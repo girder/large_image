@@ -78,7 +78,7 @@ module.exports = {
         'active',
         'updateMin',
         'updateMax',
-        'updateAutoRange',
+        'updateAutoRange'
     ],
     data() {
         return {
@@ -93,9 +93,9 @@ module.exports = {
         },
         frameHistograms() {
             if (this.framedelta !== undefined) {
-                const targetFrame = this.currentFrame + this.framedelta
+                const targetFrame = this.currentFrame + this.framedelta;
                 if (this.frameHistograms[targetFrame]) {
-                    this.histogram = this.frameHistograms[targetFrame][0]
+                    this.histogram = this.frameHistograms[targetFrame][0];
                 }
             }
         },
@@ -130,18 +130,18 @@ module.exports = {
         fetchHistogram() {
             if (!this.active) return undefined;
             if (this.framedelta !== undefined) {
-                const targetFrame = this.currentFrame + this.framedelta
+                const targetFrame = this.currentFrame + this.framedelta;
                 if (this.frameHistograms[targetFrame]) {
-                    this.histogram = this.frameHistograms[targetFrame][0]
+                    this.histogram = this.frameHistograms[targetFrame][0];
                 } else {
                     const params = Object.assign(
                         this.histogramParams,
                         {frame: targetFrame}
-                    )
-                    this.getFrameHistogram(params)
+                    );
+                    this.getFrameHistogram(params);
                 }
             } else {
-                const currentFrameHistogram = this.frameHistograms[this.currentFrame] || []
+                const currentFrameHistogram = this.frameHistograms[this.currentFrame] || [];
                 this.histogram = this.layerIndex < currentFrameHistogram.length
                     ? currentFrameHistogram[this.layerIndex]
                     : currentFrameHistogram[0];
@@ -286,7 +286,7 @@ module.exports = {
             } else {
                 if (name === 'min') {
                     this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newLocation.x - 5}`);
-                    this.updateMin(newValue)
+                    this.updateMin(newValue);
                 } else if (name === 'max') {
                     this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newLocation.x}`);
                     this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${this.xRange[1] - newLocation.x}`);
@@ -324,11 +324,11 @@ module.exports = {
             return numSamples / this.histogram.samples * 100;
         },
         updateFromInput(target, value) {
-            value = parseFloat(parseFloat(value).toFixed(2))
+            value = parseFloat(parseFloat(value).toFixed(2));
             if (target === 'min') {
-                this.updateMin(value)
+                this.updateMin(value);
             } else if (target === 'max') {
-                this.updateMax(value)
+                this.updateMax(value);
             }
         }
     }
@@ -336,85 +336,89 @@ module.exports = {
 </script>
 
 <template>
-    <div class="range-editor">
-      <input
-        v-if="histogram && autoRange === undefined"
-        type="number"
-        class="input-80 min-input"
-        :min="histogram.min"
-        :max="currentMax"
-        :value="currentMin || parseFloat(histogram.min.toFixed(2))"
-        @input="(e) => updateFromInput('min', e.target.value)"
+  <div class="range-editor">
+    <input
+      v-if="histogram && autoRange === undefined"
+      type="number"
+      class="input-80 min-input"
+      :min="histogram.min"
+      :max="currentMax"
+      :value="currentMin || parseFloat(histogram.min.toFixed(2))"
+      @input="(e) => updateFromInput('min', e.target.value)"
+    >
+    <canvas
+      ref="canvas"
+      class="canvas"
+    ></canvas>
+    <svg
+      ref="svg"
+      class="handles-svg"
+    >
+      <text
+        v-if="vRange[0] !== undefined"
+        x="5"
+        y="40"
+        class="small"
       >
-      <canvas
-        ref="canvas"
-        class="canvas"
-      ></canvas>
-      <svg
-        ref="svg"
-        class="handles-svg"
+        {{ +vRange[0].toFixed(2) || 0 }}
+      </text>
+      <rect
+        ref="minExclusionBox"
+        x="5"
+        y="0"
+        width="0"
+        height="30"
+        opacity="0.2"
+      />
+      <line
+        ref="minHandle"
+        class="draggable"
+        name="min"
+        stroke="#000"
+        stroke-width="5"
+        x1="5"
+        x2="5"
+        y1="0"
+        y2="30"
+      />
+      <text
+        v-if="vRange[1] !== undefined"
+        :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 8): 0"
+        y="40"
+        class="small"
       >
-        <text
-          v-if="vRange[0] !== undefined"
-          x="5"
-          y="40"
-          class="small"
-        >{{ +vRange[0].toFixed(2) || 0 }}</text>
-        <rect
-          ref="minExclusionBox"
-          x="5"
-          y="0"
-          width="0"
-          height="30"
-          opacity="0.2"
-        />
-        <line
-          ref="minHandle"
-          class="draggable"
-          name="min"
-          stroke="#000"
-          stroke-width="5"
-          x1="5"
-          x2="5"
-          y1="0"
-          y2="30"
-        />
-        <text
-          v-if="vRange[1] !== undefined"
-          :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 8): 0"
-          y="40"
-          class="small"
-        >{{ +vRange[1].toFixed(2) || 1 }}</text>
-        <rect
-          ref="maxExclusionBox"
-          x="5"
-          y="0"
-          width="0"
-          height="30"
-          opacity="0.2"
-        />
-        <line
-          ref="maxHandle"
-          class="draggable"
-          name="max"
-          stroke="#000"
-          stroke-width="5"
-          x1="5"
-          x2="5"
-          y1="0"
-          y2="30"
-        />
-      </svg>
-      <input
-        v-if="histogram && autoRange === undefined"
-        type="number"
-        class="input-80 max-input"
-        :max="histogram.max"
-        :min="currentMin"
-        :value="currentMax || parseFloat(histogram.max.toFixed(2))"
-        @input="(e) => updateFromInput('max', e.target.value)"
-      >
-    </div>
+        {{ +vRange[1].toFixed(2) || 1 }}
+      </text>
+      <rect
+        ref="maxExclusionBox"
+        x="5"
+        y="0"
+        width="0"
+        height="30"
+        opacity="0.2"
+      />
+      <line
+        ref="maxHandle"
+        class="draggable"
+        name="max"
+        stroke="#000"
+        stroke-width="5"
+        x1="5"
+        x2="5"
+        y1="0"
+        y2="30"
+      />
+    </svg>
+    <input
+      v-if="histogram && autoRange === undefined"
+      type="number"
+      class="input-80 max-input"
+      :max="histogram.max"
+      :min="currentMin"
+      :value="currentMax || parseFloat(histogram.max.toFixed(2))"
+      @input="(e) => updateFromInput('max', e.target.value)"
+    >
+  </div>
 </template>
 
 <style scoped>

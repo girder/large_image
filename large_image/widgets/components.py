@@ -1,8 +1,9 @@
-import ipyvue
 import json
-import traitlets
 from pathlib import Path
-from typing import Callable, List, Union
+from typing import Callable, Union
+
+import ipyvue
+import traitlets
 
 parent = Path(__file__).parent
 colors_file = parent / 'colors.json'

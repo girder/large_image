@@ -27,6 +27,7 @@ matplotlib
 pylibmc>=1.5.1
 redis
 simplejpeg
+aiohttp
 
 # External dependencies
 pip>=9
