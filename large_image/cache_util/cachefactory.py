@@ -113,7 +113,7 @@ def getFirstAvailableCache() -> Tuple[cachetools.Cache, Optional[threading.Lock]
             f'Automatically setting `{cacheBackend}` as cache_backend from availableCaches',
         )
         config.setConfig('cache_backend', cacheBackend)
-    return cache, cacheLock
+    return cache, cacheLock  # type: ignore
 
 
 class CacheFactory:
