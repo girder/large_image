@@ -2,7 +2,6 @@
 module.exports = {
     name: 'FrameSelector',
     props: [
-        'debug',
         'currentFrame',
         'itemId',
         'imageMetadata',
@@ -317,7 +316,6 @@ module.exports = {
     v-if="loaded"
     class="image-frame-control-box"
   >
-    <div>{{ debug }}</div>
     <div
       id="current_image_frame"
       class="invisible"
