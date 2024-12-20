@@ -386,6 +386,12 @@ class AnnotationSchema:
                 'exclusiveMinimum': 0,
                 'description': 'radius used for heatmap interpretation',
             },
+            'scaleWithZoom': {
+                'type': 'boolean',
+                'description':
+                    'If true, and interpreted as a heatmap, scale the size '
+                    'of points with the zoom level of the map.',
+            },
             'colorRange': colorRangeSchema,
             'rangeValues': rangeValueSchema,
             'normalizeRange': {

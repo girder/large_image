@@ -74,16 +74,20 @@ RUN apt-get update && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -r /etc/ssh/ssh_host* && \
+    rm -rf /usr/share/vim/vim91/{doc,tutor}/* /usr/share/doc && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/*
 
 RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
     cd ./ctags && \
     ./autogen.sh && \
     ./configure && \
+    export CFLAGS="-g0 -Os -DNDEBUG" && \
+    export LDFLAGS="-Wl,--strip-debug,--strip-discarded,--discard-locals" && \
     make -j `nproc` && \
     make install -j `nproc`  && \
     cd .. && \
-    rm -rf ./ctags
+    rm -rf ./ctags && \
+    rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /usr/local/bin
 
 RUN pyenv update && \
     pyenv install --list && \
@@ -95,7 +99,9 @@ RUN pyenv update && \
     find $PYENV_ROOT/versions -type f '(' -name '*.py[co]' -o -name '*.exe' ')' -exec rm -fv '{}' + >/dev/null && \
     echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
-    rm -rf /tmp/* /var/tmp/* && \
+    rm -rf /tmp/* /var/tmp/* /root/.cache/* && \
+    find /.pyenv -name '*.so' -o -name '*.a' -o -name '*.so.*' -exec strip --strip-unneeded -p -D {} \; && \
+    find /.pyenv -name 'libpython*.a' -delete && \
     # This makes duplicate python library files hardlinks of each other \
     rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /.pyenv
 
@@ -118,6 +124,7 @@ RUN . ~/.bashrc && \
     nvm install 14 && \
     nvm alias default 14 && \
     nvm use default && \
+    rm -rf /root/.nvm/.cache && \
     ln -s $(dirname `which npm`) /usr/local/node
 
 ENV PATH="/usr/local/node:$PATH"

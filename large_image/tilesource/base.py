@@ -176,7 +176,7 @@ class TileSource(IPyLeafletMixin):
         self.edge = edge
         self._setStyle(style)
 
-    def __getstate__(self):
+    def __getstate__(self) -> None:
         """
         Allow pickling.
 
@@ -203,7 +203,7 @@ class TileSource(IPyLeafletMixin):
     def __repr__(self) -> str:
         return self.getState()
 
-    def _repr_png_(self):
+    def _repr_png_(self) -> bytes:
         return self.getThumbnail(encoding='PNG')[0]
 
     @property
@@ -257,12 +257,12 @@ class TileSource(IPyLeafletMixin):
         return (bounds['sizeY'] / 2, bounds['sizeX'] / 2)
 
     @property
-    def style(self):
+    def style(self) -> Optional[JSONDict]:
         return self._style
 
     @style.setter
-    def style(self, value):
-        if not hasattr(self, '_unstyledStyle') and value == getattr(self, '_unstyledStyle', None):
+    def style(self, value: Any) -> None:
+        if value is None and not hasattr(self, '_unstyledStyle'):
             return
         if not getattr(self, '_noCache', False):
             msg = 'Cannot set the style of a cached source'
@@ -1139,8 +1139,9 @@ class TileSource(IPyLeafletMixin):
         """
         tile, mode = _imageToNumpy(intile)
         if (applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
-                (not getattr(self, 'style', None) or len(self.style) != 1 or
-                 self.style.get('icc') is not False)):
+                (not getattr(self, 'style', None) or
+                 len(cast(JSONDict, self.style)) != 1 or
+                 cast(JSONDict, self.style).get('icc') is not False)):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = np.zeros(
@@ -1242,7 +1243,7 @@ class TileSource(IPyLeafletMixin):
         return None
 
     @classmethod
-    def canRead(cls, *args, **kwargs):
+    def canRead(cls, *args, **kwargs) -> bool:
         """
         Check if we can read the input.  This takes the same parameters as
         __init__.
@@ -1315,7 +1316,7 @@ class TileSource(IPyLeafletMixin):
     def metadata(self) -> JSONDict:
         return self.getMetadata()
 
-    def _getFrameValueInformation(self, frames: List[Dict]):
+    def _getFrameValueInformation(self, frames: List[Dict]) -> Dict[str, Any]:
         """
         Given a `frames` list from a metadata response, return a dictionary describing
         the value info for any frame axes. Keys in this dictionary follow the pattern "Value[AXIS]"
@@ -1412,7 +1413,7 @@ class TileSource(IPyLeafletMixin):
             for frame in metadata['frames']:
                 frame['Channel'] = channels[frame.get('IndexC', 0)]
 
-    def getInternalMetadata(self, **kwargs):
+    def getInternalMetadata(self, **kwargs) -> Optional[Dict[Any, Any]]:
         """
         Return additional known metadata about the tile source.  Data returned
         from this method is not guaranteed to be in any particular format or
@@ -1485,10 +1486,12 @@ class TileSource(IPyLeafletMixin):
         :returns: an integer frame number.
         """
         frame = int(frame or 0)
-        if (hasattr(self, '_style') and 'bands' in self.style and
-                len(self.style['bands']) and
-                all(entry.get('frame') is not None for entry in self.style['bands'])):
-            frame = int(self.style['bands'][0]['frame'])
+        if (hasattr(self, '_style') and
+                'bands' in cast(JSONDict, self.style) and
+                len(cast(JSONDict, self.style)['bands']) and
+                all(entry.get('frame') is not None
+                    for entry in cast(JSONDict, self.style)['bands'])):
+            frame = int(cast(JSONDict, self.style)['bands'][0]['frame'])
         return frame
 
     def _xyzInRange(
@@ -1627,8 +1630,10 @@ class TileSource(IPyLeafletMixin):
             getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
-                sparseFallback=False, frame=None):
+    def getTile(self, x: int, y: int, z: int, pilImageAllowed: bool = False,
+                numpyAllowed: Union[bool, str] = False,
+                sparseFallback: bool = False, frame: Optional[int] = None) -> Union[
+                    ImageBytes, PIL.Image.Image, bytes, np.ndarray]:
         """
         Get a tile from a tile source, returning it as an binary image, a PIL
         image, or a numpy array.

@@ -115,12 +115,15 @@ function convertGridToHeatmap(record, properties, layer) {
     const dx = (record.dx || 1);
     const dy = (record.dy || 1);
     const colorTable = heatmapColorTable(record, record.values);
+    const tileLayer = map.layers().find((l) => l instanceof window.geo.tileLayer && l.options && l.options.maxLevel !== undefined);
+    const scaleZoomFactor = tileLayer ? 2 ** -tileLayer.options.maxLevel : 1;
     const heatmap = heatmapLayer.createFeature('heatmap', {
         style: {
-            radius: record.radius || 25,
+            radius: (record.radius || 25) * (record.scaleWithZoom ? scaleZoomFactor : 1),
             blurRadius: 0,
             gaussian: true,
-            color: colorTable.color
+            color: colorTable.color,
+            scaleWithZoom: record.scaleWithZoom || false
         },
         position: (d, i) => ({
             x: x0 + dx * (i % record.gridWidth),
