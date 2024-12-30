@@ -741,6 +741,19 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ext = dotext.strip('.')
                 if ext not in cls.extensions:
                     cls.extensions[ext] = SourcePriority.IMPLICIT
+            # The python modules doesn't list all the extensions that can be
+            # read, so supplement from the jar
+            readerlist = zipfile.ZipFile(
+                pathlib.Path(bioformats.__file__).parent /
+                'jars/bioformats_package.jar',
+            ).open('loci/formats/readers.txt').read(100000).decode().split('\n')
+            pattern = re.compile(r'^loci\.formats\.in\..* # (?:.*?\b(\w{2,})\b(?:,|\s|$))')
+            for line in readerlist:
+                for ext in set(pattern.findall(line)) - {
+                        'pattern', 'urlreader', 'screen', 'zip', 'zarr', 'db',
+                        'fake', 'no'}:
+                    if ext not in cls.extensions:
+                        cls.extensions[ext] = SourcePriority.IMPLICIT
 
 
 def open(*args, **kwargs):

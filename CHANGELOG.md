@@ -6,6 +6,7 @@
 
 - Harden the geojson annotation parser ([#1743](../../pull/1743))
 - Add more color palettes ([#1746](../../pull/1746))
+- Improve the list of extensions the bioformats source reports ([#1748](../../pull/1748))
 
 ## 1.30.5
 
