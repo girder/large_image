@@ -8,6 +8,10 @@
 - Add more color palettes ([#1746](../../pull/1746))
 - Improve the list of extensions the bioformats source reports ([#1748](../../pull/1748))
 
+### Changes
+
+- Suppress a warning about nd2 files that we can't do anything about ([#1749](../../pull/1749))
+
 ## 1.30.5
 
 ### Improvements
