@@ -105,6 +105,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             msg = 'Not a recognized OME Tiff'
             raise TileSourceError(msg)
         info = getattr(base, '_description_record', None)
+        self._associatedImages = {}
         if not info or not info.get('OME'):
             msg = 'Not an OME Tiff'
             raise TileSourceError(msg)
@@ -115,6 +116,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         except KeyError:
             msg = 'Not a recognized OME Tiff'
             raise TileSourceError(msg)
+        usesSubIfds = self._checkForSubIfds(base)
         omeimages = [
             entry['Pixels'] for entry in self._omeinfo['Image'] if
             len(entry['Pixels']['TiffData']) == len(self._omebase['TiffData'])]
@@ -125,10 +127,16 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         omebylevel = dict(zip(levels, omeimages))
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
         if base._tiffInfo.get('istiled'):
+            if usesSubIfds:
+                self._omeLevels = [None] * max(usesSubIfds) + [self._omeLevels[-1]]
             self._tiffDirectories = [
                 self.getTiffDir(int(entry['TiffData'][0].get('IFD', 0)))
                 if entry else None
                 for entry in self._omeLevels]
+            if usesSubIfds:
+                for lvl in usesSubIfds:
+                    if self._tiffDirectories[lvl] is None:
+                        self._tiffDirectories[lvl] = False
         else:
             self._tiffDirectories = [
                 self.getTiffDir(0, mustBeTiled=None)
@@ -149,7 +157,6 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         # We can get the embedded images, but we don't currently use non-tiled
         # images as associated images.  This would require enumerating tiff
         # directories not mentioned by the ome list.
-        self._associatedImages = {}
         self._checkForInefficientDirectories()
 
     def _checkForOMEZLoop(self):
@@ -199,6 +206,40 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         info['Image']['Pixels']['PlanesFromZloop'] = 'true'
         info['Image']['Pixels']['SizeZ'] = str(zloop)
 
+    def _checkForSubIfds(self, base):
+        """
+        Check if the first ifd has sub-ifds.  If so, expect lower resolutions
+        to be in subifds, not in primary ifds.
+
+        :param base: base tiff directory
+        :returns: either False if no subifds are lower resolution, or a
+            dictionary of levels (keys) and values that are subifd numbers.
+        """
+        try:
+            levels = int(max(0, math.ceil(max(
+                math.log(float(base.imageWidth) / base.tileWidth),
+                math.log(float(base.imageHeight) / base.tileHeight)) / math.log(2))) + 1)
+            filled = {}
+            for z in range(levels - 2, -1, -1):
+                subdir = levels - 1 - z
+                scale = int(2 ** subdir)
+                try:
+                    dir = self.getTiffDir(0, mustBeTiled=True, subDirectoryNum=subdir)
+                except Exception:
+                    continue
+                if (dir is not None and
+                        (dir.tileWidth == base.tileWidth or dir.tileWidth == dir.imageWidth) and
+                        (dir.tileHeight == base.tileHeight or dir.tileHeight == dir.imageHeight) and
+                        abs(dir.imageWidth * scale - base.imageWidth) <= scale and
+                        abs(dir.imageHeight * scale - base.imageHeight) <= scale):
+                    filled[z] = subdir
+            if not len(filled):
+                return False
+            filled[levels - 1] = 0
+            return filled
+        except TiffError:
+            return False
+
     def _parseOMEInfo(self):  # noqa
         if isinstance(self._omeinfo['Image'], dict):
             self._omeinfo['Image'] = [self._omeinfo['Image']]
@@ -241,6 +282,33 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                     for entry in self._omebase['TiffData']}) > 1:
                 msg = 'OME Tiff references multiple files'
                 raise TileSourceError(msg)
+            if (len(self._omebase['TiffData']) ==
+                    int(self._omebase['SizeT']) * int(self._omebase['SizeZ'])):
+                self._omebase['SizeC'] = 1
+                # DWM:: others are probably associated images
+                for img in self._omeinfo['Image'][1:]:
+                    try:
+                        if img['Name'] and img['Pixels']['TiffData'][0]['IFD']:
+                            self._addAssociatedImage(
+                                int(img['Pixels']['TiffData'][0]['IFD']),
+                                None, None, img['Name'].split()[0])
+                    except Exception:
+                        pass
+            elif len(self._omeinfo['Image']) > 1:
+                multiple = False
+                for img in self._omeinfo['Image'][1:]:
+                    try:
+                        bpix = self._omeinfo['Image'][0]['Pixels']
+                        imgpix = img['Pixels']
+                        if imgpix['SizeX'] == bpix['SizeX'] and imgpix['SizeY'] == bpix['SizeY']:
+                            multiple = True
+                            break
+                    except Exception:
+                        multiple = True
+                if multiple:
+                    # We should handle this as SizeXY
+                    msg = 'OME Tiff references multiple images'
+                    raise TileSourceError(msg)
             if (len(self._omebase['TiffData']) != int(self._omebase['SizeC']) *
                     int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
                     len(self._omebase['TiffData']) != len(

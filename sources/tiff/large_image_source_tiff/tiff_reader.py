@@ -788,11 +788,13 @@ class TiledTiffDirectory:
 
         if (not self._tiffInfo.get('istiled') or
                 self._tiffInfo.get('compression') not in {
-                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005, 34712} or
+                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33004, 33005, 34712} or
                 self._tiffInfo.get('bitspersample') != 8 or
                 self._tiffInfo.get('sampleformat') not in {
                     None, libtiff_ctypes.SAMPLEFORMAT_UINT} or
-                (asarray and self._tiffInfo.get('compression') not in {33003, 33005, 34712} and (
+                (asarray and self._tiffInfo.get('compression') not in {
+                    33003, 33004, 33005, 34712,
+                } and (
                     self._tiffInfo.get('compression') != libtiff_ctypes.COMPRESSION_JPEG or
                     self._tiffInfo.get('photometric') != libtiff_ctypes.PHOTOMETRIC_YCBCR))):
             return self._getUncompressedTile(tileNum)
@@ -811,7 +813,7 @@ class TiledTiffDirectory:
         # Get the whole frame, which is in a JPEG or JPEG 2000 format
         frame = self._getJpegFrame(tileNum, True)
         # For JP2K, see if we can convert it faster than PIL
-        if self._tiffInfo.get('compression') in {33003, 33005}:
+        if self._tiffInfo.get('compression') in {33003, 33004, 33005, 34712}:
             try:
                 import openjpeg
 
