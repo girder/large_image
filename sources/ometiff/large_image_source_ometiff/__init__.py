@@ -285,7 +285,6 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             if (len(self._omebase['TiffData']) ==
                     int(self._omebase['SizeT']) * int(self._omebase['SizeZ'])):
                 self._omebase['SizeC'] = 1
-                # DWM:: others are probably associated images
                 for img in self._omeinfo['Image'][1:]:
                     try:
                         if img['Name'] and img['Pixels']['TiffData'][0]['IFD']:

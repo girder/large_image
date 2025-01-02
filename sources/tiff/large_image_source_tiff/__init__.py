@@ -539,7 +539,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     associated._pixelInfo['width'] <= self._maxAssociatedImageSize and
                     associated._pixelInfo['height'] <= self._maxAssociatedImageSize and
                     id not in self._associatedImages):
-                image = associated._tiffFile.read_image()
+                image = associated.read_image()
                 # Optrascan scanners store xml image descriptions in a "tiled
                 # image".  Check if this is the case, and, if so, parse such
                 # data
@@ -794,9 +794,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # _associatedImages.  There are some sample files where libtiff's
         # read_image fails to read the _associatedImage properly because of
         # separated jpeg information.  For the samples we currently have,
-        # preferring the _embeddedImages is sufficient, but if find other files
-        # with seemingly bad associated images, we may need to read them with a
-        # more complex process than read_image.
+        # preferring the _embeddedImages is sufficient, but if we find other
+        # files with seemingly bad associated images, we may need to read them
+        # with a more complex process than read_image.
         for td in self._tiffDirectories:
             if td is not None and td is not False and imageKey in td._embeddedImages:
                 return PIL.Image.open(io.BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
