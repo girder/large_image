@@ -896,3 +896,27 @@ class TiledTiffDirectory:
         except Exception:
             pass
         return True
+
+    def read_image(self):
+        """
+        Use the underlying _tiffFile to read an image.  But, if it is in a jp2k
+        encoding, read the raw data and convert it.
+        """
+        if self._tiffInfo.get('compression') not in {
+                libtiff_ctypes.COMPRESSION_JPEG, 33003, 33004, 33005, 34712}:
+            return self._tiffFile.read_image()
+        output = None
+        for yidx, y in enumerate(range(0, self.imageHeight, self.tileHeight)):
+            for xidx, x in enumerate(range(0, self.imageWidth, self.tileWidth)):
+                tile = self.getTile(xidx, yidx, asarray=True)
+                if len(tile.shape) == 2:
+                    tile = tile[:, :, np.newaxis]
+                if output is None:
+                    output = np.zeros(
+                        (self.imageHeight, self.imageWidth, tile.shape[2]), dtype=tile.dtype)
+                if tile.shape[0] > self.imageHeight - y:
+                    tile = tile[:self.imageHeight - y, :, :]
+                if tile.shape[1] > self.imageWidth - x:
+                    tile = tile[:, :self.imageWidth - x, :]
+                output[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
+        return output
