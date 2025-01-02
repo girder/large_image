@@ -120,6 +120,13 @@ registry = {
     # Source: TCIA/CMB-LCA_v07_20240828/CMB-LCA/MSB-01459/
     #   12-22-1959-XR Chest-59125/1002.000000-43033/1-1.dcm
     'tcia_msb_01459_19591222.dcm': 'sha512:9dea871c3816f149227ece40d35aa5cf655f23412cb7aee72f175f0a74435d8b21aaa2030e7e75b0affbc07c03c205028025a4d5022bfa797bff523fa98315e0',  # noqa
+    # Synthetic Indica Labs tiff; subifds missing tile/strip data and unmarked
+    # float32 pixels rather than uint32
+    'synthetic_indica.tiff': 'sha512:fba7eb2fb5fd12ac242d8b0760440f170f48f9e2434a672cbf230bd8a9ff02fad8f9bdf7225edf2de244f412edfc5205e695031a1d43dd99fe31c3aca11909a1',  # noqa
+    # Converted from the TCGA svs file using bioformats java program and
+    # --rgb --quality=0.015 --compression='JPEG-2000 Lossy' parameters to make
+    # the file small
+    'TCGA-55-8207-01Z-00-DX1.ome.tiff': 'sha512:50cf63f0e8bfa3054d3532b7dd0237b66aeb4c7609da874639a28bc068dbd157f786e84d3eb76a3b0e6636a042c56c3b96d3be2ad66f7589d0542a5d20cecdb4',  # noqa
 }
 
 

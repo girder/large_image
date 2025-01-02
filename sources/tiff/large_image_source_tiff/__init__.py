@@ -30,7 +30,9 @@ import tifftools
 
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
-from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
+from large_image.exceptions import (TileSourceError,
+                                    TileSourceFileNotFoundError,
+                                    TileSourceMalformedError)
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
 from . import tiff_reader
@@ -90,6 +92,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self._initWithTiffTools()
             return
+        except TileSourceMalformedError:
+            raise
         except Exception as exc:
             self.logger.debug('Cannot read with tifftools route; %r', exc)
             lastException = exc
@@ -323,12 +327,19 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._info = info
         frames = []
         associated = []  # for now, a list of directories
+        used_subifd = False
         for idx, ifd in enumerate(info['ifds']):
             # if not tiles, add to associated images
             if tifftools.Tag.tileWidth.value not in ifd['tags']:
-                associated.append(idx)
+                associated.append((idx, False))
                 continue
-            level = self._levelFromIfd(ifd, info['ifds'][0])
+            try:
+                level = self._levelFromIfd(ifd, info['ifds'][0])
+            except TileSourceError:
+                if idx and used_subifd:
+                    associated.append((idx, True))
+                    continue
+                raise
             # if the same resolution as the main image, add a frame
             if level == self.levels - 1:
                 frames.append({'dirs': [None] * self.levels})
@@ -363,9 +374,17 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     if len(subifds) != 1:
                         msg = 'When stored in subifds, each subifd should be a single ifd.'
                         raise TileSourceError(msg)
-                    level = self._levelFromIfd(subifds[0], info['ifds'][0])
+                    if (tifftools.Tag.StripOffsets.value not in subifds[0]['tags'] and
+                            tifftools.Tag.TileOffsets.value not in subifds[0]['tags']):
+                        msg = 'Subifd has no strip or tile offsets.'
+                        raise TileSourceMalformedError(msg)
+                    try:
+                        level = self._levelFromIfd(subifds[0], info['ifds'][0])
+                    except Exception:
+                        break
                     if level < self.levels - 1 and frames[-1]['dirs'][level] is None:
                         frames[-1]['dirs'][level] = (idx, subidx + 1)
+                        used_subifd = True
                     else:
                         msg = 'Tile layers are in a surprising order'
                         raise TileSourceError(msg)
@@ -399,8 +418,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._iccprofiles.append(ifd['tags'][
                     tifftools.Tag.ICCProfile.value]['data'])
         self._associatedImages = {}
-        for dirNum in associated:
-            self._addAssociatedImage(dirNum)
+        for dirNum, isTiled in associated:
+            self._addAssociatedImage(dirNum, isTiled)
         self._frames = frames
         self._tiffDirectories = [
             self.getTiffDir(
@@ -482,7 +501,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 frame.setdefault('frame', {})
                 frame['frame']['IndexC'] = idx
 
-    def _addAssociatedImage(self, directoryNum, mustBeTiled=False, topImage=None):
+    def _addAssociatedImage(self, directoryNum, mustBeTiled=False, topImage=None, imageId=None):
         """
         Check if the specified TIFF directory contains an image with a sensible
         image description that can be used as an ID.  If so, and if the image
@@ -493,6 +512,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
            untiled images.
         :param topImage: if specified, add image-embedded metadata to this
            image.
+        :param imageId: if specified, use this as the image name.
         """
         try:
             associated = self.getTiffDir(directoryNum, mustBeTiled)
@@ -506,6 +526,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 id = 'dir%d' % directoryNum
                 if not len(self._associatedImages):
                     id = 'macro'
+            if imageId:
+                id = imageId
             if not id and not mustBeTiled:
                 id = {1: 'label', 9: 'macro'}.get(associated._tiffInfo.get('subfiletype'))
             if not isinstance(id, str):
@@ -757,7 +779,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         imageList = set(self._associatedImages)
         for td in self._tiffDirectories:
-            if td is not None:
+            if td is not None and td is not False:
                 imageList |= set(td._embeddedImages)
         return sorted(imageList)
 
@@ -776,7 +798,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # with seemingly bad associated images, we may need to read them with a
         # more complex process than read_image.
         for td in self._tiffDirectories:
-            if td is not None and imageKey in td._embeddedImages:
+            if td is not None and td is not False and imageKey in td._embeddedImages:
                 return PIL.Image.open(io.BytesIO(base64.b64decode(td._embeddedImages[imageKey])))
         if imageKey in self._associatedImages:
             return PIL.Image.fromarray(self._associatedImages[imageKey])

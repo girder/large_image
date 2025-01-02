@@ -255,7 +255,7 @@ class AnnotationResource(Resource):
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))
                 # Collect multiple elements before emitting them.  This
-                # balances using less memoryand streaming right away with
+                # balances using less memory and streaming right away with
                 # efficiency in dumping the json.  Experimentally, 100 is
                 # significantly faster than 10 and not much slower than 1000.
                 collect.append(element)

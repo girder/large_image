@@ -19,6 +19,7 @@ import json
 import math
 import os
 import threading
+import warnings
 
 import numpy as np
 import PIL.Image
@@ -55,6 +56,8 @@ try:
 except PackageNotFoundError:
     # package is not installed
     pass
+
+warnings.filterwarnings('ignore', category=UserWarning, module='.*PIL.*')
 
 # Default to ignoring files with some specific extensions.
 config.ConfigValues['source_pil_ignored_names'] = \
@@ -138,7 +141,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if self._pilImage is None:
             try:
                 self._pilImage = PIL.Image.open(largeImagePath)
-            except OSError:
+            except (OSError, ValueError):
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 msg = 'File cannot be opened via PIL.'
