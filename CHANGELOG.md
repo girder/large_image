@@ -13,6 +13,10 @@
 
 - Suppress a warning about nd2 files that we can't do anything about ([#1749](../../pull/1749))
 
+### Bug Fixes
+
+- Harden the tile cache between python versions and numpy versions ([#1751](../../pull/1751))
+
 ## 1.30.5
 
 ### Improvements

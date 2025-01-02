@@ -100,7 +100,7 @@ def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
                     return self.cache[k]
             except KeyError:
                 pass  # key not found
-            except (ValueError, pickle.UnpicklingError):
+            except (ValueError, pickle.UnpicklingError, ModuleNotFoundError):
                 # this can happen if a different version of python wrote the record
                 pass
             v = func(self, *args, **kwargs)
