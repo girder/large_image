@@ -39,6 +39,7 @@ extraReqs = {
     'redis': ['redis>=4.5.5'],
     'converter': [f'large-image-converter{limit_version}'],
     'colormaps': ['matplotlib', 'tol_colors'],
+    'jupyter': ['aiohttp', 'ipyvue', 'ipyleaflet'],
     'tiledoutput': ['pyvips'],
     'performance': [
         'psutil>=4.2.0',
@@ -110,8 +111,6 @@ setup(
         'palettable',
         'Pillow',
         'numpy',
-        'ipyvue',
-        'aiohttp',
         'typing-extensions',
     ],
     extras_require=extraReqs,
