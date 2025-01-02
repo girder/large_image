@@ -158,6 +158,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frameValues = None
         self._frameAxes = None
         self._frameUnits = None
+        if not self._created:
+            try:
+                self._validateZarr()
+            except Exception:
+                pass
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):
@@ -809,6 +814,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._levels = None
                 self.levels = int(max(1, math.ceil(math.log(max(
                     self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+                updateMetadata = True
         if updateMetadata:
             self._writeInternalMetadata()
 
