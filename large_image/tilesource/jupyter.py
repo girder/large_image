@@ -28,9 +28,9 @@ import numpy as np
 
 from large_image.exceptions import TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
-from large_image.widgets.components import FrameSelector
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
+ipyvuePresent = importlib.util.find_spec('ipyvue') is not None
 
 
 class IPyLeafletMixin:
@@ -317,7 +317,9 @@ class Map:
 
         children: List[Any] = []
         frames = metadata.get('frames')
-        if frames is not None:
+        if frames is not None and ipyvuePresent:
+            from large_image.widgets.components import FrameSelector
+
             self.frame_selector = FrameSelector()
             self.frame_selector.imageMetadata = metadata
             self.frame_selector.updateFrameCallback = self.update_frame
