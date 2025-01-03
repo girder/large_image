@@ -154,7 +154,7 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
     _postRender: function () {
     },
 
-    frameUpdate: function (frame, style) {
+    frameUpdate: function ({frame, style}) {
         if (this._frame === undefined) {
             // don't set up layers until the we access the first non-zero frame
             if (frame === 0 && style === undefined) {
@@ -242,8 +242,8 @@ var GeojsImageViewerWidget = ImageViewerWidget.extend({
                     this._layer2 = ltemp;
                     this._updating = false;
                     this.trigger('g:imageFrameChanged', this, frame);
-                    if (frame !== this._nextframe || style !== this._nextstyle) {
-                        this.frameUpdate(this._nextframe, this._nextstyle);
+                    if (frame !== this._nextframe || JSON.stringify(style) !== JSON.stringify(this._nextstyle)) {
+                        this.frameUpdate({frame: this._nextframe, style: this._nextstyle});
                     }
                 });
             });

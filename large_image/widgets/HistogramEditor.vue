@@ -1,23 +1,85 @@
 <script>
-import {restRequest} from '@girder/core/rest';
-import Vue from 'vue';
+function clamp(num, min, max) {
+    return Math.min(Math.max(num, min), max);
+}
 
-import {makeDraggableSVG} from '../utils/drag';
+function makeDraggableSVG(svg, validateDrag, callback, xRange) {
+    // Modified from https://www.w3schools.com/howto/howto_js_draggable.asp
+    let selectedShape;
+    let posOffset;
+    svg.addEventListener('mousedown', startDrag);
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('mouseup', endDrag);
 
-export default {
+    function getMousePosition(evt) {
+        if (!svg) return {x: 0, y: 0};
+        const CTM = svg.getScreenCTM();
+        if (!CTM) return {x: 0, y: 0};
+        return {
+            x: (evt.clientX - CTM.e) / CTM.a,
+            y: (evt.clientY - CTM.f) / CTM.d
+        };
+    }
+
+    function startDrag(evt) {
+        const target = evt.target;
+        if (target && target.classList.contains('draggable')) {
+            selectedShape = target;
+            posOffset = getMousePosition(evt);
+            posOffset.x -= parseFloat(
+                selectedShape.getAttributeNS(null, 'x1') || '0'
+            );
+            posOffset.y -= parseFloat(
+                selectedShape.getAttributeNS(null, 'y1') || '0'
+            );
+        }
+    }
+
+    function drag(evt) {
+        if (selectedShape) {
+            evt.preventDefault();
+            const coord = getMousePosition(evt);
+            if (posOffset) {
+                coord.x -= posOffset.x;
+                coord.y -= posOffset.y;
+            }
+            coord.x = clamp(coord.x, xRange[0], xRange[1]);
+            const [moveX, moveY] = validateDrag(selectedShape, coord);
+            if (!moveX) {
+                coord.x = parseFloat(selectedShape.getAttributeNS(null, 'x1') || '0');
+            }
+            if (!moveY) {
+                coord.y = parseFloat(selectedShape.getAttributeNS(null, 'y1') || '0');
+            }
+
+            selectedShape.setAttributeNS(null, 'x1', `${coord.x}`);
+            selectedShape.setAttributeNS(null, 'x2', `${coord.x}`);
+            selectedShape.setAttributeNS(null, 'y1', `${coord.y}`);
+            callback(selectedShape, coord);
+        }
+    }
+    function endDrag() {
+        selectedShape = undefined;
+    }
+}
+
+module.exports = {
     props: [
         'itemId',
         'layerIndex',
         'currentFrame',
-        'currentFrameHistogram',
         'histogramParams',
+        'frameHistograms',
+        'getFrameHistogram',
         'framedelta',
         'currentMin',
         'currentMax',
         'autoRange',
-        'active'
+        'active',
+        'updateMin',
+        'updateMax',
+        'updateAutoRange'
     ],
-    emits: ['updateMin', 'updateMax', 'updateAutoRange'],
     data() {
         return {
             histogram: undefined,
@@ -29,26 +91,27 @@ export default {
         currentFrame() {
             this.fetchHistogram();
         },
-        currentFrameHistogram() {
-            this.fetchHistogram();
+        frameHistograms() {
+            if (this.framedelta !== undefined) {
+                const targetFrame = this.currentFrame + this.framedelta;
+                if (this.frameHistograms[targetFrame]) {
+                    this.histogram = this.frameHistograms[targetFrame][0];
+                }
+            }
         },
         histogram() {
-            // allow rerender to occur first
-            Vue.nextTick().then(() => {
-                this.xRange = [5, this.$refs.svg.clientWidth - 5];
-                this.vRange = [this.histogram.min, this.histogram.max];
-                this.drawHistogram(
-                    this.simplifyHistogram(this.histogram.hist)
-                );
-                makeDraggableSVG(
-                    this.$refs.svg,
-                    this.validateHandleDrag,
-                    this.dragHandle,
-                    this.xRange
-                );
-                this.initializePositions();
-                return undefined;
-            });
+            this.xRange = [5, this.$refs.svg.clientWidth - 5];
+            this.vRange = [this.histogram.min, this.histogram.max];
+            this.drawHistogram(
+                this.simplifyHistogram(this.histogram.hist)
+            );
+            makeDraggableSVG(
+                this.$refs.svg,
+                this.validateHandleDrag,
+                this.dragHandle,
+                this.xRange
+            );
+            this.initializePositions();
         },
         currentMin() {
             this.initializePositions();
@@ -67,25 +130,21 @@ export default {
         fetchHistogram() {
             if (!this.active) return undefined;
             if (this.framedelta !== undefined) {
-                restRequest({
-                    type: 'GET',
-                    url: 'item/' + this.itemId + '/tiles/histogram',
-                    data: Object.assign(
+                const targetFrame = this.currentFrame + this.framedelta;
+                if (this.frameHistograms[targetFrame]) {
+                    this.histogram = this.frameHistograms[targetFrame][0];
+                } else {
+                    const params = Object.assign(
                         this.histogramParams,
-                        {frame: this.currentFrame + this.framedelta}
-                    )
-                }).then((response) => {
-                    if (response.length < 3) {
-                        this.histogram = response[0];
-                    } else {
-                        this.histogram = response[1];
-                    }
-                    return undefined;
-                });
+                        {frame: targetFrame}
+                    );
+                    this.getFrameHistogram(params);
+                }
             } else {
-                this.histogram = this.layerIndex < this.currentFrameHistogram.length
-                    ? this.currentFrameHistogram[this.layerIndex]
-                    : this.currentFrameHistogram[0];
+                const currentFrameHistogram = this.frameHistograms[this.currentFrame] || [];
+                this.histogram = this.layerIndex < currentFrameHistogram.length
+                    ? currentFrameHistogram[this.layerIndex]
+                    : currentFrameHistogram[0];
             }
         },
         simplifyHistogram(hist) {
@@ -215,23 +274,24 @@ export default {
             return [moveX, moveY];
         },
         dragHandle(selected, newLocation) {
-            const funcName = selected.getAttribute('name');
+            const name = selected.getAttribute('name');
             let newValue = this.xPositionToValue(newLocation.x);
             if (this.autoRange !== undefined) {
                 newValue = this.toDistributionPercentage(newValue);
-                if (funcName === 'updateMax') {
+                if (name === 'max') {
                     newValue = 100 - newValue;
                 }
                 newValue = parseFloat(parseFloat(newValue).toFixed(2));
-                this.$emit('updateAutoRange', newValue);
+                this.updateAutoRange(newValue);
             } else {
-                if (funcName === 'updateMin') {
+                if (name === 'min') {
                     this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newLocation.x - 5}`);
-                } else if (funcName === 'updateMax') {
+                    this.updateMin(newValue);
+                } else if (name === 'max') {
                     this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newLocation.x}`);
                     this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${this.xRange[1] - newLocation.x}`);
+                    this.updateMax(newValue);
                 }
-                this.$emit(funcName, newValue);
             }
         },
         setHandlePosition(handle, position, exclusionBox, exclusionBoxPosition, exclusionBoxWidth) {
@@ -263,115 +323,101 @@ export default {
             });
             return numSamples / this.histogram.samples * 100;
         },
-        updateFromInput(funcName, value) {
-            let roundedValue;
-            if (value) {
-                roundedValue = parseFloat(parseFloat(value).toFixed(2));
+        updateFromInput(target, value) {
+            value = parseFloat(parseFloat(value).toFixed(2));
+            if (target === 'min') {
+                this.updateMin(value);
+            } else if (target === 'max') {
+                this.updateMax(value);
             }
-            this.$emit(funcName, roundedValue);
         }
     }
 };
 </script>
 
 <template>
-  <div v-if="histogram">
-    <div class="range-editor">
-      <input
-        v-if="autoRange === undefined"
-        type="number"
-        class="input-80"
-        :min="histogram.min"
-        :max="currentMax"
-        :value="currentMin"
-        @input="(e) => updateFromInput('updateMin', e.target.value)"
+  <div class="range-editor">
+    <input
+      v-if="histogram && autoRange === undefined"
+      type="number"
+      class="input-80 min-input"
+      :min="histogram.min"
+      :max="currentMax"
+      :value="currentMin || parseFloat(histogram.min.toFixed(2))"
+      @input="(e) => updateFromInput('min', e.target.value)"
+    >
+    <canvas
+      ref="canvas"
+      class="canvas"
+    ></canvas>
+    <svg
+      ref="svg"
+      class="handles-svg"
+    >
+      <text
+        v-if="vRange[0] !== undefined"
+        x="5"
+        y="40"
+        class="small"
       >
-      <span
-        v-else
-        class="input-80"
+        {{ +vRange[0].toFixed(2) || 0 }}
+      </text>
+      <rect
+        ref="minExclusionBox"
+        x="5"
+        y="0"
+        width="0"
+        height="30"
+        opacity="0.2"
       />
-      <svg
-        ref="svg"
-        class="handles-svg"
-      >
-        <text
-          v-if="vRange[0] !== undefined"
-          x="5"
-          y="43"
-          class="small"
-        >{{ +vRange[0].toFixed(2) || 0 }}</text>
-        <rect
-          ref="minExclusionBox"
-          x="5"
-          y="0"
-          width="0"
-          height="30"
-          opacity="0.2"
-        />
-        <line
-          ref="minHandle"
-          class="draggable"
-          name="updateMin"
-          stroke="#000"
-          stroke-width="4"
-          x1="5"
-          x2="5"
-          y1="0"
-          y2="30"
-        />
-        <text
-          v-if="vRange[1] !== undefined"
-          :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 6): 0"
-          y="43"
-          class="small"
-        >{{ +vRange[1].toFixed(2) || 1 }}</text>
-        <rect
-          ref="maxExclusionBox"
-          x="5"
-          y="0"
-          width="0"
-          height="30"
-          opacity="0.2"
-        />
-        <line
-          ref="maxHandle"
-          class="draggable"
-          name="updateMax"
-          stroke="#000"
-          stroke-width="4"
-          x1="5"
-          x2="5"
-          y1="0"
-          y2="30"
-        />
-      </svg>
-      <canvas
-        ref="canvas"
-        class="canvas"
+      <line
+        ref="minHandle"
+        class="draggable"
+        name="min"
+        stroke="#000"
+        stroke-width="5"
+        x1="5"
+        x2="5"
+        y1="0"
+        y2="30"
       />
-      <input
-        v-if="autoRange === undefined"
-        type="number"
-        class="input-80"
-        :max="histogram.max"
-        :min="currentMin"
-        :value="currentMax"
-        @input="(e) => updateFromInput('updateMax', e.target.value)"
+      <text
+        v-if="vRange[1] !== undefined"
+        :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 8): 0"
+        y="40"
+        class="small"
       >
-      <span
-        v-else
-        class="percentage-input"
-      >
-        <input
-          type="number"
-          class="input-80"
-          :max="50"
-          :min="0"
-          :value="autoRange"
-          @input="(e) => updateFromInput('updateAutoRange', e.target.value)"
-        >
-      </span>
-    </div>
+        {{ +vRange[1].toFixed(2) || 1 }}
+      </text>
+      <rect
+        ref="maxExclusionBox"
+        x="5"
+        y="0"
+        width="0"
+        height="30"
+        opacity="0.2"
+      />
+      <line
+        ref="maxHandle"
+        class="draggable"
+        name="max"
+        stroke="#000"
+        stroke-width="5"
+        x1="5"
+        x2="5"
+        y1="0"
+        y2="30"
+      />
+    </svg>
+    <input
+      v-if="histogram && autoRange === undefined"
+      type="number"
+      class="input-80 max-input"
+      :max="histogram.max"
+      :min="currentMin"
+      :value="currentMax || parseFloat(histogram.max.toFixed(2))"
+      @input="(e) => updateFromInput('max', e.target.value)"
+    >
   </div>
 </template>
 
@@ -383,17 +429,27 @@ export default {
     width: 100%;
 }
 .canvas {
-    width: calc(100% - 160px);
+    position: absolute;
+    left: 90px;
+    width: calc(100% - 180px);
     max-height: 100%;
     padding: 0px 5px;
 }
 .handles-svg {
     position: absolute;
-    left: 80px;
-    width: calc(100% - 160px);
+    left: 90px;
+    width: calc(100% - 180px);
     height: calc(100% + 15px);
 }
 .draggable {
   cursor: move;
+}
+.min-input {
+    position: absolute;
+    left: 0;
+}
+.max-input {
+    position: absolute;
+    right: 0;
 }
 </style>
