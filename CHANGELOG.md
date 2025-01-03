@@ -13,6 +13,7 @@
 ### Changes
 
 - Suppress a warning about nd2 files that we can't do anything about ([#1749](../../pull/1749))
+- Zero empty areas in tile frames ([#1752](../../pull/1752))
 
 ### Bug Fixes
 
