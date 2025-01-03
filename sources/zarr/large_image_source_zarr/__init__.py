@@ -158,6 +158,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frameValues = None
         self._frameAxes = None
         self._frameUnits = None
+        if not self._created:
+            try:
+                self._validateZarr()
+            except Exception:
+                pass
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):
@@ -363,6 +368,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if axes_values.get(a) is not None
             ]
             self._frameUnits = {k: axes_units.get(k) for k in self.frameAxes if k in axes_units}
+            self._frameValues = None
             frame_values_shape = [baseArray.shape[self._axes[a]] for a in self.frameAxes]
             frame_values_shape.append(len(frame_values_shape))
             frame_values = np.empty(frame_values_shape, dtype=object)
@@ -387,7 +393,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                         if name:
                                             slicing[self._frameAxes.index(name)] = j
                             frame_values[tuple(slicing)] = value
-            self._frameValues = frame_values
+            if frame_values.size > 0:
+                self._frameValues = frame_values
 
     def _validateZarr(self):
         """
@@ -645,6 +652,50 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         return tile, mask, placement, axes
 
+    def _updateFrameValues(self, frame_values, placement, axes, new_axes, new_dims):
+        self._frameAxes = [
+            a for a in axes
+            if a in frame_values or
+            (self.frameAxes is not None and a in self.frameAxes)
+        ]
+        frames_shape = [new_dims[a] for a in self.frameAxes]
+        frames_shape.append(len(frames_shape))
+        if self.frameValues is None:
+            self._frameValues = np.empty(frames_shape, dtype=object)
+        elif self.frameValues.shape != frames_shape:
+            if len(new_axes):
+                for i in new_axes.values():
+                    self._frameValues = np.expand_dims(self._frameValues, axis=i)
+            frame_padding = [
+                (0, s - self.frameValues.shape[i])
+                for i, s in enumerate(frames_shape)
+            ]
+            frame_padding[-1] = (0, 0)
+            self._frameValues = np.pad(self._frameValues, frame_padding)
+            for i in new_axes.values():
+                self._frameValues = np.insert(
+                    self._frameValues, i, 0, axis=len(frames_shape) - 1,
+                )
+        current_frame_slice = tuple(placement.get(a) for a in self.frameAxes)
+        for i, k in enumerate(self.frameAxes):
+            self.frameValues[(*current_frame_slice, i)] = frame_values.get(k)
+
+    def _resizeImage(self, arr, new_shape, new_axes, chunking):
+        if new_shape != arr.shape:
+            if len(new_axes):
+                for i in new_axes.values():
+                    arr = np.expand_dims(arr, axis=i)
+                arr = np.pad(
+                    arr,
+                    [(0, s - arr.shape[i]) for i, s in enumerate(new_shape)],
+                )
+                new_arr = zarr.empty(new_shape, chunks=chunking, dtype=arr.dtype)
+                new_arr[:] = arr[:]
+                arr = new_arr
+            else:
+                arr.resize(*new_shape)
+        return arr
+
     def addTile(self, tile, x=0, y=0, mask=None, axes=None, **kwargs):
         """
         Add a numpy or image tile to the image, expanding the image as needed
@@ -665,6 +716,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ``level`` is a reserved word and not permitted for an axis name.
         """
         self._checkEditable()
+        try:
+            # read any info written by other processes
+            self._validateZarr()
+        except TileSourceError:
+            pass
+        updateMetadata = False
         store_path = str(kwargs.pop('level', 0))
         placement = {
             'x': x,
@@ -678,9 +735,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
 
         with self._threadLock and self._processLock:
+            old_axes = self._axes if hasattr(self, '_axes') else {}
             self._axes = {k: i for i, k in enumerate(axes)}
+            new_axes = {k: i for k, i in self._axes.items() if k not in old_axes}
             new_dims = {
                 a: max(
+                    self._axisCounts.get(a, 0) if hasattr(self, '_axisCounts') else 0,
                     self._dims.get(store_path, {}).get(a, 0),
                     placement.get(a, 0) + tile.shape[i],
                 )
@@ -694,23 +754,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
             if len(frame_values.keys()) > 0:
                 # update self.frameValues
-                self.frameAxes = [
-                    a for a in axes
-                    if a in frame_values or
-                    (self.frameAxes is not None and a in self.frameAxes)
-                ]
-                frames_shape = [new_dims[a] for a in self.frameAxes]
-                frames_shape.append(len(frames_shape))
-                if self.frameValues is None:
-                    self.frameValues = np.empty(frames_shape, dtype=object)
-                elif self.frameValues.shape != frames_shape:
-                    self.frameValues = np.pad(
-                        self.frameValues,
-                        [(0, s - self.frameValues.shape[i]) for i, s in enumerate(frames_shape)],
-                    )
-                current_frame_slice = tuple(placement.get(a) for a in self.frameAxes)
-                for i, k in enumerate(self.frameAxes):
-                    self.frameValues[(*current_frame_slice, i)] = frame_values.get(k)
+                updateMetadata = True
+                self._updateFrameValues(frame_values, placement, axes, new_axes, new_dims)
 
             current_arrays = dict(self._zarr.arrays())
             if store_path == '0':
@@ -728,16 +773,18 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ])
             else:
                 arr = current_arrays[store_path]
-                new_shape = tuple(max(v, arr.shape[i]) for i, v in enumerate(new_dims.values()))
-                if new_shape != arr.shape:
-                    arr.resize(*new_shape)
-                    if arr.chunks[-1] != new_dims.get('s'):
-                        # rechunk if length of samples axis changes
-                        chunking = tuple([
-                            self._tileSize if a in ['x', 'y'] else
-                            new_dims.get('s') if a == 's' else 1
-                            for a in axes
-                        ])
+                new_shape = tuple(
+                    max(v, arr.shape[old_axes[k]] if k in old_axes else 0)
+                    for k, v in new_dims.items()
+                )
+                if arr.chunks[-1] != new_dims.get('s') or len(new_axes):
+                    # rechunk if length of samples axis changed or any new axis added
+                    chunking = tuple([
+                        self._tileSize if a in ['x', 'y'] else
+                        new_dims.get('s') if a == 's' else 1
+                        for a in axes
+                    ])
+                arr = self._resizeImage(arr, new_shape, new_axes, chunking)
 
             if mask is not None:
                 arr[placement_slices] = np.where(mask, tile, arr[placement_slices])
@@ -767,6 +814,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._levels = None
                 self.levels = int(max(1, math.ceil(math.log(max(
                     self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
+                updateMetadata = True
+        if updateMetadata:
+            self._writeInternalMetadata()
 
     def addAssociatedImage(self, image, imageKey=None):
         """
@@ -1002,6 +1052,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def frameAxes(self, axes):
         self._checkEditable()
         self._frameAxes = axes
+        self._writeInternalMetadata()
 
     @property
     def frameUnits(self):
@@ -1034,6 +1085,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             err = f'frameValues must have {len(self.frameAxes) + 1} dimensions.'
             raise ValueError(err)
         self._frameValues = a
+        self._writeInternalMetadata()
 
     def _generateDownsampledLevels(self, resample_method):
         self._checkEditable()
