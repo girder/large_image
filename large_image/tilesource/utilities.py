@@ -885,7 +885,7 @@ def _addSubimageToImage(
     if image is None:
         if (x, y, width, height) == (0, 0, subimage.shape[1], subimage.shape[0]):
             return subimage
-        image = np.empty(
+        image = np.zeros(
             (height, width, subimage.shape[2]),  # type: ignore[misc]
             dtype=subimage.dtype)
     elif len(image.shape) != len(subimage.shape) or image.shape[-1] != subimage.shape[-1]:
