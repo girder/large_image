@@ -141,7 +141,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 continue
             # If a layer is a multiple of the tile size, the number of tiles
             # should be a power of two rounded up from the primary.
-            if (not (td.imageWidth % td.tileWidth) and not (td.imageHeight % td.tileHeight)):
+            if not (td.imageWidth % td.tileWidth) and not (td.imageHeight % td.tileHeight):
                 htw = highest.imageWidth // td.tileWidth
                 hth = highest.imageHeight // td.tileHeight
                 ttw = td.imageWidth // td.tileWidth
@@ -695,8 +695,7 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 except Exception:
                     if sparseFallback:
                         raise IOTiffError('Missing z level %d' % z)
-                    else:
-                        raise
+                    raise
             else:
                 tile = dir.getTile(x, y, asarray=numpyAllowed == 'always')
                 format = 'JPEG'

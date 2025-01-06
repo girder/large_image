@@ -44,12 +44,9 @@ class TileIterator:
     def __next__(self) -> LazyTileDict:
         if self._iter is None:
             raise StopIteration
-        try:
-            tile = next(self._iter)
-            tile.setFormat(self.format, bool(self.resample), self._kwargs)
-            return tile
-        except StopIteration:
-            raise
+        tile = next(self._iter)
+        tile.setFormat(self.format, bool(self.resample), self._kwargs)
+        return tile
 
     def __repr__(self) -> str:
         repr = f'TileIterator<{self.source}'

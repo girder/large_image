@@ -228,8 +228,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                 except Exception:
                     continue
                 if (dir is not None and
-                        (dir.tileWidth == base.tileWidth or dir.tileWidth == dir.imageWidth) and
-                        (dir.tileHeight == base.tileHeight or dir.tileHeight == dir.imageHeight) and
+                        (dir.tileWidth in {base.tileWidth, dir.imageWidth}) and
+                        (dir.tileHeight in {base.tileHeight, dir.imageHeight}) and
                         abs(dir.imageWidth * scale - base.imageWidth) <= scale and
                         abs(dir.imageHeight * scale - base.imageHeight) <= scale):
                     filled[z] = subdir
@@ -410,8 +410,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         if subdir:
             scale = int(2 ** subdir)
             if (dir is None or
-                    (dir.tileWidth != self.tileWidth and dir.tileWidth != dir.imageWidth) or
-                    (dir.tileHeight != self.tileHeight and dir.tileHeight != dir.imageHeight) or
+                    (dir.tileWidth not in {self.tileWidth, dir.imageWidth}) or
+                    (dir.tileHeight not in {self.tileHeight, dir.imageHeight}) or
                     abs(dir.imageWidth * scale - self.sizeX) > scale or
                     abs(dir.imageHeight * scale - self.sizeY) > scale):
                 return super().getTile(

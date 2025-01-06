@@ -89,9 +89,8 @@ def combine_rows(results):
                     result['tilesource'],
                 ]
                 break
-            else:
-                row_key_index += 1
-                row_key = f'{row_base_key}_{row_key_index}'
+            row_key_index += 1
+            row_key = f'{row_base_key}_{row_key_index}'
         if row_key not in table_rows:
             table_rows[row_key] = result
     return table_rows

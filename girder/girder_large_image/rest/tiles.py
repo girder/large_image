@@ -118,9 +118,9 @@ def _pickleParams(params):
     if not str(params.get('encoding')).startswith('pickle'):
         return None
     params['format'] = large_image.constants.TILE_FORMAT_NUMPY
-    pickle = params['encoding'].split(':')[-1]
+    pickl = params['encoding'].split(':')[-1]
     del params['encoding']
-    return int(pickle) or 4 if pickle.isdigit() else 4
+    return int(pickl) or 4 if pickl.isdigit() else 4
 
 
 def _pickleOutput(data, protocol):
@@ -764,7 +764,7 @@ class TilesItemResource(ItemResource):
             ('contentDispositionFileName', str),
         ])
         _handleETag('getTilesThumbnail', item, params)
-        pickle = _pickleParams(params)
+        pickl = _pickleParams(params)
         try:
             result = self.imageItemModel.getThumbnail(item, **params)
         except TileGeneralError as e:
@@ -774,8 +774,8 @@ class TilesItemResource(ItemResource):
         if not isinstance(result, tuple):
             return result
         thumbData, thumbMime = result
-        if pickle:
-            thumbData, thumbMime = _pickleOutput(thumbData, pickle)
+        if pickl:
+            thumbData, thumbMime = _pickleOutput(thumbData, pickl)
         self._setContentDisposition(
             item, params.get('contentDisposition'), thumbMime, 'thumbnail',
             params.get('contentDispositionFilename'))
@@ -904,13 +904,13 @@ class TilesItemResource(ItemResource):
             ('contentDispositionFileName', str),
         ])
         _handleETag('getTilesRegion', item, params)
-        pickle = _pickleParams(params)
+        pickl = _pickleParams(params)
         setResponseTimeLimit(86400)
         try:
             regionData, regionMime = self.imageItemModel.getRegion(
                 item, **params)
-            if pickle:
-                regionData, regionMime = _pickleOutput(regionData, pickle)
+            if pickl:
+                regionData, regionMime = _pickleOutput(regionData, pickl)
         except TileGeneralError as e:
             raise RestException(e.args[0])
         except ValueError as e:
@@ -1332,7 +1332,7 @@ class TilesItemResource(ItemResource):
 
         params = self._parseParams(params, True, self._tileFramesParams)
         _handleETag('tileFrames', item, params)
-        pickle = _pickleParams(params)
+        pickl = _pickleParams(params)
         if 'frameList' in params:
             params['frameList'] = [
                 int(f.strip()) for f in str(params['frameList']).lstrip(
@@ -1348,8 +1348,8 @@ class TilesItemResource(ItemResource):
         if not isinstance(result, tuple):
             return result
         regionData, regionMime = result
-        if pickle:
-            regionData, regionMime = _pickleOutput(regionData, pickle)
+        if pickl:
+            regionData, regionMime = _pickleOutput(regionData, pickl)
         self._setContentDisposition(
             item, params.get('contentDisposition'), regionMime, 'tileframes',
             params.get('contentDispositionFilename'))

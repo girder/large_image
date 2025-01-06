@@ -447,12 +447,11 @@ class TiledTiffDirectory:
 
         if tileByteCountsLibtiffType == libtiff_ctypes.TIFFDataType.TIFF_LONG8:
             return ctypes.c_uint64
-        elif tileByteCountsLibtiffType == \
+        if tileByteCountsLibtiffType == \
                 libtiff_ctypes.TIFFDataType.TIFF_SHORT:
             return ctypes.c_uint16
-        else:
-            raise IOTiffError(
-                'Invalid type for TIFFTAG_TILEBYTECOUNTS: %s' % tileByteCountsLibtiffType)
+        raise IOTiffError(
+            'Invalid type for TIFFTAG_TILEBYTECOUNTS: %s' % tileByteCountsLibtiffType)
 
     def _getJpegFrameSize(self, tileNum):
         """
@@ -529,10 +528,10 @@ class TiledTiffDirectory:
         if bytesRead == -1:
             msg = 'Failed to read raw tile'
             raise IOTiffError(msg)
-        elif bytesRead < rawTileSize:
+        if bytesRead < rawTileSize:
             msg = 'Buffer underflow when reading tile'
             raise IOTiffError(msg)
-        elif bytesRead > rawTileSize:
+        if bytesRead > rawTileSize:
             # It's unlikely that this will ever occur, but incomplete reads will
             # be checked for by looking for the JPEG end marker
             msg = 'Buffer overflow when reading tile'
@@ -838,7 +837,7 @@ class TiledTiffDirectory:
         self._embeddedImages = {}
 
         if not meta:
-            return
+            return None
         if not isinstance(meta, str):
             meta = meta.decode(errors='ignore')
         try:
@@ -860,7 +859,7 @@ class TiledTiffDirectory:
                         meta.split('|MPP = ', 1)[1].split('|')[0].strip()) * 0.001
                 except Exception:
                     pass
-            return
+            return None
         try:
             image = xml.find(
                 ".//DataObject[@ObjectType='DPScannedImage']")

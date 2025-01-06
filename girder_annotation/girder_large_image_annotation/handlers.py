@@ -50,7 +50,7 @@ def _itemFromEvent(event, identifierEnding, itemAccessLevel=AccessType.READ):
             reference['uuid'] = str(uuid.uuid4())
         if 'userId' not in reference or 'itemId' not in reference or 'fileId' not in reference:
             logger.error('Reference does not contain required information.')
-            return
+            return None
 
         userId = reference['userId']
         imageId = reference['fileId']

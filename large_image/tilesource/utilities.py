@@ -276,8 +276,7 @@ def _imageToNumpy(
         if len(image.shape) == 3:
             mode = modesBySize[(image.shape[2] - 1) if image.shape[2] <= 4 else 3]
             return image, mode
-        else:
-            mode = 'L'
+        mode = 'L'
     if len(image.shape) == 2:
         image = np.resize(image, (image.shape[0], image.shape[1], 1))
     return image, mode
@@ -335,7 +334,7 @@ def _vipsCast(image: Any, mustBe8Bit: bool = False) -> Any:
     if image.format not in formats or (image.format == pyvips.BandFormat.USHORT and not mustBe8Bit):
         return image
     target, offset, multiplier = formats[image.format]
-    if image.format == pyvips.BandFormat.DOUBLE or image.format == pyvips.BandFormat.FLOAT:
+    if image.format in {pyvips.BandFormat.DOUBLE, pyvips.BandFormat.FLOAT}:
         maxVal = image.max()
         # These thresholds are higher than 256 and 65536 because bicubic and
         # other interpolations can cause value spikes
@@ -388,7 +387,8 @@ def _rasterioParameters(
 
     # add the remaining options
     options.update(tiled=True, bigtiff='IF_SAFER')
-    'predictor' not in options or options.update(predictor=predictor[str(options['predictor'])])
+    if 'predictor' in options:
+        options.update(predictor=predictor[str(options['predictor'])])
 
     return options
 
@@ -997,7 +997,7 @@ def _calculateWidthHeight(
     scaledHeight = max(1, int(regionHeight * cast(float, width) / regionWidth))
     if scaledWidth == width or (
             cast(float, width) * regionHeight > cast(float, height) * regionWidth and
-            not scaledHeight == height):
+            scaledHeight != height):
         scale = float(regionHeight) / cast(float, height)
         width = scaledWidth
     else:

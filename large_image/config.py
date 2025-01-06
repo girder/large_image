@@ -135,7 +135,7 @@ def _ignoreSourceNames(
     """
     ignored_names = getConfig('source_%s_ignored_names' % configKey) or default
     if not ignored_names or not os.path.isfile(path):
-        return None
+        return
     if re.search(ignored_names, os.path.basename(path), flags=re.IGNORECASE):
         raise exceptions.TileSourceError('File will not be opened by %s reader' % configKey)
 
@@ -157,12 +157,8 @@ def cpu_count(logical: bool = True) -> int:
         count = min(count, len(os.sched_getaffinity(0)))
     except AttributeError:
         pass
-    try:
-        import psutil
-
+    if HAS_PSUTIL:
         count = min(count, psutil.cpu_count(logical) or count)
-    except ImportError:
-        pass
     return max(1, count)
 
 

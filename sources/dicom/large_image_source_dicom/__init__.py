@@ -186,9 +186,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if isinstance(path, dict):
             # Use the DICOMweb open method
             return self._open_wsi_dicomweb(path)
-        else:
-            # Use the regular open method
-            return wsidicom.WsiDicom.open(path)
+        # Use the regular open method
+        return wsidicom.WsiDicom.open(path)
 
     def _open_wsi_dicomweb(self, info):
         # These are the required keys in the info dict
@@ -333,22 +332,21 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             study_uid = self._dicom.uids.study_instance
             series_uid = self._dicom.uids.series_instance
             return get_dicomweb_metadata(client, study_uid, series_uid)
-        else:
-            # Find the first volume instance and extract the metadata
-            volume = None
-            for level in self._dicom.pyramids[0]:
-                for ds in level.datasets:
-                    if ds.image_type.value == 'VOLUME':
-                        volume = ds
-                        break
-
-                if volume:
+        # Find the first volume instance and extract the metadata
+        volume = None
+        for level in self._dicom.pyramids[0]:
+            for ds in level.datasets:
+                if ds.image_type.value == 'VOLUME':
+                    volume = ds
                     break
 
-            if not volume:
-                return None
+            if volume:
+                break
 
-            return extract_dicom_metadata(volume)
+        if not volume:
+            return None
+
+        return extract_dicom_metadata(volume)
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
