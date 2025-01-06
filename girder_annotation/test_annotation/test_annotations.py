@@ -197,7 +197,7 @@ class TestLargeImageAnnotation:
         versions = list(Annotation().versionList(saved2['_id']))
         assert len(versions) == 2
         # If we save with an old version, we should get the original id back
-        assert not versions[1]['_id'] == loaded['_id']
+        assert versions[1]['_id'] != loaded['_id']
         saved3 = Annotation().save(versions[1])
         assert saved3['_id'] == loaded['_id']
 

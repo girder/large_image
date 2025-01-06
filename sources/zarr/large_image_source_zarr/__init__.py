@@ -567,7 +567,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :return: the image in PIL format or None.
         """
         if imageKey not in self._associatedImages:
-            return
+            return None
         group, arr = self._associatedImages[imageKey]
         axes = self._getGeneralAxes(arr)
         trans = [idx for idx in range(len(arr.shape))

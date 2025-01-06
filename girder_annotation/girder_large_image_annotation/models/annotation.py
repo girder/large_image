@@ -842,7 +842,7 @@ class Annotation(AccessControlledModel):
         """
         annotation = super().load(id, *args, **kwargs)
         if annotation is None:
-            return
+            return None
 
         if getElements:
             # It is possible that we are trying to read the elements of an
@@ -1108,7 +1108,7 @@ class Annotation(AccessControlledModel):
                     element['id'] = str(element['id'])
                 # Handle elements with large arrays by checking that a
                 # conversion to a numpy array works
-                keys = None
+                keys = {}
                 if len(element.get('points', element.get('values', []))) > VALIDATE_ARRAY_LENGTH:
                     key = 'points' if 'points' in element else 'values'
                     try:
@@ -1230,7 +1230,7 @@ class Annotation(AccessControlledModel):
                 version = oldVersions[1]['_version']
         annotation = Annotation().getVersion(id, version, user, force=force)
         if annotation is None:
-            return
+            return None
         # If this is the most recent (active) annotation, don't do anything.
         # Otherwise, revert it.
         if not annotation.get('_active', True):

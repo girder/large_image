@@ -183,7 +183,7 @@ class TileSource(IPyLeafletMixin):
         We reconstruct our state via the creation caused by the inverse of
         reduce, so we don't report state here.
         """
-        return None
+        return
 
     def __reduce__(self) -> Tuple[functools.partial, Tuple[str]]:
         """
@@ -192,7 +192,6 @@ class TileSource(IPyLeafletMixin):
         Reduce can pass the args but not the kwargs, so use a partial class
         call to reconstruct kwargs.
         """
-        import functools
         import pickle
 
         if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
@@ -316,7 +315,7 @@ class TileSource(IPyLeafletMixin):
             kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
-            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
+            '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
 
     def getState(self) -> str:
         """
@@ -2481,7 +2480,7 @@ class TileSource(IPyLeafletMixin):
         width = kwargs.get('width')
         height = kwargs.get('height')
         if width or height:
-            width, height, calcScale = utilities._calculateWidthHeight(
+            width, height, _ = utilities._calculateWidthHeight(
                 width, height, imageWidth, imageHeight)
             image = image.resize(
                 (width, height),
@@ -2561,7 +2560,7 @@ class FileTileSource(TileSource):
             args[0], kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
-            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
+            '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
 
     def getState(self) -> str:
         if hasattr(self, '_classkey'):

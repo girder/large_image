@@ -712,7 +712,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         info = self._metadata['seriesAssociatedImages'].get(imageKey)
         if info is None:
-            return
+            return None
         series = info['seriesNum']
         with self._tileLock:
             try:

@@ -934,7 +934,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             None if the associated image doesn't exist.
         """
         if imageKey not in self._associatedImages:
-            return
+            return None
         source = self._sources[self._associatedImages[imageKey]['sourcenum']]
         ts = self._openSource(source)
         return ts.getAssociatedImage(self._associatedImages[imageKey]['key'], *args, **kwargs)

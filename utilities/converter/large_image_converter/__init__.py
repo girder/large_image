@@ -80,7 +80,7 @@ def _data_from_large_image(path, outputPath, **kwargs):
         try:
             ts = large_image.open(path, noCache=True)
         except Exception:
-            return
+            return None
     else:
         import urllib.parse
 
@@ -285,7 +285,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
     adjusted = format_hook('modify_vips_image_before_output', image, convertParams, **kwargs)
     if adjusted is False:
         return
-    elif adjusted:
+    if adjusted:
         image = adjusted
     if (convertParams['compression'] not in {'jpeg'} or
             image.interpretation != pyvips.Interpretation.SCRGB):
@@ -936,7 +936,7 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
         logger.debug('Is file geospatial: %r', geospatial)
     suffix = format_hook('adjust_params', geospatial, kwargs, **kwargs)
     if suffix is False:
-        return
+        return None
     suffix = suffix or ('.tiff' if not geospatial else '.geo.tiff')
     if not outputPath:
         outputPath = os.path.splitext(inputPath)[0] + suffix
@@ -953,7 +953,7 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
     except Exception:
         tiffinfo = None
     eightbit = _is_eightbit(inputPath, tiffinfo)
-    if not kwargs.get('compression', None):
+    if not kwargs.get('compression'):
         kwargs = kwargs.copy()
         lossy = _is_lossy(inputPath, tiffinfo)
         logger.debug('Is file lossy: %r', lossy)

@@ -112,7 +112,7 @@ class IPyLeafletMixin:
             base_url = f'http://{self.JUPYTER_HOST}:{port}'
 
         # Use repr in URL params to prevent caching across sources/styles
-        endpoint = f'tile?z={{z}}&x={{x}}&y={{y}}&encoding=png&repr={self.__repr__()}'
+        endpoint = f'tile?z={{z}}&x={{x}}&y={{y}}&encoding=png&repr={self!r}'
         return self._map.make_layer(
             self.metadata,  # type: ignore[attr-defined]
             f'{base_url}/{endpoint}')

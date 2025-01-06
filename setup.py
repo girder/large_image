@@ -17,8 +17,7 @@ def prerelease_local_scheme(version):
 
     if os.getenv('CIRCLE_BRANCH') in ('master', ):
         return ''
-    else:
-        return get_local_node_and_date(version)
+    return get_local_node_and_date(version)
 
 
 try:

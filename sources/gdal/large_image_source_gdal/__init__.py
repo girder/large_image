@@ -296,7 +296,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             if (self.dataset.GetGeoTransform(can_return_null=True) or
                     hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}):
                 return 'epsg:4326'
-            return
+            return None
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
         return proj.ExportToProj4()
@@ -328,7 +328,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if isinstance(proj, bytes):
             proj = proj.decode()
         if not isinstance(proj, str):
-            return
+            return None
         if proj.lower().startswith('proj4:'):
             proj = proj.split(':', 1)[1]
         if proj.lower().startswith('epsg:'):
@@ -464,7 +464,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             nativeSrs = self.getProj4String()
             if not nativeSrs or not gt:
                 self._bounds[srs] = None
-                return
+                return None
             bounds = {
                 'll': {
                     'x': gt[0] + self.sourceSizeY * gt[2],
@@ -945,7 +945,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         """
         from osgeo_utils.samples.validate_cloud_optimized_geotiff import validate
 
-        warnings, errors, details = validate(
+        warnings, errors, _ = validate(
             self._largeImagePath,
             check_tiled=check_tiled,
             full_check=full_check,

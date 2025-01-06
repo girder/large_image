@@ -380,7 +380,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # set bounds to none and exit if no crs is set for the dataset
         if not srcCrs:
             self._bounds[strDstCrs] = None
-            return
+            return None
 
         # compute the corner coordinates using the affine transformation as
         # longitudes and latitudes. Cannot only rely on bounds because of

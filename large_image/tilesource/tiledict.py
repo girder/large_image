@@ -254,8 +254,7 @@ class LazyTileDict(dict):
                     tileData = pilData if pilData is not None else _imageToPIL(tileData)
                     tileFormat = TILE_FORMAT_PIL
                 elif TILE_FORMAT_IMAGE in self.format:
-                    tileData, mimeType = _encodeImage(
-                        tileData, **self.imageKwargs)
+                    tileData, _ = _encodeImage(tileData, **self.imageKwargs)
                     tileFormat = TILE_FORMAT_IMAGE
                 if tileFormat not in self.format:
                     raise exceptions.TileSourceError(

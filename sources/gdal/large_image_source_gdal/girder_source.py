@@ -53,7 +53,7 @@ class GDALGirderTileSource(GDALFileTileSource, GirderTileSource):
                     not largeImageFile.get('assetstoreId') and
                     re.match(r'(http(|s)|ftp)://', largeImageFile['linkUrl'])):
                 largeImagePath = '/vsicurl/' + largeImageFile['linkUrl']
-                logger.info('Using %s' % largeImagePath)
+                logger.info('Using %s', largeImagePath)
                 return largeImagePath
         except Exception:
             pass
