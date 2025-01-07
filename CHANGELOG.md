@@ -2,6 +2,10 @@
 
 ## 1.30.6
 
+### Features
+
+- Allow gdal to read and rasterize vector formats ([#1763](../../pull/1763))
+
 ### Improvements
 
 - Harden the geojson annotation parser ([#1743](../../pull/1743))

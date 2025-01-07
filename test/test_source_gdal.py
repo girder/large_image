@@ -142,3 +142,10 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
         assert tileMetadata['bounds']['ymin'] == pytest.approx(2149548, 1)
         assert '+proj=aea' in tileMetadata['bounds']['srs']
         region.unlink()
+
+    def testVectorFormat(self):
+        testDir = os.path.dirname(os.path.realpath(__file__))
+        imagePath = os.path.join(testDir, 'test_files', 'sample.geojson')
+        source = self.basemodule.open(imagePath)
+        assert source.sizeX == 267
+        assert source.sizeY == 119
