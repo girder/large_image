@@ -921,7 +921,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             raise exc
         return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
 
-    def validateCOG(self, check_tiled=True, full_check=False, strict=True, warn=True):
+    def validateCOG(self, check_tiled=True, full_check=False, strict=True, warn=True) -> bool:
         """Check if this image is a valid Cloud Optimized GeoTiff.
 
         This will raise a :class:`large_image.exceptions.TileSourceInefficientError`
@@ -946,7 +946,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         from osgeo_utils.samples.validate_cloud_optimized_geotiff import validate
 
         warnings, errors, _ = validate(
-            self._largeImagePath,
+            self.dataset,
             check_tiled=check_tiled,
             full_check=full_check,
         )
