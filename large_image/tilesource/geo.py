@@ -29,7 +29,8 @@ def make_vsi(url: Union[str, pathlib.Path, Dict[Any, Any]], **options) -> str:
         gdal_options = {
             'url': str(url),
             'use_head': 'no',
-            'list_dir': 'no',
+            'list_dir': 'no',  # don't search for adjacent files
+            'empty_dir': 'yes',  # don't probe for sidecar files
         }
         gdal_options.update(options)
         vsi = f'/vsicurl?{urlencode(gdal_options)}'
