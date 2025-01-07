@@ -22,6 +22,7 @@
 ### Bug Fixes
 
 - Harden the tile cache between python versions and numpy versions ([#1751](../../pull/1751))
+- Cast histogram ranges to floats ([#1762](../../pull/1762))
 
 ## 1.30.5
 
