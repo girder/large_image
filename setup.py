@@ -75,7 +75,7 @@ extraReqs['all'] = list(set(itertools.chain.from_iterable(extraReqs.values())) |
 # The common packages are ones that will install on Ubuntu, OSX, and Windows
 # from pypi with all needed dependencies.
 extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for key in {
-    'memcached', 'redis', 'colormaps', 'performance',
+    'colormaps', 'performance',
     'deepzoom', 'dicom', 'multi', 'nd2', 'openslide', 'test', 'tifffile',
     'zarr',
 })) | {
