@@ -48,6 +48,7 @@ gdal = None
 gdal_array = None
 gdalconst = None
 osr = None
+ogr = None
 pyproj = None
 
 
@@ -89,7 +90,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'gdal'
 
-    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
+    VECTOR_IMAGE_SIZE = 256 * 1024
+
+    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -115,8 +118,10 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self._bounds = {}
         self._largeImagePath = self._getLargeImagePath()
         try:
-            self.dataset = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
-        except (RuntimeError, UnicodeDecodeError):
+            self.dataset = gdal.OpenEx(self._largeImagePath, gdalconst.GA_ReadOnly)
+            if not self.dataset.RasterCount and self.dataset.GetLayer() is not None:
+                self.dataset = self._openVectorSource(self.dataset)
+        except (RuntimeError, UnicodeDecodeError, OverflowError):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = 'File cannot be opened via GDAL'
@@ -161,6 +166,49 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self._getPopulatedLevels()
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
+
+    def _openVectorSource(self, vec):
+        # This is mainly to speed up back-to-back canRead and open calls
+        if hasattr(self.__class__, '_openVectorLock') and hasattr(self.__class__, '_lastVectorDS'):
+            with self.__class__._openVectorLock:
+                if self.__class__._lastVectorDS[0] == self._largeImagePath:
+                    return self.__class__._lastVectorDS[1]
+        layer = vec.GetLayer()
+        x_min, x_max, y_min, y_max = layer.GetExtent()
+        try:
+            proj = layer.GetSpatialRef().ExportToWkt()
+            if (layer.GetSpatialRef().ExportToProj4() == '+proj=longlat +datum=WGS84 +no_defs' and
+                    (max(abs(x_min), abs(x_max)) > 180 or max(abs(y_min), abs(y_max)) > 90)):
+                proj = None
+        except Exception:
+            proj = None
+        # Define raster parameters
+        pixel_size = max(x_max - x_min, y_max - y_min) / self.VECTOR_IMAGE_SIZE
+        if not pixel_size:
+            msg = 'Cannot determine dimensions'
+            raise RuntimeError(msg)
+        if not proj and pixel_size < 1:
+            pixel_size = 1
+        x_res = int((x_max - x_min) / pixel_size)
+        y_res = int((y_max - y_min) / pixel_size)
+
+        # Create an in-memory raster dataset
+        with tempfile.NamedTemporaryFile(suffix='.tif', delete=True) as tmpfile:
+            drv = gdal.GetDriverByName('Gtiff')
+            ds = drv.Create(
+                tmpfile.name, x_res, y_res, 1, gdal.GDT_Byte,
+                options=['COMPRESS=DEFLATE', 'PREDICTOR=2', 'TILED=YES',
+                         'SPARSE_OK=TRUE', 'BIGTIFF=IF_SAFER'])
+            # Set raster geotransform and projection
+            ds.SetGeoTransform((x_min, pixel_size, 0, y_min, 0, pixel_size))
+            if proj:
+                ds.SetProjection(proj)
+            gdal.RasterizeLayer(ds, [1], layer, burn_values=[255])
+            if not hasattr(self.__class__, '_openVectorLock'):
+                self.__class__._openVectorLock = threading.RLock()
+            with self.__class__._openVectorLock:
+                self.__class__._lastVectorDS = (self._largeImagePath, ds)
+            return ds
 
     def _getDriver(self):
         """
@@ -1000,7 +1048,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             cls.mimeTypes = cls.mimeTypes.copy()
             for idx in range(gdal.GetDriverCount()):
                 drv = gdal.GetDriver(idx)
-                if drv.GetMetadataItem(gdal.DCAP_RASTER):
+                if drv.GetMetadataItem(gdal.DCAP_RASTER) or drv.GetMetadataItem(gdal.DCAP_VECTOR):
                     drvexts = drv.GetMetadataItem(gdal.DMD_EXTENSIONS)
                     if drvexts is not None:
                         for ext in drvexts.split():

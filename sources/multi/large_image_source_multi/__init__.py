@@ -457,7 +457,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 with builtins.open(self._largeImagePath) as fptr:
                     start = fptr.read(1024).strip()
-                    if start[:1] not in ('{', '#', '-') and (start[:1] < 'a' or start[:1] > 'z'):
+                    if (start[:1] not in ('{', '#', '-') and
+                            (start[:1] < 'a' or start[:1] > 'z')) or 'FeatureCollection' in start:
                         msg = 'File cannot be opened via multi-source reader.'
                         raise TileSourceError(msg)
                     fptr.seek(0)
