@@ -901,8 +901,7 @@ class TiledTiffDirectory:
         Use the underlying _tiffFile to read an image.  But, if it is in a jp2k
         encoding, read the raw data and convert it.
         """
-        if self._tiffInfo.get('compression') not in {
-                libtiff_ctypes.COMPRESSION_JPEG, 33003, 33004, 33005, 34712}:
+        if self._tiffInfo.get('compression') not in {33003, 33004, 33005, 34712}:
             return self._tiffFile.read_image()
         output = None
         for yidx, y in enumerate(range(0, self.imageHeight, self.tileHeight)):
