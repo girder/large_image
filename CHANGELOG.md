@@ -18,6 +18,7 @@
 - Zero empty areas in tile frames ([#1752](../../pull/1752))
 - Don't include cache libraries in [common] deployments ([#1758](../../pull/1758))
 - Specify empty_dir=yes when constructing vsicurl parameters ([#1760](../../pull/1760))
+- Update how some associated images are read in tiff files ([#1763](../../pull/1763))
 
 ### Bug Fixes
 
