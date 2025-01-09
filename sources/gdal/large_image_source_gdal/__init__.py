@@ -99,7 +99,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'gdal'
 
-    VECTOR_IMAGE_SIZE = 256 * 1024
+    VECTOR_IMAGE_SIZE = 256 * 1024  # for vector files without projections
+    PROJECTED_VECTOR_IMAGE_SIZE = 32 * 1024  # if the file has a projection
 
     def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):  # noqa
         """
@@ -155,7 +156,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         is_netcdf = self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
-        except RuntimeError as exc:
+        except (RuntimeError, ZeroDivisionError) as exc:
             raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
         if not self.sizeX or not self.sizeY:
             msg = 'File cannot be opened via GDAL (no size)'
@@ -192,7 +193,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             proj = None
         # Define raster parameters
-        pixel_size = max(x_max - x_min, y_max - y_min) / self.VECTOR_IMAGE_SIZE
+        pixel_size = max(x_max - x_min, y_max - y_min) / (
+            self.VECTOR_IMAGE_SIZE if proj is None else self.PROJECTED_VECTOR_IMAGE_SIZE)
         if not pixel_size:
             msg = 'Cannot determine dimensions'
             raise RuntimeError(msg)
@@ -212,6 +214,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             ds.SetGeoTransform((x_min, pixel_size, 0, y_min, 0, pixel_size))
             if proj:
                 ds.SetProjection(proj)
+            msg = f'Rasterizing a vector layer to {x_res} x {y_res}'
+            self.logger.info(msg)
             gdal.RasterizeLayer(ds, [1], layer, burn_values=[255])
             if not hasattr(self.__class__, '_openVectorLock'):
                 self.__class__._openVectorLock = threading.RLock()

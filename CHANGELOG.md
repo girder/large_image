@@ -16,6 +16,7 @@
 - Improve writing to zarr sinks from multiple processes ([#1713](../../pull/1713))
 - Slightly faster GDAL validateCOG ([#1761](../../pull/1761))
 - Improve clearing caches ([#1766](../../pull/1766))
+- Harden many of the source reads ([#1768](../../pull/1768))
 
 ### Changes
 

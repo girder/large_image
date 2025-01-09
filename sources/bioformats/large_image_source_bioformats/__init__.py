@@ -62,7 +62,7 @@ _openImages = []
 
 
 # Default to ignoring files with no extension and some specific extensions.
-config.ConfigValues['source_bioformats_ignored_names'] = r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|geojson|isyntax|mrxs|zip|zarr(\.db|\.zip)))$'  # noqa
+config.ConfigValues['source_bioformats_ignored_names'] = r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|geojson|fits|isyntax|mrxs|zip|zarr(\.db|\.zip)))$'  # noqa
 
 
 def _monitor_thread():

@@ -97,6 +97,15 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             projection = projection.lower()
         super().__init__(
             path, projection=projection, unitsPerPixel=unitsPerPixel, **kwargs)
+        if self.dataset.GetDriver().ShortName in {'MBTiles', 'Rasterlite', 'SQLite'}:
+            msg = 'File will not be opened via mapbox'
+            raise TileSourceError(msg)
+        self.logger.debug('mapnik source using the GDAL %s driver',
+                          self.dataset.GetDriver().ShortName)
+
+    def _openVectorSource(self, ds):
+        msg = 'File will not be opened via mapnik'
+        raise TileSourceError(msg)
 
     def _checkNetCDF(self):
         """

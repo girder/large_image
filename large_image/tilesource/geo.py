@@ -1,3 +1,4 @@
+import math
 import pathlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urlencode, urlparse
@@ -186,7 +187,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get('interpretation'):
-                self._bandNames[band['interpretation'].lower()] = idx
+                self._bandNames[str(band['interpretation']).lower()] = idx
         if isinstance(getattr(self, '_style', None), dict) and (
                 not self._style or 'icc' in self._style and len(self._style) == 1):
             return
@@ -277,6 +278,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         :return: width of a pixel in mm, height of a pixel in mm.
         """
         scale = self.getPixelSizeInMeters()
+        if scale and not math.isfinite(scale):
+            scale = None
         return {
             'magnification': None,
             'mm_x': scale * 100 if scale else None,

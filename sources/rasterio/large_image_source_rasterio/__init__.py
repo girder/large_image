@@ -642,7 +642,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     width=self.tileWidth,
                     add_alpha=add_alpha,
                 ) as vrt:
-                    tile = vrt.read(resampling=rio.enums.Resampling.nearest)
+                    try:
+                        tile = vrt.read(resampling=rio.enums.Resampling.nearest)
+                    except Exception:
+                        self.logger.exception('Failed to getTile')
+                        tile = np.zeros((1, 1))
 
         # necessary for multispectral images:
         # set the coordinates first and the bands at the end
