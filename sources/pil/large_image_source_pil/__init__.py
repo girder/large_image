@@ -141,7 +141,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if self._pilImage is None:
             try:
                 self._pilImage = PIL.Image.open(largeImagePath)
-            except (OSError, ValueError):
+            except (OSError, ValueError, NotImplementedError):
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 msg = 'File cannot be opened via PIL.'
@@ -178,7 +178,11 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 msg = 'PIL cannot find loader for this file.'
                 raise TileSourceError(msg)
-            maxval = 256 ** math.ceil(math.log(float(np.max(imgdata)) + 1, 256)) - 1
+            try:
+                maxval = 256 ** math.ceil(math.log(float(np.max(imgdata)) + 1, 256)) - 1
+            except Exception:
+                msg = 'PIL cannot load this file.'
+                raise TileSourceError(msg)
             self._factor = 255.0 / max(maxval, 1)
             self._pilImage = PIL.Image.fromarray(np.uint8(np.multiply(
                 imgdata, self._factor)))
