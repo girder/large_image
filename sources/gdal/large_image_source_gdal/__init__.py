@@ -26,7 +26,7 @@ from importlib.metadata import version as _importlib_version
 import numpy as np
 import PIL.Image
 
-from large_image.cache_util import LruCacheMetaclass, methodcache
+from large_image.cache_util import LruCacheMetaclass, _cacheClearFuncs, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
                                    TileOutputMimeTypes)
@@ -77,6 +77,15 @@ def _lazyImport():
             import pyproj
 
             # isort: on
+
+            def _clearGDALCache():
+                old = gdal.GetCacheMax()
+                # print('Clearing GDAL cache: size %r, max %r' % (
+                #     gdal.GetCacheUsed(), old))
+                gdal.SetCacheMax(0)
+                gdal.SetCacheMax(old)
+
+            _cacheClearFuncs.append(_clearGDALCache)
         except ImportError:
             msg = 'gdal module not found.'
             raise TileSourceError(msg)
