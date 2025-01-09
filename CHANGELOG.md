@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.30.7
+
+### Improvements
+
+- Better report if rasterized vector files are geospatial ([#1769](../../pull/1769))
+
 ## 1.30.6
 
 ### Features
