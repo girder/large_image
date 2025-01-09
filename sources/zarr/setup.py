@@ -53,7 +53,8 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'zarr',
+        # zarr 3 removes the SQLiteStore
+        'zarr<3',
         # numcodecs had been required by zarr, but now needs to be asked for
         'numcodecs',
         # Without imagecodecs-numcodecs, some jpeg encoded data cannot be read
