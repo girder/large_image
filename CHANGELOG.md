@@ -15,7 +15,7 @@
 - Read jp2k compressed associated images in tiff files ([#1754](../../pull/1754))
 - Improve writing to zarr sinks from multiple processes ([#1713](../../pull/1713))
 - Slightly faster GDAL validateCOG ([#1761](../../pull/1761))
-- Improve clearing caches ([#1765](../../pull/1765))
+- Improve clearing caches ([#1766](../../pull/1766))
 
 ### Changes
 
@@ -24,6 +24,7 @@
 - Don't include cache libraries in [common] deployments ([#1758](../../pull/1758))
 - Specify empty_dir=yes when constructing vsicurl parameters ([#1760](../../pull/1760))
 - Update how some associated images are read in tiff files ([#1763](../../pull/1763))
+- Pin zarr < 3 ([#1767](../../pull/1767))
 
 ### Bug Fixes
 
