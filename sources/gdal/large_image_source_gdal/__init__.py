@@ -192,6 +192,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 proj = None
         except Exception:
             proj = None
+        self._geospatial = proj is not None
         # Define raster parameters
         pixel_size = max(x_max - x_min, y_max - y_min) / (
             self.VECTOR_IMAGE_SIZE if proj is None else self.PROJECTED_VECTOR_IMAGE_SIZE)
@@ -214,7 +215,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             ds.SetGeoTransform((x_min, pixel_size, 0, y_min, 0, pixel_size))
             if proj:
                 ds.SetProjection(proj)
-            msg = f'Rasterizing a vector layer to {x_res} x {y_res}'
+            msg = (f'Rasterizing a vector layer to {x_res} x {y_res} '
+                   f'({"not " if not self._geospatial else ""} geospatial)')
             self.logger.info(msg)
             gdal.RasterizeLayer(ds, [1], layer, burn_values=[255])
             if not hasattr(self.__class__, '_openVectorLock'):
@@ -659,11 +661,13 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         """
         This is true if the source has geospatial information.
         """
-        return bool(
-            self.dataset.GetProjection() or
-            (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
-            self.dataset.GetGeoTransform(can_return_null=True) or
-            hasattr(self, '_netcdf'))
+        if not hasattr(self, '_geospatial'):
+            self._geospatial = bool(
+                self.dataset.GetProjection() or
+                (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
+                self.dataset.GetGeoTransform(can_return_null=True) or
+                hasattr(self, '_netcdf'))
+        return self._geospatial
 
     def getMetadata(self):
         metadata = super().getMetadata()
