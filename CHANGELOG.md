@@ -15,6 +15,7 @@
 - Read jp2k compressed associated images in tiff files ([#1754](../../pull/1754))
 - Improve writing to zarr sinks from multiple processes ([#1713](../../pull/1713))
 - Slightly faster GDAL validateCOG ([#1761](../../pull/1761))
+- Improve clearing caches ([#1765](../../pull/1765))
 
 ### Changes
 

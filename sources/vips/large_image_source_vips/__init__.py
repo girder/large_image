@@ -26,12 +26,18 @@ config.ConfigValues['source_vips_ignored_names'] = \
 
 
 def _clearVipsCache():
-    old = pyvips.voperation.cache_get_max_files()
-    pyvips.voperation.cache_set_max_files(0)
-    pyvips.voperation.cache_set_max_files(old)
-    old = pyvips.voperation.cache_get_max()
-    pyvips.voperation.cache_set_max(0)
-    pyvips.voperation.cache_set_max(old)
+    oldfiles = pyvips.cache_get_max_files()
+    oldmax = pyvips.cache_get_max()
+    oldmem = pyvips.cache_get_max_mem()
+    # print('Clearing vips cache: size %r, max files %r, max %r, mem %r' % (
+    #     pyvips.cache_get_size(), oldfiles, oldmax, oldmem))
+    pyvips.cache_set_max_files(0)
+    # This shouldn't ever go to zero
+    pyvips.cache_set_max(1)
+    pyvips.cache_set_max_mem(0)
+    pyvips.cache_set_max_files(oldfiles)
+    pyvips.cache_set_max(oldmax)
+    pyvips.cache_set_max_mem(oldmem)
 
 
 _cacheClearFuncs.append(_clearVipsCache)
