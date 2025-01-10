@@ -5,6 +5,7 @@
 ### Improvements
 
 - Better report if rasterized vector files are geospatial ([#1769](../../pull/1769))
+- Provide some latitude in vips multiframe detection ([#1770](../../pull/1770))
 
 ## 1.30.6
 
