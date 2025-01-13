@@ -94,6 +94,13 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     tifftools.Tag.ICCProfile.value]['data']]
         except Exception:
             pass
+        if hasattr(self, '_tiffinfo'):
+            for ifd in self._tiffinfo['ifds']:
+                if (tifftools.Tag.NDPI_FOCAL_PLANE.value in ifd['tags'] and
+                        ifd['tags'][tifftools.Tag.NDPI_FOCAL_PLANE.value]['data'][0] != 0):
+                    msg = ('File will not be opened via OpenSlide; '
+                           'non-zero focal planes would be missed.')
+                    raise TileSourceError(msg)
 
         svsAvailableLevels = self._getAvailableLevels(self._largeImagePath)
         if not len(svsAvailableLevels):

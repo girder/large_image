@@ -430,6 +430,20 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             pass
 
+    def _handle_internal_ndpi(self, intmeta):
+        try:
+            ndpi = intmeta.pop('65449')
+            intmeta['ndpi'] = {}
+            for line in ndpi.replace('\r', '\n').split('\n'):
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    if key and key not in intmeta['ndpi'] and value:
+                        intmeta['ndpi'][key] = value
+        except Exception:
+            pass
+
     def getNativeMagnification(self):
         """
         Get the magnification at a particular level.
@@ -499,6 +513,10 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                 json.dumps(result[key][subkey])
                             except Exception:
                                 del result[key][subkey]
+        for key in dir(self._tf):
+            if (key.startswith('is_') and hasattr(self, '_handle_internal_' + key[3:]) and
+                    getattr(self._tf, key)):
+                getattr(self, '_handle_internal_' + key[3:])(result)
         if hasattr(self, '_xml') and 'xml' not in result:
             result.pop('ImageDescription', None)
             result['xml'] = self._xml
