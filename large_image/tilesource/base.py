@@ -1625,9 +1625,16 @@ class TileSource(IPyLeafletMixin):
                 mode = subtile.mode
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
-        return tile.resize(
-            (self.tileWidth, self.tileHeight),
-            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
+        tile = tile.resize(
+            (min(self.tileWidth, (tile.width + scale - 1) // scale),
+             min(self.tileHeight, (tile.height + scale - 1) // scale)),
+            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        if tile.width != self.tileWidth or tile.height != self.tileHeight:
+            fulltile = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
+            fulltile.paste(tile, (0, 0))
+            tile = fulltile
+        tile = tile.convert(mode)
+        return (tile, TILE_FORMAT_PIL)
 
     @methodcache()
     def getTile(self, x: int, y: int, z: int, pilImageAllowed: bool = False,
