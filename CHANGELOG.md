@@ -8,6 +8,10 @@
 - Provide some latitude in vips multiframe detection ([#1770](../../pull/1770))
 - Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
 
+### Bug Fixes
+
+Vy- Fix scaling tiles from stripped tiffs in some instances ([#1773](../../pull/1773))
+
 ## 1.30.6
 
 ### Features
