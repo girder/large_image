@@ -490,7 +490,9 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
 
         def get(self) -> None:
             kwargs = {k: ast.literal_eval(self.get_argument(k)) for k in self.request.arguments}
-            histogram = manager.tile_source.histogram(**kwargs).get('histogram', [{}])  # type: ignore[attr-defined]
+            histogram = manager.tile_source.histogram(  # type: ignore[attr-defined]
+                **kwargs,
+            ).get('histogram', [{}])
             self.write(json.dumps(histogram, cls=NumpyEncoder))
             self.set_header('Content-Type', 'application/json')
 
