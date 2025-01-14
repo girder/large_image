@@ -416,22 +416,23 @@ class Map:
             self._layer.redraw()
 
     def get_frame_histogram(self, params):
-        frame = params.get('frame')
-        frame_histograms = self.frame_selector.frameHistograms or {}
-        frame_histograms = frame_histograms.copy()
-        parsed_url = urlparse(self._layer.url)
-        scheme, netloc = parsed_url.scheme, parsed_url.netloc
-        path = '/histogram'
-        histogram_url = f'{scheme}://{netloc}{path}?{urlencode(params)}'
+        if self._layer is not None:
+            frame = params.get('frame')
+            frame_histograms = self.frame_selector.frameHistograms or {}
+            frame_histograms = frame_histograms.copy()
+            parsed_url = urlparse(self._layer.url)
+            scheme, netloc = parsed_url.scheme, parsed_url.netloc
+            path = '/histogram'
+            histogram_url = f'{scheme}://{netloc}{path}?{urlencode(params)}'
 
-        async def fetch(url):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    frame_histograms[frame] = await response.json()
-                    # rewrite whole object for watcher
-                    self.frame_selector.frameHistograms = frame_histograms
+            async def fetch(url):
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        frame_histograms[frame] = await response.json()
+                        # rewrite whole object for watcher
+                        self.frame_selector.frameHistograms = frame_histograms
 
-        asyncio.ensure_future(fetch(histogram_url))
+            asyncio.ensure_future(fetch(histogram_url))
 
 
 # used for encoding histogram data
@@ -489,7 +490,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
 
         def get(self) -> None:
             kwargs = {k: ast.literal_eval(self.get_argument(k)) for k in self.request.arguments}
-            histogram = manager.tile_source.histogram(**kwargs).get('histogram', [{}])
+            histogram = manager.tile_source.histogram(**kwargs).get('histogram', [{}])  # type: ignore[attr-defined]
             self.write(json.dumps(histogram, cls=NumpyEncoder))
             self.set_header('Content-Type', 'application/json')
 
@@ -502,7 +503,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             z = int(self.get_argument('z'))
             frame = int(self.get_argument('frame', default='0'))
             style = json.loads(self.get_argument('style', default='{}'))
-            manager.tile_source.style = style
+            manager.tile_source.style = style  # type: ignore[attr-defined]
             encoding = self.get_argument('encoding', 'PNG')
             try:
                 tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
