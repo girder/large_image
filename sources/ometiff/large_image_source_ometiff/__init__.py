@@ -244,6 +244,9 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         if isinstance(self._omeinfo['Image'], dict):
             self._omeinfo['Image'] = [self._omeinfo['Image']]
         for img in self._omeinfo['Image']:
+            if isinstance(img['Pixels'], list):
+                msg = 'OME Tiff has multiple pixels'
+                raise TileSourceError(msg)
             if isinstance(img['Pixels'].get('TiffData'), dict):
                 img['Pixels']['TiffData'] = [img['Pixels']['TiffData']]
             if isinstance(img['Pixels'].get('Plane'), dict):

@@ -5,6 +5,7 @@ import os
 import threading
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
+from pathlib import Path
 
 import numpy as np
 
@@ -83,6 +84,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'scn': SourcePriority.PREFERRED,
         'tif': SourcePriority.LOW,
         'tiff': SourcePriority.LOW,
+        'ome': SourcePriority.HIGHER,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
@@ -120,6 +122,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = 'File cannot be opened via tifffile.'
             raise TileSourceError(msg)
+        self._checkForOmeBinaryonly()
         maxseries, maxsamples = self._biggestSeries()
         self.tileWidth = self.tileHeight = self._tileSize
         s = self._tf.series[maxseries]
@@ -127,6 +130,9 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if len(s.levels) == 1:
             self.tileWidth = self.tileHeight = self._singleTileSize
         page = s.pages[0]
+        if not hasattr(page, 'tags'):
+            msg = 'File will not be opened via tifffile.'
+            raise TileSourceError(msg)
         if ('TileWidth' in page.tags and
                 self._minTileSize <= page.tags['TileWidth'].value <= self._maxTileSize):
             self.tileWidth = page.tags['TileWidth'].value
@@ -137,6 +143,10 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._iccprofiles = [page.tags['InterColorProfile'].value]
         self.sizeX = s.shape[s.axes.index('X')]
         self.sizeY = s.shape[s.axes.index('Y')]
+        while (self.tileWidth // 2 >= self.sizeX and self.tileHeight // 2 >= self.sizeY and
+                min(self.tileWidth, self.tileHeight) // 2 >= self._minTileSize):
+            self.tileWidth //= 2
+            self.tileHeight //= 2
         self._mm_x = self._mm_y = None
         try:
             unit = {2: 25.4, 3: 10}[page.tags['ResolutionUnit'].value.real]
@@ -169,6 +179,35 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             msg = 'File cannot be opened via tifffile: axes and shape do not match access pattern.'
             raise TileSourceError(msg)
+
+    def _checkForOmeBinaryonly(self):
+        from xml.etree import ElementTree as etree
+
+        omexml = getattr(self._tf, 'ome_metadata', None)
+        if not omexml:
+            return
+        try:
+            root = etree.fromstring(omexml)
+        except Exception:
+            return
+        metadatafile = None
+        for element in root:
+            if element.tag.endswith('BinaryOnly'):
+                metadatafile = element.attrib.get('MetadataFile', '')
+        if not metadatafile:
+            return
+        path = Path(self._largeImagePath).parent / metadatafile
+        if not path.is_file():
+            return
+        try:
+            newxml = path.open('r').read()
+        except Exception:
+            return
+        try:
+            root = etree.fromstring(newxml)
+        except Exception:
+            return
+        self._tf._omexml = newxml
 
     def _biggestSeries(self):
         """

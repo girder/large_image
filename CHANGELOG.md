@@ -7,10 +7,11 @@
 - Better report if rasterized vector files are geospatial ([#1769](../../pull/1769))
 - Provide some latitude in vips multiframe detection ([#1770](../../pull/1770))
 - Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
+- Harden sources based on more fuzz testing ([#1774](../../pull/1774))
 
 ### Bug Fixes
 
-Vy- Fix scaling tiles from stripped tiffs in some instances ([#1773](../../pull/1773))
+- Fix scaling tiles from stripped tiffs in some instances ([#1773](../../pull/1773))
 
 ## 1.30.6
 
