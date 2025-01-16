@@ -276,21 +276,11 @@ class Map:
             crs = dict(
                 name='PixelSpace',
                 custom=True,
-                # Why does this need to be 256?
                 resolutions=[2 ** (metadata['levels'] - 1 - l) for l in range(20)],
 
-                # This works but has x and y reversed
                 proj4def='+proj=longlat +axis=esu',
-                bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]],
-                # Why is origin X, Y but bounds Y, X?
+                bounds=[[0, 0], [metadata['sizeX'], metadata['sizeY']]],
                 origin=[0, metadata['sizeY']],
-
-                # This almost works to fix the x, y reversal, but
-                # - bounds are weird and other issues occur
-                # proj4def='+proj=longlat +axis=seu',
-                # bounds=[[-metadata['sizeX'],-metadata['sizeY']],
-                #         [metadata['sizeX'],metadata['sizeY']]],
-                # origin=[0,0],
             )
         layer = layer or self._layer
 

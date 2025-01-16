@@ -12,6 +12,7 @@
 ### Bug Fixes
 
 - Fix scaling tiles from stripped tiffs in some instances ([#1773](../../pull/1773))
+- Updated jupyter support for ipyleaflet ([#1775](../../pull/1775))
 
 ## 1.30.6
 
