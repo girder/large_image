@@ -32,8 +32,8 @@ lint.ignore = [
     "D404",
     "D415",
     "C408",
-    "G002",
-    "G004"
+    "G002", # logging uses format/f strings
+    "G004",
     "E741",  # ambiguous variable name
     "NPY002",  # numpy-legacy-random
     "PT011",  # pytest-raises-too-broad
