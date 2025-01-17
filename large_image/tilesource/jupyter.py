@@ -337,8 +337,7 @@ class Map:
             dragging=True,
             attribution_control=False,
         )
-        m.layout.width = f'{metadata["sizeX"]}px'
-        m.layout.height = f'{metadata["sizeY"]}px'
+        m.layout.height = '50vh'
         if self._geospatial:
             m.add_layer(layer)
         self._map = m
