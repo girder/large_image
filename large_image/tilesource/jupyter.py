@@ -21,7 +21,7 @@ import json
 import os
 import weakref
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
-from urllib.parse import parse_qs, quote, urlencode, urlparse
+from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 import aiohttp
 import numpy as np
@@ -401,9 +401,6 @@ class Map:
     def update_frame(self, frame, style, **kwargs):
         if self._layer:
             parsed_url = urlparse(self._layer.url)
-            scheme = parsed_url.scheme
-            netloc = parsed_url.netloc
-            path = parsed_url.path
             query = parsed_url.query
             query = {k: v[0] for k, v in parse_qs(query).items()}
             query.update(dict(
@@ -411,18 +408,25 @@ class Map:
                 style=json.dumps(style),
             ))
             query_string = urlencode(query, quote_via=quote, safe='{}')
-            self._layer.url = f'{scheme}://{netloc}{path}?{query_string}'
+            self._layer.url = urlunparse((
+                parsed_url.scheme, parsed_url.netloc,
+                parsed_url.path, parsed_url.params,
+                query_string, parsed_url.fragment,
+            ))
             self._layer.redraw()
 
-    def get_frame_histogram(self, params):
+    def get_frame_histogram(self, query):
         if self._layer is not None:
-            frame = params.get('frame')
+            frame = query.get('frame')
             frame_histograms = self.frame_selector.frameHistograms or {}
             frame_histograms = frame_histograms.copy()
             parsed_url = urlparse(self._layer.url)
-            scheme, netloc = parsed_url.scheme, parsed_url.netloc
-            path = '/histogram'
-            histogram_url = f'{scheme}://{netloc}{path}?{urlencode(params)}'
+            query_string = urlencode(query)
+            histogram_url = urlunparse((
+                parsed_url.scheme, parsed_url.netloc,
+                '/histogram', parsed_url.params,
+                query_string, parsed_url.fragment,
+            ))
 
             async def fetch(url):
                 async with aiohttp.ClientSession() as session:
