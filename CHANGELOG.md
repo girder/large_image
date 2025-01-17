@@ -8,6 +8,7 @@
 - Provide some latitude in vips multiframe detection ([#1770](../../pull/1770))
 - Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
 - Harden sources based on more fuzz testing ([#1774](../../pull/1774))
+- Default to not caching source in notebooks ([#1776](../../pull/1776))
 
 ### Bug Fixes
 
