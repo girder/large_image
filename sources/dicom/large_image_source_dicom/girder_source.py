@@ -40,8 +40,7 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         assetstore_type = assetstore['type'] if assetstore else None
         if assetstore_type == getattr(AssetstoreType, 'DICOMWEB', '__undefined__'):
             return self._getDICOMwebLargeImagePath(assetstore)
-        else:
-            return self._getFilesystemLargeImagePath()
+        return self._getFilesystemLargeImagePath()
 
     def _getFilesystemLargeImagePath(self):
         filelist = [

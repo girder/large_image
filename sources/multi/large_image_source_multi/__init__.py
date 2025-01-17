@@ -300,10 +300,12 @@ SourceEntrySchema = {
                 'sampleScale is applied',
             'type': 'number',
         },
-        'style': {'type': 'object'},
+        'style': {
+            'description': 'A style specification to pass to the base tile source',
+            'type': 'object',
+        },
         'params': {
-            'description':
-                'Additional parameters to pass to the base tile source',
+            'description': 'Additional parameters to pass to the base tile source',
             'type': 'object',
         },
     },
@@ -455,7 +457,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 with builtins.open(self._largeImagePath) as fptr:
                     start = fptr.read(1024).strip()
-                    if start[:1] not in ('{', '#', '-') and (start[:1] < 'a' or start[:1] > 'z'):
+                    if (start[:1] not in ('{', '#', '-') and
+                            (start[:1] < 'a' or start[:1] > 'z')) or 'FeatureCollection' in start:
                         msg = 'File cannot be opened via multi-source reader.'
                         raise TileSourceError(msg)
                     fptr.seek(0)
@@ -932,7 +935,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             None if the associated image doesn't exist.
         """
         if imageKey not in self._associatedImages:
-            return
+            return None
         source = self._sources[self._associatedImages[imageKey]['sourcenum']]
         ts = self._openSource(source)
         return ts.getAssociatedImage(self._associatedImages[imageKey]['key'], *args, **kwargs)
@@ -1035,7 +1038,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
 
-    def _getTransformedTile(self, ts, transform, corners, scale, frame, crop=None):
+    def _getTransformedTile(self, ts, transform, corners, scale, frame,
+                            crop=None, firstMerge=False):
         """
         Determine where the target tile's corners are located on the source.
         Fetch that so that we have at least sqrt(2) more resolution, then use
@@ -1052,6 +1056,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :param crop: an optional dictionary to crop the source image in full
             resolution, untransformed coordinates.  This may contain left, top,
             right, and bottom values in pixels.
+        :param firstMerge: if False and using an alpha channel, transform
+            with nearest neighbor rather than a higher order function to
+            avoid transparency effects.
         :returns: a numpy array tile or None, x, y coordinates within the
             target tile for the placement of the numpy tile array.
         """
@@ -1143,9 +1150,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         destShape = [min(destShape[0], outh - y), min(destShape[1], outw - x)]
         if destShape[0] <= 0 or destShape[1] <= 0:
             return None, None, None
-        # Add an alpha band if needed
+        # Add an alpha band if needed.  This has to be done before the
+        # transform if it isn't the first tile, since the unused transformed
+        # areas need to have a zero alpha value
         if srcImage.shape[2] in {1, 3}:
             _, srcImage = _makeSameChannelDepth(np.zeros((1, 1, srcImage.shape[2] + 1)), srcImage)
+        useNearest = srcImage.shape[2] in {2, 4} and not firstMerge
         # skimage.transform.warp is faster and has less artifacts than
         # scipy.ndimage.affine_transform.  It is faster than using cupy's
         # version of scipy's affine_transform when the source and destination
@@ -1155,7 +1165,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # provide any speed improvement
             srcImage.astype(float),
             skimage.transform.AffineTransform(np.linalg.inv(transform)),
-            order=3,
+            order=0 if useNearest else 3,
             output_shape=(destShape[0], destShape[1], srcImage.shape[2]),
         ).astype(srcImage.dtype)
         return destImage, x, y
@@ -1232,7 +1242,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             sourceTile, x, y = self._getTransformedTile(
                 ts, transform, corners, scale, sourceEntry.get('frame', 0),
-                source.get('position', {}).get('crop'))
+                source.get('position', {}).get('crop'),
+                firstMerge=tile is None)
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
             targetDtype = np.dtype(self._info.get('dtype', ts.dtype))
             changeDtype = sourceTile.dtype != targetDtype

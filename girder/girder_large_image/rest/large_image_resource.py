@@ -633,7 +633,7 @@ class LargeImageResource(Resource):
                 matches = re.search(r'\[line[ ]*(\d+)\]', msg)
             if matches:
                 line = int(matches.groups()[0])
-                msg = msg.split('\n')[0].strip() or 'General error'
+                msg = msg.split('\n', 1)[0].strip() or 'General error'
                 msg = msg.rsplit(": '<string>'", 1)[0].rsplit("'<string>'", 1)[-1].strip()
                 return [{'line': line - 1, 'message': msg}]
         except Exception:
@@ -760,9 +760,9 @@ class LargeImageResource(Resource):
                 return {'status': 'no change'}
             newpath = path + '.' + time.strftime(
                 '%Y%m%d-%H%M%S', time.localtime(os.stat(path).st_mtime))
-            logger.info('Copying existing config file from %s to %s' % (path, newpath))
+            logger.info('Copying existing config file from %s to %s', path, newpath)
             shutil.copy2(path, newpath)
-        logger.warning('Replacing config file %s' % (path))
+        logger.warning('Replacing config file %s', path)
         open(path, 'w').write(config)
 
         class Restart(cherrypy.process.plugins.Monitor):

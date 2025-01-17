@@ -1,3 +1,4 @@
+import math
 import pathlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urlencode, urlparse
@@ -29,7 +30,8 @@ def make_vsi(url: Union[str, pathlib.Path, Dict[Any, Any]], **options) -> str:
         gdal_options = {
             'url': str(url),
             'use_head': 'no',
-            'list_dir': 'no',
+            'list_dir': 'no',  # don't search for adjacent files
+            'empty_dir': 'yes',  # don't probe for sidecar files
         }
         gdal_options.update(options)
         vsi = f'/vsicurl?{urlencode(gdal_options)}'
@@ -143,7 +145,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         }
         style = []
         if hasattr(self, '_style'):
-            styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
+            styleBands = (cast(JSONDict, self.style)['bands']
+                          if 'bands' in cast(JSONDict, self.style) else [self.style])
             for styleBand in styleBands:
 
                 styleBand = styleBand.copy()
@@ -184,12 +187,13 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get('interpretation'):
-                self._bandNames[band['interpretation'].lower()] = idx
+                self._bandNames[str(band['interpretation']).lower()] = idx
         if isinstance(getattr(self, '_style', None), dict) and (
                 not self._style or 'icc' in self._style and len(self._style) == 1):
             return
         if hasattr(self, '_style'):
-            styleBands = self.style['bands'] if 'bands' in self.style else [self.style]
+            styleBands = (cast(JSONDict, self.style)['bands']
+                          if 'bands' in cast(JSONDict, self.style) else [self.style])
             if not len(styleBands) or (len(styleBands) == 1 and isinstance(
                     styleBands[0].get('band', 1), int) and styleBands[0].get('band', 1) <= 0):
                 del self._style
@@ -274,6 +278,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         :return: width of a pixel in mm, height of a pixel in mm.
         """
         scale = self.getPixelSizeInMeters()
+        if scale and not math.isfinite(scale):
+            scale = None
         return {
             'magnification': None,
             'mm_x': scale * 100 if scale else None,

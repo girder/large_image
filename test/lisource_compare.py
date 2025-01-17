@@ -145,7 +145,7 @@ def source_compare(sourcePath, opts):  # noqa
            (getattr(opts, 'usesource', None) is None or k in opts.usesource)}
     canread = large_image.canReadList(sourcePath, availableSources=sublist)
     if opts.can_read and not len([cr for cr in canread if cr[1]]):
-        return
+        return None
     large_image.cache_util.cachesClear()
     slen = max([len(source) for source, _ in canread] + [10])
     sys.stdout.write('Source' + ' ' * (slen - 6))
@@ -208,14 +208,16 @@ def source_compare(sourcePath, opts):  # noqa
                     '_geospatial_source', None):
                 continue
             result = results['styles'][-1]['sources'][source] = {}
-            sys.stdout.write('%s' % (source + ' ' * (slen - len(source))))
-            sys.stdout.flush()
             large_image.cache_util.cachesClear()
             try:
                 t = time.time()
                 ts = large_image.tilesource.AvailableTileSources[source](sourcePath, **kwargs)
                 opentime = time.time() - t
             except Exception as exp:
+                if opts.can_read and projection and None in projections:
+                    continue
+                sys.stdout.write('%s' % (source + ' ' * (slen - len(source))))
+                sys.stdout.flush()
                 result['exception'] = str(exp)
                 result['error'] = 'open'
                 sexp = str(exp).replace('\n', ' ').replace('  ', ' ').strip()
@@ -224,6 +226,8 @@ def source_compare(sourcePath, opts):  # noqa
                 sys.stdout.write('%s %s\n' % (' ' * slen, sexp[78 - slen: 2 * (78 - slen)]))
                 sys.stdout.flush()
                 continue
+            sys.stdout.write('%s' % (source + ' ' * (slen - len(source))))
+            sys.stdout.flush()
             sizeX, sizeY = ts.sizeX, ts.sizeY
             result['sizeX'], result['sizeY'] = ts.sizeX, ts.sizeY
             try:
@@ -304,7 +308,13 @@ def source_compare(sourcePath, opts):  # noqa
             sys.stdout.flush()
             write_thumb(img[0], source, thumbs, 'thumbnail', opts, styleidx, projidx)
             t = time.time()
-            img = ts.getTile(tx0, ty0, tz0, sparseFallback=True)
+            try:
+                img = ts.getTile(tx0, ty0, tz0, sparseFallback=True)
+            except Exception as exp:
+                result['exception'] = str(exp)
+                result['error'] = 'gettile'
+                sys.stdout.write(' fail\n')
+                continue
             tile0time = time.time() - t
             result['tile0time'] = tile0time
             sys.stdout.write(' %8.3fs' % tile0time)
@@ -391,16 +401,26 @@ def source_compare(sourcePath, opts):  # noqa
             sys.stdout.flush()
 
             # get maxval for other histograms
-            h = ts.histogram(onlyMinMax=True, output=dict(maxWidth=2048, maxHeight=2048), **kwargs)
+            h = ts.histogram(
+                onlyMinMax=True, output=dict(maxWidth=2048, maxHeight=2048),
+                resample=0, **kwargs)
             if 'max' not in h:
+                result['error'] = 'max'
                 sys.stdout.write(' fail\n')
                 sys.stdout.flush()
                 continue
-            maxval = max(h['max'].tolist())
-            maxval = 2 ** (int(math.log(maxval or 1) / math.log(2)) + 1) if maxval > 1 else 1
+            try:
+                maxval = max(h['max'].tolist())
+                maxval = 2 ** (int(math.log(maxval or 1) / math.log(2)) + 1) if maxval > 1 else 1
+            except (TypeError, OverflowError) as exp:
+                result['exception'] = str(exp)
+                result['error'] = 'maxval'
+                sys.stdout.write(' fail\n')
+                sys.stdout.flush()
+                continue
             # thumbnail histogram
             h = ts.histogram(bins=9, output=dict(maxWidth=256, maxHeight=256),
-                             range=[0, maxval], **kwargs)
+                             range=[0, maxval], resample=0, **kwargs)
             maxchan = len(h['histogram'])
             if maxchan == 4:
                 maxchan = 3
@@ -409,13 +429,13 @@ def source_compare(sourcePath, opts):  # noqa
             sys.stdout.flush()
             # full image histogram
             h = ts.histogram(bins=9, output=dict(maxWidth=2048, maxHeight=2048),
-                             range=[0, maxval], **kwargs)
+                             range=[0, maxval], resample=0, **kwargs)
             result['full_2048_histogram'] = histotext(h, maxchan)
             sys.stdout.write(' %s' % histotext(h, maxchan))
             sys.stdout.flush()
             if opts.full:
                 # at full res
-                h = ts.histogram(bins=9, range=[0, maxval], **kwargs)
+                h = ts.histogram(bins=9, range=[0, maxval], resample=0, **kwargs)
                 result['full_max_histogram'] = histotext(h, maxchan)
                 sys.stdout.write(' %s' % histotext(h, maxchan))
                 sys.stdout.flush()
@@ -426,12 +446,14 @@ def source_compare(sourcePath, opts):  # noqa
                 if not opts.full:
                     h = ts.histogram(
                         bins=9, output=dict(maxWidth=2048, maxHeight=2048),
-                        range=[0, maxval], frame=frames - 1, **kwargs)
+                        range=[0, maxval], frame=frames - 1, resample=0,
+                        **kwargs)
                     result['full_f_2048_histogram'] = histotext(h, maxchan)
                     sys.stdout.write(' %s' % histotext(h, maxchan))
                 else:
                     # at full res
-                    h = ts.histogram(bins=9, range=[0, maxval], frame=frames - 1, **kwargs)
+                    h = ts.histogram(bins=9, range=[0, maxval],
+                                     frame=frames - 1, resample=0, **kwargs)
                     result['full_f_max_histogram'] = histotext(h, maxchan)
                     sys.stdout.write(' %s' % histotext(h, maxchan))
                 sys.stdout.flush()
@@ -444,7 +466,7 @@ def source_compare(sourcePath, opts):  # noqa
                         h = ts.histogram(bins=32, output=dict(
                             maxWidth=int(math.ceil(ts.sizeX / 2 ** (levels - 1 - ll))),
                             maxHeight=int(math.ceil(ts.sizeY / 2 ** (levels - 1 - ll))),
-                        ), range=[0, maxval], frame=f, **kwargs)
+                        ), range=[0, maxval], frame=f, resample=0, **kwargs)
                         t += time.time()
                         result[f'level_{ll}_f_{f}_histogram'] = histotext(h, maxchan)
                         sys.stdout.write('%3d%5d %s' % (ll, f, histotext(h, maxchan)))

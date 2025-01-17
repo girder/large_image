@@ -176,14 +176,14 @@ class TileSource(IPyLeafletMixin):
         self.edge = edge
         self._setStyle(style)
 
-    def __getstate__(self):
+    def __getstate__(self) -> None:
         """
         Allow pickling.
 
         We reconstruct our state via the creation caused by the inverse of
         reduce, so we don't report state here.
         """
-        return None
+        return
 
     def __reduce__(self) -> Tuple[functools.partial, Tuple[str]]:
         """
@@ -192,7 +192,6 @@ class TileSource(IPyLeafletMixin):
         Reduce can pass the args but not the kwargs, so use a partial class
         call to reconstruct kwargs.
         """
-        import functools
         import pickle
 
         if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
@@ -203,7 +202,7 @@ class TileSource(IPyLeafletMixin):
     def __repr__(self) -> str:
         return self.getState()
 
-    def _repr_png_(self):
+    def _repr_png_(self) -> bytes:
         return self.getThumbnail(encoding='PNG')[0]
 
     @property
@@ -257,12 +256,12 @@ class TileSource(IPyLeafletMixin):
         return (bounds['sizeY'] / 2, bounds['sizeX'] / 2)
 
     @property
-    def style(self):
+    def style(self) -> Optional[JSONDict]:
         return self._style
 
     @style.setter
-    def style(self, value):
-        if not hasattr(self, '_unstyledStyle') and value == getattr(self, '_unstyledStyle', None):
+    def style(self, value: Any) -> None:
+        if value is None and not hasattr(self, '_unstyledStyle'):
             return
         if not getattr(self, '_noCache', False):
             msg = 'Cannot set the style of a cached source'
@@ -316,7 +315,7 @@ class TileSource(IPyLeafletMixin):
             kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
-            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
+            '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
 
     def getState(self) -> str:
         """
@@ -651,7 +650,8 @@ class TileSource(IPyLeafletMixin):
             for idx in range(min(len(results['min']), tile.shape[-1])):
                 entry = results['histogram'][idx]
                 hist, bin_edges = np.histogram(
-                    tile[:, :, idx], entry['bins'], entry['range'], density=False)
+                    tile[:, :, idx], entry['bins'],
+                    (float(entry['range'][0]), float(entry['range'][1])), density=False)
                 if entry['hist'] is None:
                     entry['hist'] = hist
                     entry['bin_edges'] = bin_edges
@@ -1139,8 +1139,9 @@ class TileSource(IPyLeafletMixin):
         """
         tile, mode = _imageToNumpy(intile)
         if (applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
-                (not getattr(self, 'style', None) or len(self.style) != 1 or
-                 self.style.get('icc') is not False)):
+                (not getattr(self, 'style', None) or
+                 len(cast(JSONDict, self.style)) != 1 or
+                 cast(JSONDict, self.style).get('icc') is not False)):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = np.zeros(
@@ -1242,7 +1243,7 @@ class TileSource(IPyLeafletMixin):
         return None
 
     @classmethod
-    def canRead(cls, *args, **kwargs):
+    def canRead(cls, *args, **kwargs) -> bool:
         """
         Check if we can read the input.  This takes the same parameters as
         __init__.
@@ -1315,7 +1316,7 @@ class TileSource(IPyLeafletMixin):
     def metadata(self) -> JSONDict:
         return self.getMetadata()
 
-    def _getFrameValueInformation(self, frames: List[Dict]):
+    def _getFrameValueInformation(self, frames: List[Dict]) -> Dict[str, Any]:
         """
         Given a `frames` list from a metadata response, return a dictionary describing
         the value info for any frame axes. Keys in this dictionary follow the pattern "Value[AXIS]"
@@ -1412,7 +1413,7 @@ class TileSource(IPyLeafletMixin):
             for frame in metadata['frames']:
                 frame['Channel'] = channels[frame.get('IndexC', 0)]
 
-    def getInternalMetadata(self, **kwargs):
+    def getInternalMetadata(self, **kwargs) -> Optional[Dict[Any, Any]]:
         """
         Return additional known metadata about the tile source.  Data returned
         from this method is not guaranteed to be in any particular format or
@@ -1485,10 +1486,12 @@ class TileSource(IPyLeafletMixin):
         :returns: an integer frame number.
         """
         frame = int(frame or 0)
-        if (hasattr(self, '_style') and 'bands' in self.style and
-                len(self.style['bands']) and
-                all(entry.get('frame') is not None for entry in self.style['bands'])):
-            frame = int(self.style['bands'][0]['frame'])
+        if (hasattr(self, '_style') and
+                'bands' in cast(JSONDict, self.style) and
+                len(cast(JSONDict, self.style)['bands']) and
+                all(entry.get('frame') is not None
+                    for entry in cast(JSONDict, self.style)['bands'])):
+            frame = int(cast(JSONDict, self.style)['bands'][0]['frame'])
         return frame
 
     def _xyzInRange(
@@ -1622,13 +1625,22 @@ class TileSource(IPyLeafletMixin):
                 mode = subtile.mode
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
-        return tile.resize(
-            (self.tileWidth, self.tileHeight),
-            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
+        tile = tile.resize(
+            (min(self.tileWidth, (tile.width + scale - 1) // scale),
+             min(self.tileHeight, (tile.height + scale - 1) // scale)),
+            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        if tile.width != self.tileWidth or tile.height != self.tileHeight:
+            fulltile = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
+            fulltile.paste(tile, (0, 0))
+            tile = fulltile
+        tile = tile.convert(mode)
+        return (tile, TILE_FORMAT_PIL)
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
-                sparseFallback=False, frame=None):
+    def getTile(self, x: int, y: int, z: int, pilImageAllowed: bool = False,
+                numpyAllowed: Union[bool, str] = False,
+                sparseFallback: bool = False, frame: Optional[int] = None) -> Union[
+                    ImageBytes, PIL.Image.Image, bytes, np.ndarray]:
         """
         Get a tile from a tile source, returning it as an binary image, a PIL
         image, or a numpy array.
@@ -2476,7 +2488,7 @@ class TileSource(IPyLeafletMixin):
         width = kwargs.get('width')
         height = kwargs.get('height')
         if width or height:
-            width, height, calcScale = utilities._calculateWidthHeight(
+            width, height, _ = utilities._calculateWidthHeight(
                 width, height, imageWidth, imageHeight)
             image = image.resize(
                 (width, height),
@@ -2528,6 +2540,52 @@ class TileSource(IPyLeafletMixin):
             self._frameCount = len(self.getMetadata().get('frames', [])) or 1
         return self._frameCount
 
+    def frameToAxes(self, frame: int) -> Dict[str, int]:
+        """
+        Given a frame number, return a dictionary of axes values.  If unknown,
+        this is just 'frame': frame.
+
+        :param frame: a frame number.
+        :returns: a dictionary of axes that specify the frame.
+        """
+        if frame >= self.frames:
+            msg = 'frame is outside of range'
+            raise exceptions.TileSourceRangeError(msg)
+        meta = self.metadata
+        if self.frames == 1 or 'IndexStride' not in meta:
+            return {'frame': frame}
+        axes = {
+            key[5:].lower(): (frame // stride) % meta['IndexRange'][key]
+            for key, stride in meta['IndexStride'].items()}
+        return axes
+
+    def axesToFrame(self, **kwargs: int) -> int:
+        """
+        Given values on some or all of the axes, return the corresponding frame
+        number.  Any unspecified axis is 0.  If one of the specified axes is
+        'frame', this is just returned and the other values are ignored.
+
+        :param kwargs: axes with position values.
+        :returns: a frame number.
+        """
+        meta = self.metadata
+        frame = 0
+        for key, value in kwargs.items():
+            if key.lower() == 'frame':
+                if value < 0 or value >= self.frames:
+                    msg = f'{value} is out of range for frame'
+                    raise exceptions.TileSourceRangeError(msg)
+                return value
+            ikey = 'Index' + key.upper()
+            if ikey not in meta.get('IndexStride', {}):
+                msg = f'{key} is not a known axis'
+                raise exceptions.TileSourceRangeError(msg)
+            if value < 0 or value >= meta['IndexRange'][ikey]:
+                msg = f'{value} is out of range for axis {key}'
+                raise exceptions.TileSourceRangeError(msg)
+            frame += value * meta['IndexStride'][ikey]
+        return frame
+
 
 class FileTileSource(TileSource):
 
@@ -2556,7 +2614,7 @@ class FileTileSource(TileSource):
             args[0], kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
-            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
+            '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
 
     def getState(self) -> str:
         if hasattr(self, '_classkey'):

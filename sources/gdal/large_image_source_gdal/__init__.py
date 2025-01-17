@@ -26,7 +26,7 @@ from importlib.metadata import version as _importlib_version
 import numpy as np
 import PIL.Image
 
-from large_image.cache_util import LruCacheMetaclass, methodcache
+from large_image.cache_util import LruCacheMetaclass, _cacheClearFuncs, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
                                    TileOutputMimeTypes)
@@ -48,6 +48,7 @@ gdal = None
 gdal_array = None
 gdalconst = None
 osr = None
+ogr = None
 pyproj = None
 
 
@@ -76,6 +77,15 @@ def _lazyImport():
             import pyproj
 
             # isort: on
+
+            def _clearGDALCache():
+                old = gdal.GetCacheMax()
+                # print('Clearing GDAL cache: size %r, max %r' % (
+                #     gdal.GetCacheUsed(), old))
+                gdal.SetCacheMax(0)
+                gdal.SetCacheMax(old)
+
+            _cacheClearFuncs.append(_clearGDALCache)
         except ImportError:
             msg = 'gdal module not found.'
             raise TileSourceError(msg)
@@ -89,7 +99,10 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'gdal'
 
-    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
+    VECTOR_IMAGE_SIZE = 256 * 1024  # for vector files without projections
+    PROJECTED_VECTOR_IMAGE_SIZE = 32 * 1024  # if the file has a projection
+
+    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -115,8 +128,10 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self._bounds = {}
         self._largeImagePath = self._getLargeImagePath()
         try:
-            self.dataset = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
-        except (RuntimeError, UnicodeDecodeError):
+            self.dataset = gdal.OpenEx(self._largeImagePath, gdalconst.GA_ReadOnly)
+            if not self.dataset.RasterCount and self.dataset.GetLayer() is not None:
+                self.dataset = self._openVectorSource(self.dataset)
+        except (RuntimeError, UnicodeDecodeError, OverflowError):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = 'File cannot be opened via GDAL'
@@ -141,7 +156,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         is_netcdf = self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
-        except RuntimeError as exc:
+        except (RuntimeError, ZeroDivisionError) as exc:
             raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
         if not self.sizeX or not self.sizeY:
             msg = 'File cannot be opened via GDAL (no size)'
@@ -161,6 +176,54 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self._getPopulatedLevels()
         self._getTileLock = threading.Lock()
         self._setDefaultStyle()
+
+    def _openVectorSource(self, vec):
+        # This is mainly to speed up back-to-back canRead and open calls
+        if hasattr(self.__class__, '_openVectorLock') and hasattr(self.__class__, '_lastVectorDS'):
+            with self.__class__._openVectorLock:
+                if self.__class__._lastVectorDS[0] == self._largeImagePath:
+                    return self.__class__._lastVectorDS[1]
+        layer = vec.GetLayer()
+        x_min, x_max, y_min, y_max = layer.GetExtent()
+        try:
+            proj = layer.GetSpatialRef().ExportToWkt()
+            if (layer.GetSpatialRef().ExportToProj4() == '+proj=longlat +datum=WGS84 +no_defs' and
+                    (max(abs(x_min), abs(x_max)) > 180 or max(abs(y_min), abs(y_max)) > 90)):
+                proj = None
+        except Exception:
+            proj = None
+        self._geospatial = proj is not None
+        # Define raster parameters
+        pixel_size = max(x_max - x_min, y_max - y_min) / (
+            self.VECTOR_IMAGE_SIZE if proj is None else self.PROJECTED_VECTOR_IMAGE_SIZE)
+        if not pixel_size:
+            msg = 'Cannot determine dimensions'
+            raise RuntimeError(msg)
+        if not proj and pixel_size < 1:
+            pixel_size = 1
+        x_res = int((x_max - x_min) / pixel_size)
+        y_res = int((y_max - y_min) / pixel_size)
+
+        # Create an in-memory raster dataset
+        with tempfile.NamedTemporaryFile(suffix='.tif', delete=True) as tmpfile:
+            drv = gdal.GetDriverByName('Gtiff')
+            ds = drv.Create(
+                tmpfile.name, x_res, y_res, 1, gdal.GDT_Byte,
+                options=['COMPRESS=DEFLATE', 'PREDICTOR=2', 'TILED=YES',
+                         'SPARSE_OK=TRUE', 'BIGTIFF=IF_SAFER'])
+            # Set raster geotransform and projection
+            ds.SetGeoTransform((x_min, pixel_size, 0, y_min, 0, pixel_size))
+            if proj:
+                ds.SetProjection(proj)
+            msg = (f'Rasterizing a vector layer to {x_res} x {y_res} '
+                   f'({"not " if not self._geospatial else ""} geospatial)')
+            self.logger.info(msg)
+            gdal.RasterizeLayer(ds, [1], layer, burn_values=[255])
+            if not hasattr(self.__class__, '_openVectorLock'):
+                self.__class__._openVectorLock = threading.RLock()
+            with self.__class__._openVectorLock:
+                self.__class__._lastVectorDS = (self._largeImagePath, ds)
+            return ds
 
     def _getDriver(self):
         """
@@ -296,7 +359,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             if (self.dataset.GetGeoTransform(can_return_null=True) or
                     hasattr(self, '_netcdf') or self._getDriver() in {'NITF'}):
                 return 'epsg:4326'
-            return
+            return None
         proj = osr.SpatialReference()
         proj.ImportFromWkt(wkt)
         return proj.ExportToProj4()
@@ -328,7 +391,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         if isinstance(proj, bytes):
             proj = proj.decode()
         if not isinstance(proj, str):
-            return
+            return None
         if proj.lower().startswith('proj4:'):
             proj = proj.split(':', 1)[1]
         if proj.lower().startswith('epsg:'):
@@ -464,7 +527,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             nativeSrs = self.getProj4String()
             if not nativeSrs or not gt:
                 self._bounds[srs] = None
-                return
+                return None
             bounds = {
                 'll': {
                     'x': gt[0] + self.sourceSizeY * gt[2],
@@ -598,11 +661,13 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         """
         This is true if the source has geospatial information.
         """
-        return bool(
-            self.dataset.GetProjection() or
-            (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
-            self.dataset.GetGeoTransform(can_return_null=True) or
-            hasattr(self, '_netcdf'))
+        if not hasattr(self, '_geospatial'):
+            self._geospatial = bool(
+                self.dataset.GetProjection() or
+                (self.dataset.GetGCPProjection() and self.dataset.GetGCPs()) or
+                self.dataset.GetGeoTransform(can_return_null=True) or
+                hasattr(self, '_netcdf'))
+        return self._geospatial
 
     def getMetadata(self):
         metadata = super().getMetadata()
@@ -921,7 +986,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             raise exc
         return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
 
-    def validateCOG(self, check_tiled=True, full_check=False, strict=True, warn=True):
+    def validateCOG(self, check_tiled=True, full_check=False, strict=True, warn=True) -> bool:
         """Check if this image is a valid Cloud Optimized GeoTiff.
 
         This will raise a :class:`large_image.exceptions.TileSourceInefficientError`
@@ -945,8 +1010,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         """
         from osgeo_utils.samples.validate_cloud_optimized_geotiff import validate
 
-        warnings, errors, details = validate(
-            self._largeImagePath,
+        warnings, errors, _ = validate(
+            self.dataset,
             check_tiled=check_tiled,
             full_check=full_check,
         )
@@ -1000,7 +1065,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             cls.mimeTypes = cls.mimeTypes.copy()
             for idx in range(gdal.GetDriverCount()):
                 drv = gdal.GetDriver(idx)
-                if drv.GetMetadataItem(gdal.DCAP_RASTER):
+                if drv.GetMetadataItem(gdal.DCAP_RASTER) or drv.GetMetadataItem(gdal.DCAP_VECTOR):
                     drvexts = drv.GetMetadataItem(gdal.DMD_EXTENSIONS)
                     if drvexts is not None:
                         for ext in drvexts.split():

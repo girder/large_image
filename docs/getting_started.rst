@@ -296,6 +296,9 @@ Many image formats (such as TIFF) can contain multiple images within a single fi
 
 By default, the ``getTile``, ``getRegion``, and ``tileIterator`` methods will return all of the bands of a single frame.  The specific bands returned can be modified using the ``style`` parameter.  The specific frame, including any channel or other axes, is specified with the ``frame`` parameter.
 
+Since if can be useful to ask for a specific frame based on the axes values there are ``frameFromAxes`` and ``axesFromFrame`` utility functions.
+
+
 Styles - Changing colors, scales, and other properties
 ------------------------------------------------------
 
@@ -413,7 +416,12 @@ You may also choose to read tiles from one source and write modified tiles to a 
 Multiple processes
 ~~~~~~~~~~~~~~~~~~
 
-In some cases, it may be beneficial to write to a single image from multiple processes or threads:
+In some cases, it may be beneficial to write to a single image from multiple processes or threads.
+
+There is one important thing to note about writing an image with multiple processes.
+In order to properly record the set of values along each frame axis, prior to any multiprocess concurrency,
+the first tile added should be at the maximum position so that the size of each dimension is preallocated.
+The following example demonstrates this step.
 
 .. code-block:: python
 

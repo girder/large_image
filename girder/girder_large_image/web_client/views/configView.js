@@ -278,7 +278,7 @@ var ConfigView = View.extend({
             const li = {
                 columns: [
                     {type: 'record', value: 'name', title: 'Name'},
-                    {type: 'record', value: 'controls', title: 'Contols'},
+                    {type: 'record', value: 'controls', title: 'Controls'},
                     {type: 'record', value: 'size', title: 'Size'}]
             };
             const val = {itemList: li, itemListDialog: li};

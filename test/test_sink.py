@@ -600,10 +600,6 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
     ))
     expected_metadata = get_expected_metadata(axis_spec, frame_shape)
 
-    sink.frameAxes = list(axis_spec.keys())
-    sink.frameUnits = {
-        k: v['units'] for k, v in axis_spec.items()
-    }
     frame_values_shape = [
         *[len(v['values']) for v in axis_spec.values()],
         len(axis_spec),
@@ -633,7 +629,11 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
     index += 1
 
     if not use_add_tile_args:
+        sink.frameAxes = list(axis_spec.keys())
         sink.frameValues = frame_values
+    sink.frameUnits = {
+        k: v['units'] for k, v in axis_spec.items()
+    }
     compare_metadata(dict(sink.getMetadata()), expected_metadata)
 
     sink.write(output_file)
@@ -686,10 +686,6 @@ def testFrameValues(use_add_tile_args, tmp_path):
     )
     expected_metadata = get_expected_metadata(axis_spec, frame_shape)
 
-    sink.frameAxes = list(axis_spec.keys())
-    sink.frameUnits = {
-        k: v['units'] for k, v in axis_spec.items()
-    }
     frame_values_shape = [
         *[len(v['values']) for v in axis_spec.values()],
         len(axis_spec),
@@ -727,7 +723,11 @@ def testFrameValues(use_add_tile_args, tmp_path):
             index += 1
 
     if not use_add_tile_args:
+        sink.frameAxes = list(axis_spec.keys())
         sink.frameValues = frame_values
+    sink.frameUnits = {
+        k: v['units'] for k, v in axis_spec.items()
+    }
     compare_metadata(dict(sink.getMetadata()), expected_metadata)
 
     sink.write(output_file)
@@ -783,19 +783,81 @@ def testSubprocess(tmp_path):
     subprocess.run([sys.executable, '-c', """import large_image_source_zarr
 import numpy as np
 sink = large_image_source_zarr.open('%s')
-sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2)
+sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2, t_value='thursday', z_value=0.2)
 """ % path], capture_output=True, text=True, check=True)
-    sink.addTile(np.ones((1, 1, 1)), x=5000, y=4095, t=0, z=4)
+    sink.addTile(np.ones((1, 1, 1)), x=5000, y=4095, t=0, z=4, t_value='sunday', z_value=0.4)
 
-    assert sink.metadata['IndexRange']['IndexZ'] == 5
+    metadata = sink.getMetadata()
+    assert metadata['IndexRange']['IndexZ'] == 5
     assert sink.getRegion(
         region=dict(left=2047, top=2047, width=1, height=1),
         format='numpy',
         frame=17,
     )[0] == 1
+    assert metadata['ValueT']['values'][17] == 'thursday'
+    assert metadata['ValueZ']['values'][17] == 0.2
     assert sink.getRegion(
         region=dict(left=5000, top=4095, width=1, height=1),
         format='numpy',
         frame=24,
     )[0] == 1
+    assert metadata['ValueT']['values'][24] == 'sunday'
+    assert metadata['ValueZ']['values'][24] == 0.4
     assert sink.sizeX == 5001
+
+
+@pytest.mark.parametrize('axes_order', ['tzd', 'tdz', 'dzt', 'dtz', 'ztd', 'zdt'])
+def testAddAxes(tmp_path, axes_order):
+    sink = large_image_source_zarr.new()
+    kwarg_groups = [
+        dict(t=0, t_value='sunday'),
+        dict(
+            t=5, t_value='friday',
+            z=1, z_value=0.1,
+            axes=axes_order.replace('d', '') + 'yxs',
+        ),
+        dict(
+            t=6, t_value='saturday',
+            z=2, z_value=0.2,
+            d=1, d_value=100,
+            axes=axes_order + 'yxs',
+        ),
+    ]
+    for kwarg_group in kwarg_groups:
+        sink.addTile(
+            np.ones((4, 4, 4)),
+            x=1020, y=1020,
+            **kwarg_group,
+        )
+
+    metadata = sink.getMetadata()
+    t_values = metadata['ValueT']['values']
+    z_values = metadata['ValueZ']['values']
+    d_values = metadata['ValueD']['values']
+    t_stride = metadata['IndexStride']['IndexT']
+    z_stride = metadata['IndexStride']['IndexZ']
+    expected_filled_frames = [
+        # first and last frame are known, middle frame depends on axis ordering
+        0, z_stride + t_stride * 5, 41,
+    ]
+    for frame in metadata.get('frames', []):
+        frame_index = frame.get('Frame')
+        sample = sink.getRegion(
+            region=dict(left=1020, top=1020, width=1, height=1),
+            format='numpy',
+            frame=frame_index,
+        )[0]
+        frame_values = dict(
+            t_value=t_values[frame_index],
+            z_value=z_values[frame_index],
+            d_value=d_values[frame_index],
+        )
+        kwarg_group = {}
+        if frame_index in expected_filled_frames:
+            kwarg_group = kwarg_groups[expected_filled_frames.index(frame_index)]
+            assert (sample == 1).all()
+        else:
+            assert (sample == 0).all()
+
+        for k, v in frame_values.items():
+            assert v == kwarg_group.get(k, 0)

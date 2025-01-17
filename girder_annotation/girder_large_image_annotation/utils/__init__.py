@@ -246,18 +246,18 @@ class GeoJSONAnnotation:
         self._annotation = {'elements': self._elements}
         self._parseFeature(geojson)
 
-    def _parseFeature(self, geoelem):
+    def _parseFeature(self, geoelem):  # noqa
         if isinstance(geoelem, (list, tuple)):
             for entry in geoelem:
                 self._parseFeature(entry)
         if not isinstance(geoelem, dict) or 'type' not in geoelem:
-            return
+            return None
         if geoelem['type'] == 'FeatureCollection':
             return self._parseFeature(geoelem.get('features', []))
         if geoelem['type'] == 'GeometryCollection' and isinstance(geoelem.get('geometries'), list):
             for entry in geoelem['geometry']:
                 self._parseFeature({'type': 'Feature', 'geometry': entry})
-            return
+            return None
         if geoelem['type'] in {'Point', 'LineString', 'Polygon', 'MultiPoint',
                                'MultiLineString', 'MultiPolygon'}:
             geoelem = {'type': 'Feature', 'geometry': geoelem}
@@ -266,8 +266,15 @@ class GeoJSONAnnotation:
             'fillColor', 'radius', 'width', 'height', 'rotation',
             'normal',
         }}
-        if 'annotation' in geoelem.get('properties', {}):
-            self._annotation.update(geoelem['properties']['annotation'])
+        if 'label' in element:
+            if not isinstance(element['label'], dict):
+                element['label'] = {'value': element['label']}
+            element['label']['value'] = str(element['label']['value'])
+        if geoelem.get('properties', {}).get('annotation'):
+            try:
+                self._annotation.update(geoelem['properties']['annotation'])
+            except Exception:
+                pass
             self._annotation['elements'] = self._elements
         elemtype = geoelem.get('properties', {}).get('type', '') or geoelem['geometry']['type']
         func = getattr(self, elemtype.lower() + 'Type', None)
@@ -1417,7 +1424,7 @@ class PlottableItemData:
             # collects data as a side effect
             collist = self._getColumns()
             if self.cancel:
-                return
+                return None
             for coldata in self._datacolumns.values():
                 rows |= set(coldata.keys())
             rows = sorted(rows)
@@ -1449,7 +1456,7 @@ class PlottableItemData:
         if len(subdata) and len(subdata) < len(data):
             data = subdata
         if self.cancel:
-            return
+            return None
         # Refresh our count, distinct, distinctcount, min, max for each column
         for cidx, col in enumerate(colsout):
             col['count'] = len([row[cidx] for row in data if row[cidx] is not None])

@@ -100,7 +100,7 @@ def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
                     return self.cache[k]
             except KeyError:
                 pass  # key not found
-            except (ValueError, pickle.UnpicklingError):
+            except (ValueError, pickle.UnpicklingError, ModuleNotFoundError):
                 # this can happen if a different version of python wrote the record
                 pass
             v = func(self, *args, **kwargs)
@@ -125,7 +125,7 @@ class LruCacheMetaclass(type):
     namedCaches: Dict[str, Any] = {}
     classCaches: Dict[type, Any] = {}
 
-    def __new__(metacls, name, bases, namespace, **kwargs):
+    def __new__(mcs, name, bases, namespace, **kwargs):
         # Get metaclass parameters by finding and removing them from the class
         # namespace (necessary for Python 2), or preferentially as metaclass
         # arguments (only in Python 3).
@@ -151,7 +151,7 @@ class LruCacheMetaclass(type):
         timeout = kwargs.get('cacheTimeout', timeout)
 
         cls = super().__new__(
-            metacls, name, bases, namespace)
+            mcs, name, bases, namespace)
         if not cacheName:
             cacheName = cls
 

@@ -129,9 +129,8 @@ def _createTestTiles(server, admin, params=None, info=None, error=None):
     except AssertionError as exc:
         if error:
             assert error in exc.args[0]
-            return
-        else:
-            raise
+            return None
+        raise
     assert utilities.respStatus(resp) == 200
     infoDict = resp.json
     if info:

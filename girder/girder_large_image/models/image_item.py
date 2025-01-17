@@ -239,7 +239,9 @@ class ImageItem(Item):
             # tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
             # but, instead, log that the original source no longer works are
             # reraise the exception
-            logger.warning('The original tile source for item %s is not working' % item['_id'])
+            logger.warning(
+                'The original tile source (%s) for item %s is not working',
+                sourceName, item['_id'])
             try:
                 file = File().load(item['largeImage']['fileId'], force=True)
                 localPath = File().getLocalFilePath(file)

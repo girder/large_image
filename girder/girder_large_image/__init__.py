@@ -415,7 +415,7 @@ def metadataSearchHandler(  # noqa
         return []
     filter = {'$and': filter} if len(filter) > 1 else filter[0]
     result = {}
-    logger.debug('Metadata search uses filter: %r' % filter)
+    logger.debug('Metadata search uses filter: %r', filter)
     for model in searchModels or types:
         modelInst = ModelImporter.model(*model if isinstance(model, tuple) else [model])
         if searchModels is None:
@@ -432,11 +432,16 @@ def metadataSearchHandler(  # noqa
                 if id in foundIds:
                     continue
                 foundIds.add(id)
-                entry = resultModelInst.load(id=id, user=user, level=level, exc=False)
+                try:
+                    entry = resultModelInst.load(id=id, user=user, level=level, exc=False)
+                except Exception:
+                    # We might have permission to view an annotation but not
+                    # the item
+                    continue
                 if entry is not None and offset:
                     offset -= 1
                     continue
-                elif entry is not None:
+                if entry is not None:
                     result[searchModels[model]['model']].append(resultModelInst.filter(entry, user))
                     if limit and len(result[searchModels[model]['model']]) == limit:
                         break
@@ -540,7 +545,7 @@ def addSettingsToConfig(config, user, name=None):
                 columns.append({'type': 'image', 'value': value, 'title': value.title()})
 
     columns.append({'type': 'record', 'value': 'name', 'title': 'Name'})
-    columns.append({'type': 'record', 'value': 'controls', 'title': 'Contols'})
+    columns.append({'type': 'record', 'value': 'controls', 'title': 'Controls'})
     columns.append({'type': 'record', 'value': 'size', 'title': 'Size'})
 
     if 'itemList' not in config:
@@ -565,7 +570,7 @@ def yamlConfigFile(folder, name, user):
         if item:
             for file in Item().childFiles(item):
                 if file['size'] > 10 * 1024 ** 2:
-                    logger.info('Not loading %s -- too large' % file['name'])
+                    logger.info('Not loading %s -- too large', file['name'])
                     continue
                 with File().open(file) as fptr:
                     config = yaml.safe_load(fptr)
@@ -657,7 +662,7 @@ def validateBoolean(doc):
     val = doc['value']
     if str(val).lower() not in ('false', 'true', ''):
         raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
-    doc['value'] = (str(val).lower() != 'false')
+    doc['value'] = str(val).lower() != 'false'
 
 
 @setting_utilities.validator({
@@ -674,7 +679,7 @@ def validateBooleanOrICCIntent(doc):
         if str(val).lower() not in ('false', 'true', ''):
             raise ValidationException(
                 '%s must be a boolean or a named intent.' % doc['key'], 'value')
-        doc['value'] = (str(val).lower() != 'false')
+        doc['value'] = str(val).lower() != 'false'
 
 
 @setting_utilities.validator({

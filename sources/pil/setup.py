@@ -19,8 +19,7 @@ def prerelease_local_scheme(version):
 
     if os.getenv('CIRCLE_BRANCH') in ('master', ):
         return ''
-    else:
-        return get_local_node_and_date(version)
+    return get_local_node_and_date(version)
 
 
 try:
@@ -57,9 +56,9 @@ setup(
     ],
     extras_require={
         'all': [
-            'rawpy ; python_version < "3.13"',
+            'rawpy',
             'pillow-heif',
-            'pillow-jxl-plugin ; python_version < "3.13"',
+            'pillow-jxl-plugin',
             'pillow-jpls',
         ],
         'girder': f'girder-large-image{limit_version}',

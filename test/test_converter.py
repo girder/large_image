@@ -146,8 +146,8 @@ def testConvertJp2kCompression(tmpdir):
     image, _ = source.getRegion(
         output={'maxWidth': 200, 'maxHeight': 200}, format=constants.TILE_FORMAT_NUMPY)
     # Without or with icc adjustment
-    assert ((image[12][167] == [215, 135, 172]).all() or
-            (image[12][167] == [216, 134, 172]).all())
+    assert ((image[12][167][:3] == [215, 135, 172]).all() or
+            (image[12][167][:3] == [216, 134, 172]).all())
 
     outputPath2 = os.path.join(tmpdir, 'out2.tiff')
     large_image_converter.convert(imagePath, outputPath2, compression='jp2k', psnr=50)

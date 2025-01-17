@@ -63,13 +63,13 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm)',  # noqa
-        'skip': r'nokeyframe\.ome\.tiff$',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi)',  # noqa
+        'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff$',
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
         'read': r'(\.(jpg|jpeg|png|tif.*)|18[-0-9a-f]{34}\.dcm)$',
-        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview|indica)',  # noqa
+        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview|indica|TCGA-55.*\.ome\.tiff)',  # noqa
     },
     'rasterio': {
         'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
@@ -83,7 +83,7 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|ndpi|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm)$)' +  # noqa
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm)$)' +  # noqa
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
         'skip': r'indica' if sys.version_info < (3, 9) else '^$',

@@ -26,12 +26,18 @@ config.ConfigValues['source_vips_ignored_names'] = \
 
 
 def _clearVipsCache():
-    old = pyvips.voperation.cache_get_max_files()
-    pyvips.voperation.cache_set_max_files(0)
-    pyvips.voperation.cache_set_max_files(old)
-    old = pyvips.voperation.cache_get_max()
-    pyvips.voperation.cache_set_max(0)
-    pyvips.voperation.cache_set_max(old)
+    oldfiles = pyvips.cache_get_max_files()
+    oldmax = pyvips.cache_get_max()
+    oldmem = pyvips.cache_get_max_mem()
+    # print('Clearing vips cache: size %r, max files %r, max %r, mem %r' % (
+    #     pyvips.cache_get_size(), oldfiles, oldmax, oldmem))
+    pyvips.cache_set_max_files(0)
+    # This shouldn't ever go to zero
+    pyvips.cache_set_max(1)
+    pyvips.cache_set_max_mem(0)
+    pyvips.cache_set_max_files(oldfiles)
+    pyvips.cache_set_max(oldmax)
+    pyvips.cache_set_max_mem(oldmem)
 
 
 _cacheClearFuncs.append(_clearVipsCache)
@@ -54,7 +60,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     _tileSize = 256
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -64,6 +70,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         super().__init__(path, **kwargs)
         self.addKnownExtensions()
 
+        self._suffix = ''
         if str(path).startswith(NEW_IMAGE_PATH_FLAG):
             self._initNew(**kwargs)
             return
@@ -79,6 +86,11 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = 'File cannot be opened via pyvips'
             raise TileSourceError(msg)
+        # Ask pdfs to render at a higher resolution
+        if ('vips-loader' in self._image.get_fields() and
+                self._image.get('vips-loader') in {'pdfload'}):
+            self._suffix = ',dpi=144'
+            self._image = pyvips.Image.new_from_file(self._largeImagePath + '[dpi=300]')
         self.sizeX = self._image.width
         self.sizeY = self._image.height
         self.tileWidth = self.tileHeight = self._tileSize
@@ -87,13 +99,17 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             pages = self._image.get('n-pages')
         self._frames = [0]
         for page in range(1, pages):
-            subInputPath = self._largeImagePath + '[page=%d]' % page
+            subInputPath = self._largeImagePath + f'[page={page}{self._suffix}]'
             with _newFromFileLock:
                 try:
                     subImage = pyvips.Image.new_from_file(subInputPath)
                 except Exception:
                     continue
             if subImage.width == self.sizeX and subImage.height == self.sizeY:
+                self._frames.append(page)
+                continue
+            if (self.sizeX - 16 < subImage.width <= self.sizeX and
+                    self.sizeY - 16 < subImage.height <= self.sizeY):
                 self._frames.append(page)
                 continue
             if subImage.width * subImage.height < self.sizeX * self.sizeY:
@@ -191,7 +207,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if frame > 0:
             with self._frameLock:
                 if frame not in self._recentFrames:
-                    subpath = self._largeImagePath + '[page=%d]' % self._frames[frame]
+                    subpath = self._largeImagePath + f'[page={self._frames[frame]}{self._suffix}]'
                     with _newFromFileLock:
                         img = pyvips.Image.new_from_file(subpath)
                     self._recentFrames[frame] = img
@@ -217,7 +233,9 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._xyzInRange(x, y, z, frame, len(self._frames))
         img = self._getFrameImage(frame)
         x0, y0, x1, y1, step = self._xyzToCorners(x, y, z)
-        tileimg = img.crop(x0, y0, x1 - x0, y1 - y0)
+        tileimg = img.crop(min(x0, img.width), min(y0, img.height),
+                           min(x1, img.width) - min(x0, img.width),
+                           min(y1, img.height) - min(y0, img.height))
         try:
             if step != 1:
                 tileimg = tileimg.resize(1.0 / step, kernel=pyvips.enums.Kernel.NEAREST, gap=0)
