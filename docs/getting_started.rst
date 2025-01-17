@@ -296,6 +296,9 @@ Many image formats (such as TIFF) can contain multiple images within a single fi
 
 By default, the ``getTile``, ``getRegion``, and ``tileIterator`` methods will return all of the bands of a single frame.  The specific bands returned can be modified using the ``style`` parameter.  The specific frame, including any channel or other axes, is specified with the ``frame`` parameter.
 
+Since if can be useful to ask for a specific frame based on the axes values there are ``frameFromAxes`` and ``axesFromFrame`` utility functions.
+
+
 Styles - Changing colors, scales, and other properties
 ------------------------------------------------------
 

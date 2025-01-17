@@ -2,6 +2,10 @@
 
 ## 1.30.7
 
+### Features
+
+- Add utility functions for converting between frame and axes ([#1777](../../pull/1777))
+
 ### Improvements
 
 - Better report if rasterized vector files are geospatial ([#1769](../../pull/1769))
