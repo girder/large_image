@@ -296,7 +296,7 @@ jobs:
           path: ~/wheels
   check_release:
     docker:
-      - image: cimg/python:3.10
+      - image: girder/tox-and-node
     steps:
       - checkout
       - run:
