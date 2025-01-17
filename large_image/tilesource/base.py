@@ -2540,6 +2540,52 @@ class TileSource(IPyLeafletMixin):
             self._frameCount = len(self.getMetadata().get('frames', [])) or 1
         return self._frameCount
 
+    def frameToAxes(self, frame: int) -> Dict[str, int]:
+        """
+        Given a frame number, return a dictionary of axes values.  If unknown,
+        this is just 'frame': frame.
+
+        :param frame: a frame number.
+        :returns: a dictionary of axes that specify the frame.
+        """
+        if frame >= self.frames:
+            msg = 'frame is outside of range'
+            raise exceptions.TileSourceRangeError(msg)
+        meta = self.metadata
+        if self.frames == 1 or 'IndexStride' not in meta:
+            return {'frame': frame}
+        axes = {
+            key[5:].lower(): (frame // stride) % meta['IndexRange'][key]
+            for key, stride in meta['IndexStride'].items()}
+        return axes
+
+    def axesToFrame(self, **kwargs: int) -> int:
+        """
+        Given values on some or all of the axes, return the corresponding frame
+        number.  Any unspecified axis is 0.  If one of the specified axes is
+        'frame', this is just returned and the other values are ignored.
+
+        :param kwargs: axes with position values.
+        :returns: a frame number.
+        """
+        meta = self.metadata
+        frame = 0
+        for key, value in kwargs.items():
+            if key.lower() == 'frame':
+                if value < 0 or value >= self.frames:
+                    msg = f'{value} is out of range for frame'
+                    raise exceptions.TileSourceRangeError(msg)
+                return value
+            ikey = 'Index' + key.upper()
+            if ikey not in meta.get('IndexStride', {}):
+                msg = f'{key} is not a known axis'
+                raise exceptions.TileSourceRangeError(msg)
+            if value < 0 or value >= meta['IndexRange'][ikey]:
+                msg = f'{value} is out of range for axis {key}'
+                raise exceptions.TileSourceRangeError(msg)
+            frame += value * meta['IndexStride'][ikey]
+        return frame
+
 
 class FileTileSource(TileSource):
 
