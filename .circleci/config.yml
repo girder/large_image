@@ -312,6 +312,15 @@ jobs:
           name: Install python packages
           command: pip install setuptools_scm twine
       - run:
+          name: Use nvm
+          # see https://discuss.circleci.com/t/nvm-does-not-change-node-version-on-machine/28973/14
+          command: |
+            echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - restore_cache:
+          name: Restore nvm cache
+          key: v1-nvm-cache-<< parameters.node >>
+      - run:
           name: Switch node versions
           command: |
             nvm install << parameters.node >>
