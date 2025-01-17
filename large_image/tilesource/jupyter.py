@@ -30,33 +30,30 @@ ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
 class IPyLeafletMixin:
     """Mixin class to support interactive visualization in JupyterLab.
 
-    This class implements ``_ipython_display_`` with ``ipyleaflet``
-    to display an interactive image visualizer for the tile source
-    in JupyterLab.
+    This class implements ``_ipython_display_`` with ``ipyleaflet`` to display
+    an interactive image visualizer for the tile source in JupyterLab.
 
-    Install `ipyleaflet <https://github.com/jupyter-widgets/ipyleaflet>`_
-    to interactively visualize tile sources in JupyterLab.
+    Install `ipyleaflet <https://github.com/jupyter-widgets/ipyleaflet>`_ to
+    interactively visualize tile sources in JupyterLab.
 
-    For remote JupyterHub environments, you may need to configure
-    the class variables ``JUPYTER_HOST`` or ``JUPYTER_PROXY``.
+    For remote JupyterHub environments, you may need to configure the class
+    variables ``JUPYTER_HOST`` or ``JUPYTER_PROXY``.
 
     If ``JUPYTER_PROXY`` is set, it overrides ``JUPYTER_HOST``.
 
-    Use ``JUPYTER_HOST`` to set the host name of the machine such
-    that the tile URL can be accessed at
-    ``'http://{JUPYTER_HOST}:{port}'``.
+    Use ``JUPYTER_HOST`` to set the host name of the machine such that the tile
+    URL can be accessed at ``'http://{JUPYTER_HOST}:{port}'``.
 
-    Use ``JUPYTER_PROXY`` to leverage ``jupyter-server-proxy`` to
-    proxy the tile serving port through Jupyter's authenticated web
-    interface. This is useful in Docker and cloud JupyterHub
-    environments. You can set the environment variable
-    ``LARGE_IMAGE_JUPYTER_PROXY`` to control the default value of
-    ``JUPYTER_PROXY``. If ``JUPYTER_PROXY`` is set to ``True``, the
-    default will be ``'/proxy/`` which will work for most Docker
-    Jupyter configurations. If in a cloud JupyterHub environment,
-    this will get a bit more nuanced as the
-    ``JUPYTERHUB_SERVICE_PREFIX`` may need to prefix the
-    ``'/proxy/'``.
+    Use ``JUPYTER_PROXY`` to leverage ``jupyter-server-proxy`` to proxy the
+    tile serving port through Jupyter's authenticated web interface.  This is
+    useful in Docker and cloud JupyterHub environments.  You can set the
+    environment variable ``LARGE_IMAGE_JUPYTER_PROXY`` to control the default
+    value of ``JUPYTER_PROXY``.  If ``JUPYTER_PROXY`` is set to ``True``, the
+    default will be ``'/proxy/`` which will work for most Docker Jupyter
+    configurations. If in a cloud JupyterHub environment, this will get a bit
+    more nuanced as the ``JUPYTERHUB_SERVICE_PREFIX`` may need to prefix the
+    ``'/proxy/'``.  If set to ``'auto'``, an automatic value will be chosen
+    through some effort to detect the environment.
 
     To programmatically set these values:
 
@@ -80,7 +77,7 @@ class IPyLeafletMixin:
     """
 
     JUPYTER_HOST = '127.0.0.1'
-    JUPYTER_PROXY = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', False)
+    JUPYTER_PROXY: Union[str, bool] = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', 'auto')
 
     _jupyter_server_manager: Any
 
@@ -103,6 +100,10 @@ class IPyLeafletMixin:
 
         port = self._jupyter_server_manager.port
 
+        if self.JUPYTER_PROXY == 'auto':
+            self._autoJupyterProxy()
+        if self.JUPYTER_PROXY and str(self.JUPYTER_PROXY).lower() in {'true', 'false'}:
+            self.JUPYTER_PROXY = str(self.JUPYTER_PROXY).lower() == 'true'
         if self.JUPYTER_PROXY:
             if isinstance(self.JUPYTER_PROXY, str):
                 base_url = f'{self.JUPYTER_PROXY.rstrip("/")}/{port}'
@@ -116,6 +117,15 @@ class IPyLeafletMixin:
         return self._map.make_layer(
             self.metadata,  # type: ignore[attr-defined]
             f'{base_url}/{endpoint}')
+
+    def _autoJupyterProxy(self):
+        if importlib.util.find_spec('google') and importlib.util.find_spec('google.colab'):
+            # colab intercepts localhost
+            self.JUPYTER_PROXY = 'https://localhost'
+        elif importlib.util.find_spec('jupyter_server_proxy'):
+            self.JUPYTER_PROXY = True
+        else:
+            self.JUPYTER_PROXY = False
 
     # Only make _ipython_display_ available if ipyleaflet is installed
     if ipyleafletPresent:
