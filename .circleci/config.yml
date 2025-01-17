@@ -297,6 +297,10 @@ jobs:
   check_release:
     docker:
       - image: girder/tox-and-node
+    parameters:
+      node:
+        type: string
+        default: v20
     steps:
       - checkout
       - run:
@@ -307,6 +311,13 @@ jobs:
       - run:
           name: Install python packages
           command: pip install setuptools_scm twine
+      - run:
+          name: Switch node versions
+          command: |
+            nvm install << parameters.node >>
+            nvm alias default << parameters.node >>
+            NODE_DIR=$(dirname $(which node))
+            echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
       - run:
           name: Check node versions
           command: |
