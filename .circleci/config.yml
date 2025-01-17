@@ -308,6 +308,11 @@ jobs:
           name: Install python packages
           command: pip install setuptools_scm twine
       - run:
+          name: Check node versions
+          command: |
+            node --version
+            npm --version
+      - run:
           name: Check release to PyPi
           command: ./.circleci/release_pypi.sh check
   release:
