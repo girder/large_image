@@ -21,6 +21,23 @@ fallbackLogHandler = logging.NullHandler()
 fallbackLogHandler.setLevel(logging.NOTSET)
 fallbackLogger.addHandler(fallbackLogHandler)
 
+
+def _in_notebook() -> bool:
+    """
+    Try to detect if we are in an interactvie notebook.
+
+    :returns: True if we think we are in an interactive notebook.
+    """
+    try:
+        shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
+        # Jupyter
+        if shell == 'ZMQInteractiveShell':
+            return True
+        return False
+    except NameError:
+        return False
+
+
 ConfigValues = {
     'logger': fallbackLogger,
     'logprint': fallbackLogger,
@@ -40,7 +57,7 @@ ConfigValues = {
     # substantial performance penalties if sources are used multiple times, so
     # should only be set in singular dynamic environments such as experimental
     # notebooks.
-    'cache_sources': True,
+    'cache_sources': not _in_notebook(),
 
     # Generally, these keys are the form of "cache_<cacheName>_<key>"
 
