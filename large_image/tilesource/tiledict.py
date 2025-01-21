@@ -156,7 +156,7 @@ class LazyTileDict(dict):
                 elif tileData.shape[2] < retile.shape[2]:
                     retile = retile[:, :, :tileData.shape[2]]
                 retile[y0:y0 + th, x0:x0 + tw] = tileData[
-                    :th, :tw, :retile.shape[2]]  # type: ignore[misc]
+                    :th, :tw, :retile.shape[2]]
         return cast(np.ndarray, retile)
 
     def _resample(self, tileData: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray]) -> Tuple[
@@ -197,7 +197,7 @@ class LazyTileDict(dict):
             tileData = skimage.transform.resize(
                 cast(np.ndarray, tileData),
                 (self['width'], self['height'],
-                 cast(np.ndarray, tileData).shape[2]),  # type: ignore[misc]
+                 cast(np.ndarray, tileData).shape[2]),
                 order=3 if self.resample is True else self.resample)
         return tileData, pilData
 
