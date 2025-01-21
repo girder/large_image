@@ -13,6 +13,7 @@
 - Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
 - Harden sources based on more fuzz testing ([#1774](../../pull/1774))
 - Default to not caching source in notebooks ([#1776](../../pull/1776))
+- Automatically set the JUPYTER_PROXY value ([#1781](../../pull/1781))
 
 ### Changes
 
