@@ -108,10 +108,7 @@ setup(
         'cachetools',
         'palettable',
         'Pillow',
-        # Newer versions of numpy include some typing changes that may need to be addressed in
-        # large_image.
-        # https://github.com/numpy/numpy/issues/28076
-        'numpy<2.1.0',
+        'numpy',
         'typing-extensions',
     ],
     extras_require=extraReqs,
