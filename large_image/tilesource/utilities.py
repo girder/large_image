@@ -213,28 +213,30 @@ def _imageToPIL(
             mode = modesBySize[image.shape[2] - 1]
         if len(image.shape) == 3 and image.shape[2] == 1:
             image = np.resize(image, image.shape[:2])
-        if image.dtype == np.uint32:
+        if cast(np.ndarray, image).dtype == np.uint32:
             image = np.floor_divide(image, 2 ** 24).astype(np.uint8)
-        elif image.dtype == np.uint16:
+        elif cast(np.ndarray, image).dtype == np.uint16:
             image = np.floor_divide(image, 256).astype(np.uint8)
-        elif image.dtype == np.int8:
-            image = (image.astype(float) + 128).astype(np.uint8)
-        elif image.dtype == np.int16:
-            image = np.floor_divide(image.astype(float) + 2 ** 15, 256).astype(np.uint8)
-        elif image.dtype == np.int32:
-            image = np.floor_divide(image.astype(float) + 2 ** 31, 2 ** 24).astype(np.uint8)
+        elif cast(np.ndarray, image).dtype == np.int8:
+            image = (cast(np.ndarray, image).astype(float) + 128).astype(np.uint8)
+        elif cast(np.ndarray, image).dtype == np.int16:
+            image = np.floor_divide(
+                cast(np.ndarray, image).astype(float) + 2 ** 15, 256).astype(np.uint8)
+        elif cast(np.ndarray, image).dtype == np.int32:
+            image = np.floor_divide(
+                cast(np.ndarray, image).astype(float) + 2 ** 31, 2 ** 24).astype(np.uint8)
         # TODO: The scaling of float data needs to be identical across all
         # tiles of an image.  This means that we need a reference to the parent
         # tile source or some other way of regulating it.
-        # elif image.dtype.kind == 'f':
+        # elif cast(np.ndarray, image).dtype.kind == 'f':
         #     if numpy.max(image) > 1:
         #         maxl2 = math.ceil(math.log(numpy.max(image) + 1) / math.log(2))
         #         image = image / ((2 ** maxl2) - 1)
         #     image = (image * 255).astype(numpy.uint8)
-        elif image.dtype != np.uint8:
+        elif cast(np.ndarray, image).dtype != np.uint8:
             image = np.clip(np.nan_to_num(np.where(
                 image is None, np.nan, image), nan=0), 0, 255).astype(np.uint8)
-        image = PIL.Image.fromarray(image, mode)
+        image = PIL.Image.fromarray(cast(np.ndarray, image), mode)
     elif not isinstance(image, PIL.Image.Image):
         image = PIL.Image.open(io.BytesIO(image))
     if setMode is not None and image.mode != setMode:
@@ -277,9 +279,10 @@ def _imageToNumpy(
             mode = modesBySize[(image.shape[2] - 1) if image.shape[2] <= 4 else 3]
             return image, mode
         mode = 'L'
-    if len(image.shape) == 2:
-        image = np.resize(image, (image.shape[0], image.shape[1], 1))
-    return image, mode
+    if len(cast(np.ndarray, image).shape) == 2:
+        image = np.resize(cast(np.ndarray, image),
+                          (cast(np.ndarray, image).shape[0], cast(np.ndarray, image).shape[1], 1))
+    return cast(np.ndarray, image), mode
 
 
 def _letterboxImage(image: PIL.Image.Image, width: int, height: int, fill: str) -> PIL.Image.Image:
@@ -811,7 +814,7 @@ def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
     if cast(np.dtype, dtype).kind == 'u':
         return np.iinfo(dtype).max
     if isinstance(arr, np.ndarray) and cast(np.dtype, dtype).kind == 'f':
-        amax = np.amax(arr)
+        amax = cast(float, np.amax(arr))
         if amax > 1 and amax < 256:
             return 255
         if amax > 1 and amax < 65536:
@@ -844,24 +847,24 @@ def _makeSameChannelDepth(arr1: np.ndarray, arr2: np.ndarray) -> Tuple[np.ndarra
     # If any array is RGB, make sure all arrays are RGB.
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
-        if arr.shape[2] < 3 and other.shape[2] >= 3:  # type: ignore[misc]
+        if arr.shape[2] < 3 and other.shape[2] >= 3:
             newarr = np.ones(
-                (arr.shape[0], arr.shape[1], arr.shape[2] + 2),  # type: ignore[misc]
+                (arr.shape[0], arr.shape[1], arr.shape[2] + 2),
                 dtype=arr.dtype)
             newarr[:, :, 0:1] = arr[:, :, 0:1]
             newarr[:, :, 1:2] = arr[:, :, 0:1]
             newarr[:, :, 2:3] = arr[:, :, 0:1]
-            if arr.shape[2] == 2:  # type: ignore[misc]
+            if arr.shape[2] == 2:
                 newarr[:, :, 3:4] = arr[:, :, 1:2]
             arrays[key] = newarr
     # If only one array has an A channel, make sure all arrays have an A
     # channel
     for key, arr in arrays.items():
         other = arrays['arr1' if key == 'arr2' else 'arr2']
-        if arr.shape[2] < other.shape[2]:  # type: ignore[misc]
+        if arr.shape[2] < other.shape[2]:
             arrays[key] = np.pad(
                 arr,
-                ((0, 0), (0, 0), (0, other.shape[2] - arr.shape[2])),  # type: ignore[misc]
+                ((0, 0), (0, 0), (0, other.shape[2] - arr.shape[2])),
                 constant_values=fullAlphaValue(arr))
     return arrays['arr1'], arrays['arr2']
 
@@ -886,7 +889,7 @@ def _addSubimageToImage(
         if (x, y, width, height) == (0, 0, subimage.shape[1], subimage.shape[0]):
             return subimage
         image = np.zeros(
-            (height, width, subimage.shape[2]),  # type: ignore[misc]
+            (height, width, subimage.shape[2]),
             dtype=subimage.dtype)
     elif len(image.shape) != len(subimage.shape) or image.shape[-1] != subimage.shape[-1]:
         image, subimage = _makeSameChannelDepth(image, subimage)
@@ -944,7 +947,7 @@ def _addRegionTileToTiled(
         subimage = subimage.astype('d')
     vimgMem = pyvips.Image.new_from_memory(
         np.ascontiguousarray(subimage).data,
-        subimage.shape[1], subimage.shape[0], subimage.shape[2],  # type: ignore[misc]
+        subimage.shape[1], subimage.shape[0], subimage.shape[2],
         dtypeToGValue[subimage.dtype.char])
     vimg = pyvips.Image.new_temp_file('%s.v')
     vimgMem.write(vimg)
@@ -955,7 +958,7 @@ def _addRegionTileToTiled(
             'mm_x': tile.get('mm_x') if tile else None,
             'mm_y': tile.get('mm_y') if tile else None,
             'magnification': tile.get('magnification') if tile else None,
-            'channels': subimage.shape[2],  # type: ignore[misc]
+            'channels': subimage.shape[2],
             'strips': {},
         }
     if y not in image['strips']:
