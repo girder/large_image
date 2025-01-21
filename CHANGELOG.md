@@ -4,7 +4,7 @@
 
 ### Features
 
-- Add utility functions for converting between frame and axes ([#1777](../../pull/1777))
+- Add utility functions for converting between frame and axes ([#1778](../../pull/1778))
 
 ### Improvements
 
@@ -13,6 +13,10 @@
 - Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
 - Harden sources based on more fuzz testing ([#1774](../../pull/1774))
 - Default to not caching source in notebooks ([#1776](../../pull/1776))
+
+### Changes
+
+- Allow umap-learn for graphing in girder annotations in python 3.13 ([#1780](../../pull/1780))
 
 ### Bug Fixes
 

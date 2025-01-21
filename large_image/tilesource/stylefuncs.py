@@ -93,9 +93,9 @@ def medianFilter(
         pimg: np.ndarray = image.astype(float)
         if len(pimg.shape) == 2:
             pimg = np.resize(pimg, (pimg.shape[0], pimg.shape[1], 1))
-        pimg = pimg[:, :, :fimg.shape[2]]  # type: ignore[index,misc]
+        pimg = pimg[:, :, :fimg.shape[2]]
         dimg = (pimg - fimg.astype(float) * mul) * weight
-        pimg = pimg[:, :, :fimg.shape[2]] + dimg  # type: ignore[index,misc]
+        pimg = pimg[:, :, :fimg.shape[2]] + dimg
         if clip:
             pimg = pimg.clip(0, clip)
         if len(image.shape) != 3:
