@@ -92,7 +92,7 @@ class IPyLeafletMixin:
 
     def __init__(self, *args, **kwargs) -> None:
         self._jupyter_server_manager = None
-        self._map = Map()
+        self._map = Map(ts=self)
         if ipyleafletPresent:
             self.to_map = self._map.to_map
             self.from_map = self._map.from_map
@@ -422,8 +422,12 @@ class Map:
             frame_histograms = frame_histograms.copy()
             parsed_url = urlparse(self._layer.url)
             query_string = urlencode(query)
+            scheme = parsed_url.scheme or 'http'
+            netloc = parsed_url.netloc
+            if not netloc and self._ts is not None:
+                netloc = f'{self._ts.JUPYTER_HOST}:{self._ts._jupyter_server_manager.port}'
             histogram_url = urlunparse((
-                parsed_url.scheme, parsed_url.netloc,
+                scheme, netloc,
                 '/histogram', parsed_url.params,
                 query_string, parsed_url.fragment,
             ))
