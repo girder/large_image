@@ -322,6 +322,7 @@ jobs:
       - run:
           name: Switch node versions
           command: |
+            . ~/.bashrc
             nvm install << parameters.node >>
             nvm alias default << parameters.node >>
             NODE_DIR=$(dirname $(which node))
