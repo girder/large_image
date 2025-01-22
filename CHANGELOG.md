@@ -15,6 +15,7 @@
 - Default to not caching source in notebooks ([#1776](../../pull/1776))
 - Automatically set the JUPYTER_PROXY value ([#1781](../../pull/1781))
 - Add a general channelNames property to tile sources ([#1783](../../pull/1783))
+- Speed up compositing styles ([#1784](../../pull/1784))
 
 ### Changes
 
