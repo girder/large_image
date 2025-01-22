@@ -178,7 +178,7 @@ class Map:
         :param resource: a girder resource path of an item or file that exists
             on the girder client.
         """
-        self._layer = self._map = self._metadata = self._frame_slider = None
+        self._layer = self._map = self._metadata = self._frame_slider = self._frame_histograms = None
         self._ts = ts
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
@@ -417,9 +417,10 @@ class Map:
 
     def get_frame_histogram(self, query):
         if self._layer is not None:
+            if self._frame_histograms is None:
+                self._frame_histograms = {}
+
             frame = query.get('frame')
-            frame_histograms = self.frame_selector.frameHistograms or {}
-            frame_histograms = frame_histograms.copy()
             parsed_url = urlparse(self._layer.url)
             query_string = urlencode(query)
             scheme = parsed_url.scheme or 'http'
@@ -435,9 +436,9 @@ class Map:
             async def fetch(url):
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url) as response:
-                        frame_histograms[frame] = await response.json()
+                        self._frame_histograms[frame] = await response.json()
                         # rewrite whole object for watcher
-                        self.frame_selector.frameHistograms = frame_histograms
+                        self.frame_selector.frameHistograms = self._frame_histograms.copy()
 
             asyncio.ensure_future(fetch(histogram_url))
 
