@@ -198,6 +198,7 @@ def testSourcesTilesAndMethods(filename, source):
     tileMetadata = ts.getMetadata()
     assert ts.metadata['sizeX'] == tileMetadata['sizeX']
     assert ts.bandCount == tileMetadata['bandCount']
+    assert ts.channelNames == tileMetadata.get('channels')
     utilities.checkTilesZXY(ts, tileMetadata)
     # All of these should succeed
     assert ts.getInternalMetadata() is not None

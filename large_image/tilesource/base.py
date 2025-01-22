@@ -303,6 +303,15 @@ class TileSource(IPyLeafletMixin):
                 return None
         return self._bandCount
 
+    @property
+    def channelNames(self) -> Optional[List[str]]:
+        """
+        If known, return a list of channel names.
+
+        :returns: either None or a list of channel names as strings.
+        """
+        return self.metadata.get('channels')
+
     @staticmethod
     def getLRUHash(*args, **kwargs) -> str:
         """
