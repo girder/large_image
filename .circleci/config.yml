@@ -295,8 +295,7 @@ jobs:
       - store_artifacts:
           path: ~/wheels
   check_release:
-    docker:
-      - image: girder/tox-and-node
+    executor: toxandnode
     parameters:
       node:
         type: string
