@@ -146,7 +146,6 @@ def source_compare(sourcePath, opts):  # noqa
     canread = large_image.canReadList(sourcePath, availableSources=sublist)
     if opts.can_read and not len([cr for cr in canread if cr[1]]):
         return None
-    large_image.cache_util.cachesClear()
     slen = max([len(source) for source, _ in canread] + [10])
     sys.stdout.write('Source' + ' ' * (slen - 6))
     sys.stdout.write('  Width Height')
@@ -208,7 +207,8 @@ def source_compare(sourcePath, opts):  # noqa
                     '_geospatial_source', None):
                 continue
             result = results['styles'][-1]['sources'][source] = {}
-            large_image.cache_util.cachesClear()
+            if couldread:
+                large_image.cache_util.cachesClear()
             try:
                 t = time.time()
                 ts = large_image.tilesource.AvailableTileSources[source](sourcePath, **kwargs)

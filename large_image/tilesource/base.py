@@ -1070,9 +1070,11 @@ class TileSource(IPyLeafletMixin):
             if sc.nodata is not None:
                 sc.mask = sc.band != float(sc.nodata)
             else:
-                sc.mask = np.full(image.shape[:2], True)
+                sc.mask = None
             sc.band = (sc.band - sc.min) / delta
             if not sc.clamp:
+                if sc.mask is None:
+                    sc.mask = np.full(image.shape[:2], True)
                 sc.mask = sc.mask & (sc.band >= 0) & (sc.band <= 1)
             sc.band = self._applyStyleFunction(sc.band, sc, 'band')
             # To implement anything other multiply or lighten, we should mimic
@@ -1097,25 +1099,27 @@ class TileSource(IPyLeafletMixin):
                     if not channel or np.any(
                             sc.palette[:, channel] != sc.palette[:, channel - 1]):
                         if not sc.discrete:
-                            clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
+                            if len(sc.palette) == 2 and sc.palette[0, channel] == 0:
+                                clrs = sc.band * sc.palette[1, channel]
+                            else:
+                                clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
                         else:
                             clrs = sc.palette[
                                 np.floor(sc.band * len(sc.palette)).astype(int).clip(
                                     0, len(sc.palette) - 1), channel]
                 if sc.composite == 'multiply':
                     if eidx:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.multiply(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs / 255, 1))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.multiply(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            (clrs / 255) if sc.mask is None else np.where(sc.mask, clrs / 255, 1))
                 else:
                     if not eidx:
-                        sc.output[:sc.mask.shape[0],
-                                  :sc.mask.shape[1],
-                                  channel] = np.where(sc.mask, clrs, 0)
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = (
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
                     else:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.maximum(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs, 0))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.maximum(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
             sc.output = self._applyStyleFunction(sc.output, sc, 'postband')
         if hasattr(sc, 'styleIndex'):
             del sc.styleIndex
