@@ -1028,12 +1028,14 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @property
     def channelNames(self):
-        return self._channelNames
+        if hasattr(self, '_channelNames'):
+            return self._channelNames or None
+        return super().channelNames
 
     @channelNames.setter
     def channelNames(self, names):
         self._checkEditable()
-        self._channelNames = names
+        self._channelNames = names or []
 
     @property
     def channelColors(self):
