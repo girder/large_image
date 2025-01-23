@@ -11,7 +11,7 @@ COPY . /opt/build-context/
 WORKDIR /opt/build-context
 
 RUN python -m pip install --upgrade pip wheel setuptools
-RUN sh .circleci/make_wheels.sh
+RUN sh .circleci/release_pypi.sh skip
 RUN mv ~/wheels /opt/build-context/
 
 RUN echo "pylibmc>=1.5.1\nmatplotlib\npyvips\nsimplejpeg\n" \
