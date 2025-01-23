@@ -295,8 +295,11 @@ jobs:
       - store_artifacts:
           path: ~/wheels
   check_release:
-    docker:
-      - image: cimg/python:3.10
+    executor: toxandnode
+    parameters:
+      node:
+        type: string
+        default: v20
     steps:
       - checkout
       - run:
@@ -307,12 +310,37 @@ jobs:
       - run:
           name: Install python packages
           command: pip install setuptools_scm twine
+      - run:
+          name: Use nvm
+          # see https://discuss.circleci.com/t/nvm-does-not-change-node-version-on-machine/28973/14
+          command: |
+            echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - restore_cache:
+          name: Restore nvm cache
+          key: v1-nvm-cache-<< parameters.node >>
+      - run:
+          name: Switch node versions
+          command: |
+            . ~/.bashrc
+            nvm install << parameters.node >>
+            nvm alias default << parameters.node >>
+            NODE_DIR=$(dirname $(which node))
+            echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
+      - run:
+          name: Check node versions
+          command: |
+            node --version
+            npm --version
       - run:
           name: Check release to PyPi
           command: ./.circleci/release_pypi.sh check
   release:
-    docker:
-      - image: cimg/python:3.10
+    executor: toxandnode
+    parameters:
+      node:
+        type: string
+        default: v20
     steps:
       - checkout
       - run:
@@ -323,6 +351,28 @@ jobs:
       - run:
           name: Install python packages
           command: pip install setuptools_scm twine
+      - run:
+          name: Use nvm
+          # see https://discuss.circleci.com/t/nvm-does-not-change-node-version-on-machine/28973/14
+          command: |
+            echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+      - restore_cache:
+          name: Restore nvm cache
+          key: v1-nvm-cache-<< parameters.node >>
+      - run:
+          name: Switch node versions
+          command: |
+            . ~/.bashrc
+            nvm install << parameters.node >>
+            nvm alias default << parameters.node >>
+            NODE_DIR=$(dirname $(which node))
+            echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
+      - run:
+          name: Check node versions
+          command: |
+            node --version
+            npm --version
       - run:
           name: Release to PyPi
           command: ./.circleci/release_pypi.sh upload

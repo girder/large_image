@@ -13,12 +13,22 @@ twine ${1:-check} $( [[ "${1:-check}" == "upload" ]] && printf %s '--verbose' ) 
 cd "$ROOTPATH/girder"
 cp "$ROOTPATH/README.rst" .
 cp "$ROOTPATH/LICENSE" .
+# Build the client plugin code
+pushd "$ROOTPATH/girder/girder_large_image/web_client/"
+npm ci
+npm run build
+popd
 python setup.py sdist
 pip wheel . --no-deps -w dist
 twine ${1:-check} $( [[ "${1:-check}" == "upload" ]] && printf %s '--verbose' ) dist/*
 cd "$ROOTPATH/girder_annotation"
 cp "$ROOTPATH/README.rst" .
 cp "$ROOTPATH/LICENSE" .
+# Build the client plugin code
+pushd "$ROOTPATH/girder_annotation/girder_large_image_annotation/web_client/"
+npm ci
+npm run build
+popd
 python setup.py sdist
 pip wheel . --no-deps -w dist
 twine ${1:-check} $( [[ "${1:-check}" == "upload" ]] && printf %s '--verbose' ) dist/*
@@ -49,6 +59,7 @@ twine ${1:-check} $( [[ "${1:-check}" == "upload" ]] && printf %s '--verbose' ) 
 cd "$ROOTPATH/sources/dicom"
 cp "$ROOTPATH/README.rst" .
 cp "$ROOTPATH/LICENSE" .
+# TODO build DICOMweb plugin client code when converted
 python setup.py sdist
 pip wheel . --no-deps -w dist
 twine ${1:-check} $( [[ "${1:-check}" == "upload" ]] && printf %s '--verbose' ) dist/*
