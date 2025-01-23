@@ -2,11 +2,29 @@
 
 ## 1.30.7
 
+### Features
+
+- Add utility functions for converting between frame and axes ([#1778](../../pull/1778))
+
 ### Improvements
 
 - Better report if rasterized vector files are geospatial ([#1769](../../pull/1769))
 - Provide some latitude in vips multiframe detection ([#1770](../../pull/1770))
 - Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
+- Harden sources based on more fuzz testing ([#1774](../../pull/1774))
+- Default to not caching source in notebooks ([#1776](../../pull/1776))
+- Automatically set the JUPYTER_PROXY value ([#1781](../../pull/1781))
+- Add a general channelNames property to tile sources ([#1783](../../pull/1783))
+- Speed up compositing styles ([#1784](../../pull/1784))
+
+### Changes
+
+- Allow umap-learn for graphing in girder annotations in python 3.13 ([#1780](../../pull/1780))
+
+### Bug Fixes
+
+- Fix scaling tiles from stripped tiffs in some instances ([#1773](../../pull/1773))
+- Updated jupyter support for ipyleaflet ([#1775](../../pull/1775))
 
 ## 1.30.6
 

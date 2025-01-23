@@ -111,7 +111,7 @@ A band definition is an object which can contain the following keys:
 
     - ``band``: the band numpy image in a band stage.
 
-    - ``mask``: a mask numpy image to use when applying the band.
+    - ``mask``: a mask numpy image to use when applying the band.  None for no mask (this is the equivalent of the mask being all True).
 
     - ``palette``: the normalized palette for a band.
 

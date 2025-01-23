@@ -216,7 +216,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 self._frames = None
                 self._frameCount = 1
-                self._pilImage.seek(0)
+                self._pilImage = PIL.Image.open(self._getLargeImagePath())
 
     def _fromRawpy(self, largeImagePath):
         """

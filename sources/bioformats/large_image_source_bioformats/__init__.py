@@ -321,8 +321,15 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if self.sizeX <= 0 or self.sizeY <= 0:
             msg = 'Bioformats tile size is invalid.'
             raise TileSourceError(msg)
+        if ('JPEG' in self._metadata['readerClassName'] and
+                (self._metadata['optimalTileWidth'] > 16384 or
+                 self._metadata['optimalTileHeight'] > 16384)):
+            msg = 'Bioformats will be too inefficient to read this file.'
+            raise TileSourceError(msg)
         try:
+            self._lastGetTileException = 'raise'
             self.getTile(0, 0, self.levels - 1)
+            delattr(self, '_lastGetTileException')
         except Exception as exc:
             raise TileSourceError('Bioformats cannot read a tile: %r' % exc)
         self._populatedLevels = len([
@@ -370,6 +377,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'optimalTileWidth': rdr.getOptimalTileWidth(),
             'optimalTileHeight': rdr.getOptimalTileHeight(),
             'resolutionCount': rdr.getResolutionCount(),
+            'readerClassName': rdr.get_class_name(),
         })
 
     def _getSeriesStarts(self, rdr):  # noqa
@@ -613,7 +621,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return self._metadata
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):  # noqa
         self._xyzInRange(x, y, z)
         ft = fc = fz = 0
         fseries = self._metadata['frameSeries'][0]
@@ -668,9 +676,14 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     format = TILE_FORMAT_NUMPY
                 except javabridge.JavaException as exc:
                     es = javabridge.to_string(exc.throwable)
-                    raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
-                        fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx,
-                        offsety, width, height)))
+                    self.logger.exception('Failed to getTile (%r)', es)
+                    if getattr(self, '_lastGetTileException', None) == 'raise':
+                        raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
+                            fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx,
+                            offsety, width, height)))
+                    self._lastGetTileException = repr(es)
+                    tile = np.zeros((1, 1))
+                    format = TILE_FORMAT_NUMPY
                 finally:
                     if javabridge.get_env():
                         javabridge.detach()

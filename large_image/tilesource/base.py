@@ -303,6 +303,15 @@ class TileSource(IPyLeafletMixin):
                 return None
         return self._bandCount
 
+    @property
+    def channelNames(self) -> Optional[List[str]]:
+        """
+        If known, return a list of channel names.
+
+        :returns: either None or a list of channel names as strings.
+        """
+        return self.metadata.get('channels')
+
     @staticmethod
     def getLRUHash(*args, **kwargs) -> str:
         """
@@ -1006,7 +1015,7 @@ class TileSource(IPyLeafletMixin):
                 elif sc.mainImage.dtype.kind == 'f':
                     sc.dtype = 'float'
             sc.axis = sc.axis if sc.axis is not None else entry.get('axis')
-            sc.bandidx = 0 if image.shape[2] <= 2 else 1  # type: ignore[misc]
+            sc.bandidx = 0 if image.shape[2] <= 2 else 1
             sc.band = None
             if ((entry.get('frame') is None and not entry.get('framedelta')) or
                     entry.get('frame') == sc.mainFrame):
@@ -1021,29 +1030,29 @@ class TileSource(IPyLeafletMixin):
                               :sc.mainImage.shape[1],
                               :sc.mainImage.shape[2]]
             if (isinstance(entry.get('band'), int) and
-                    entry['band'] >= 1 and entry['band'] <= image.shape[2]):  # type: ignore[misc]
+                    entry['band'] >= 1 and entry['band'] <= image.shape[2]):
                 sc.bandidx = entry['band'] - 1
             sc.composite = entry.get('composite', 'lighten')
             if (hasattr(self, '_bandnames') and entry.get('band') and
                     str(entry['band']).lower() in self._bandnames and
-                    image.shape[2] > self._bandnames[  # type: ignore[misc]
+                    image.shape[2] > self._bandnames[
                         str(entry['band']).lower()]):
                 sc.bandidx = self._bandnames[str(entry['band']).lower()]
-            if entry.get('band') == 'red' and image.shape[2] > 2:  # type: ignore[misc]
+            if entry.get('band') == 'red' and image.shape[2] > 2:
                 sc.bandidx = 0
-            elif entry.get('band') == 'blue' and image.shape[2] > 2:  # type: ignore[misc]
+            elif entry.get('band') == 'blue' and image.shape[2] > 2:
                 sc.bandidx = 2
                 sc.band = image[:, :, 2]
             elif entry.get('band') == 'alpha':
-                sc.bandidx = (image.shape[2] - 1 if image.shape[2] in (2, 4)  # type: ignore[misc]
+                sc.bandidx = (image.shape[2] - 1 if image.shape[2] in (2, 4)
                               else None)
-                sc.band = (image[:, :, -1] if image.shape[2] in (2, 4) else  # type: ignore[misc]
+                sc.band = (image[:, :, -1] if image.shape[2] in (2, 4) else
                            np.full(image.shape[:2], 255, np.uint8))
                 sc.composite = entry.get('composite', 'multiply')
             if sc.band is None:
                 sc.band = image[
-                    :, :, sc.bandidx  # type: ignore[index]
-                    if sc.bandidx is not None and sc.bandidx < image.shape[2]  # type: ignore[misc]
+                    :, :, sc.bandidx
+                    if sc.bandidx is not None and sc.bandidx < image.shape[2]
                     else 0]
             sc.band = self._applyStyleFunction(sc.band, sc, 'preband')
             sc.palette = getPaletteColors(entry.get(
@@ -1061,9 +1070,11 @@ class TileSource(IPyLeafletMixin):
             if sc.nodata is not None:
                 sc.mask = sc.band != float(sc.nodata)
             else:
-                sc.mask = np.full(image.shape[:2], True)
+                sc.mask = None
             sc.band = (sc.band - sc.min) / delta
             if not sc.clamp:
+                if sc.mask is None:
+                    sc.mask = np.full(image.shape[:2], True)
                 sc.mask = sc.mask & (sc.band >= 0) & (sc.band <= 1)
             sc.band = self._applyStyleFunction(sc.band, sc, 'band')
             # To implement anything other multiply or lighten, we should mimic
@@ -1076,7 +1087,7 @@ class TileSource(IPyLeafletMixin):
             # divide.
             # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html for
             # some details.
-            for channel in range(sc.output.shape[2]):  # type: ignore[misc]
+            for channel in range(sc.output.shape[2]):
                 if np.all(sc.palette[:, channel] == sc.palette[0, channel]):
                     if ((sc.palette[0, channel] == 0 and sc.composite != 'multiply') or
                             (sc.palette[0, channel] == 255 and sc.composite == 'multiply')):
@@ -1088,25 +1099,27 @@ class TileSource(IPyLeafletMixin):
                     if not channel or np.any(
                             sc.palette[:, channel] != sc.palette[:, channel - 1]):
                         if not sc.discrete:
-                            clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
+                            if len(sc.palette) == 2 and sc.palette[0, channel] == 0:
+                                clrs = sc.band * sc.palette[1, channel]
+                            else:
+                                clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
                         else:
                             clrs = sc.palette[
                                 np.floor(sc.band * len(sc.palette)).astype(int).clip(
                                     0, len(sc.palette) - 1), channel]
                 if sc.composite == 'multiply':
                     if eidx:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.multiply(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs / 255, 1))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.multiply(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            (clrs / 255) if sc.mask is None else np.where(sc.mask, clrs / 255, 1))
                 else:
                     if not eidx:
-                        sc.output[:sc.mask.shape[0],
-                                  :sc.mask.shape[1],
-                                  channel] = np.where(sc.mask, clrs, 0)
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = (
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
                     else:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.maximum(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs, 0))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.maximum(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
             sc.output = self._applyStyleFunction(sc.output, sc, 'postband')
         if hasattr(sc, 'styleIndex'):
             del sc.styleIndex
@@ -1117,7 +1130,7 @@ class TileSource(IPyLeafletMixin):
             sc.output = (sc.output * 65535 / 255).astype(np.uint16)
         elif sc.dtype == 'float':
             sc.output /= 255
-        if sc.axis is not None and 0 <= int(sc.axis) < sc.output.shape[2]:  # type: ignore[misc]
+        if sc.axis is not None and 0 <= int(sc.axis) < sc.output.shape[2]:
             sc.output = sc.output[:, :, sc.axis:sc.axis + 1]
         sc.output = self._applyStyleFunction(sc.output, sc, 'post')
         return sc.output
@@ -1145,7 +1158,7 @@ class TileSource(IPyLeafletMixin):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = np.zeros(
-                (self.tileHeight, self.tileWidth, tile.shape[2]),  # type: ignore[misc]
+                (self.tileHeight, self.tileWidth, tile.shape[2]),
                 dtype=tile.dtype)
             extend[:min(self.tileHeight, tile.shape[0]),
                    :min(self.tileWidth, tile.shape[1])] = tile
@@ -1625,9 +1638,16 @@ class TileSource(IPyLeafletMixin):
                 mode = subtile.mode
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
-        return tile.resize(
-            (self.tileWidth, self.tileHeight),
-            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
+        tile = tile.resize(
+            (min(self.tileWidth, (tile.width + scale - 1) // scale),
+             min(self.tileHeight, (tile.height + scale - 1) // scale)),
+            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        if tile.width != self.tileWidth or tile.height != self.tileHeight:
+            fulltile = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
+            fulltile.paste(tile, (0, 0))
+            tile = fulltile
+        tile = tile.convert(mode)
+        return (tile, TILE_FORMAT_PIL)
 
     @methodcache()
     def getTile(self, x: int, y: int, z: int, pilImageAllowed: bool = False,
@@ -2532,6 +2552,52 @@ class TileSource(IPyLeafletMixin):
         if not hasattr(self, '_frameCount'):
             self._frameCount = len(self.getMetadata().get('frames', [])) or 1
         return self._frameCount
+
+    def frameToAxes(self, frame: int) -> Dict[str, int]:
+        """
+        Given a frame number, return a dictionary of axes values.  If unknown,
+        this is just 'frame': frame.
+
+        :param frame: a frame number.
+        :returns: a dictionary of axes that specify the frame.
+        """
+        if frame >= self.frames:
+            msg = 'frame is outside of range'
+            raise exceptions.TileSourceRangeError(msg)
+        meta = self.metadata
+        if self.frames == 1 or 'IndexStride' not in meta:
+            return {'frame': frame}
+        axes = {
+            key[5:].lower(): (frame // stride) % meta['IndexRange'][key]
+            for key, stride in meta['IndexStride'].items()}
+        return axes
+
+    def axesToFrame(self, **kwargs: int) -> int:
+        """
+        Given values on some or all of the axes, return the corresponding frame
+        number.  Any unspecified axis is 0.  If one of the specified axes is
+        'frame', this is just returned and the other values are ignored.
+
+        :param kwargs: axes with position values.
+        :returns: a frame number.
+        """
+        meta = self.metadata
+        frame = 0
+        for key, value in kwargs.items():
+            if key.lower() == 'frame':
+                if value < 0 or value >= self.frames:
+                    msg = f'{value} is out of range for frame'
+                    raise exceptions.TileSourceRangeError(msg)
+                return value
+            ikey = 'Index' + key.upper()
+            if ikey not in meta.get('IndexStride', {}):
+                msg = f'{key} is not a known axis'
+                raise exceptions.TileSourceRangeError(msg)
+            if value < 0 or value >= meta['IndexRange'][ikey]:
+                msg = f'{value} is out of range for axis {key}'
+                raise exceptions.TileSourceRangeError(msg)
+            frame += value * meta['IndexStride'][ikey]
+        return frame
 
 
 class FileTileSource(TileSource):

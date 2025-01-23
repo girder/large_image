@@ -62,7 +62,7 @@ setup(
             'pandas ; python_version < "3.9"',
             'pandas>=2.2 ; python_version >= "3.9"',
             'python-calamine ; python_version >= "3.9"',
-            'umap-learn ; python_version < "3.13"',
+            'umap-learn',
         ],
         'tasks': [
             f'girder-large-image[tasks]{limit_version}',
