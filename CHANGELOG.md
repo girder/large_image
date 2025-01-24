@@ -16,6 +16,7 @@
 - Automatically set the JUPYTER_PROXY value ([#1781](../../pull/1781))
 - Add a general channelNames property to tile sources ([#1783](../../pull/1783))
 - Speed up compositing styles ([#1784](../../pull/1784))
+- Better repr of large_image classes ([#1787](../../pull/1787))
 
 ### Changes
 

@@ -224,9 +224,11 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         # if rawpy is present, try reading via that library first
         try:
+            import builtins
+
             import rawpy
 
-            with contextlib.redirect_stderr(open(os.devnull, 'w')):
+            with contextlib.redirect_stderr(builtins.open(os.devnull, 'w')):
                 rgb = rawpy.imread(largeImagePath).postprocess()
                 rgb = large_image.tilesource.utilities._imageToNumpy(rgb)[0]
                 if rgb.shape[2] == 2:
