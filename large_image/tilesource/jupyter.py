@@ -439,7 +439,9 @@ class Map:
                     async with session.get(url) as response:
                         self._frame_histograms[frame] = await response.json()  # type: ignore
                         # rewrite whole object for watcher
-                        self.frame_selector.frameHistograms = self._frame_histograms.copy()  # type: ignore
+                        self.frame_selector.frameHistograms = (
+                            self._frame_histograms.copy()  # type: ignore
+                        )
 
             asyncio.ensure_future(fetch(histogram_url))
 
