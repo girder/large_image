@@ -79,13 +79,13 @@ module.exports = {
     },
     methods: {
         updateCurrentFrame(value) {
-            this.currentFrame = value;
+            this.currentFrame = +value;
         },
         setCurrentMode(mode) {
             this.currentModeId = mode.id;
         },
         setCurrentFrame(frame) {
-            this.currentFrame = frame;
+            this.currentFrame = +frame;
             this.indexInfo = Object.fromEntries(
                 Object.entries(this.indexInfo)
                     .map(([index, info]) => {
@@ -128,7 +128,7 @@ module.exports = {
             this.updateHistogramParamStyles();
         },
         updateFrameSlider(frame) {
-            this.currentFrame = frame;
+            this.currentFrame = +frame;
             this.frameUpdate({frame, undefined});
         },
         update() {
@@ -141,7 +141,7 @@ module.exports = {
                     }
                 }
             });
-            this.currentFrame = frame;
+            this.currentFrame = +frame;
             let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined;
             if (style && style.preset) delete style.preset;
             style = this.maxMergeStyle(style);
