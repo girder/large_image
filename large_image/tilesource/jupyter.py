@@ -437,7 +437,7 @@ class Map:
             async def fetch(url):
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url) as response:
-                        self._frame_histograms[frame] = await response.json()
+                        self._frame_histograms[frame] = await response.json()  # type: ignore
                         # rewrite whole object for watcher
                         self.frame_selector.frameHistograms = self._frame_histograms.copy()  # type: ignore
 
