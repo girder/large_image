@@ -178,7 +178,8 @@ class Map:
         :param resource: a girder resource path of an item or file that exists
             on the girder client.
         """
-        self._layer = self._map = self._metadata = self._frame_slider = self._frame_histograms = None
+        self._layer = self._map = self._metadata = self._frame_slider = None
+        self._frame_histograms: Optional[Dict[int, Any]] = None
         self._ts = ts
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
@@ -436,9 +437,11 @@ class Map:
             async def fetch(url):
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url) as response:
-                        self._frame_histograms[frame] = await response.json()
+                        self._frame_histograms[frame] = await response.json()  # type: ignore
                         # rewrite whole object for watcher
-                        self.frame_selector.frameHistograms = self._frame_histograms.copy()
+                        self.frame_selector.frameHistograms = (
+                            self._frame_histograms.copy()  # type: ignore
+                        )
 
             asyncio.ensure_future(fetch(histogram_url))
 
@@ -498,7 +501,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
 
         def get(self) -> None:
             kwargs = {k: ast.literal_eval(self.get_argument(k)) for k in self.request.arguments}
-            histogram = manager.tile_source.histogram(  # type: ignore[attr-defined]
+            histogram = manager.tile_source._unstyled.histogram(  # type: ignore[attr-defined]
                 **kwargs,
             ).get('histogram', [{}])
             self.write(json.dumps(histogram, cls=NumpyEncoder))
