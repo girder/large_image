@@ -58,7 +58,8 @@ setup(
         'all': [
             'rawpy',
             'pillow-heif',
-            'pillow-jxl-plugin',
+            'pillow-jxl-plugin < 1.3 ; python_version < "3.8"',
+            'pillow-jxl-plugin ; python_version >= "3.9"',
             'pillow-jpls',
         ],
         'girder': f'girder-large-image{limit_version}',
