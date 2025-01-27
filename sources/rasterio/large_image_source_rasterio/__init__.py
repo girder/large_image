@@ -1077,6 +1077,15 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             for ext in rasterio.drivers.raster_driver_extensions():
                 if ext not in cls.extensions:
                     cls.extensions[ext] = SourcePriority.IMPLICIT
+            # This list was compiled by trying to read the test files in GDAL's
+            # repo.
+            for ext in {
+                    'adf', 'aux', 'demtif', 'dim', 'doq', 'flt', 'fst', 'gsc',
+                    'h3', 'lan', 'los', 'lrc', 'mint.bin', 'mtw', 'nsf', 'nws',
+                    'on9', 'pjg', 'png.ovr', 'prj', 'ptf', 'rasterlite', 'rdb',
+                    'tif.grd', 'til', 'vic', 'xlb'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):

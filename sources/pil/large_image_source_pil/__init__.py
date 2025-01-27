@@ -325,6 +325,10 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for mimeType in PIL.Image.MIME.values():
                 if mimeType not in cls.mimeTypes:
                     cls.mimeTypes[mimeType] = SourcePriority.IMPLICIT_HIGH
+            # These were found by reading various test files.
+            for ext in {'ppg'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):
