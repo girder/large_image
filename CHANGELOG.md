@@ -21,6 +21,7 @@
 ### Changes
 
 - Allow umap-learn for graphing in girder annotations in python 3.13 ([#1780](../../pull/1780))
+- List a few more known extensions for different sources ([#1790](../../pull/1790))
 
 ### Bug Fixes
 
