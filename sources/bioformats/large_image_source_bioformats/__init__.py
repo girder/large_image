@@ -767,6 +767,10 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         'fake', 'no'}:
                     if ext not in cls.extensions:
                         cls.extensions[ext] = SourcePriority.IMPLICIT
+            # These were found by reading some OMERO test files
+            for ext in {'columbusidx', 'dv_vol', 'lifext'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):
