@@ -228,6 +228,10 @@ class TileSource(IPyLeafletMixin):
     def geospatial(self) -> bool:
         return False
 
+    @property
+    def _unstyled(self) -> 'TileSource':
+        return getattr(self, '_unstyledInstance', self)
+
     def _setStyle(self, style: Any) -> None:
         """
         Check and set the specified style from a json string or a dictionary.
@@ -304,13 +308,11 @@ class TileSource(IPyLeafletMixin):
         with self._sourceLock:
             if not self._dtype:
                 self._dtype = 'check'
-                sample, _ = cast(Tuple[np.ndarray, Any], getattr(
-                    self, '_unstyledInstance', self).getRegion(
-                        region=dict(left=0, top=0, width=1, height=1),
-                        format=TILE_FORMAT_NUMPY))
+                sample, _ = cast(Tuple[np.ndarray, Any], self._unstyled.getRegion(
+                    region=dict(left=0, top=0, width=1, height=1),
+                    format=TILE_FORMAT_NUMPY))
                 self._dtype = np.dtype(sample.dtype)
-                self._bandCount = len(
-                    getattr(getattr(self, '_unstyledInstance', self), '_bandInfo', []))
+                self._bandCount = len(getattr(self._unstyled, '_bandInfo', []))
                 if not self._bandCount:
                     self._bandCount = sample.shape[-1] if len(sample.shape) == 3 else 1
         return cast(np.dtype, self._dtype)
@@ -706,7 +708,7 @@ class TileSource(IPyLeafletMixin):
         :param onlyMinMax: if True, only find the min and max.  If False, get
             the entire histogram.
         """
-        self._bandRanges[frame] = getattr(self, '_unstyledInstance', self).histogram(
+        self._bandRanges[frame] = self._unstyled.histogram(
             dtype=dtype,
             onlyMinMax=onlyMinMax,
             output={'maxWidth': min(self.sizeX, analysisSize),
@@ -1043,8 +1045,7 @@ class TileSource(IPyLeafletMixin):
             else:
                 frame = entry['frame'] if entry.get('frame') is not None else (
                     sc.mainFrame + entry['framedelta'])
-                image = getattr(self, '_unstyledInstance', self).getTile(
-                    x, y, z, frame=frame, numpyAllowed=True)
+                image = self._unstyled.getTile(x, y, z, frame=frame, numpyAllowed=True)
                 image = image[:sc.mainImage.shape[0],
                               :sc.mainImage.shape[1],
                               :sc.mainImage.shape[2]]
@@ -1625,7 +1626,7 @@ class TileSource(IPyLeafletMixin):
                             'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                             x * scale + newX, y * scale + newY, z)
                         lastlog = time.time()
-                    subtile = getattr(self, '_unstyledInstance', self).getTile(
+                    subtile = self._unstyled.getTile(
                         x * scale + newX, y * scale + newY, z,
                         pilImageAllowed=False, numpyAllowed='always',
                         sparseFallback=True, edge=False, frame=kwargs.get('frame'))
@@ -1649,7 +1650,7 @@ class TileSource(IPyLeafletMixin):
                         'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                         x * scale + newX, y * scale + newY, z)
                     lastlog = time.time()
-                subtile = getattr(self, '_unstyledInstance', self).getTile(
+                subtile = self._unstyled.getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))

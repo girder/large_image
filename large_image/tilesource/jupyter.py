@@ -14,17 +14,25 @@ Please note that this webserver will not work with Classic Notebook and will
 likely lead to crashes. This is only for use in JupyterLab.
 
 """
+import ast
+import asyncio
 import importlib.util
 import json
 import os
-import re
+import threading
 import weakref
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
+import aiohttp
+import numpy as np
+
+import large_image
 from large_image.exceptions import TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
+ipyvuePresent = importlib.util.find_spec('ipyvue') is not None
 
 
 class IPyLeafletMixin:
@@ -83,7 +91,7 @@ class IPyLeafletMixin:
 
     def __init__(self, *args, **kwargs) -> None:
         self._jupyter_server_manager = None
-        self._map = Map()
+        self._map = Map(ts=self)
         if ipyleafletPresent:
             self.to_map = self._map.to_map
             self.from_map = self._map.from_map
@@ -173,6 +181,7 @@ class Map:
             on the girder client.
         """
         self._layer = self._map = self._metadata = self._frame_slider = None
+        self._frame_histograms: Optional[Dict[int, Any]] = None
         self._ts = ts
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
@@ -270,7 +279,7 @@ class Map:
         ipyleaflet layer, and the center of the tile source.
         """
         from ipyleaflet import Map, basemaps, projections
-        from ipywidgets import IntSlider, VBox
+        from ipywidgets import VBox
 
         try:
             default_zoom = metadata['levels'] - metadata['sourceLevels']
@@ -311,16 +320,14 @@ class Map:
 
         children: List[Any] = []
         frames = metadata.get('frames')
-        if frames is not None:
-            self._frame_slider = IntSlider(
-                value=0,
-                min=0,
-                max=len(frames) - 1,
-                description='Frame:',
-            )
-            if self._frame_slider:
-                self._frame_slider.observe(self.update_frame, names='value')
-                children.append(self._frame_slider)
+        if frames is not None and ipyvuePresent:
+            from large_image.widgets.components import FrameSelector
+
+            self.frame_selector = FrameSelector()
+            self.frame_selector.imageMetadata = metadata
+            self.frame_selector.updateFrameCallback = self.update_frame
+            self.frame_selector.getFrameHistogram = self.get_frame_histogram
+            children.append(self.frame_selector)
 
         m = Map(
             crs=crs,
@@ -333,6 +340,7 @@ class Map:
             dragging=True,
             attribution_control=False,
         )
+        m.layout.height = '50vh'
         if self._geospatial:
             m.add_layer(layer)
         self._map = m
@@ -393,18 +401,67 @@ class Map:
             return transf.transform(x, y)
         return x, self._metadata['sizeY'] - y
 
-    def update_frame(self, event, **kwargs):
-        frame = int(event.get('new'))
+    def update_frame(self, frame, style, **kwargs):
         if self._layer:
-            if 'frame=' in self._layer.url:
-                self._layer.url = re.sub(r'frame=(\d+)', f'frame={frame}', self._layer.url)
-            else:
-                if '?' in self._layer.url:
-                    self._layer.url = self._layer.url.replace('?', f'?frame={frame}&')
-                else:
-                    self._layer.url += f'?frame={frame}'
-
+            parsed_url = urlparse(self._layer.url)
+            query = parsed_url.query
+            query = {k: v[0] for k, v in parse_qs(query).items()}
+            query.update(dict(
+                frame=frame,
+                style=json.dumps(style),
+            ))
+            query_string = urlencode(query, quote_via=quote, safe='{}')
+            self._layer.url = urlunparse((
+                parsed_url.scheme, parsed_url.netloc,
+                parsed_url.path, parsed_url.params,
+                query_string, parsed_url.fragment,
+            ))
             self._layer.redraw()
+
+    def get_frame_histogram(self, query):
+        if self._layer is not None:
+            if self._frame_histograms is None:
+                self._frame_histograms = {}
+
+            frame = query.get('frame')
+            parsed_url = urlparse(self._layer.url)
+            query_string = urlencode(query)
+            scheme = parsed_url.scheme or 'http'
+            netloc = parsed_url.netloc
+            if not netloc and self._ts is not None:
+                netloc = f'{self._ts.JUPYTER_HOST}:{self._ts._jupyter_server_manager.port}'
+            histogram_url = urlunparse((
+                scheme, netloc,
+                '/histogram', parsed_url.params,
+                query_string, parsed_url.fragment,
+            ))
+
+            async def fetch(url):
+                async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=900),
+                ) as session:
+                    async with session.get(url) as response:
+                        self._frame_histograms[frame] = await response.json()  # type: ignore
+                        # rewrite whole object for watcher
+                        self.frame_selector.frameHistograms = (
+                            self._frame_histograms.copy()  # type: ignore
+                        )
+
+            asyncio.ensure_future(fetch(histogram_url))
+
+
+# used for encoding histogram data
+class NumpyEncoder(json.JSONEncoder):
+    """Special json encoder for numpy types from https://stackoverflow.com/a/49677241"""
+
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
@@ -443,6 +500,26 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             self.write(json.dumps(manager.tile_source.metadata))  # type: ignore[attr-defined]
             self.set_header('Content-Type', 'application/json')
 
+    class TileSourceHistogramHandler(tornado.web.RequestHandler):
+        """REST endpoint to get image metadata."""
+
+        async def get(self) -> None:
+            kwargs = {k: ast.literal_eval(self.get_argument(k)) for k in self.request.arguments}
+
+            def fetch():
+                if not hasattr(manager, '_histogram_semaphore'):
+                    manager._histogram_semaphore = threading.Semaphore(  # type: ignore
+                        min(6, large_image.config.cpu_count()),
+                    )
+                with manager._histogram_semaphore:  # type: ignore[attr-defined]
+                    histogram = manager.tile_source._unstyled.histogram(  # type: ignore
+                        **kwargs,
+                    ).get('histogram', [{}])
+                self.write(json.dumps(histogram, cls=NumpyEncoder))
+                self.set_header('Content-Type', 'application/json')
+
+            await tornado.ioloop.IOLoop.current().run_in_executor(None, fetch)
+
     class TileSourceTileHandler(tornado.web.RequestHandler):
         """REST endpoint to serve tiles from image in slippy maps standard."""
 
@@ -451,6 +528,9 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             y = int(self.get_argument('y'))
             z = int(self.get_argument('z'))
             frame = int(self.get_argument('frame', default='0'))
+            style = self.get_argument('style', default=None)
+            if style:
+                manager.tile_source.style = json.loads(style)  # type: ignore[attr-defined]
             encoding = self.get_argument('encoding', 'PNG')
             try:
                 tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
@@ -465,6 +545,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
 
     app = tornado.web.Application([
         (r'/metadata', TileSourceMetadataHandler),
+        (r'/histogram', TileSourceHistogramHandler),
         (r'/tile', TileSourceTileHandler),
     ])
     sockets = tornado.netutil.bind_sockets(port, '')
