@@ -435,7 +435,9 @@ class Map:
             ))
 
             async def fetch(url):
-                async with aiohttp.ClientSession() as session:
+                async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=900)
+                ) as session:
                     async with session.get(url) as response:
                         self._frame_histograms[frame] = await response.json()  # type: ignore
                         # rewrite whole object for watcher
