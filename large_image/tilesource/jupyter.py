@@ -24,7 +24,6 @@ import weakref
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
-import aiohttp
 import numpy as np
 
 import large_image
@@ -33,6 +32,7 @@ from large_image.tilesource.utilities import JSONDict
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
 ipyvuePresent = importlib.util.find_spec('ipyvue') is not None
+aiohttpPresent = importlib.util.find_spec('aiohttp') is not None
 
 
 class IPyLeafletMixin:
@@ -320,7 +320,7 @@ class Map:
 
         children: List[Any] = []
         frames = metadata.get('frames')
-        if frames is not None and ipyvuePresent:
+        if frames is not None and ipyvuePresent and aiohttpPresent:
             from large_image.widgets.components import FrameSelector
 
             self.frame_selector = FrameSelector()
@@ -419,6 +419,8 @@ class Map:
             self._layer.redraw()
 
     def get_frame_histogram(self, query):
+        import aiohttp
+
         if self._layer is not None:
             if self._frame_histograms is None:
                 self._frame_histograms = {}
