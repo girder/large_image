@@ -438,7 +438,7 @@ class Map:
 
             async def fetch(url):
                 async with aiohttp.ClientSession(
-                    timeout=aiohttp.ClientTimeout(total=900)
+                    timeout=aiohttp.ClientTimeout(total=900),
                 ) as session:
                     async with session.get(url) as response:
                         self._frame_histograms[frame] = await response.json()  # type: ignore
@@ -508,9 +508,11 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
 
             def fetch():
                 if not hasattr(manager, '_histogram_semaphore'):
-                    manager._histogram_semaphore = threading.Semaphore(min(6, large_image.config.cpu_count()))
-                with manager._histogram_semaphore:
-                    histogram = manager.tile_source._unstyled.histogram(  # type: ignore[attr-defined]
+                    manager._histogram_semaphore = threading.Semaphore(  # type: ignore
+                        min(6, large_image.config.cpu_count()),
+                    )
+                with manager._histogram_semaphore:  # type: ignore[attr-defined]
+                    histogram = manager.tile_source._unstyled.histogram(  # type: ignore
                         **kwargs,
                     ).get('histogram', [{}])
                 self.write(json.dumps(histogram, cls=NumpyEncoder))
