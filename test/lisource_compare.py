@@ -568,6 +568,7 @@ def command():
     if not large_image.tilesource.AvailableTileSources:
         large_image.tilesource.loadTileSources()
     if opts.all:
+        large_image.config.setConfig('max_small_image_size', 16384)
         for key in list(large_image.config.ConfigValues):
             if '_ignored_names' in key:
                 del large_image.config.ConfigValues[key]
