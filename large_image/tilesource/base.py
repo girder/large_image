@@ -200,10 +200,29 @@ class TileSource(IPyLeafletMixin):
         return functools.partial(type(self), **self._initValues[1]), self._initValues[0]
 
     def __repr__(self) -> str:
-        return self.getState()
+        if hasattr(self, '_initValues') and not hasattr(self, '_unpickleable'):
+            param = [
+                f'{k}={v!r}' if k != 'style' or not isinstance(v, dict) or
+                not getattr(self, '_jsonstyle', None) else
+                f'style={json.loads(self._jsonstyle)}'
+                for k, v in self._initValues[1].items()]
+            return (
+                f'{self.__class__.__name__}('
+                f'{", ".join(repr(val) for val in self._initValues[0])}'
+                f'{", " if len(self._initValues[1]) else ""}'
+                f'{", ".join(param)}'
+                ')')
+        return '<' + self.getState() + '>'
 
     def _repr_png_(self) -> bytes:
         return self.getThumbnail(encoding='PNG')[0]
+
+    def __rich_repr__(self) -> Iterator[Any]:
+        if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
+            yield self.getState()
+        else:
+            yield from self._initValues[0]
+            yield from self._initValues[1].items()
 
     @property
     def geospatial(self) -> bool:

@@ -27,9 +27,10 @@ class SourcePriority(enum.IntEnum):
     LOWER = 6
     IMPLICIT_HIGH = 7
     IMPLICIT = 8
-    FALLBACK_HIGH = 9
-    FALLBACK = 10
-    MANUAL = 11  # This and higher values will never be selected automatically
+    IMPLICIT_LOW = 9
+    FALLBACK_HIGH = 10
+    FALLBACK = 11
+    MANUAL = 12  # This and higher values will never be selected automatically
 
 
 TILE_FORMAT_IMAGE = 'image'

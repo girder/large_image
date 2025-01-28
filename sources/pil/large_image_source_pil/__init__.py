@@ -101,6 +101,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'jpg': SourcePriority.LOW,
         'jpeg': SourcePriority.LOW,
         'jpe': SourcePriority.LOW,
+        'nef': SourcePriority.LOW,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK_HIGH,
@@ -222,11 +223,20 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Try to use rawpy to read an image.
         """
-        # if rawpy is present, try reading via that library first
+        # if rawpy is present, try reading via that library first, but only
+        # if PIL reports a single frame
         try:
+            img = PIL.Image.open(largeImagePath)
+            if len(list(PIL.ImageSequence.Iterator(img))) > 1:
+                return
+        except Exception:
+            pass
+        try:
+            import builtins
+
             import rawpy
 
-            with contextlib.redirect_stderr(open(os.devnull, 'w')):
+            with contextlib.redirect_stderr(builtins.open(os.devnull, 'w')):
                 rgb = rawpy.imread(largeImagePath).postprocess()
                 rgb = large_image.tilesource.utilities._imageToNumpy(rgb)[0]
                 if rgb.shape[2] == 2:
@@ -323,6 +333,10 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for mimeType in PIL.Image.MIME.values():
                 if mimeType not in cls.mimeTypes:
                     cls.mimeTypes[mimeType] = SourcePriority.IMPLICIT_HIGH
+            # These were found by reading various test files.
+            for ext in {'ppg'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):

@@ -16,10 +16,13 @@
 - Automatically set the JUPYTER_PROXY value ([#1781](../../pull/1781))
 - Add a general channelNames property to tile sources ([#1783](../../pull/1783))
 - Speed up compositing styles ([#1784](../../pull/1784))
+- Better repr of large_image classes ([#1787](../../pull/1787))
+- Better detect multiframe images in PIL ([#1791](../../pull/1791))
 
 ### Changes
 
 - Allow umap-learn for graphing in girder annotations in python 3.13 ([#1780](../../pull/1780))
+- List a few more known extensions for different sources ([#1790](../../pull/1790))
 
 ### Bug Fixes
 
