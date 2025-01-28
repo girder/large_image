@@ -101,6 +101,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'jpg': SourcePriority.LOW,
         'jpeg': SourcePriority.LOW,
         'jpe': SourcePriority.LOW,
+        'nef': SourcePriority.LOW,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK_HIGH,
@@ -222,7 +223,14 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Try to use rawpy to read an image.
         """
-        # if rawpy is present, try reading via that library first
+        # if rawpy is present, try reading via that library first, but only
+        # if PIL reports a single frame
+        try:
+            img = PIL.Image.open(largeImagePath)
+            if len(list(PIL.ImageSequence.Iterator(img))) > 1:
+                return
+        except Exception:
+            pass
         try:
             import builtins
 
