@@ -19,6 +19,7 @@ import asyncio
 import importlib.util
 import json
 import os
+import threading
 import weakref
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
@@ -26,6 +27,7 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 import aiohttp
 import numpy as np
 
+import large_image
 from large_image.exceptions import TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
 
@@ -505,9 +507,12 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             kwargs = {k: ast.literal_eval(self.get_argument(k)) for k in self.request.arguments}
 
             def fetch():
-                histogram = manager.tile_source._unstyled.histogram(  # type: ignore[attr-defined]
-                    **kwargs,
-                ).get('histogram', [{}])
+                if not hasattr(manager, '_histogram_semaphore'):
+                    manager._histogram_semaphore = threading.Semaphore(min(6, large_image.config.cpu_count()))
+                with manager._histogram_semaphore:
+                    histogram = manager.tile_source._unstyled.histogram(  # type: ignore[attr-defined]
+                        **kwargs,
+                    ).get('histogram', [{}])
                 self.write(json.dumps(histogram, cls=NumpyEncoder))
                 self.set_header('Content-Type', 'application/json')
 
