@@ -483,7 +483,6 @@ module.exports = {
     border-bottom: 3px solid !important;
 }
 .table-row {
-    height: 50px;
     vertical-align: top;
     border-bottom: 1px solid !important;
     position: relative;
@@ -501,13 +500,11 @@ module.exports = {
     width: 30px;
 }
 .name-col {
-    padding: 0 5px;
     width: 50%;
     word-break: break-all;
     font-size: inherit;
 }
 .color-col {
-    padding: 0 5px;
     width: 25%;
 }
 .auto-range-col {
@@ -577,8 +574,6 @@ module.exports = {
     position: absolute;
     right: 10px;
     top: 5px;
-    font-size: 20px;
-    font-weight: 900 !important;
 }
 .advanced-section {
     position: absolute;
@@ -606,13 +601,19 @@ module.exports = {
 }
 .percentage-input {
     position: relative;
-    margin-top: 5px;
     width: 80px;
+}
+.jupyter-widgets .percentage-input {
+    margin-top: 5px;
 }
 .percentage-input::after {
     position: absolute;
     content: '%';
     left: 45px;
     top: 3px;
+}
+.jupyter-widgets .expand-btn {
+    font-size: 20px;
+    font-weight: 900 !important;
 }
 </style>

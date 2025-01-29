@@ -83,6 +83,7 @@ var ImageViewerSelectWidget = View.extend({
     _createVue(imageMetadata, frameUpdate) {
         const el = this.$('#vue-container').get(0);
         const getFrameHistogram = (params) => {
+            params = Object.assign({}, params);
             restRequest({
                 type: 'GET',
                 url: 'item/' + this.itemId + '/tiles/histogram',

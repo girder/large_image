@@ -433,7 +433,6 @@ module.exports = {
     left: 90px;
     width: calc(100% - 180px);
     max-height: 100%;
-    padding: 0px 5px;
 }
 .handles-svg {
     position: absolute;
