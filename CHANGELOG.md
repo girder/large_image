@@ -5,7 +5,7 @@
 ### Features
 
 - Add utility functions for converting between frame and axes ([#1778](../../pull/1778))
-- Jupyter frame selector ([#1738](../../pull/1738), [#1792](../../pull/1792))
+- Jupyter frame selector ([#1738](../../pull/1738), [#1792](../../pull/1792), [#1793](../../pull/1793))
 
 ### Improvements
 
