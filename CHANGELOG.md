@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.31.1
+
+### Improvements
+
+- Improve how we use vips to read lower tile levels ([#1794](../../pull/1794))
+
 ## 1.31.0
 
 ### Features

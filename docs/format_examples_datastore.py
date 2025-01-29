@@ -100,7 +100,8 @@ format_examples = [
         examples=[
             dict(
                 filename='sample_image.nd2',
-                # originally from 'https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
+                # originally from
+                # 'https://downloads.openmicroscopy.org/images/ND2/aryeh/MeOh_high_fluo_003.nd2',
                 url='https://data.kitware.com/api/v1/file/hashsum/sha512/4e76e490c915b10f646cb516f85a4d36d52aa7eff94715b90222644180e26fef6768493887c05adf182cf0351ba0bce659204041c4698a0f6b08423586788f4d/download',
                 hash='8e23bb594cd18314f9c18e70d736088ae46f8bc696ab7dc047784be416d7a706',
             ),
@@ -127,7 +128,8 @@ format_examples = [
         examples=[
             dict(
                 filename='US-MONO2-8-8x-execho.dcm',
-                # originally from 'https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
+                # originally from
+                # 'https://downloads.openmicroscopy.org/images/DICOM/samples/US-MONO2-8-8x-execho.dcm',
                 url='https://data.kitware.com/api/v1/file/hashsum/sha512/5332044f887d82c7f3693c6ca180f07accf5f00c2b7b1a3a29ef9ae737d5f1975478b5e2d5846c391987b8051416068f57a7062e848323c700412236b35679db/download',
                 hash='7d3f54806d0315c6cfc8b7371649a242b5ef8f31e0d20221971dd8087f2ff1ea',
             ),
@@ -141,7 +143,8 @@ format_examples = [
         examples=[
             dict(
                 filename='20191025 Test FRET 585. 423, 426.lif',
-                # originally from 'https://downloads.openmicroscopy.org/images/Leica-LIF/imagesc-30856/20191025%20Test%20FRET%20585.%20423,%20426.lif',
+                # originally from
+                # 'https://downloads.openmicroscopy.org/images/Leica-LIF/imagesc-30856/20191025%20Test%20FRET%20585.%20423,%20426.lif',
                 url='https://data.kitware.com/api/v1/file/hashsum/sha512/d25de002d8a81dfcaf6b062b9f429ca85bb81423bc09d3aa33d9d51e9392cc4ace2b8521475e373ceecaf958effd0fade163e7173c467aab66c957da14482ed7/download',
                 hash='8d4ee62868b9616b832c2eb28e7d62ec050fb032e0bc11ea0a392f5c84390c71',
             ),
@@ -155,7 +158,8 @@ format_examples = [
         examples=[
             dict(
                 filename='Animated_PNG_example_bouncing_beach_ball.png',
-                # originally from 'https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
+                # originally from
+                # 'https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
                 url='https://data.kitware.com/api/v1/file/hashsum/sha512/465ebdc2e81b2576dfc96b34e82db7f968e6d4f32f0fa80ef4bb0e44ed216230e6be1a2e4b11ae301a2905cc582dd24cbd2c360d9567ff7b1dac2c871f6d1e37/download',
                 hash='3b28e2462f1b31d0d15d795e6e58baf397899c3f864be7034bf47939b5bbbc3b',
             ),
