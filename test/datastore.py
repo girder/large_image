@@ -27,9 +27,9 @@ registry = {
     # RGB JPEG compression
     # Source: TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs
     'TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs': 'sha512:1b75a4ec911017aef5c885760a3c6575dacf5f8efb59fb0e011108dce85b1f4e97b8d358f3363c1f5ea6f1c3698f037554aec1620bbdd4cac54e3d5c9c1da1fd',  # noqa
-    # Tiff with floating point pixels
+    # Tiff with floating point pixels (icc profile stripped)
     # Source: d042-353.crop.small.float32.tif
-    'd042-353.crop.small.float32.tif': 'sha512:ae05dbe6f3330c912893b203b55db27b0fdf3222a0e7f626d372c09668334494d07dc1d35533670cfac51b588d2292eeee7431317741fdb4cbb281c28a289115',  # noqa
+    'd042-353.crop.small.float32.tif': 'sha512:8b640e9adcd0b8aba794666027b80215964d075e76ca2ebebefc7e17c3cd79af7da40a40151e2a2ba0ae48969e54275cf69a3cfc1a2a6b87fbb0d186013e5489',  # noqa
     # JPEG with progressive compression and restart markers
     # Source: d042-353.crop.small.jpg
     'd042-353.crop.small.jpg': 'sha512:1353646637c1fae266b87312698aa39eca0311222c3a1399b60efdc13bfe55e2f3db59da005da945dd7e9e816f31ccd18846dd72744faac75215074c3d87414f',  # noqa

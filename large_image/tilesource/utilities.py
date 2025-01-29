@@ -312,7 +312,8 @@ def _letterboxImage(image: PIL.Image.Image, width: int, height: int, fill: str) 
     return result
 
 
-def _vipsCast(image: Any, mustBe8Bit: bool = False) -> Any:
+def _vipsCast(image: Any, mustBe8Bit: bool = False,
+              preferredCast: Optional[Tuple[Any, float, float]] = None) -> Any:
     """
     Cast a vips image to a format we want.
 
@@ -323,7 +324,7 @@ def _vipsCast(image: Any, mustBe8Bit: bool = False) -> Any:
     import pyvips
 
     image = cast(pyvips.Image, image)
-    formats = {
+    formats: Dict[pyvips.BandFormat, Tuple[pyvips.BandFormat, float, float]] = {
         pyvips.BandFormat.CHAR: (pyvips.BandFormat.UCHAR, 2**7, 1),
         pyvips.BandFormat.COMPLEX: (pyvips.BandFormat.USHORT, 0, 65535),
         pyvips.BandFormat.DOUBLE: (pyvips.BandFormat.USHORT, 0, 65535),
@@ -334,9 +335,13 @@ def _vipsCast(image: Any, mustBe8Bit: bool = False) -> Any:
         pyvips.BandFormat.SHORT: (pyvips.BandFormat.USHORT, 2**15, 1),
         pyvips.BandFormat.UINT: (pyvips.BandFormat.USHORT, 0, 2**-16),
     }
-    if image.format not in formats or (image.format == pyvips.BandFormat.USHORT and not mustBe8Bit):
+    if (image.format not in formats and preferredCast is None) or (
+            image.format == pyvips.BandFormat.USHORT and not mustBe8Bit):
         return image
-    target, offset, multiplier = formats[image.format]
+    if preferredCast is not None:
+        target, offset, multiplier = preferredCast
+    else:
+        target, offset, multiplier = formats[image.format]
     if image.format in {pyvips.BandFormat.DOUBLE, pyvips.BandFormat.FLOAT}:
         maxVal = image.max()
         # These thresholds are higher than 256 and 65536 because bicubic and
