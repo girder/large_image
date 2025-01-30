@@ -7,6 +7,10 @@
 - Improve how we use vips to read lower tile levels ([#1794](../../pull/1794))
 - Be more specific in casting when converting images via vips ([#1795](../../pull/1795))
 
+### Bug Fixes
+
+- Fix an issue with lazy tiles that have non power of two scaling ([#1797](../../pull/1797))
+
 ## 1.31.0
 
 ### Features
@@ -58,7 +62,7 @@
 ### Changes
 
 - Suppress a warning about nd2 files that we can't do anything about ([#1749](../../pull/1749))
-- Zero empty areas in tile frames ([#1752](../../pull/1752))
+- Zero empty areas in tile frames ([#1755](../../pull/1755))
 - Don't include cache libraries in [common] deployments ([#1758](../../pull/1758))
 - Specify empty_dir=yes when constructing vsicurl parameters ([#1760](../../pull/1760))
 - Update how some associated images are read in tiff files ([#1763](../../pull/1763))
