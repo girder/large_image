@@ -249,7 +249,7 @@ def _generate_tiff(inputPath, outputPath, tempPath, lidata, **kwargs):
 
 
 def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
-                      status=None, **kwargs):
+                      status=None, preferredVipsCast=None, **kwargs):
     """
     Convert a file, buffer, or vips image to a tiff file.  This is equivalent
     to a vips command line of
@@ -263,6 +263,7 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
         also stores files in TMPDIR
     :param forTiled: True if the output should be tiled, false if not.
     :param status: an optional additional string to add to log messages.
+    :param preferredVipsCast: vips scaling parameters to use in a cast.
     :param kwargs: addition arguments that get passed to _vipsParameters
         and _convert_to_jp2k.
     """
@@ -294,7 +295,8 @@ def _convert_via_vips(inputPathOrBuffer, outputPath, tempPath, forTiled=True,
         image = _vipsCast(
             image,
             convertParams['compression'] in {'webp', 'jpeg'} or
-            kwargs.get('compression') in {'jp2k'})
+            kwargs.get('compression') in {'jp2k'},
+            preferredVipsCast)
     # TODO: revisit the TMPDIR override; this is not thread safe
     # oldtmpdir = os.environ.get('TMPDIR')
     # os.environ['TMPDIR'] = os.path.dirname(tempPath)
@@ -535,8 +537,9 @@ def _convert_large_image_tile(tilelock, strips, tile):
         strips[ty] = strips[ty].insert(vimg, x, 0, expand=True)
 
 
-def _convert_large_image_frame(frame, numFrames, ts, frameOutputPath, tempPath,
-                               parentConcurrency=None, **kwargs):
+def _convert_large_image_frame(
+        frame, numFrames, ts, frameOutputPath, tempPath, preferredVipsCast=None,
+        parentConcurrency=None, **kwargs):
     """
     Convert a single frame from a large_image source.  This parallelizes tile
     reads.  Once all tiles are converted to a composited vips image, a tiff
@@ -547,6 +550,7 @@ def _convert_large_image_frame(frame, numFrames, ts, frameOutputPath, tempPath,
     :param ts: the open tile source.
     :param frameOutputPath: the destination name for the tiff file.
     :param tempPath: a temporary file in a temporary directory.
+    :param preferredVipsCast: vips scaling parameters to use in a cast.
     :param parentConcurrency: amount of concurrency used by parent task.
     """
     # The iterator tile size is a balance between memory use and fewer calls
@@ -573,7 +577,64 @@ def _convert_large_image_frame(frame, numFrames, ts, frameOutputPath, tempPath,
     for stripidx in range(1, len(strips)):
         img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)
     _convert_via_vips(
-        img, frameOutputPath, tempPath, status='%d/%d' % (frame + 1, numFrames), **kwargs)
+        img, frameOutputPath, tempPath, status='%d/%d' % (frame + 1, numFrames),
+        preferredVipsCast=preferredVipsCast, **kwargs)
+
+
+def _output_type(lidata):  # noqa
+    """
+    Determine how to cast and scale vips data based on actual image contents.
+    """
+    try:
+        intype = np.dtype(lidata['tilesource'].dtype)
+    except Exception:
+        return None
+    if intype == np.uint8 or intype == np.uint16:
+        return None
+    logger.debug('Checking data range')
+    minval = maxval = None
+    for frame in range(len(lidata['metadata'].get('frames', [0]))):
+        h = lidata['tilesource'].histogram(
+            onlyMinMax=True, output=dict(maxWidth=2048, maxHeight=2048),
+            resample=0, frame=frame)
+        if 'max' not in h:
+            continue
+        if maxval is None:
+            maxval = max(h['max'].tolist())
+            minval = min(h['min'].tolist())
+        else:
+            maxval = max(maxval, max(h['max'].tolist()))
+            minval = min(minval, min(h['min'].tolist()))
+    lidata['range'] = (minval, maxval)
+    logger.debug('Data range is [%r, %r]', minval, maxval)
+    if minval >= 0 and intype == np.int8:
+        return (pyvips.BandFormat.UCHAR, 0, 1)
+    if minval >= 0 and intype == np.int16:
+        return (pyvips.BandFormat.USHORT, 0, 1)
+    if minval >= 0 and maxval == 0:
+        return (pyvips.BandFormat.UCHAR, 0, 1)
+    if minval >= 0 and maxval <= 2 ** -8:
+        return (pyvips.BandFormat.USHORT, 0,
+                2 ** -(math.ceil(math.log2(maxval)) - 16) - 2 ** -math.ceil(math.log2(maxval)))
+    if minval >= 0 and maxval <= 1:
+        return (pyvips.BandFormat.USHORT, 0, 65535)
+    if minval >= 0 and maxval < 256:
+        return (pyvips.BandFormat.UCHAR, 0, 1)
+    if minval >= 0 and maxval < 65536:
+        return (pyvips.BandFormat.USHORT, 0, 1)
+    if minval >= 0:
+        return (pyvips.BandFormat.USHORT, 0,
+                2 ** -(math.ceil(math.log2(maxval)) - 16) - 2 ** -math.ceil(math.log2(maxval)))
+    if minval >= -2 ** -8 and maxval <= 2 ** -8:
+        return (pyvips.BandFormat.USHORT, 1,
+                2 ** -(math.ceil(math.log2(maxval)) - 15) - 2 ** -math.ceil(math.log2(maxval)))
+    if minval >= -1 and maxval <= 1:
+        return (pyvips.BandFormat.USHORT, 1, 32767)
+    if minval >= -32768 and maxval < 32768:
+        return (pyvips.BandFormat.USHORT, 32768, 1)
+    return (pyvips.BandFormat.USHORT, 0,
+            2 ** -(math.ceil(math.log2(max(-minval, maxval))) - 16) -
+            2 ** -math.ceil(math.log2(max(-minval, maxval))))
 
 
 def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
@@ -588,6 +649,7 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
         images.
     """
     ts = lidata['tilesource']
+    lidata['_vips_cast'] = _output_type(lidata)
     numFrames = len(lidata['metadata'].get('frames', [0]))
     outputList = []
     tasks = []
@@ -603,7 +665,7 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
             frame + 1, time.strftime('%Y%m%d-%H%M%S'))
         _pool_add(tasks, (pool.submit(
             _convert_large_image_frame, frame, numFrames, ts, frameOutputPath,
-            tempPath, pool._max_workers, **kwargs), ))
+            tempPath, lidata['_vips_cast'], pool._max_workers, **kwargs), ))
         outputList.append(frameOutputPath)
     _drain_pool(pool, tasks, 'frames')
     _output_tiff(outputList, outputPath, tempPath, lidata, **kwargs)
@@ -971,7 +1033,9 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
             if lidata and (not is_vips(
                     inputPath, (lidata['metadata']['sizeX'], lidata['metadata']['sizeY'])) or (
                     len(lidata['metadata'].get('frames', [])) >= 2 and
-                    not _is_multiframe(inputPath))):
+                    not _is_multiframe(inputPath)) or
+                    (np.dtype(lidata['tilesource'].dtype) != np.uint8 and
+                     np.dtype(lidata['tilesource'].dtype) != np.uint16)):
                 _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
             elif _is_multiframe(inputPath):
                 _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)

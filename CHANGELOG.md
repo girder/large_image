@@ -5,6 +5,7 @@
 ### Improvements
 
 - Improve how we use vips to read lower tile levels ([#1794](../../pull/1794))
+- Be more specific in casting when converting images via vips ([#1795](../../pull/1795))
 
 ## 1.31.0
 
