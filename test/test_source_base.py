@@ -372,6 +372,26 @@ def testTileOverlapWithRegionOffset():
     assert firstTile['tile_overlap']['right'] == 200
 
 
+def testLazyTileWithScale():
+    imagePath = datastore.fetch('sample_Easy1.png')
+    ts = large_image.open(imagePath)
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=3)
+    assert tile['width'] == 31
+    assert tile['height'] == 256
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=4)
+    assert tile['width'] == 256
+    assert tile['height'] == 211
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=7)
+    assert tile['width'] == 31
+    assert tile['height'] == 211
+
+
 def testGetRegionAutoOffset():
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
