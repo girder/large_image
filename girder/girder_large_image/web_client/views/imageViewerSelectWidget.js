@@ -1,7 +1,5 @@
 import Vue from 'vue';
 
-import {restRequest} from '@girder/core/rest';
-
 import largeImageConfig from './configView';
 import * as viewers from './imageViewerWidget';
 
@@ -21,6 +19,7 @@ const {wrap} = girder.utilities.PluginUtils;
 const eventStream = girder.utilities.EventStream;
 const ItemView = girder.views.body.ItemView;
 const View = girder.views.View;
+const {restRequest} = girder.rest;
 
 wrap(ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
