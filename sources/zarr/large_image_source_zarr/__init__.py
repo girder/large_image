@@ -689,7 +689,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     arr,
                     [(0, s - arr.shape[i]) for i, s in enumerate(new_shape)],
                 )
-                new_arr = zarr.empty(new_shape, chunks=chunking, dtype=arr.dtype)
+                new_arr = zarr.empty(
+                    new_shape, chunks=chunking, dtype=arr.dtype,
+                    write_empty_chunks=False)
                 new_arr[:] = arr[:]
                 arr = new_arr
             else:
@@ -765,12 +767,22 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         self._zarr_store.rmdir(path)
             chunking = None
             if store_path not in current_arrays:
-                arr = np.empty(tuple(new_dims.values()), dtype=tile.dtype)
                 chunking = tuple([
                     self._tileSize if a in ['x', 'y'] else
                     new_dims.get('s') if a == 's' else 1
                     for a in axes
                 ])
+                # If we have to create the array, do so with the desired store
+                # and chunking so we don't have to immediately rechunk it
+                arr = zarr.empty(
+                    tuple(new_dims.values()),
+                    dtype=tile.dtype,
+                    chunks=chunking,
+                    store=self._zarr_store,
+                    path=store_path,
+                    write_empty_chunks=False,
+                )
+                chunking = None
             else:
                 arr = current_arrays[store_path]
                 new_shape = tuple(
