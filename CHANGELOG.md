@@ -1,10 +1,22 @@
 # Change Log
 
-## 1.30.7
+## 1.31.1
+
+### Improvements
+
+- Improve how we use vips to read lower tile levels ([#1794](../../pull/1794))
+- Be more specific in casting when converting images via vips ([#1795](../../pull/1795))
+
+### Bug Fixes
+
+- Fix an issue with lazy tiles that have non power of two scaling ([#1797](../../pull/1797))
+
+## 1.31.0
 
 ### Features
 
 - Add utility functions for converting between frame and axes ([#1778](../../pull/1778))
+- Jupyter frame selector ([#1738](../../pull/1738), [#1792](../../pull/1792), [#1793](../../pull/1793))
 
 ### Improvements
 
@@ -13,10 +25,16 @@
 - Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
 - Harden sources based on more fuzz testing ([#1774](../../pull/1774))
 - Default to not caching source in notebooks ([#1776](../../pull/1776))
+- Automatically set the JUPYTER_PROXY value ([#1781](../../pull/1781))
+- Add a general channelNames property to tile sources ([#1783](../../pull/1783))
+- Speed up compositing styles ([#1784](../../pull/1784))
+- Better repr of large_image classes ([#1787](../../pull/1787))
+- Better detect multiframe images in PIL ([#1791](../../pull/1791))
 
 ### Changes
 
 - Allow umap-learn for graphing in girder annotations in python 3.13 ([#1780](../../pull/1780))
+- List a few more known extensions for different sources ([#1790](../../pull/1790))
 
 ### Bug Fixes
 
@@ -44,7 +62,7 @@
 ### Changes
 
 - Suppress a warning about nd2 files that we can't do anything about ([#1749](../../pull/1749))
-- Zero empty areas in tile frames ([#1752](../../pull/1752))
+- Zero empty areas in tile frames ([#1755](../../pull/1755))
 - Don't include cache libraries in [common] deployments ([#1758](../../pull/1758))
 - Specify empty_dir=yes when constructing vsicurl parameters ([#1760](../../pull/1760))
 - Update how some associated images are read in tiff files ([#1763](../../pull/1763))

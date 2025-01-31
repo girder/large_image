@@ -1075,6 +1075,16 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     if drvmimes is not None:
                         if drvmimes not in cls.mimeTypes:
                             cls.mimeTypes[drvmimes] = SourcePriority.IMPLICIT
+            # This list was compiled by trying to read the test files in GDAL's
+            # repo.
+            for ext in {
+                    'adf', 'aux', 'demtif', 'dim', 'doq', 'flt', 'fst',
+                    'gdbtable', 'gsc', 'h3', 'idf', 'lan', 'los', 'lrc',
+                    'mapml', 'mint.bin', 'mtw', 'nsf', 'nws', 'on2', 'on9',
+                    'osm.pbf', 'pjg', 'prj', 'ptf', 'rasterlite', 'rdb', 'rl2',
+                    'shx', 'sos', 'tif.grd', 'til', 'vic', 'xlb'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):
