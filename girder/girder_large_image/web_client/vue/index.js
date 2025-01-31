@@ -1,7 +1,7 @@
-import CompositeLayers from './components/CompositeLayers.vue';
-import DualInput from './components/DualInput.vue';
-import FrameSelector from './components/FrameSelector.vue';
-import HistogramEditor from './components/HistogramEditor.vue';
+import CompositeLayers from '../widgets/CompositeLayers.vue';
+import DualInput from '../widgets/DualInput.vue';
+import FrameSelector from '../widgets/FrameSelector.vue';
+import HistogramEditor from '../widgets/HistogramEditor.vue';
 import PresetsMenu from './components/PresetsMenu.vue';
 
 export {

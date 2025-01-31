@@ -87,7 +87,7 @@ class LazyTileDict(dict):
             self['tile_x'] = self.get('tile_x', self['x'])
             self['tile_y'] = self.get('tile_y', self['y'])
             self['tile_width'] = self.get('tile_width', self.width)
-            self['tile_height'] = self.get('tile_width', self.height)
+            self['tile_height'] = self.get('tile_height', self.height)
             if self.get('magnification', None):
                 self['tile_magnification'] = self.get('tile_magnification', self['magnification'])
             self['tile_mm_x'] = self.get('mm_x')

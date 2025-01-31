@@ -200,14 +200,37 @@ class TileSource(IPyLeafletMixin):
         return functools.partial(type(self), **self._initValues[1]), self._initValues[0]
 
     def __repr__(self) -> str:
-        return self.getState()
+        if hasattr(self, '_initValues') and not hasattr(self, '_unpickleable'):
+            param = [
+                f'{k}={v!r}' if k != 'style' or not isinstance(v, dict) or
+                not getattr(self, '_jsonstyle', None) else
+                f'style={json.loads(self._jsonstyle)}'
+                for k, v in self._initValues[1].items()]
+            return (
+                f'{self.__class__.__name__}('
+                f'{", ".join(repr(val) for val in self._initValues[0])}'
+                f'{", " if len(self._initValues[1]) else ""}'
+                f'{", ".join(param)}'
+                ')')
+        return '<' + self.getState() + '>'
 
     def _repr_png_(self) -> bytes:
         return self.getThumbnail(encoding='PNG')[0]
 
+    def __rich_repr__(self) -> Iterator[Any]:
+        if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
+            yield self.getState()
+        else:
+            yield from self._initValues[0]
+            yield from self._initValues[1].items()
+
     @property
     def geospatial(self) -> bool:
         return False
+
+    @property
+    def _unstyled(self) -> 'TileSource':
+        return getattr(self, '_unstyledInstance', self)
 
     def _setStyle(self, style: Any) -> None:
         """
@@ -285,13 +308,11 @@ class TileSource(IPyLeafletMixin):
         with self._sourceLock:
             if not self._dtype:
                 self._dtype = 'check'
-                sample, _ = cast(Tuple[np.ndarray, Any], getattr(
-                    self, '_unstyledInstance', self).getRegion(
-                        region=dict(left=0, top=0, width=1, height=1),
-                        format=TILE_FORMAT_NUMPY))
+                sample, _ = cast(Tuple[np.ndarray, Any], self._unstyled.getRegion(
+                    region=dict(left=0, top=0, width=1, height=1),
+                    format=TILE_FORMAT_NUMPY))
                 self._dtype = np.dtype(sample.dtype)
-                self._bandCount = len(
-                    getattr(getattr(self, '_unstyledInstance', self), '_bandInfo', []))
+                self._bandCount = len(getattr(self._unstyled, '_bandInfo', []))
                 if not self._bandCount:
                     self._bandCount = sample.shape[-1] if len(sample.shape) == 3 else 1
         return cast(np.dtype, self._dtype)
@@ -302,6 +323,15 @@ class TileSource(IPyLeafletMixin):
             if not self._dtype or (isinstance(self._dtype, str) and self._dtype == 'check'):
                 return None
         return self._bandCount
+
+    @property
+    def channelNames(self) -> Optional[List[str]]:
+        """
+        If known, return a list of channel names.
+
+        :returns: either None or a list of channel names as strings.
+        """
+        return self.metadata.get('channels')
 
     @staticmethod
     def getLRUHash(*args, **kwargs) -> str:
@@ -678,7 +708,7 @@ class TileSource(IPyLeafletMixin):
         :param onlyMinMax: if True, only find the min and max.  If False, get
             the entire histogram.
         """
-        self._bandRanges[frame] = getattr(self, '_unstyledInstance', self).histogram(
+        self._bandRanges[frame] = self._unstyled.histogram(
             dtype=dtype,
             onlyMinMax=onlyMinMax,
             output={'maxWidth': min(self.sizeX, analysisSize),
@@ -1015,8 +1045,7 @@ class TileSource(IPyLeafletMixin):
             else:
                 frame = entry['frame'] if entry.get('frame') is not None else (
                     sc.mainFrame + entry['framedelta'])
-                image = getattr(self, '_unstyledInstance', self).getTile(
-                    x, y, z, frame=frame, numpyAllowed=True)
+                image = self._unstyled.getTile(x, y, z, frame=frame, numpyAllowed=True)
                 image = image[:sc.mainImage.shape[0],
                               :sc.mainImage.shape[1],
                               :sc.mainImage.shape[2]]
@@ -1061,9 +1090,11 @@ class TileSource(IPyLeafletMixin):
             if sc.nodata is not None:
                 sc.mask = sc.band != float(sc.nodata)
             else:
-                sc.mask = np.full(image.shape[:2], True)
+                sc.mask = None
             sc.band = (sc.band - sc.min) / delta
             if not sc.clamp:
+                if sc.mask is None:
+                    sc.mask = np.full(image.shape[:2], True)
                 sc.mask = sc.mask & (sc.band >= 0) & (sc.band <= 1)
             sc.band = self._applyStyleFunction(sc.band, sc, 'band')
             # To implement anything other multiply or lighten, we should mimic
@@ -1088,25 +1119,27 @@ class TileSource(IPyLeafletMixin):
                     if not channel or np.any(
                             sc.palette[:, channel] != sc.palette[:, channel - 1]):
                         if not sc.discrete:
-                            clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
+                            if len(sc.palette) == 2 and sc.palette[0, channel] == 0:
+                                clrs = sc.band * sc.palette[1, channel]
+                            else:
+                                clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
                         else:
                             clrs = sc.palette[
                                 np.floor(sc.band * len(sc.palette)).astype(int).clip(
                                     0, len(sc.palette) - 1), channel]
                 if sc.composite == 'multiply':
                     if eidx:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.multiply(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs / 255, 1))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.multiply(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            (clrs / 255) if sc.mask is None else np.where(sc.mask, clrs / 255, 1))
                 else:
                     if not eidx:
-                        sc.output[:sc.mask.shape[0],
-                                  :sc.mask.shape[1],
-                                  channel] = np.where(sc.mask, clrs, 0)
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = (
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
                     else:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.maximum(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs, 0))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.maximum(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
             sc.output = self._applyStyleFunction(sc.output, sc, 'postband')
         if hasattr(sc, 'styleIndex'):
             del sc.styleIndex
@@ -1593,7 +1626,7 @@ class TileSource(IPyLeafletMixin):
                             'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                             x * scale + newX, y * scale + newY, z)
                         lastlog = time.time()
-                    subtile = getattr(self, '_unstyledInstance', self).getTile(
+                    subtile = self._unstyled.getTile(
                         x * scale + newX, y * scale + newY, z,
                         pilImageAllowed=False, numpyAllowed='always',
                         sparseFallback=True, edge=False, frame=kwargs.get('frame'))
@@ -1617,7 +1650,7 @@ class TileSource(IPyLeafletMixin):
                         'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                         x * scale + newX, y * scale + newY, z)
                     lastlog = time.time()
-                subtile = getattr(self, '_unstyledInstance', self).getTile(
+                subtile = self._unstyled.getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))

@@ -60,7 +60,8 @@
             "promise/no-return-in-finally": "error",
             "promise/no-return-wrap": "error",
             "vue/require-prop-types": "off",
-            "vue/multiline-html-element-content-newline": "off"
+            "vue/multiline-html-element-content-newline": "off",
+            "vue/html-self-closing": "off"
         },
         "ignorePatterns": ["dist/**"],
         "root": true,
