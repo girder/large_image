@@ -278,8 +278,8 @@ class Map:
         Create an ipyleaflet map given large_image metadata, an optional
         ipyleaflet layer, and the center of the tile source.
         """
-        from ipyleaflet import Map, basemaps, projections
-        from ipywidgets import VBox
+        from ipyleaflet import Map, basemaps, projections, FullScreenControl, DrawControl, Popup
+        from ipywidgets import HTML, VBox
 
         try:
             default_zoom = metadata['levels'] - metadata['sourceLevels']
@@ -345,6 +345,51 @@ class Map:
             m.add_layer(layer)
         self._map = m
         children.append(m)
+
+        info_label = HTML(f"{metadata.get('sizeX')}, {metadata.get('sizeY')}")
+        popup = Popup(child=info_label)
+        draw_control = DrawControl(
+            rectangle=dict(shapeOptions=dict(color='#19a7ff')),
+            # enable drawing other shapes by specifying styling
+            polygon=dict(),
+            circle=dict(),
+            polyline=dict(),
+            circlemarker=dict(),
+            rotate=False,
+            cut=False,
+            edit=False
+        )
+
+        def handle_interaction(**kwargs):
+            coords = kwargs.get('coordinates')
+            interaction_type = kwargs.get('type')
+            if interaction_type == 'mousemove':
+                for rectangle in draw_control.data:
+                    rect_coords = rectangle.get('geometry', {}).get('coordinates', [[]])[0]
+                    x_range = [round(rect_coords[0][0]), round(rect_coords[2][0])]
+                    y_range = [round(rect_coords[0][1]), round(rect_coords[1][1])]
+                    if (
+                        coords[1] >= x_range[0] and
+                        coords[1] <= x_range[1] and
+                        coords[0] >= y_range[0] and
+                        coords[0] <= y_range[1]
+                    ):
+                        flipped_y_range = [metadata.get('sizeY') - y_range[1], metadata.get('sizeY') - y_range[0]]
+                        info_label.value = f'<div>Box X Range: {x_range}</div>'
+                        info_label.value += f'<div>Box Y Range: {flipped_y_range}</div>'
+                        info_label.value += f'<div>Mouse X: {round(coords[1])}</div>'
+                        info_label.value += f'<div>Mouse Y: {round(metadata.get("sizeY") - coords[0])}</div>'
+                        center_x = (x_range[1] - x_range[0]) / 2 + x_range[0]
+                        popup.location = (y_range[1], center_x)
+                        popup.close_popup()
+                        popup.open_popup()
+                        return
+            popup.close_popup()
+
+        m.on_interaction(handle_interaction)
+        m.add(popup)
+        m.add(draw_control)
+        m.add(FullScreenControl())
 
         return VBox(children)
 
