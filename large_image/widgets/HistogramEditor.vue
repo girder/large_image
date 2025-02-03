@@ -125,13 +125,13 @@ module.exports = {
     },
     computed: {
         minVal() {
-            if (this.autoRange) return Math.round(this.fromDistributionPercentage(this.autoRange / 100))
+            if (this.autoRange) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
             return this.currentMin || parseFloat(this.histogram.min.toFixed(2));
         },
         maxVal() {
-            if (this.autoRange) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100))
+            if (this.autoRange) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
             return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
-        },
+        }
     },
     mounted() {
         this.fetchHistogram();
