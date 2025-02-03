@@ -123,6 +123,16 @@ module.exports = {
             this.initializePositions();
         }
     },
+    computed: {
+        minVal() {
+            if (this.autoRange) return Math.round(this.fromDistributionPercentage(this.autoRange / 100))
+            return this.currentMin || parseFloat(this.histogram.min.toFixed(2));
+        },
+        maxVal() {
+            if (this.autoRange) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100))
+            return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
+        },
+    },
     mounted() {
         this.fetchHistogram();
     },
@@ -338,12 +348,13 @@ module.exports = {
 <template>
   <div class="range-editor">
     <input
-      v-if="histogram && autoRange === undefined"
+      v-if="histogram"
       type="number"
       class="input-80 min-input"
+      :disabled="autoRange"
       :min="histogram.min"
       :max="currentMax"
-      :value="currentMin || parseFloat(histogram.min.toFixed(2))"
+      :value="minVal"
       @input="(e) => updateFromInput('min', e.target.value)"
     >
     <canvas
@@ -410,12 +421,13 @@ module.exports = {
       />
     </svg>
     <input
-      v-if="histogram && autoRange === undefined"
+      v-if="histogram"
       type="number"
       class="input-80 max-input"
+      :disabled="autoRange"
       :max="histogram.max"
       :min="currentMin"
-      :value="currentMax || parseFloat(histogram.max.toFixed(2))"
+      :value="maxVal"
       @input="(e) => updateFromInput('max', e.target.value)"
     >
   </div>
