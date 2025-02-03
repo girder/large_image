@@ -3,7 +3,7 @@ function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
 
-function makeDraggableSVG(svg, validateDrag, callback, xRange) {
+function makeDraggableSVG(svg, validateDrag, dragCallback, endCallback, xRange) {
     // Modified from https://www.w3schools.com/howto/howto_js_draggable.asp
     let selectedShape;
     let posOffset;
@@ -55,11 +55,13 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
             selectedShape.setAttributeNS(null, 'x1', `${coord.x}`);
             selectedShape.setAttributeNS(null, 'x2', `${coord.x}`);
             selectedShape.setAttributeNS(null, 'y1', `${coord.y}`);
-            callback(selectedShape, coord);
+            dragCallback(selectedShape, coord);
         }
     }
+
     function endDrag() {
         selectedShape = undefined;
+        endCallback();
     }
 }
 
@@ -109,6 +111,7 @@ module.exports = {
                 this.$refs.svg,
                 this.validateHandleDrag,
                 this.dragHandle,
+                () => { this.$refs.handleTooltip.style.visibility = 'hidden'; },
                 this.xRange
             );
             this.initializePositions();
@@ -286,6 +289,9 @@ module.exports = {
         dragHandle(selected, newLocation) {
             const name = selected.getAttribute('name');
             let newValue = this.xPositionToValue(newLocation.x);
+            this.$refs.handleTooltip.innerText = newValue;
+            this.$refs.handleTooltip.style.visibility = 'visible';
+            this.$refs.handleTooltip.style.left = `${newLocation.x + 70}px`;
             if (this.autoRange !== undefined) {
                 newValue = this.toDistributionPercentage(newValue);
                 if (name === 'max') {
@@ -347,6 +353,7 @@ module.exports = {
 
 <template>
   <div class="range-editor">
+    <div ref="handleTooltip" class="handle-tooltip"></div>
     <input
       v-if="histogram"
       type="number"
@@ -434,6 +441,16 @@ module.exports = {
 </template>
 
 <style scoped>
+.handle-tooltip {
+    position: absolute;
+    background-color: white;
+    z-index: 2;
+    top: 18px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    visibility: hidden;
+}
 .range-editor {
     position: absolute;
     display: flex;
