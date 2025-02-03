@@ -346,8 +346,9 @@ class Map:
         self._map = m
         children.append(m)
 
-        info_label = HTML(f"{metadata.get('sizeX')}, {metadata.get('sizeY')}")
+        info_label = HTML()
         popup = Popup(child=info_label)
+        popup.close_popup()
         draw_control = DrawControl(
             rectangle=dict(shapeOptions=dict(color='#19a7ff')),
             # enable drawing other shapes by specifying styling
@@ -380,9 +381,7 @@ class Map:
                         info_label.value += f'<div>Mouse X: {round(coords[1])}</div>'
                         info_label.value += f'<div>Mouse Y: {round(metadata.get("sizeY") - coords[0])}</div>'
                         center_x = (x_range[1] - x_range[0]) / 2 + x_range[0]
-                        popup.location = (y_range[1], center_x)
-                        popup.close_popup()
-                        popup.open_popup()
+                        popup.open_popup((y_range[1], center_x))
                         return
             popup.close_popup()
 
