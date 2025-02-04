@@ -93,6 +93,15 @@ def testAddTileWithLevel():
     assert arrays.get('1') is None
 
 
+def testNoSamplesAxis(tmp_path):
+    output_file = tmp_path / 'test.tiff'
+    sink = large_image_source_zarr.new()
+    data = np.zeros((4, 1040, 1388))
+    sink.addTile(data, 0, 0, axes=['c', 'y', 'x'])
+    sink.write(output_file)
+    assert sink.metadata.get('bandCount') == 1
+
+
 def testExtraAxis():
     sink = large_image_source_zarr.new()
     sink.addTile(np.random.random((256, 256)), 0, 0, z=1)
