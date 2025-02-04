@@ -110,6 +110,13 @@ def testExtraAxis():
     assert len(metadata.get('frames')) == 2
 
 
+def testXYAxis():
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.random.random((256, 256)), 0, 0, xy=1)
+    metadata = sink.getMetadata()
+    assert metadata['IndexStride']['IndexXY'] == 1
+
+
 @pytest.mark.parametrize('file_type', FILE_TYPES)
 def testCrop(file_type, tmp_path):
     output_file = tmp_path / f'test.{file_type}'

@@ -13,6 +13,7 @@
 - Fix an issue with lazy tiles that have non power of two scaling ([#1797](../../pull/1797))
 - Use zarr.empty not np.empty when creating large zarr sinks ([#1801](../../pull/1801))
 - Fix zarr sink addTile when no samples axis is specified ([#1805](../../pull/1805))
+- Fix zarr sink adding an xy axis ([#1807](../../pull/1807))
 
 ## 1.31.0
 
