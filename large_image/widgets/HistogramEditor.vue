@@ -126,12 +126,12 @@ module.exports = {
     },
     computed: {
         minVal() {
-            if (!this.histogram) return 0
+            if (!this.histogram) return 0;
             if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
             return this.currentMin || parseFloat(this.histogram.min.toFixed(2));
         },
         maxVal() {
-            if (!this.histogram) return 1
+            if (!this.histogram) return 1;
             if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
             return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
         }
@@ -274,23 +274,25 @@ module.exports = {
                 if (this.autoRange === undefined && newValue >= this.currentMax) {
                     moveX = false;
                 } else if (this.autoRange !== undefined) {
-                    const percentage = this.toDistributionPercentage(newValue)
+                    const percentage = this.toDistributionPercentage(newValue);
                     if (
                         percentage >= 50 ||
                         parseFloat(parseFloat(percentage).toFixed(2)) === this.autoRange
-                    )
-                    moveX = false;
+                    ) {
+                        moveX = false;
+                    }
                 }
             } else if (handleName === 'max') {
                 if (this.autoRange === undefined && newValue <= this.currentMin) {
                     moveX = false;
                 } else if (this.autoRange !== undefined) {
-                    const percentage = this.toDistributionPercentage(newValue)
+                    const percentage = this.toDistributionPercentage(newValue);
                     if (
                         percentage <= 50 ||
                         parseFloat(parseFloat(100 - percentage).toFixed(2)) === this.autoRange
-                    )
-                    moveX = false;
+                    ) {
+                        moveX = false;
+                    }
                 }
             }
 
