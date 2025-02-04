@@ -3,7 +3,7 @@ function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
 
-function makeDraggableSVG(svg, validateDrag, dragCallback, endCallback, xRange) {
+function makeDraggableSVG(svg, validateDrag, callback, xRange) {
     // Modified from https://www.w3schools.com/howto/howto_js_draggable.asp
     let selectedShape;
     let posOffset;
@@ -55,13 +55,12 @@ function makeDraggableSVG(svg, validateDrag, dragCallback, endCallback, xRange) 
             selectedShape.setAttributeNS(null, 'x1', `${coord.x}`);
             selectedShape.setAttributeNS(null, 'x2', `${coord.x}`);
             selectedShape.setAttributeNS(null, 'y1', `${coord.y}`);
-            dragCallback(selectedShape, coord);
+            callback(selectedShape, coord);
         }
     }
 
     function endDrag() {
         selectedShape = undefined;
-        endCallback();
     }
 }
 
@@ -111,7 +110,6 @@ module.exports = {
                 this.$refs.svg,
                 this.validateHandleDrag,
                 this.dragHandle,
-                () => { this.$refs.handleTooltip.style.visibility = 'hidden'; },
                 this.xRange
             );
             this.initializePositions();
@@ -289,9 +287,6 @@ module.exports = {
         dragHandle(selected, newLocation) {
             const name = selected.getAttribute('name');
             let newValue = this.xPositionToValue(newLocation.x);
-            this.$refs.handleTooltip.innerText = newValue;
-            this.$refs.handleTooltip.style.visibility = 'visible';
-            this.$refs.handleTooltip.style.left = `${newLocation.x + 70}px`;
             if (this.autoRange !== undefined) {
                 newValue = this.toDistributionPercentage(newValue);
                 if (name === 'max') {
@@ -353,7 +348,6 @@ module.exports = {
 
 <template>
   <div class="range-editor">
-    <div ref="handleTooltip" class="handle-tooltip"></div>
     <input
       v-if="histogram"
       type="number"
@@ -398,7 +392,9 @@ module.exports = {
         x2="5"
         y1="0"
         y2="30"
-      />
+      >
+        <title>{{ minVal }}</title>
+      </line>
       <text
         v-if="vRange[1] !== undefined"
         :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 8): 0"
@@ -425,7 +421,9 @@ module.exports = {
         x2="5"
         y1="0"
         y2="30"
-      />
+      >
+        <title>{{ maxVal }}</title>
+      </line>
     </svg>
     <input
       v-if="histogram"
@@ -441,16 +439,6 @@ module.exports = {
 </template>
 
 <style scoped>
-.handle-tooltip {
-    position: absolute;
-    background-color: white;
-    z-index: 2;
-    top: 18px;
-    padding: 5px;
-    border: 1px solid black;
-    border-radius: 5px;
-    visibility: hidden;
-}
 .range-editor {
     position: absolute;
     display: flex;
