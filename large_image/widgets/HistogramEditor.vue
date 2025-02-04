@@ -126,11 +126,13 @@ module.exports = {
     },
     computed: {
         minVal() {
-            if (this.autoRange) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
+            if (!this.histogram) return 0
+            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
             return this.currentMin || parseFloat(this.histogram.min.toFixed(2));
         },
         maxVal() {
-            if (this.autoRange) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
+            if (!this.histogram) return 1
+            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
             return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
         }
     },
@@ -229,7 +231,7 @@ module.exports = {
             if (this.currentMax) {
                 newMaxPosition = this.valueToXPosition(this.currentMax);
             }
-            if (this.autoRange) {
+            if (this.autoRange !== undefined) {
                 newMinPosition = this.valueToXPosition(
                     this.fromDistributionPercentage(this.autoRange / 100)
                 );
@@ -268,16 +270,26 @@ module.exports = {
             const moveY = false;
             const handleName = selected.getAttribute('name');
             const newValue = this.xPositionToValue(newLocation.x);
-            if (handleName === 'updateMin') {
-                if (!this.autoRange && newValue >= this.currentMax) {
+            if (handleName === 'min') {
+                if (this.autoRange === undefined && newValue >= this.currentMax) {
                     moveX = false;
-                } else if (this.autoRange && this.toDistributionPercentage(newValue) >= 50) {
+                } else if (this.autoRange !== undefined) {
+                    const percentage = this.toDistributionPercentage(newValue)
+                    if (
+                        percentage >= 50 ||
+                        parseFloat(parseFloat(percentage).toFixed(2)) === this.autoRange
+                    )
                     moveX = false;
                 }
-            } else if (handleName === 'updateMax') {
-                if (!this.autoRange && newValue <= this.currentMin) {
+            } else if (handleName === 'max') {
+                if (this.autoRange === undefined && newValue <= this.currentMin) {
                     moveX = false;
-                } else if (this.autoRange && this.toDistributionPercentage(newValue) <= 50) {
+                } else if (this.autoRange !== undefined) {
+                    const percentage = this.toDistributionPercentage(newValue)
+                    if (
+                        percentage <= 50 ||
+                        parseFloat(parseFloat(100 - percentage).toFixed(2)) === this.autoRange
+                    )
                     moveX = false;
                 }
             }
@@ -352,7 +364,7 @@ module.exports = {
       v-if="histogram"
       type="number"
       class="input-80 min-input"
-      :disabled="autoRange"
+      :disabled="autoRange !== undefined"
       :min="histogram.min"
       :max="currentMax"
       :value="minVal"
@@ -429,7 +441,7 @@ module.exports = {
       v-if="histogram"
       type="number"
       class="input-80 max-input"
-      :disabled="autoRange"
+      :disabled="autoRange !== undefined"
       :max="histogram.max"
       :min="currentMin"
       :value="maxVal"
