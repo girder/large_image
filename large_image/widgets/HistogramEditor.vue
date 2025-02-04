@@ -63,7 +63,7 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
     }
 }
 
-module.exports = {
+export default {
     props: [
         'itemId',
         'layerIndex',
