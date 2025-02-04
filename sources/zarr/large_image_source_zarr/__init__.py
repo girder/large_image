@@ -637,6 +637,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         axes = [x.lower() for x in axes]
         if axes[-1] != 's':
             axes.append('s')
+            tile = tile[..., np.newaxis]
         if mask is not None and len(axes) - 1 == len(mask.shape):
             mask = mask[:, :, np.newaxis]
         if 'x' not in axes or 'y' not in axes:
