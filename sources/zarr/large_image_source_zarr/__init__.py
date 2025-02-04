@@ -455,7 +455,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._axisCounts = {}
         for _, k in sorted(
             (-self._axes.get(k, 'tzc'.index(k) if k in 'tzc' else -1), k)
-            for k in self._axes if k not in 'xys'
+            for k in self._axes if k not in {'x', 'y', 's'}
         ):
             self._strides[k] = stride
             self._axisCounts[k] = baseArray.shape[self._axes[k]]
