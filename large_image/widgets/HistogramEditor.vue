@@ -58,6 +58,7 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
             callback(selectedShape, coord);
         }
     }
+
     function endDrag() {
         selectedShape = undefined;
     }
@@ -121,6 +122,18 @@ module.exports = {
         },
         autoRange() {
             this.initializePositions();
+        }
+    },
+    computed: {
+        minVal() {
+            if (!this.histogram) return 0;
+            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
+            return this.currentMin || parseFloat(this.histogram.min.toFixed(2));
+        },
+        maxVal() {
+            if (!this.histogram) return 1;
+            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
+            return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
         }
     },
     mounted() {
@@ -218,7 +231,7 @@ module.exports = {
             if (this.currentMax) {
                 newMaxPosition = this.valueToXPosition(this.currentMax);
             }
-            if (this.autoRange) {
+            if (this.autoRange !== undefined) {
                 newMinPosition = this.valueToXPosition(
                     this.fromDistributionPercentage(this.autoRange / 100)
                 );
@@ -257,17 +270,29 @@ module.exports = {
             const moveY = false;
             const handleName = selected.getAttribute('name');
             const newValue = this.xPositionToValue(newLocation.x);
-            if (handleName === 'updateMin') {
-                if (!this.autoRange && newValue >= this.currentMax) {
+            if (handleName === 'min') {
+                if (this.autoRange === undefined && newValue >= this.currentMax) {
                     moveX = false;
-                } else if (this.autoRange && this.toDistributionPercentage(newValue) >= 50) {
-                    moveX = false;
+                } else if (this.autoRange !== undefined) {
+                    const percentage = this.toDistributionPercentage(newValue);
+                    if (
+                        percentage >= 50 ||
+                        parseFloat(parseFloat(percentage).toFixed(2)) === this.autoRange
+                    ) {
+                        moveX = false;
+                    }
                 }
-            } else if (handleName === 'updateMax') {
-                if (!this.autoRange && newValue <= this.currentMin) {
+            } else if (handleName === 'max') {
+                if (this.autoRange === undefined && newValue <= this.currentMin) {
                     moveX = false;
-                } else if (this.autoRange && this.toDistributionPercentage(newValue) <= 50) {
-                    moveX = false;
+                } else if (this.autoRange !== undefined) {
+                    const percentage = this.toDistributionPercentage(newValue);
+                    if (
+                        percentage <= 50 ||
+                        parseFloat(parseFloat(100 - percentage).toFixed(2)) === this.autoRange
+                    ) {
+                        moveX = false;
+                    }
                 }
             }
 
@@ -338,12 +363,13 @@ module.exports = {
 <template>
   <div class="range-editor">
     <input
-      v-if="histogram && autoRange === undefined"
+      v-if="histogram"
       type="number"
       class="input-80 min-input"
+      :disabled="autoRange !== undefined"
       :min="histogram.min"
       :max="currentMax"
-      :value="currentMin || parseFloat(histogram.min.toFixed(2))"
+      :value="minVal"
       @input="(e) => updateFromInput('min', e.target.value)"
     >
     <canvas
@@ -380,7 +406,9 @@ module.exports = {
         x2="5"
         y1="0"
         y2="30"
-      />
+      >
+        <title>{{ minVal }}</title>
+      </line>
       <text
         v-if="vRange[1] !== undefined"
         :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 8): 0"
@@ -407,15 +435,18 @@ module.exports = {
         x2="5"
         y1="0"
         y2="30"
-      />
+      >
+        <title>{{ maxVal }}</title>
+      </line>
     </svg>
     <input
-      v-if="histogram && autoRange === undefined"
+      v-if="histogram"
       type="number"
       class="input-80 max-input"
+      :disabled="autoRange !== undefined"
       :max="histogram.max"
       :min="currentMin"
-      :value="currentMax || parseFloat(histogram.max.toFixed(2))"
+      :value="maxVal"
       @input="(e) => updateFromInput('max', e.target.value)"
     >
   </div>
