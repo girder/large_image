@@ -629,7 +629,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _validateNewTile(self, tile, mask, placement, axes):
         if not isinstance(tile, np.ndarray) or axes is None:
-            axes = 'yxs'
+            axes = self._axes if hasattr(self, '_axes') else 'yxs'
             tile, mode = _imageToNumpy(tile)
         elif not isinstance(axes, str) and not isinstance(axes, list):
             err = 'Invalid type for axes. Must be str or list[str].'

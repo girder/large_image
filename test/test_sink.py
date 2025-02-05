@@ -117,6 +117,14 @@ def testXYAxis():
     assert metadata['IndexStride']['IndexXY'] == 1
 
 
+def testMultiFrameAxes():
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.random.random((256, 256)), 0, 0, q=1)
+    assert sink.metadata.get('IndexRange') == dict(IndexQ=2)
+    sink.addTile(np.random.random((256, 256)), 0, 0, r=1)
+    assert sink.metadata.get('IndexRange') == dict(IndexQ=2, IndexR=2)
+
+
 @pytest.mark.parametrize('file_type', FILE_TYPES)
 def testCrop(file_type, tmp_path):
     output_file = tmp_path / f'test.{file_type}'
