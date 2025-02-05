@@ -1,4 +1,5 @@
 <script>
+// TODO: consider removing all mutations of the prop `currentFrame`
 export default {
     name: 'FrameSelector',
     props: [
@@ -79,12 +80,14 @@ export default {
     },
     methods: {
         updateCurrentFrame(value) {
+            // eslint-disable-next-line
             this.currentFrame = +value;
         },
         setCurrentMode(mode) {
             this.currentModeId = mode.id;
         },
         setCurrentFrame(frame) {
+            // eslint-disable-next-line
             this.currentFrame = +frame;
             this.indexInfo = Object.fromEntries(
                 Object.entries(this.indexInfo)
@@ -128,6 +131,7 @@ export default {
             this.updateHistogramParamStyles();
         },
         updateFrameSlider(frame) {
+            // eslint-disable-next-line
             this.currentFrame = +frame;
             this.frameUpdate({frame, undefined});
         },
@@ -141,6 +145,7 @@ export default {
                     }
                 }
             });
+            // eslint-disable-next-line
             this.currentFrame = +frame;
             let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined;
             if (style && style.preset) delete style.preset;
