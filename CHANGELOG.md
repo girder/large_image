@@ -7,6 +7,7 @@
 - Improve how we use vips to read lower tile levels ([#1794](../../pull/1794))
 - Be more specific in casting when converting images via vips ([#1795](../../pull/1795))
 - Improve how ometiff internal metadata is exposed ([#1806](../../pull/1806))
+- Show histogram auto range calculated values ([#1803](../../pull/1803))
 
 ### Bug Fixes
 
@@ -14,6 +15,7 @@
 - Use zarr.empty not np.empty when creating large zarr sinks ([#1801](../../pull/1801))
 - Fix zarr sink addTile when no samples axis is specified ([#1805](../../pull/1805))
 - Fix zarr sink adding an xy axis ([#1807](../../pull/1807))
+- Fix adding axes one at a time with zarr sink ([#1808](../../pull/1808))
 
 ## 1.31.0
 
