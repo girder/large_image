@@ -8,6 +8,7 @@
 - Be more specific in casting when converting images via vips ([#1795](../../pull/1795))
 - Improve how ometiff internal metadata is exposed ([#1806](../../pull/1806))
 - Show histogram auto range calculated values ([#1803](../../pull/1803))
+- Test reading from lower tile levels in bioformats ([#1810](../../pull/1810))
 
 ### Bug Fixes
 
