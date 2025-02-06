@@ -30,7 +30,8 @@ commands:
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=3 COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]}
+            -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
