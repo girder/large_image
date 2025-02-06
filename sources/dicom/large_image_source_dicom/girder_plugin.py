@@ -11,6 +11,7 @@ class DICOMwebPlugin(GirderPlugin):
     def load(self, info):
         registerPluginStaticContent(
             plugin='dicomweb',
+            css=[],
             js=['/girder-plugin-dicomweb.umd.js'],
             staticDir=Path(__file__).parent / 'web_client' / 'dist',
             tree=info['serverRoot'],
