@@ -278,7 +278,7 @@ class Map:
         Create an ipyleaflet map given large_image metadata, an optional
         ipyleaflet layer, and the center of the tile source.
         """
-        from ipyleaflet import Map, basemaps, projections, FullScreenControl, DrawControl, Popup
+        from ipyleaflet import DrawControl, FullScreenControl, Map, Popup, basemaps, projections
         from ipywidgets import HTML, VBox
 
         try:
@@ -358,35 +358,67 @@ class Map:
             circlemarker=dict(),
             rotate=False,
             cut=False,
-            edit=False
+            edit=False,
         )
+
+        transformer = None
+        if metadata.get('geospatial'):
+            import pyproj
+
+            transformer = pyproj.Transformer.from_crs(
+                'EPSG:4326',
+                metadata['projection'],
+                always_xy=True,
+            )
 
         def handle_interaction(**kwargs):
             coords = kwargs.get('coordinates')
+            x, y = [coords[1], coords[0]]
             interaction_type = kwargs.get('type')
-            if interaction_type == 'mousemove':
+            if interaction_type == 'click':
                 for rectangle in draw_control.data:
                     rect_coords = rectangle.get('geometry', {}).get('coordinates', [[]])[0]
-                    x_range = [round(rect_coords[0][0]), round(rect_coords[2][0])]
-                    y_range = [round(rect_coords[0][1]), round(rect_coords[1][1])]
+                    xmin, xmax = rect_coords[0][0], rect_coords[2][0]
+                    ymin, ymax = rect_coords[0][1], rect_coords[1][1]
+                    x_label, y_label = 'X', 'Y'
                     if (
-                        coords[1] >= x_range[0] and
-                        coords[1] <= x_range[1] and
-                        coords[0] >= y_range[0] and
-                        coords[0] <= y_range[1]
+                        x >= xmin and x <= xmax and
+                        y >= ymin and y <= ymax
                     ):
-                        flipped_y_range = [metadata.get('sizeY') - y_range[1], metadata.get('sizeY') - y_range[0]]
-                        info_label.value = f'<div>Box X Range: {x_range}</div>'
-                        info_label.value += f'<div>Box Y Range: {flipped_y_range}</div>'
-                        info_label.value += f'<div>Mouse X: {round(coords[1])}</div>'
-                        info_label.value += f'<div>Mouse Y: {round(metadata.get("sizeY") - coords[0])}</div>'
-                        center_x = (x_range[1] - x_range[0]) / 2 + x_range[0]
-                        popup.open_popup((y_range[1], center_x))
-                        return
-            popup.close_popup()
+                        x0, y0, x1, y1 = None, None, None, None
+                        if transformer is not None:
+                            x_label, y_label = 'Lon', 'Lat'
+                            x0, y0 = transformer.transform(xmin, ymin)
+                            x1, y1 = transformer.transform(xmax, ymax)
+                            bounds = metadata['bounds']
+                            x0, x1 = [
+                                round((v - bounds['xmin']) /
+                                      (bounds['xmax'] - bounds['xmin']) *
+                                      metadata['sizeX']) for v in [x0, x1]
+                            ]
+                            y0, y1 = [
+                                round((v - bounds['ymin']) /
+                                      (bounds['ymax'] - bounds['ymin']) *
+                                      metadata['sizeY']) for v in [y0, y1]
+                            ]
+                        else:
+                            xmin, xmax = round(xmin), round(xmax)
+                            ymin = round(metadata.get('sizeY') - ymax)
+                            ymax = round(metadata.get('sizeY') - ymin)
+                            x0, y0, x1, y1 = xmin, ymin, xmax, ymax
+                        info_label.value = f'<div>Box {x_label} Range: [{xmin}, {xmax}]</div>'
+                        info_label.value += f'<div>Box {y_label} Range: [{ymin}, {ymax}]</div>'
+                        if (
+                            x0 >= 0 and y0 >= 0 and
+                            x1 <= metadata['sizeX'] and y1 <= metadata['sizeY']
+                        ):
+                            roi = [x0, y0, x1 - x0, y1 - y0]
+                            info_label.value += f'<div>ROI: {roi}</div>'
+                        popup.open_popup((rect_coords[1][1], (xmax - xmin) / 2 + xmin))
+                        if popup not in m.layers:
+                            m.add(popup)
 
         m.on_interaction(handle_interaction)
-        m.add(popup)
         m.add(draw_control)
         m.add(FullScreenControl())
 
