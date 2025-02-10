@@ -405,9 +405,9 @@ class Map:
                                       metadata['sizeX']) for v in [x0, x1]
                             ]
                             y0, y1 = [
-                                round((v - bounds['ymin']) /
-                                      (bounds['ymax'] - bounds['ymin']) *
-                                      metadata['sizeY']) for v in [y0, y1]
+                                round((v - bounds['ymax']) /
+                                      (bounds['ymin'] - bounds['ymax']) *
+                                      metadata['sizeY']) for v in [y1, y0]
                             ]
                         else:
                             xmin, xmax = round(xmin), round(xmax)
