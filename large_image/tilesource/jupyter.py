@@ -357,8 +357,8 @@ class Map:
         if self._map is None or metadata is None:
             return
 
-        info_label = HTML()
-        popup = Popup(child=info_label)
+        self.info_label = HTML()
+        popup = Popup(child=self.info_label)
         popup.close_popup()
         draw_control = DrawControl(
             rectangle=dict(shapeOptions=dict(color='#19a7ff')),
@@ -393,6 +393,7 @@ class Map:
                     rect_coords = rectangle.get('geometry', {}).get('coordinates', [[]])[0]
                     xmin, xmax = rect_coords[0][0], rect_coords[2][0]
                     ymin, ymax = rect_coords[0][1], rect_coords[1][1]
+                    width, height = metadata['sizeX'], metadata['sizeY']
                     x_label, y_label = 'X', 'Y'
                     if (
                         x >= xmin and x <= xmax and
@@ -407,26 +408,25 @@ class Map:
                             x0, x1 = [
                                 round((v - bounds['xmin']) /
                                       (bounds['xmax'] - bounds['xmin']) *
-                                      metadata['sizeX']) for v in [x0, x1]
+                                      width) for v in [x0, x1]
                             ]
                             y0, y1 = [
                                 round((v - bounds['ymax']) /
                                       (bounds['ymin'] - bounds['ymax']) *
-                                      metadata['sizeY']) for v in [y1, y0]
+                                      height) for v in [y1, y0]
                             ]
                         else:
                             xmin, xmax = round(xmin), round(xmax)
-                            ymin = round(metadata.get('sizeY') - ymax)
-                            ymax = round(metadata.get('sizeY') - ymin)
+                            ymin, ymax = round(height - ymax), round(height - ymin)
                             x0, y0, x1, y1 = xmin, ymin, xmax, ymax
-                        info_label.value = f'<div>Box {x_label} Range: [{xmin}, {xmax}]</div>'
-                        info_label.value += f'<div>Box {y_label} Range: [{ymin}, {ymax}]</div>'
+                        self.info_label.value = f'<div>Box {x_label} Range: [{xmin}, {xmax}]</div>'
+                        self.info_label.value += f'<div>Box {y_label} Range: [{ymin}, {ymax}]</div>'
                         if (
                             x0 >= 0 and y0 >= 0 and
-                            x1 <= metadata['sizeX'] and y1 <= metadata['sizeY']
+                            x1 <= width and y1 <= height
                         ):
                             roi = [x0, y0, x1 - x0, y1 - y0]
-                            info_label.value += f'<div>ROI: {roi}</div>'
+                            self.info_label.value += f'<div>ROI: {roi}</div>'
                         popup.open_popup((rect_coords[1][1], (xmax - xmin) / 2 + xmin))
                         if popup not in self._map.layers:
                             self._map.add(popup)
