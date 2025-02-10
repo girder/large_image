@@ -426,6 +426,11 @@ class Map:
                         if popup not in self._map.layers:
                             self._map.add(popup)
 
+        def handle_draw(target, action, geo_json):
+            if action == 'deleted':
+                popup.close_popup()
+
+        draw_control.on_draw(handle_draw)
         self._map.on_interaction(handle_interaction)
         self._map.add(draw_control)
         self._map.add(FullScreenControl())
