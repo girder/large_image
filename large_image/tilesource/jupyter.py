@@ -353,6 +353,10 @@ class Map:
         from ipyleaflet import DrawControl, FullScreenControl, Popup
         from ipywidgets import HTML
 
+        metadata = self._metadata
+        if self._map is None or metadata is None:
+            return
+
         info_label = HTML()
         popup = Popup(child=info_label)
         popup.close_popup()
@@ -369,7 +373,6 @@ class Map:
         )
 
         transformer = None
-        metadata = self._metadata
         if metadata.get('geospatial'):
             import pyproj
 
@@ -381,6 +384,8 @@ class Map:
 
         def handle_interaction(**kwargs):
             coords = kwargs.get('coordinates')
+            if self._map is None or metadata is None or coords is None:
+                return
             x, y = [coords[1], coords[0]]
             interaction_type = kwargs.get('type')
             if interaction_type == 'click':
