@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.31.2
+
+### Improvements
+
+- Apply background color information from openslide sources ([#1819](../../pull/1819))
+
 ## 1.31.1
 
 ### Improvements
