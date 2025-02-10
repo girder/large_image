@@ -278,8 +278,8 @@ class Map:
         Create an ipyleaflet map given large_image metadata, an optional
         ipyleaflet layer, and the center of the tile source.
         """
-        from ipyleaflet import DrawControl, FullScreenControl, Map, Popup, basemaps, projections
-        from ipywidgets import HTML, VBox
+        from ipyleaflet import Map, basemaps, projections
+        from ipywidgets import VBox
 
         try:
             default_zoom = metadata['levels'] - metadata['sourceLevels']
@@ -346,6 +346,13 @@ class Map:
         self._map = m
         children.append(m)
 
+        self.add_region_indicator()
+        return VBox(children)
+
+    def add_region_indicator(self):
+        from ipyleaflet import DrawControl, FullScreenControl, Popup
+        from ipywidgets import HTML
+
         info_label = HTML()
         popup = Popup(child=info_label)
         popup.close_popup()
@@ -362,6 +369,7 @@ class Map:
         )
 
         transformer = None
+        metadata = self._metadata
         if metadata.get('geospatial'):
             import pyproj
 
@@ -415,14 +423,12 @@ class Map:
                             roi = [x0, y0, x1 - x0, y1 - y0]
                             info_label.value += f'<div>ROI: {roi}</div>'
                         popup.open_popup((rect_coords[1][1], (xmax - xmin) / 2 + xmin))
-                        if popup not in m.layers:
-                            m.add(popup)
+                        if popup not in self._map.layers:
+                            self._map.add(popup)
 
-        m.on_interaction(handle_interaction)
-        m.add(draw_control)
-        m.add(FullScreenControl())
-
-        return VBox(children)
+        self._map.on_interaction(handle_interaction)
+        self._map.add(draw_control)
+        self._map.add(FullScreenControl())
 
     @property
     def layer(self) -> Any:
