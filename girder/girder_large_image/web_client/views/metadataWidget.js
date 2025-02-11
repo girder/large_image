@@ -648,7 +648,7 @@ MetadataWidget.prototype.addMetadataByKey = function (evt) {
     });
     widget.$el.appendTo(this.$('.g-widget-metadata-container'));
 
-    new EditWidget({
+    EditWidget({
         item: this.item,
         key: key,
         value: value,
