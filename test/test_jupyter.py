@@ -94,7 +94,7 @@ async def testJupyterIpyleaflet():
 
 
 def testJupyterIpyleafletMapRegion():
-    from ipyleaflet import DrawControl
+    from ipyleaflet import GeomanDrawControl
 
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'test_orient0.tif')
@@ -120,7 +120,7 @@ def testJupyterIpyleafletMapRegion():
         [xmax, height - ymin],
     ]]
     for control in m.controls:
-        if isinstance(control, DrawControl):
+        if isinstance(control, GeomanDrawControl):
             control.data = [
                 dict(geometry=dict(coordinates=rectangle)),
             ]
@@ -130,7 +130,7 @@ def testJupyterIpyleafletMapRegion():
 
 
 def testJupyterIpyleafletMapGeospatialRegion():
-    from ipyleaflet import DrawControl
+    from ipyleaflet import GeomanDrawControl
 
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
@@ -156,7 +156,7 @@ def testJupyterIpyleafletMapGeospatialRegion():
         [lonmax, latmin],
     ]]
     for control in m.controls:
-        if isinstance(control, DrawControl):
+        if isinstance(control, GeomanDrawControl):
             control.data = [
                 dict(geometry=dict(coordinates=rectangle)),
             ]

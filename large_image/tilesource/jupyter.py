@@ -350,7 +350,7 @@ class Map:
         return VBox(children)
 
     def add_region_indicator(self):
-        from ipyleaflet import DrawControl, FullScreenControl, Popup
+        from ipyleaflet import GeomanDrawControl, FullScreenControl, Popup
         from ipywidgets import HTML
 
         metadata = self._metadata
@@ -360,7 +360,7 @@ class Map:
         self.info_label = HTML()
         popup = Popup(child=self.info_label)
         popup.close_popup()
-        draw_control = DrawControl(
+        draw_control = GeomanDrawControl(
             rectangle=dict(shapeOptions=dict(color='#19a7ff')),
             # enable drawing other shapes by specifying styling
             polygon=dict(),
