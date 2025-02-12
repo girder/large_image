@@ -109,9 +109,9 @@ def testJupyterIpyleafletMapRegion():
     height = source.metadata['sizeY']
     xmin, xmax, ymin, ymax = 10, 90, 30, 100
     x, y = 50, 100
-    expected = f'<div>Box X Range: [{xmin}, {xmax}]</div>'
-    expected += f'<div>Box Y Range: [{ymin}, {ymax}]</div>'
-    expected += f'<div>ROI: [{xmin}, {ymin}, {xmax - xmin}, {ymax - ymin}]</div>'
+    expected = [f'X Range: [{xmin}, {xmax}]']
+    expected.append(f'Y Range: [{ymin}, {ymax}]')
+    expected.append(f'X/Y ROI: [{xmin}, {ymin}, {xmax - xmin}, {ymax - ymin}]')
 
     rectangle = [[
         [xmin, height - ymax],
@@ -126,7 +126,7 @@ def testJupyterIpyleafletMapRegion():
             ]
     for callback in m._interaction_callbacks.callbacks:
         callback(type='click', coordinates=[y, x])
-    assert source._map.info_label.value == expected
+    assert source._map.info_label.value == ''.join([f'<div>{e}</div>' for e in expected])
 
 
 def testJupyterIpyleafletMapGeospatialRegion():
@@ -145,9 +145,10 @@ def testJupyterIpyleafletMapGeospatialRegion():
     lonmin, lonmax, latmin, latmax = -118, -116, 32.5, 34
     lon, lat = -117, 33
     roi = [11562, 7156, 52322, 46301]
-    expected = f'<div>Box Lon Range: [{lonmin}, {lonmax}]</div>'
-    expected += f'<div>Box Lat Range: [{latmin}, {latmax}]</div>'
-    expected += f'<div>ROI: {roi}</div>'
+    expected = [f'Lon Range: [{lonmin}, {lonmax}]']
+    expected.append(f'Lat Range: [{latmin}, {latmax}]')
+    expected.append(f'Lon/Lat ROI: [{lonmin}, {latmin}, {lonmax - lonmin}, {latmax - latmin}]')
+    expected.append(f'X/Y ROI: {roi}')
 
     rectangle = [[
         [lonmin, latmin],
@@ -162,4 +163,4 @@ def testJupyterIpyleafletMapGeospatialRegion():
             ]
     for callback in m._interaction_callbacks.callbacks:
         callback(type='click', coordinates=[lat, lon])
-    assert source._map.info_label.value == expected
+    assert source._map.info_label.value == ''.join([f'<div>{e}</div>' for e in expected])
