@@ -373,7 +373,7 @@ class Map:
         )
 
         transformer = None
-        if metadata.get('geospatial'):
+        if metadata.get('geospatial') and metadata.get('projection'):
             import pyproj
 
             transformer = pyproj.Transformer.from_crs(
