@@ -396,7 +396,7 @@ class Map:
                     ymin, ymax = rect_coords[0][1], rect_coords[1][1]
                     width, height = metadata['sizeX'], metadata['sizeY']
                     if (not (x >= xmin and x <= xmax and y >= ymin and y <= ymax)):
-                        return
+                        continue
                     if transformer is not None:
                         roi = f'[{xmin:.8g}, {ymin:.8g}, {(xmax - xmin):.8g}, {(ymax - ymin):.8g}]'
                         info.append(f'Lon Range: [{xmin:.8g}, {xmax:.8g}]')
