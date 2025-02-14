@@ -47,7 +47,7 @@ if sys.version_info >= (3, 9):
     entry_points['girder.plugin'] = [
         'dicomweb = large_image_source_dicom.girder_plugin:DICOMwebPlugin',
     ]
-    girder_extras.append('girder>=3.2.3')
+    girder_extras.append('girder>=5.0.0a2')
 
 setup(
     name='large-image-source-dicom',
