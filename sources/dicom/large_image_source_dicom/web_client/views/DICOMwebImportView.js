@@ -3,9 +3,9 @@ import DWASImportTemplate from '../templates/assetstoreImport.pug';
 const $ = girder.$;
 const BrowserWidget = girder.views.widgets.BrowserWidget;
 const router = girder.router;
-const View = girder.views;
+const { View } = girder.views;
 const { restRequest } = girder.rest;
-const { assetstoreImportViewMap } = girder.views.body.AssetstoresView;
+const { assetstoreImportViewMap } = girder.views.body;
 const { AssetstoreType } = girder.constants;
 
 const DICOMwebImportView = View.extend({
