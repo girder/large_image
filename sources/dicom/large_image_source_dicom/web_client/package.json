@@ -24,7 +24,7 @@
     },
     "scripts": {
         "build": "vite build",
-        "watch": "vite build watch",
+        "watch": "vite build --watch",
         "lint": "eslint --cache . && pug-lint . && stylint",
         "format": "eslint --cache --fix . && stylint --fix"
     },
