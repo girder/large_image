@@ -55,7 +55,7 @@ cd "$ROOTPATH/sources/dicom"
 cp "$ROOTPATH/README.rst" .
 cp "$ROOTPATH/LICENSE" .
 # Build the client plugin code
-pushd "$ROOTPATH/girder/sources/dicom/large_image_source_dicom/web_client/"
+pushd "$ROOTPATH/sources/dicom/large_image_source_dicom/web_client/"
 npm ci
 npm run build
 popd
