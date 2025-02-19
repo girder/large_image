@@ -5,6 +5,7 @@
 ### Improvements
 
 - Apply background color information from openslide sources ([#1819](../../pull/1819))
+- Memoize a check for DICOM series UID ([#1827](../../pull/1827))
 
 ## 1.31.1
 
