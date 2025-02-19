@@ -2,7 +2,6 @@ from girder_large_image.girder_tilesource import GirderTileSource
 
 from girder.constants import AssetstoreType
 from girder.models.file import File
-from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.utility import assetstore_utilities
 from large_image.exceptions import TileSourceError
@@ -54,12 +53,19 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
             msg = f'File cannot be opened via dicom tile source ({exc}).'
             raise TileSourceError(msg)
         filelist = []
-        folder = Folder().load(self.item['folderId'], force=True)
-        for item in Folder().childItems(folder):
-            if len(list(Item().childFiles(item, limit=2))) == 1:
-                file = next(Item().childFiles(item, limit=2))
-                if self._pathMightBeDicom(File().getLocalFilePath(file)):
-                    filelist.append(File().getLocalFilePath(file))
+        filepath = File().getLocalFilePath(filelist[0])
+        for file in Item().collection.aggregate([
+            {'$match': {'folderId': self.item['folderId']}},
+            {'$lookup': {
+                'from': 'file', 'localField': '_id', 'foreignField': 'itemId', 'as': 'files',
+            }},
+            {'$addFields': {'fileCount': {'$size': '$files'}}},
+            {'$match': {'fileCount': 1}},
+            {'$unwind': '$files'},
+            {'$replaceRoot': {'newRoot': '$files'}},
+        ]):
+            if self._pathMightBeDicom(File().getLocalFilePath(file), filepath):
+                filelist.append(File().getLocalFilePath(file))
         return filelist
 
     def _getDICOMwebLargeImagePath(self, assetstore):

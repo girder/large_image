@@ -6,6 +6,7 @@
 
 - Apply background color information from openslide sources ([#1819](../../pull/1819))
 - Memoize a check for DICOM series UID ([#1827](../../pull/1827))
+- Speed up finding adjacent DICOM files in girder ([#1829](../../pull/1829))
 
 ### Changes
 
