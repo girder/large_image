@@ -7,6 +7,10 @@
 - Apply background color information from openslide sources ([#1819](../../pull/1819))
 - Memoize a check for DICOM series UID ([#1827](../../pull/1827))
 
+### Changes
+
+- Require a minimum version of Pillow to avoid a CVE ([#1828](../../pull/1828))
+
 ## 1.31.1
 
 ### Improvements
