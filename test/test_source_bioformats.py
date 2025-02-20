@@ -1,3 +1,5 @@
+import large_image
+
 from . import utilities
 from .datastore import datastore
 
@@ -31,3 +33,12 @@ def testBioformatsJarVersion():
     import large_image_source_bioformats
 
     assert '.' in large_image_source_bioformats._getBioformatsVersion()
+
+
+def testBioformatsDicomMonochome1():
+    import large_image_source_bioformats
+
+    imagePath = datastore.fetch('monochrome1.dcm')
+    source = large_image_source_bioformats.open(imagePath)
+    img, _ = source.getRegion(format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert img[255, 191, 0] == 618
