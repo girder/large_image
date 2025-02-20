@@ -52,7 +52,6 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         except Exception as exc:
             msg = f'File cannot be opened via dicom tile source ({exc}).'
             raise TileSourceError(msg)
-        filelist = []
         filepath = File().getLocalFilePath(filelist[0])
         for file in Item().collection.aggregate([
             {'$match': {'folderId': self.item['folderId']}},
