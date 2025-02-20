@@ -455,10 +455,16 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         stride = 1
         self._strides = {}
         self._axisCounts = {}
-        for _, k in sorted(
-            (-self._axes.get(k, 'tzc'.index(k) if k in 'tzc' else -1), k)
-            for k in self._axes if k not in {'x', 'y', 's'}
-        ):
+        # If we aren't in editable mode, prefer the channel axis to have a
+        # stride of 1, then the z axis, then the t axis, then sorted by the
+        # axis name.
+        axisOrder = ((-'tzc'.index(k) if k in 'tzc' else 1, k)
+                     for k in self._axes if k not in {'x', 'y', 's'})
+        # In editable mode, prefer the order that the axes are being written.
+        if self._editable:
+            axisOrder = ((-self._axes.get(k, 'tzc'.index(k) if k in 'tzc' else -1), k)
+                         for k in self._axes if k not in {'x', 'y', 's'})
+        for _, k in sorted(axisOrder):
             self._strides[k] = stride
             self._axisCounts[k] = baseArray.shape[self._axes[k]]
             stride *= baseArray.shape[self._axes[k]]
