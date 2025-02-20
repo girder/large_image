@@ -52,7 +52,7 @@ module.exports = {
                         } else {
                             // non-uniform values have a value for every frame
                             // labels will change with currentFrame, so only populate current label
-                            let currentLabel = info.values[this.currentFrame];
+                            let currentLabel = this.imageMetadata.frames[this.currentFrame][key];
                             if (typeof currentLabel === 'number') currentLabel = Number(currentLabel.toPrecision(5));
                             labels[labelKey] = new Array(this.indexInfo[labelKey].range + 1).fill('');
                             labels[labelKey][this.indexInfo[labelKey].current] = currentLabel;
