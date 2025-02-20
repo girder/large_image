@@ -10,6 +10,7 @@ from PIL import Image
 
 import large_image
 from large_image.constants import NEW_IMAGE_PATH_FLAG
+from large_image.exceptions import TileSourceError
 from large_image.tilesource.resample import ResampleMethod
 
 TMP_DIR = 'tmp/zarr_sink'
@@ -885,3 +886,30 @@ def testAddAxes(tmp_path, axes_order):
 
         for k, v in frame_values.items():
             assert v == kwarg_group.get(k, 0)
+
+
+def testMinWidthMinHeight():
+    sink = large_image_source_zarr.new()
+    sink.minWidth = 200
+    sink.minHeight = 100
+
+    sink.addTile(np.random.random((10, 10)), 0, 0)
+    sink.addTile(np.random.random((10, 10, 2)), 10, 0)
+
+    metadata = sink.getMetadata()
+    assert metadata.get('sizeX') == 200
+    assert metadata.get('sizeY') == 100
+
+
+def testNegativeMinWidth():
+    sink = large_image_source_zarr.new()
+    with pytest.raises(TileSourceError) as e:
+        sink.minWidth = -10
+    assert str(e.value) == 'minWidth must be positive or None'
+
+
+def testNegativeMinHeight():
+    sink = large_image_source_zarr.new()
+    with pytest.raises(TileSourceError) as e:
+        sink.minHeight = -10
+    assert str(e.value) == 'minHeight must be positive or None'

@@ -148,6 +148,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._threadLock = threading.RLock()
         self._processLock = multiprocessing.Lock()
         self._framecount = 0
+        self._minWidth = None
+        self._minHeight = None
         self._mm_x = 0
         self._mm_y = 0
         self._channelNames = []
@@ -787,7 +789,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 arr = current_arrays[store_path]
                 new_shape = tuple(
-                    max(v, arr.shape[old_axes[k]] if k in old_axes else 0)
+                    max(
+                        v,
+                        self.minWidth if self.minWidth is not None and k == 'x' else
+                        self.minHeight if self.minHeight is not None and k == 'y' else
+                        arr.shape[old_axes[k]] if k in old_axes else 0
+                    )
                     for k, v in new_dims.items()
                 )
                 if arr.chunks[-1] != new_dims.get('s') or len(new_axes):
@@ -1003,6 +1010,32 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'Crop must have non-negative x, y and positive w, h'
             raise TileSourceError(msg)
         self._crop = (x, y, w, h)
+
+    @property
+    def minWidth(self):
+        return self._minWidth
+
+    @minWidth.setter
+    def minWidth(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            msg = 'minWidth must be positive or None'
+            raise TileSourceError(msg)
+        self._minWidth = value
+
+    @property
+    def minHeight(self):
+        return self._minHeight
+
+    @minHeight.setter
+    def minHeight(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            msg = 'minHeight must be positive or None'
+            raise TileSourceError(msg)
+        self._minHeight = value
 
     @property
     def mm_x(self):
