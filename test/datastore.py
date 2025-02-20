@@ -129,6 +129,10 @@ registry = {
     # --rgb --quality=0.015 --compression='JPEG-2000 Lossy' parameters to make
     # the file small
     'TCGA-55-8207-01Z-00-DX1.ome.tiff': 'sha512:50cf63f0e8bfa3054d3532b7dd0237b66aeb4c7609da874639a28bc068dbd157f786e84d3eb76a3b0e6636a042c56c3b96d3be2ad66f7589d0542a5d20cecdb4',  # noqa
+    # Extracted from a sample dicom file from issue #1823 on github
+    # This is a dicom with monochrome1 format data that bioformats incorrectly
+    # inverts and offsets
+    'monochrome1.dcm': 'sha512:a67c38a5e26aba31b68e40eec0f260acf0ba638f0bf7fd99d41c3e16ddd8fd43b2737aeb3759ce92f2c4a10a81995bdae3b93b101ebcaa59543ea6eff7a4c8f2',  # noqa
 }
 
 
