@@ -793,7 +793,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         v,
                         self.minWidth if self.minWidth is not None and k == 'x' else
                         self.minHeight if self.minHeight is not None and k == 'y' else
-                        arr.shape[old_axes[k]] if k in old_axes else 0
+                        arr.shape[old_axes[k]] if k in old_axes else 0,
                     )
                     for k, v in new_dims.items()
                 )
