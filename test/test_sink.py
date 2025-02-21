@@ -668,6 +668,7 @@ def testFrameValuesSmall(use_add_tile_args, tmp_path):
 
 @pytest.mark.parametrize('use_add_tile_args', [True, False])
 def testFrameValues(use_add_tile_args, tmp_path):
+    output_file = tmp_path / 'test.db'
     sink = large_image_source_zarr.new()
 
     frame_shape = (300, 400, 3)
@@ -739,6 +740,11 @@ def testFrameValues(use_add_tile_args, tmp_path):
         k: v['units'] for k, v in axis_spec.items()
     }
     compare_metadata(dict(sink.getMetadata()), expected_metadata)
+
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    assert written.metadata['IndexRange'] == expected_metadata['IndexRange']
+    assert written.metadata['IndexStride']['IndexC'] == 1
 
 
 def testFrameValuesEdgeCases(tmp_path):
