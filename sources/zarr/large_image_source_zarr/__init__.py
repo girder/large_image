@@ -283,7 +283,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         elif check == results['best']:
             results['series'].append((group, arr))
         if not any(group is g for g, _ in results['associated']):
-            axes = {k: v for k, v in axes.items() if arr.shape[axes[k]] > 1}
+            axes = {k: v for k, v in axes.items() if arr.shape[axes[k]] > 1 or k in {'x', 'y'}}
             if (len(axes) <= 3 and
                     self._minAssociatedImageSize <= arr.shape[axes['x']] <=
                     self._maxAssociatedImageSize and
