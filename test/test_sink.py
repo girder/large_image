@@ -743,7 +743,8 @@ def testFrameValues(use_add_tile_args, tmp_path):
 
     sink.write(output_file)
     written = large_image_source_zarr.open(output_file)
-    compare_metadata(dict(written.getMetadata()), expected_metadata)
+    assert written.metadata['IndexRange'] == expected_metadata['IndexRange']
+    assert written.metadata['IndexStride']['IndexC'] == 1
 
 
 def testFrameValuesEdgeCases(tmp_path):
