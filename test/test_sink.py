@@ -586,11 +586,11 @@ def get_expected_metadata(axis_spec, frame_shape):
         },
         **{
             f'Value{k.upper()}': dict(
-                values=v.get('all_values', v['values']),
+                values=v['values'],
                 units=v['units'],
                 uniform=v['uniform'],
-                min=min(v.get('all_values', v['values'])),
-                max=max(v.get('all_values', v['values'])),
+                min=min(v['values']),
+                max=max(v['values']),
                 datatype=v['dtype'],
             ) for k, v in axis_spec.items()
         },
@@ -682,20 +682,6 @@ def testFrameValues(use_add_tile_args, tmp_path):
         ),
         t=dict(
             values=[10.0, 20.0, 30.0],
-            all_values=(
-                [10.00] * 3 +
-                [20.00] * 3 +
-                [30.00] * 3 +
-                [10.01] * 3 +
-                [20.01] * 3 +
-                [30.01] * 3 +
-                [10.02] * 3 +
-                [20.02] * 3 +
-                [30.02] * 3 +
-                [10.03] * 3 +
-                [20.03] * 3 +
-                [30.03] * 3
-            ),
             uniform=False,
             units='millisecond',
             stride=3,
@@ -819,15 +805,15 @@ sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2, t_value='thursday', z
         format='numpy',
         frame=17,
     )[0] == 1
-    assert metadata['ValueT']['values'][17] == 'thursday'
-    assert metadata['ValueZ']['values'][17] == 0.2
+    assert metadata['frames'][17]['ValueT'] == 'thursday'
+    assert metadata['frames'][17]['ValueZ'] == 0.2
     assert sink.getRegion(
         region=dict(left=5000, top=4095, width=1, height=1),
         format='numpy',
         frame=24,
     )[0] == 1
-    assert metadata['ValueT']['values'][24] == 'sunday'
-    assert metadata['ValueZ']['values'][24] == 0.4
+    assert metadata['frames'][24]['ValueT'] == 'sunday'
+    assert metadata['frames'][24]['ValueZ'] == 0.4
     assert sink.sizeX == 5001
 
 
@@ -856,9 +842,6 @@ def testAddAxes(tmp_path, axes_order):
         )
 
     metadata = sink.getMetadata()
-    t_values = metadata['ValueT']['values']
-    z_values = metadata['ValueZ']['values']
-    d_values = metadata['ValueD']['values']
     t_stride = metadata['IndexStride']['IndexT']
     z_stride = metadata['IndexStride']['IndexZ']
     expected_filled_frames = [
@@ -873,9 +856,9 @@ def testAddAxes(tmp_path, axes_order):
             frame=frame_index,
         )[0]
         frame_values = dict(
-            t_value=t_values[frame_index],
-            z_value=z_values[frame_index],
-            d_value=d_values[frame_index],
+            t_value=frame.get('ValueT'),
+            z_value=frame.get('ValueZ'),
+            d_value=frame.get('ValueD'),
         )
         kwarg_group = {}
         if frame_index in expected_filled_frames:
