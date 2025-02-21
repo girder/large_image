@@ -888,17 +888,21 @@ def testAddAxes(tmp_path, axes_order):
             assert v == kwarg_group.get(k, 0)
 
 
-def testMinWidthMinHeight():
+def testMinWidthMinHeight(tmp_path):
+    output_file = tmp_path / 'test.db'
     sink = large_image_source_zarr.new()
-    sink.minWidth = 200
-    sink.minHeight = 100
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=0, y=0)
+    sink.minWidth = 1024
+    sink.minHeight = 2048
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=256, y=0)
+    sink.minWidth = 768
+    sink.minHeight = 800
+    sink.write(output_file)
 
-    sink.addTile(np.random.random((10, 10)), 0, 0)
-    sink.addTile(np.random.random((10, 10, 2)), 10, 0)
-
-    metadata = sink.getMetadata()
-    assert metadata.get('sizeX') == 200
-    assert metadata.get('sizeY') == 100
+    written = large_image_source_zarr.open(output_file)
+    metadata = written.getMetadata()
+    assert metadata.get('sizeX') == 768
+    assert metadata.get('sizeY') == 800
 
 
 def testNegativeMinWidth():

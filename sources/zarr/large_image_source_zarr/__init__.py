@@ -789,12 +789,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 arr = current_arrays[store_path]
                 new_shape = tuple(
-                    max(
-                        v,
-                        self.minWidth if self.minWidth is not None and k == 'x' else
-                        self.minHeight if self.minHeight is not None and k == 'y' else
-                        arr.shape[old_axes[k]] if k in old_axes else 0,
-                    )
+                    max(v, arr.shape[old_axes[k]] if k in old_axes else 0)
                     for k, v in new_dims.items()
                 )
                 if arr.chunks[-1] != new_dims.get('s') or len(new_axes):
@@ -1255,6 +1250,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         axes=list(self._axes.keys()),
                         **frame_position,
                     )
+
+        if self.minWidth or self.minHeight:
+            old_axes = self._axes if hasattr(self, '_axes') else {}
+            current_arrays = dict(self._zarr.arrays())
+            arr = current_arrays['0']
+            new_shape = tuple(
+                max(
+                    v,
+                    self.minWidth if self.minWidth is not None and k == 'x' else
+                    self.minHeight if self.minHeight is not None and k == 'y' else
+                    arr.shape[old_axes[k]],
+                )
+                for k, v in old_axes.items()
+            )
+            self._resizeImage(arr, new_shape, {}, None)
 
         source._validateZarr()
 
