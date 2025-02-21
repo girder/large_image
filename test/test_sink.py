@@ -118,6 +118,14 @@ def testXYAxis():
     assert metadata['IndexStride']['IndexXY'] == 1
 
 
+def testXLength1():
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((1, 1, 1)), x=0, y=138)
+    sink.addTile(np.zeros((1, 1, 1)), x=0, y=138)
+    metadata = sink.getMetadata()
+    assert metadata.get('sizeX') == 1
+
+
 def testMultiFrameAxes():
     sink = large_image_source_zarr.new()
     sink.addTile(np.random.random((256, 256)), 0, 0, q=1)
