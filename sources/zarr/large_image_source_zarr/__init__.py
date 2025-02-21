@@ -148,6 +148,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._threadLock = threading.RLock()
         self._processLock = multiprocessing.Lock()
         self._framecount = 0
+        self._minWidth = None
+        self._minHeight = None
         self._mm_x = 0
         self._mm_y = 0
         self._channelNames = []
@@ -1005,6 +1007,32 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._crop = (x, y, w, h)
 
     @property
+    def minWidth(self):
+        return self._minWidth
+
+    @minWidth.setter
+    def minWidth(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            msg = 'minWidth must be positive or None'
+            raise TileSourceError(msg)
+        self._minWidth = value
+
+    @property
+    def minHeight(self):
+        return self._minHeight
+
+    @minHeight.setter
+    def minHeight(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            msg = 'minHeight must be positive or None'
+            raise TileSourceError(msg)
+        self._minHeight = value
+
+    @property
     def mm_x(self):
         return self._mm_x
 
@@ -1222,6 +1250,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         axes=list(self._axes.keys()),
                         **frame_position,
                     )
+
+        if self.minWidth or self.minHeight:
+            old_axes = self._axes if hasattr(self, '_axes') else {}
+            current_arrays = dict(self._zarr.arrays())
+            arr = current_arrays['0']
+            new_shape = tuple(
+                max(
+                    v,
+                    self.minWidth if self.minWidth is not None and k == 'x' else
+                    self.minHeight if self.minHeight is not None and k == 'y' else
+                    arr.shape[old_axes[k]],
+                )
+                for k, v in old_axes.items()
+            )
+            self._resizeImage(arr, new_shape, {}, None)
 
         source._validateZarr()
 
