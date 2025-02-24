@@ -110,15 +110,31 @@ def get_mimetypes_list():
 
 
 def get_extensions_list():
-    extensions = large_image.listExtensions()
+    lines = [
+        '.. list-table:: File Extensions',
+        '   :header-rows: 1',
+        '',
+        '   * - Tile Source',
+        '     - Extension(s)',
+        '',
+    ]
+    all_extensions = []
+    for name, info in large_image.tilesource.listSources().get('sources', {}).items():
+        extensions = [k for k in info.get('extensions', {}).keys() if k != 'default']
+        if len(extensions):
+            extensions_string = ', '.join([
+                f'``{e}``' for e in extensions
+            ])
+            lines.append(f'   * - {name}')
+            lines.append(f'     - {extensions_string}')
+            lines.append('')
+            all_extensions += list(extensions)
     return [
         '.. _extensions_list:',
         '',
-        f'Extensions ({len(extensions)})',
+        f'Extensions ({len(set(all_extensions))})',
         '~~~~~~~~~~~~~~~~~~',
-        ', '.join([
-            f'``{e}``' for e in extensions
-        ]),
+        *lines,
     ]
 
 
