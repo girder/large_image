@@ -16,6 +16,10 @@
 
 - Require a minimum version of Pillow to avoid a CVE ([#1828](../../pull/1828))
 
+### Bug Fixes
+
+- Zarr Sink: Allow X and Y to have length 1 ([#1837](../../pull/1837))
+
 ## 1.31.1
 
 ### Improvements
