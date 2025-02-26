@@ -184,7 +184,7 @@ module.exports = {
             let dtype = this.dtype.replace('>', '').replace('<', '').replace('=', '').replace('|', '')
             if (dtypeAliases[dtype]) dtype = dtypeAliases[dtype]
             const range = dtypeRanges[dtype]
-            if (range?.length === 2) {
+            if (range && range.length === 2) {
                 return range
             } else {
                 return [this.histogram.min, this.histogram.max]
