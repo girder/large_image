@@ -8,6 +8,7 @@ module.exports = {
         'histogramParamStyle',
         'frameHistograms',
         'getFrameHistogram',
+        'dtype',
         'layers',
         'layerMap',
         'active',
@@ -449,6 +450,7 @@ module.exports = {
                 :auto-range="autoRange"
                 :current-min="min"
                 :current-max="max"
+                :dtype="dtype"
                 :active="active"
                 :update-min="(v, d) => updateLayerMin(layerName, v, d)"
                 :update-max="(v, d) => updateLayerMax(layerName, v, d)"

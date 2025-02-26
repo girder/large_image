@@ -1,4 +1,34 @@
 <script>
+const dtypeAliases = {
+    'i1': 'int8',
+    'u1': 'uint8',
+    'i2': 'int16',
+    'u2': 'uint16',
+    'i4': 'int32',
+    'u4': 'uint32',
+    'i8': 'int64',
+    'u8': 'uint64',
+    'f2': 'float16',
+    'f4': 'float32',
+    'f': 'float32',
+    'f8': 'float64',
+    'd': 'float64',
+}
+
+const dtypeRanges = {
+    'int8': [-128, 127],
+    'uint8': [0, 255],
+    'int16': [-32768, 32767],
+    'uint16': [0, 65535],
+    'int32': [-2147483648, 2147483647],
+    'uint32': [0, 4294967295],
+    'int64': [-9223372036854775808, 9223372036854775807],
+    'uint64': [0, 18446744073709551615],
+    'float16': [-65,504, 65,504],
+    'float32': [-3.4e+38, 3.4e+38],
+    'float64': [-1.7e+308, +1.7e+308],
+}
+
 function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
@@ -75,6 +105,7 @@ module.exports = {
         'framedelta',
         'currentMin',
         'currentMax',
+        'dtype',
         'autoRange',
         'active',
         'updateMin',
@@ -145,6 +176,17 @@ module.exports = {
         },
         invert() {
             return this.currentMin > this.currentMax;
+        },
+        dtypeRange() {
+            // remove byte-order characters
+            let dtype = this.dtype.replace('>', '').replace('<', '').replace('=', '').replace('|', '')
+            if (dtypeAliases[dtype]) dtype = dtypeAliases[dtype]
+            const range = dtypeRanges[dtype]
+            if (range?.length === 2) {
+                return range
+            } else {
+                return [this.histogram.min, this.histogram.max]
+            }
         }
     },
     mounted() {
@@ -385,8 +427,8 @@ module.exports = {
       type="number"
       class="input-80 min-input"
       :disabled="autoRange !== undefined"
-      :min="histogram.min"
-      :max="currentMax"
+      :min="dtypeRange[0]"
+      :max="dtypeRange[1]"
       :value="minVal"
       @input="(e) => updateFromInput('min', e.target.value)"
     >
@@ -462,8 +504,8 @@ module.exports = {
       type="number"
       class="input-80 max-input"
       :disabled="autoRange !== undefined"
-      :max="histogram.max"
-      :min="currentMin"
+      :min="dtypeRange[0]"
+      :max="dtypeRange[1]"
       :value="maxVal"
       @input="(e) => updateFromInput('max', e.target.value)"
     >
