@@ -110,30 +110,47 @@ def get_mimetypes_list():
 
 
 def get_extensions_list():
+    extensions = large_image.listExtensions()
+    return [
+        '.. _extensions_list:',
+        '',
+        f'Extensions ({len(extensions)})',
+        '~~~~~~~~~~~~~~~~~~',
+        ', '.join([
+            f'``{e}``' for e in extensions
+        ]),
+    ]
+
+
+def get_extensions_mimetypes_table():
     lines = [
-        '.. list-table:: File Extensions',
+        '.. list-table:: File Extensions & Mimetypes',
         '   :header-rows: 1',
         '',
         '   * - Tile Source',
         '     - Extension(s)',
+        '     - Mime Type(s)',
         '',
     ]
-    all_extensions = []
     for name, info in large_image.tilesource.listSources().get('sources', {}).items():
         extensions = [k for k in info.get('extensions', {}).keys() if k != 'default']
+        mimetypes = [k for k in info.get('mimeTypes', {}).keys() if k != 'default']
         if len(extensions):
             extensions_string = ', '.join([
                 f'``{e}``' for e in extensions
             ])
+            mimetypes_string = ', '.join([
+                f'``{m}``' for m in mimetypes
+            ])
             lines.append(f'   * - {name}')
             lines.append(f'     - {extensions_string}')
+            lines.append(f'     - {mimetypes_string}')
             lines.append('')
-            all_extensions += list(extensions)
     return [
-        '.. _extensions_list:',
+        '.. _extensions_mimetypes_table:',
         '',
-        f'Extensions ({len(set(all_extensions))})',
-        '~~~~~~~~~~~~~~~~~~',
+        'Extensions & Mimetypes by Tilesource',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
         *lines,
     ]
 
@@ -209,12 +226,15 @@ def generate():
     lines = [
         'For a list of known mime types, see :ref:`mime_types_list`.',
         'For a list of known extensions, see :ref:`extensions_list`.',
+        'To view extensions and mime types for each tilesource, see :ref:`extensions_mimetypes_table`.',
         '',
         *lines,
         '',
         *get_mimetypes_list(),
         '',
         *get_extensions_list(),
+        '',
+        *get_extensions_mimetypes_table(),
         '',
     ]
 
