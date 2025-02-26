@@ -414,6 +414,14 @@ module.exports = {
         height="30"
         opacity="0.2"
       />
+      <rect
+        ref="maxExclusionBox"
+        x="5"
+        y="0"
+        width="0"
+        height="30"
+        opacity="0.2"
+      />
       <line
         ref="minHandle"
         class="draggable"
@@ -435,14 +443,6 @@ module.exports = {
       >
         {{ +vRange[1].toFixed(2) || 1 }}
       </text>
-      <rect
-        ref="maxExclusionBox"
-        x="5"
-        y="0"
-        width="0"
-        height="30"
-        opacity="0.2"
-      />
       <line
         ref="maxHandle"
         class="draggable"
