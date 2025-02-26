@@ -167,12 +167,14 @@ module.exports = {
         minVal() {
             if (!this.histogram) return 0;
             if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
-            return this.currentMin || parseFloat(this.histogram.min.toFixed(2));
+            if (this.currentMin === undefined) return parseFloat(this.histogram.min.toFixed(2));
+            return this.currentMin;
         },
         maxVal() {
             if (!this.histogram) return 1;
             if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
-            return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
+            if (this.currentMax === undefined) return parseFloat(this.histogram.max.toFixed(2));
+            return this.currentMax;
         },
         invert() {
             return this.currentMin > this.currentMax;
