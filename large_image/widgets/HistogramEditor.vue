@@ -122,6 +122,14 @@ module.exports = {
         },
         autoRange() {
             this.initializePositions();
+        },
+        invert() {
+            this.drawHistogram(this.simplifyHistogram(this.histogram.hist))
+            if (this.invert) {
+                this.$refs.maxExclusionBox.setAttribute('visibility', 'hidden')
+            } else {
+                this.$refs.maxExclusionBox.setAttribute('visibility', 'visible')
+            }
         }
     },
     computed: {
@@ -134,6 +142,9 @@ module.exports = {
             if (!this.histogram) return 1;
             if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
             return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
+        },
+        invert() {
+            return this.currentMin > this.currentMax;
         }
     },
     mounted() {
@@ -200,9 +211,13 @@ module.exports = {
                 }
                 const y1 = height;
 
-                ctx.rect(x0, y0, (x1 - x0), (y1 - y0));
+                if (this.invert) {
+                    ctx.rect(x0, 0, (x1 - x0), (y0)); // inverted colors
+                } else {
+                    ctx.rect(x0, y0, (x1 - x0), (y1 - y0));
+                }
             }
-            ctx.fillStyle = '#888';
+            ctx.fillStyle = '#aaa';
             ctx.fill();
         },
         xPositionToValue(xPosition) {
@@ -305,13 +320,20 @@ module.exports = {
                 newValue = parseFloat(parseFloat(newValue).toFixed(2));
                 this.updateAutoRange(newValue);
             } else {
-                if (name === 'min') {
-                    this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newLocation.x - 5}`);
-                    this.updateMin(newValue);
-                } else if (name === 'max') {
-                    this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newLocation.x}`);
-                    this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${this.xRange[1] - newLocation.x}`);
-                    this.updateMax(newValue);
+                if (name == 'min') this.updateMin(newValue);
+                if (name == 'max') this.updateMax(newValue);
+
+                // resize gray boxes
+                const minX = this.$refs.minHandle.getAttribute('x1')
+                const maxX = this.$refs.maxHandle.getAttribute('x1')
+                if (this.invert) {
+                    this.$refs.minExclusionBox.setAttribute('x', `${maxX}`)
+                    this.$refs.minExclusionBox.setAttribute('width', `${minX - maxX}`)
+                } else {
+                    this.$refs.minExclusionBox.setAttribute('x', '0')
+                    this.$refs.minExclusionBox.setAttribute('width', `${minX}`)
+                    this.$refs.maxExclusionBox.setAttribute('x', `${maxX}`)
+                    this.$refs.maxExclusionBox.setAttribute('width', `${this.xRange[1] - maxX}`)
                 }
             }
         },
