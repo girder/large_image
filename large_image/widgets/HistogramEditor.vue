@@ -1,33 +1,33 @@
 <script>
 const dtypeAliases = {
-    'i1': 'int8',
-    'u1': 'uint8',
-    'i2': 'int16',
-    'u2': 'uint16',
-    'i4': 'int32',
-    'u4': 'uint32',
-    'i8': 'int64',
-    'u8': 'uint64',
-    'f2': 'float16',
-    'f4': 'float32',
-    'f': 'float32',
-    'f8': 'float64',
-    'd': 'float64',
-}
+    i1: 'int8',
+    u1: 'uint8',
+    i2: 'int16',
+    u2: 'uint16',
+    i4: 'int32',
+    u4: 'uint32',
+    i8: 'int64',
+    u8: 'uint64',
+    f2: 'float16',
+    f4: 'float32',
+    f: 'float32',
+    f8: 'float64',
+    d: 'float64'
+};
 
 const dtypeRanges = {
-    'int8': [-128, 127],
-    'uint8': [0, 255],
-    'int16': [-32768, 32767],
-    'uint16': [0, 65535],
-    'int32': [-2147483648, 2147483647],
-    'uint32': [0, 4294967295],
-    'int64': [-9223372036854775808, 9223372036854775807],
-    'uint64': [0, 18446744073709551615],
-    'float16': [-65,504, 65,504],
-    'float32': [-3.4e+38, 3.4e+38],
-    'float64': [-1.7e+308, +1.7e+308],
-}
+    int8: [-128, 127],
+    uint8: [0, 255],
+    int16: [-32768, 32767],
+    uint16: [0, 65535],
+    int32: [-2147483648, 2147483647],
+    uint32: [0, 4294967295],
+    int64: [-9e18, 9e18],
+    uint64: [0, 1e19],
+    float16: [-65504, 65504],
+    float32: [-3.4e38, 3.4e38],
+    float64: [-1.7e308, 1.7e308]
+};
 
 function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
@@ -155,11 +155,11 @@ module.exports = {
             this.initializePositions();
         },
         invert() {
-            this.drawHistogram(this.simplifyHistogram(this.histogram.hist))
+            this.drawHistogram(this.simplifyHistogram(this.histogram.hist));
             if (this.invert) {
-                this.$refs.maxExclusionBox.setAttribute('visibility', 'hidden')
+                this.$refs.maxExclusionBox.setAttribute('visibility', 'hidden');
             } else {
-                this.$refs.maxExclusionBox.setAttribute('visibility', 'visible')
+                this.$refs.maxExclusionBox.setAttribute('visibility', 'visible');
             }
         }
     },
@@ -181,13 +181,13 @@ module.exports = {
         },
         dtypeRange() {
             // remove byte-order characters
-            let dtype = this.dtype.replace('>', '').replace('<', '').replace('=', '').replace('|', '')
-            if (dtypeAliases[dtype]) dtype = dtypeAliases[dtype]
-            const range = dtypeRanges[dtype]
+            let dtype = this.dtype.replace('>', '').replace('<', '').replace('=', '').replace('|', '');
+            if (dtypeAliases[dtype]) dtype = dtypeAliases[dtype];
+            const range = dtypeRanges[dtype];
             if (range && range.length === 2) {
-                return range
+                return range;
             } else {
-                return [this.histogram.min, this.histogram.max]
+                return [this.histogram.min, this.histogram.max];
             }
         }
     },
@@ -364,20 +364,20 @@ module.exports = {
                 newValue = parseFloat(parseFloat(newValue).toFixed(2));
                 this.updateAutoRange(newValue);
             } else {
-                if (name == 'min') this.updateMin(newValue);
-                if (name == 'max') this.updateMax(newValue);
+                if (name === 'min') this.updateMin(newValue);
+                if (name === 'max') this.updateMax(newValue);
 
                 // resize gray boxes
-                const minX = this.$refs.minHandle.getAttribute('x1')
-                const maxX = this.$refs.maxHandle.getAttribute('x1')
+                const minX = this.$refs.minHandle.getAttribute('x1');
+                const maxX = this.$refs.maxHandle.getAttribute('x1');
                 if (this.invert) {
-                    this.$refs.minExclusionBox.setAttribute('x', `${maxX}`)
-                    this.$refs.minExclusionBox.setAttribute('width', `${minX - maxX}`)
+                    this.$refs.minExclusionBox.setAttribute('x', `${maxX}`);
+                    this.$refs.minExclusionBox.setAttribute('width', `${minX - maxX}`);
                 } else {
-                    this.$refs.minExclusionBox.setAttribute('x', '0')
-                    this.$refs.minExclusionBox.setAttribute('width', `${minX}`)
-                    this.$refs.maxExclusionBox.setAttribute('x', `${maxX}`)
-                    this.$refs.maxExclusionBox.setAttribute('width', `${this.xRange[1] - maxX}`)
+                    this.$refs.minExclusionBox.setAttribute('x', '0');
+                    this.$refs.minExclusionBox.setAttribute('width', `${minX}`);
+                    this.$refs.maxExclusionBox.setAttribute('x', `${maxX}`);
+                    this.$refs.maxExclusionBox.setAttribute('width', `${this.xRange[1] - maxX}`);
                 }
             }
         },
