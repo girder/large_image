@@ -27,10 +27,10 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
             selectedShape = target;
             posOffset = getMousePosition(evt);
             posOffset.x -= parseFloat(
-                selectedShape.getAttributeNS(null, 'x1') || '0'
+                selectedShape.getAttribute('x1') || '0'
             );
             posOffset.y -= parseFloat(
-                selectedShape.getAttributeNS(null, 'y1') || '0'
+                selectedShape.getAttribute('y1') || '0'
             );
         }
     }
@@ -46,15 +46,15 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
             coord.x = clamp(coord.x, xRange[0], xRange[1]);
             const [moveX, moveY] = validateDrag(selectedShape, coord);
             if (!moveX) {
-                coord.x = parseFloat(selectedShape.getAttributeNS(null, 'x1') || '0');
+                coord.x = parseFloat(selectedShape.getAttribute('x1') || '0');
             }
             if (!moveY) {
-                coord.y = parseFloat(selectedShape.getAttributeNS(null, 'y1') || '0');
+                coord.y = parseFloat(selectedShape.getAttribute('y1') || '0');
             }
 
-            selectedShape.setAttributeNS(null, 'x1', `${coord.x}`);
-            selectedShape.setAttributeNS(null, 'x2', `${coord.x}`);
-            selectedShape.setAttributeNS(null, 'y1', `${coord.y}`);
+            selectedShape.setAttribute('x1', `${coord.x}`);
+            selectedShape.setAttribute('x2', `${coord.x}`);
+            selectedShape.setAttribute('y1', `${coord.y}`);
             callback(selectedShape, coord);
         }
     }
@@ -338,11 +338,11 @@ module.exports = {
             }
         },
         setHandlePosition(handle, position, exclusionBox, exclusionBoxPosition, exclusionBoxWidth) {
-            handle.setAttributeNS(null, 'x1', `${position}`);
-            handle.setAttributeNS(null, 'x2', `${position}`);
-            exclusionBox.setAttributeNS(null, 'x', `${exclusionBoxPosition}`);
+            handle.setAttribute('x1', `${position}`);
+            handle.setAttribute('x2', `${position}`);
+            exclusionBox.setAttribute('x', `${exclusionBoxPosition}`);
             if (exclusionBoxWidth >= 0) {
-                exclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`);
+                exclusionBox.setAttribute('width', `${exclusionBoxWidth}`);
             }
         },
         fromDistributionPercentage(percentage) {
