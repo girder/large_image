@@ -271,9 +271,7 @@ module.exports = {
             const handleName = selected.getAttribute('name');
             const newValue = this.xPositionToValue(newLocation.x);
             if (handleName === 'min') {
-                if (this.autoRange === undefined && newValue >= this.currentMax) {
-                    moveX = false;
-                } else if (this.autoRange !== undefined) {
+                if (this.autoRange !== undefined) {
                     const percentage = this.toDistributionPercentage(newValue);
                     if (
                         percentage >= 50 ||
@@ -283,9 +281,7 @@ module.exports = {
                     }
                 }
             } else if (handleName === 'max') {
-                if (this.autoRange === undefined && newValue <= this.currentMin) {
-                    moveX = false;
-                } else if (this.autoRange !== undefined) {
+                if (this.autoRange !== undefined) {
                     const percentage = this.toDistributionPercentage(newValue);
                     if (
                         percentage <= 50 ||
