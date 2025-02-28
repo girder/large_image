@@ -8,6 +8,7 @@ module.exports = {
         'histogramParamStyle',
         'frameHistograms',
         'getFrameHistogram',
+        'dtype',
         'layers',
         'layerMap',
         'active',
@@ -241,16 +242,18 @@ module.exports = {
             this.updateStyle();
         },
         updateLayerMin(layer, newVal) {
-            const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            const valid = Number.isFinite(newVal);
+            const newMinVal = valid ? parseFloat(newVal) : newVal;
             this.compositeLayerInfo[layer].min = newMinVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo); // for reactivity
-            this.updateStyle();
+            if (valid) this.updateStyle();
         },
         updateLayerMax(layer, newVal) {
-            const newMaxVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            const valid = Number.isFinite(newVal);
+            const newMaxVal = valid ? parseFloat(newVal) : newVal;
             this.compositeLayerInfo[layer].max = newMaxVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo); // for reactivity
-            this.updateStyle();
+            if (valid) this.updateStyle();
         },
         updateActiveLayers() {
             this.layers.forEach((layer) => {
@@ -449,6 +452,7 @@ module.exports = {
                 :auto-range="autoRange"
                 :current-min="min"
                 :current-max="max"
+                :dtype="dtype"
                 :active="active"
                 :update-min="(v, d) => updateLayerMin(layerName, v, d)"
                 :update-max="(v, d) => updateLayerMax(layerName, v, d)"

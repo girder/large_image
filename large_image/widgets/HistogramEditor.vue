@@ -1,4 +1,34 @@
 <script>
+const dtypeAliases = {
+    i1: 'int8',
+    u1: 'uint8',
+    i2: 'int16',
+    u2: 'uint16',
+    i4: 'int32',
+    u4: 'uint32',
+    i8: 'int64',
+    u8: 'uint64',
+    f2: 'float16',
+    f4: 'float32',
+    f: 'float32',
+    f8: 'float64',
+    d: 'float64'
+};
+
+const dtypeRanges = {
+    int8: [-128, 127],
+    uint8: [0, 255],
+    int16: [-32768, 32767],
+    uint16: [0, 65535],
+    int32: [-2147483648, 2147483647],
+    uint32: [0, 4294967295],
+    int64: [-9.22e18, 9.22e18],
+    uint64: [0, 1.84e19],
+    float16: [-65500, 65500],
+    float32: [-3.4e38, 3.4e38],
+    float64: [-1.7e308, 1.7e308]
+};
+
 function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
@@ -23,14 +53,19 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
 
     function startDrag(evt) {
         const target = evt.target;
+        Array.from(document.body.getElementsByClassName('range-editor')).forEach(
+            (el) => {
+                el.style.userSelect = 'none';
+            }
+        );
         if (target && target.classList.contains('draggable')) {
             selectedShape = target;
             posOffset = getMousePosition(evt);
             posOffset.x -= parseFloat(
-                selectedShape.getAttributeNS(null, 'x1') || '0'
+                selectedShape.getAttribute('x1') || '0'
             );
             posOffset.y -= parseFloat(
-                selectedShape.getAttributeNS(null, 'y1') || '0'
+                selectedShape.getAttribute('y1') || '0'
             );
         }
     }
@@ -46,20 +81,25 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
             coord.x = clamp(coord.x, xRange[0], xRange[1]);
             const [moveX, moveY] = validateDrag(selectedShape, coord);
             if (!moveX) {
-                coord.x = parseFloat(selectedShape.getAttributeNS(null, 'x1') || '0');
+                coord.x = parseFloat(selectedShape.getAttribute('x1') || '0');
             }
             if (!moveY) {
-                coord.y = parseFloat(selectedShape.getAttributeNS(null, 'y1') || '0');
+                coord.y = parseFloat(selectedShape.getAttribute('y1') || '0');
             }
 
-            selectedShape.setAttributeNS(null, 'x1', `${coord.x}`);
-            selectedShape.setAttributeNS(null, 'x2', `${coord.x}`);
-            selectedShape.setAttributeNS(null, 'y1', `${coord.y}`);
+            selectedShape.setAttribute('x1', `${coord.x}`);
+            selectedShape.setAttribute('x2', `${coord.x}`);
+            selectedShape.setAttribute('y1', `${coord.y}`);
             callback(selectedShape, coord);
         }
     }
 
     function endDrag() {
+        Array.from(document.body.getElementsByClassName('range-editor')).forEach(
+            (el) => {
+                el.style.userSelect = 'auto';
+            }
+        );
         selectedShape = undefined;
     }
 }
@@ -75,6 +115,7 @@ module.exports = {
         'framedelta',
         'currentMin',
         'currentMax',
+        'dtype',
         'autoRange',
         'active',
         'updateMin',
@@ -101,7 +142,7 @@ module.exports = {
             }
         },
         histogram() {
-            this.xRange = [5, this.$refs.svg.clientWidth - 5];
+            this.xRange = [5, this.$refs.svg.clientWidth];
             this.vRange = [this.histogram.min, this.histogram.max];
             this.drawHistogram(
                 this.simplifyHistogram(this.histogram.hist)
@@ -122,18 +163,42 @@ module.exports = {
         },
         autoRange() {
             this.initializePositions();
+        },
+        invert() {
+            this.drawHistogram(this.simplifyHistogram(this.histogram.hist));
+            if (this.invert) {
+                this.$refs.maxExclusionBox.setAttribute('visibility', 'hidden');
+            } else {
+                this.$refs.maxExclusionBox.setAttribute('visibility', 'visible');
+            }
         }
     },
     computed: {
         minVal() {
             if (!this.histogram) return 0;
             if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
-            return this.currentMin || parseFloat(this.histogram.min.toFixed(2));
+            if (this.currentMin === undefined) return parseFloat(this.histogram.min.toFixed(2));
+            return this.currentMin;
         },
         maxVal() {
             if (!this.histogram) return 1;
             if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
-            return this.currentMax || parseFloat(this.histogram.max.toFixed(2));
+            if (this.currentMax === undefined) return parseFloat(this.histogram.max.toFixed(2));
+            return this.currentMax;
+        },
+        invert() {
+            return this.currentMin > this.currentMax;
+        },
+        dtypeRange() {
+            // remove byte-order characters
+            let dtype = this.dtype.replace('>', '').replace('<', '').replace('=', '').replace('|', '');
+            if (dtypeAliases[dtype]) dtype = dtypeAliases[dtype];
+            const range = dtypeRanges[dtype];
+            if (range && range.length === 2) {
+                return range;
+            } else {
+                return [this.histogram.min, this.histogram.max];
+            }
         }
     },
     mounted() {
@@ -200,9 +265,13 @@ module.exports = {
                 }
                 const y1 = height;
 
-                ctx.rect(x0, y0, (x1 - x0), (y1 - y0));
+                if (this.invert) {
+                    ctx.rect(x0, 0, (x1 - x0), (y0)); // inverted colors
+                } else {
+                    ctx.rect(x0, y0, (x1 - x0), (y1 - y0));
+                }
             }
-            ctx.fillStyle = '#888';
+            ctx.fillStyle = '#aaa';
             ctx.fill();
         },
         xPositionToValue(xPosition) {
@@ -258,7 +327,7 @@ module.exports = {
             if (newMaxPosition !== currentMaxPosition) {
                 this.setHandlePosition(
                     this.$refs.maxHandle,
-                    newMaxPosition,
+                    newMaxPosition - 5,
                     this.$refs.maxExclusionBox,
                     newMaxPosition,
                     this.xRange[1] - newMaxPosition
@@ -271,9 +340,7 @@ module.exports = {
             const handleName = selected.getAttribute('name');
             const newValue = this.xPositionToValue(newLocation.x);
             if (handleName === 'min') {
-                if (this.autoRange === undefined && newValue >= this.currentMax) {
-                    moveX = false;
-                } else if (this.autoRange !== undefined) {
+                if (this.autoRange !== undefined) {
                     const percentage = this.toDistributionPercentage(newValue);
                     if (
                         percentage >= 50 ||
@@ -283,9 +350,7 @@ module.exports = {
                     }
                 }
             } else if (handleName === 'max') {
-                if (this.autoRange === undefined && newValue <= this.currentMin) {
-                    moveX = false;
-                } else if (this.autoRange !== undefined) {
+                if (this.autoRange !== undefined) {
                     const percentage = this.toDistributionPercentage(newValue);
                     if (
                         percentage <= 50 ||
@@ -309,22 +374,29 @@ module.exports = {
                 newValue = parseFloat(parseFloat(newValue).toFixed(2));
                 this.updateAutoRange(newValue);
             } else {
-                if (name === 'min') {
-                    this.$refs.minExclusionBox.setAttributeNS(null, 'width', `${newLocation.x - 5}`);
-                    this.updateMin(newValue);
-                } else if (name === 'max') {
-                    this.$refs.maxExclusionBox.setAttributeNS(null, 'x', `${newLocation.x}`);
-                    this.$refs.maxExclusionBox.setAttributeNS(null, 'width', `${this.xRange[1] - newLocation.x}`);
-                    this.updateMax(newValue);
+                if (name === 'min') this.updateMin(newValue);
+                if (name === 'max') this.updateMax(newValue);
+
+                // resize gray boxes
+                const minX = this.$refs.minHandle.getAttribute('x1');
+                const maxX = this.$refs.maxHandle.getAttribute('x1');
+                if (this.invert && minX - maxX > 0) {
+                    this.$refs.minExclusionBox.setAttribute('x', `${maxX}`);
+                    this.$refs.minExclusionBox.setAttribute('width', `${minX - maxX}`);
+                } else {
+                    this.$refs.minExclusionBox.setAttribute('x', '0');
+                    this.$refs.minExclusionBox.setAttribute('width', `${minX}`);
+                    this.$refs.maxExclusionBox.setAttribute('x', `${maxX}`);
+                    this.$refs.maxExclusionBox.setAttribute('width', `${this.xRange[1] - maxX}`);
                 }
             }
         },
         setHandlePosition(handle, position, exclusionBox, exclusionBoxPosition, exclusionBoxWidth) {
-            handle.setAttributeNS(null, 'x1', `${position}`);
-            handle.setAttributeNS(null, 'x2', `${position}`);
-            exclusionBox.setAttributeNS(null, 'x', `${exclusionBoxPosition}`);
+            handle.setAttribute('x1', `${position}`);
+            handle.setAttribute('x2', `${position}`);
+            exclusionBox.setAttribute('x', `${exclusionBoxPosition}`);
             if (exclusionBoxWidth >= 0) {
-                exclusionBox.setAttributeNS(null, 'width', `${exclusionBoxWidth}`);
+                exclusionBox.setAttribute('width', `${exclusionBoxWidth}`);
             }
         },
         fromDistributionPercentage(percentage) {
@@ -367,8 +439,8 @@ module.exports = {
       type="number"
       class="input-80 min-input"
       :disabled="autoRange !== undefined"
-      :min="histogram.min"
-      :max="currentMax"
+      :min="dtypeRange[0]"
+      :max="dtypeRange[1]"
       :value="minVal"
       @input="(e) => updateFromInput('min', e.target.value)"
     >
@@ -396,6 +468,14 @@ module.exports = {
         height="30"
         opacity="0.2"
       />
+      <rect
+        ref="maxExclusionBox"
+        x="5"
+        y="0"
+        width="0"
+        height="30"
+        opacity="0.2"
+      />
       <line
         ref="minHandle"
         class="draggable"
@@ -417,14 +497,6 @@ module.exports = {
       >
         {{ +vRange[1].toFixed(2) || 1 }}
       </text>
-      <rect
-        ref="maxExclusionBox"
-        x="5"
-        y="0"
-        width="0"
-        height="30"
-        opacity="0.2"
-      />
       <line
         ref="maxHandle"
         class="draggable"
@@ -444,8 +516,8 @@ module.exports = {
       type="number"
       class="input-80 max-input"
       :disabled="autoRange !== undefined"
-      :max="histogram.max"
-      :min="currentMin"
+      :min="dtypeRange[0]"
+      :max="dtypeRange[1]"
       :value="maxVal"
       @input="(e) => updateFromInput('max', e.target.value)"
     >
