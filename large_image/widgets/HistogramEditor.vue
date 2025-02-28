@@ -54,7 +54,9 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
     function startDrag(evt) {
         const target = evt.target;
         Array.from(document.body.getElementsByClassName('range-editor')).forEach(
-            (el) => el.style.userSelect = 'none'
+            (el) => {
+                el.style.userSelect = 'none';
+            }
         );
         if (target && target.classList.contains('draggable')) {
             selectedShape = target;
@@ -94,7 +96,9 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
 
     function endDrag() {
         Array.from(document.body.getElementsByClassName('range-editor')).forEach(
-            (el) => el.style.userSelect = 'auto'
+            (el) => {
+                el.style.userSelect = 'auto';
+            }
         );
         selectedShape = undefined;
     }
