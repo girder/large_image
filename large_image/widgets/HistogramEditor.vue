@@ -138,7 +138,7 @@ module.exports = {
             }
         },
         histogram() {
-            this.xRange = [5, this.$refs.svg.clientWidth - 5];
+            this.xRange = [5, this.$refs.svg.clientWidth];
             this.vRange = [this.histogram.min, this.histogram.max];
             this.drawHistogram(
                 this.simplifyHistogram(this.histogram.hist)
@@ -323,7 +323,7 @@ module.exports = {
             if (newMaxPosition !== currentMaxPosition) {
                 this.setHandlePosition(
                     this.$refs.maxHandle,
-                    newMaxPosition,
+                    newMaxPosition - 5,
                     this.$refs.maxExclusionBox,
                     newMaxPosition,
                     this.xRange[1] - newMaxPosition
@@ -376,7 +376,7 @@ module.exports = {
                 // resize gray boxes
                 const minX = this.$refs.minHandle.getAttribute('x1');
                 const maxX = this.$refs.maxHandle.getAttribute('x1');
-                if (this.invert) {
+                if (this.invert && minX - maxX > 0) {
                     this.$refs.minExclusionBox.setAttribute('x', `${maxX}`);
                     this.$refs.minExclusionBox.setAttribute('width', `${minX - maxX}`);
                 } else {
