@@ -19,6 +19,7 @@
 ### Bug Fixes
 
 - Zarr Sink: Allow X and Y to have length 1 ([#1837](../../pull/1837))
+- Ask zarr to use zero rather than empty arrays ([#1840](../../pull/1840))
 
 ## 1.31.1
 

@@ -373,7 +373,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._frameValues = None
             frame_values_shape = [baseArray.shape[self._axes[a]] for a in self.frameAxes]
             frame_values_shape.append(len(frame_values_shape))
-            frame_values = np.empty(frame_values_shape, dtype=object)
+            frame_values = np.zeros(frame_values_shape, dtype=object)
             all_frame_specs = self.getMetadata().get('frames')
             for axis, values in axes_values.items():
                 if axis in self.frameAxes:
@@ -698,7 +698,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     arr,
                     [(0, s - arr.shape[i]) for i, s in enumerate(new_shape)],
                 )
-                new_arr = zarr.empty(
+                new_arr = zarr.zeros(
                     new_shape, chunks=chunking, dtype=arr.dtype,
                     write_empty_chunks=False)
                 new_arr[:] = arr[:]
@@ -783,7 +783,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ])
                 # If we have to create the array, do so with the desired store
                 # and chunking so we don't have to immediately rechunk it
-                arr = zarr.empty(
+                arr = zarr.zeros(
                     tuple(new_dims.values()),
                     dtype=tile.dtype,
                     chunks=chunking,
