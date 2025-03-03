@@ -11,6 +11,7 @@
 - Add minWidth and minHeight to zarr sink ([#1831](../../pull/1831))
 - Reformat metadata for non-uniform axis values ([#1832](../../pull/1832))
 - Reorder zarr axes in read mode ([#1833](../../pull/1833))
+- Allow selecting inverted histogram ranges in the UI ([#1839](../../pull/1839))
 
 ### Changes
 
