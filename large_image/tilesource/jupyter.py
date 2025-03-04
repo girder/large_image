@@ -340,6 +340,7 @@ class Map:
             dragging=True,
             attribution_control=False,
         )
+        m.fit_bounds(bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]])
         m.layout.height = '50vh'
         if self._geospatial:
             m.add_layer(layer)
