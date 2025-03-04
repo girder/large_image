@@ -21,7 +21,8 @@ module.exports = {
             compositeLayerInfo: {},
             expandedRows: [],
             autoRangeForAll: undefined,
-            showKeyboardShortcuts: false
+            showKeyboardShortcuts: false,
+            queuedRequest: undefined,
         };
     },
     computed: {
@@ -51,8 +52,14 @@ module.exports = {
             }
         },
         histogramParams() {
-            this.getFrameHistogram(this.histogramParams);
-        }
+            this.queueHistogramRequest(this.histogramParams);
+        },
+        frameHistograms() {
+            if (this.queuedRequest) {
+                this.getFrameHistogram(this.queuedRequest);
+                this.queuedRequest = undefined;
+            }
+        },
     },
     mounted() {
         this.initializeLayerInfo();
@@ -82,6 +89,15 @@ module.exports = {
         }
     },
     methods: {
+        queueHistogramRequest(params) {
+            if (this.queuedRequest === undefined) {
+                this.queuedRequest = params;
+                this.getFrameHistogram(params);
+            } else {
+                // overwrite queued request
+                this.queuedRequest = params;
+            }
+        },
         keyHandler(e) {
             let numericKey = parseFloat(e.key);
             if (e.ctrlKey && !isNaN(numericKey)) {
@@ -143,7 +159,7 @@ module.exports = {
                     usedColors.push(chosenColor);
                 }
             });
-            this.getFrameHistogram(this.histogramParams);
+            this.queueHistogramRequest(this.histogramParams);
         },
         initializeStateFromStyle() {
             this.enabledLayers = [];
@@ -446,7 +462,7 @@ module.exports = {
                 :layer-index="index"
                 :current-frame="currentFrame"
                 :frame-histograms="frameHistograms"
-                :get-frame-histogram="getFrameHistogram"
+                :get-frame-histogram="queueHistogramRequest"
                 :histogram-params="histogramParams"
                 :framedelta="framedelta"
                 :auto-range="autoRange"
