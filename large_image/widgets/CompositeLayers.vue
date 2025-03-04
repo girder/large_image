@@ -22,7 +22,7 @@ module.exports = {
             expandedRows: [],
             autoRangeForAll: undefined,
             showKeyboardShortcuts: false,
-            queuedRequest: undefined,
+            queuedRequest: undefined
         };
     },
     computed: {
@@ -59,7 +59,7 @@ module.exports = {
                 this.getFrameHistogram(this.queuedRequest);
                 this.queuedRequest = undefined;
             }
-        },
+        }
     },
     mounted() {
         this.initializeLayerInfo();
