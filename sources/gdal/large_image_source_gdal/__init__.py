@@ -26,6 +26,7 @@ from importlib.metadata import version as _importlib_version
 import numpy as np
 import PIL.Image
 
+from large_image import config
 from large_image.cache_util import LruCacheMetaclass, _cacheClearFuncs, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
@@ -140,6 +141,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
+        if projection is None:
+            projection = config.getConfig('default_projection')
         if projection and projection.lower().startswith('epsg:'):
             projection = projection.lower()
         if projection and not isinstance(projection, bytes):
