@@ -42,6 +42,10 @@ ConfigValues = {
     'logger': fallbackLogger,
     'logprint': fallbackLogger,
 
+    # Encoding and Projection
+    'default_encoding': 'PNG' if _in_notebook() else 'JPEG',
+    'default_projection': 'EPSG:3857' if _in_notebook() else None,
+
     # For tiles
     'cache_backend': None,  # 'python', 'redis' or 'memcached'
     # 'python' cache can use 1/(val) of the available memory

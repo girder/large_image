@@ -72,7 +72,7 @@ class TileSource(IPyLeafletMixin):
     _initValues: Tuple[Tuple[Any, ...], Dict[str, Any]]
     _iccprofilesObjects: List[Any]
 
-    def __init__(self, encoding: str = 'JPEG', jpegQuality: int = 95,
+    def __init__(self, encoding: Optional[str] = None, jpegQuality: int = 95,
                  jpegSubsampling: int = 0, tiffCompression: str = 'raw',
                  edge: Union[bool, str] = False,
                  style: Optional[Union[str, Dict[str, int]]] = None,
@@ -166,6 +166,7 @@ class TileSource(IPyLeafletMixin):
         self._dtype: Optional[Union[npt.DTypeLike, str]] = None
         self._bandCount: Optional[int] = None
 
+        encoding = encoding or config.getConfig('default_encoding')
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
 
