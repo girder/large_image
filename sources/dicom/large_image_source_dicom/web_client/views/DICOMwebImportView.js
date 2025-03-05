@@ -93,6 +93,9 @@ const DICOMwebImportView = View.extend({
     }
 });
 
-assetstoreImportViewMap[AssetstoreType.DICOMWEB] = DICOMwebImportView;
+// This can be null if the base view is not the main Girder application
+if (assetstoreImportViewMap) {
+    assetstoreImportViewMap[AssetstoreType.DICOMWEB] = DICOMwebImportView;
+}
 
 export default DICOMwebImportView;
