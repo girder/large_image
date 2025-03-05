@@ -22,7 +22,7 @@ module.exports = {
             expandedRows: [],
             autoRangeForAll: undefined,
             showKeyboardShortcuts: false,
-            queuedRequest: undefined
+            queuedRequests: undefined
         };
     },
     computed: {
@@ -55,10 +55,12 @@ module.exports = {
             this.queueHistogramRequest(this.histogramParams);
         },
         frameHistograms() {
-            if (this.queuedRequest) {
-                this.getFrameHistogram(this.queuedRequest);
-                this.queuedRequest = undefined;
+            if (this.queuedRequests && this.queuedRequests[this.currentFrame]) {
+                this.queuedRequests[this.currentFrame].forEach((r) => {
+                    this.getFrameHistogram(r);
+                });
             }
+            this.queuedRequests = undefined;
         }
     },
     mounted() {
@@ -90,12 +92,17 @@ module.exports = {
     },
     methods: {
         queueHistogramRequest(params) {
-            if (this.queuedRequest === undefined) {
-                this.queuedRequest = params;
+            if (this.queuedRequests === undefined) {
                 this.getFrameHistogram(params);
+                this.queuedRequests = {};
             } else {
-                // overwrite queued request
-                this.queuedRequest = params;
+                if (!this.queuedRequests[this.currentFrame]) {
+                    this.queuedRequests[this.currentFrame] = [];
+                }
+                this.queuedRequests[this.currentFrame] = [
+                    ...this.queuedRequests[this.currentFrame],
+                    {...params}
+                ];
             }
         },
         keyHandler(e) {
@@ -159,7 +166,6 @@ module.exports = {
                     usedColors.push(chosenColor);
                 }
             });
-            this.queueHistogramRequest(this.histogramParams);
         },
         initializeStateFromStyle() {
             this.enabledLayers = [];
