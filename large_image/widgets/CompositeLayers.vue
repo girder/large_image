@@ -101,7 +101,7 @@ module.exports = {
                 }
                 this.queuedRequests[this.currentFrame] = [
                     ...this.queuedRequests[this.currentFrame],
-                    {...params}
+                    Object.assign({}, params)
                 ];
             }
         },
