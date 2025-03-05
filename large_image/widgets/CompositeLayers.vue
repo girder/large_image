@@ -55,12 +55,18 @@ module.exports = {
             this.queueHistogramRequest(this.histogramParams);
         },
         frameHistograms() {
-            if (this.queuedRequests && this.queuedRequests[this.currentFrame]) {
-                this.queuedRequests[this.currentFrame].forEach((r) => {
-                    this.getFrameHistogram(r);
-                });
+            if (this.queuedRequests) {
+                const requests = this.queuedRequests[this.currentFrame];
+                if (!requests || !requests.length) this.queuedRequests = undefined;
+                else {
+                    requests.slice(0, 3).forEach((r) => {
+                        this.getFrameHistogram(r);
+                    });
+                    this.queuedRequests = {
+                        [this.currentFrame]: requests.slice(3)
+                    };
+                }
             }
-            this.queuedRequests = undefined;
         }
     },
     mounted() {
