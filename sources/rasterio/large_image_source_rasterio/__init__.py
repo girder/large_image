@@ -28,6 +28,7 @@ import numpy as np
 import PIL.Image
 
 import large_image
+from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
                                    TILE_FORMAT_PIL, SourcePriority,
@@ -142,6 +143,9 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         self._bounds = {}
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
+
+        if projection is None:
+            projection = config.getConfig('default_projection')
         self.projection = make_crs(projection) if projection else None
 
         # get width and height parameters
