@@ -355,7 +355,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         for frame in result['frames']:
             for key in reftbl:
                 if key in frame and reftbl[key] not in frame:
-                    frame[reftbl[key]] = int(frame[key])
+                    if int(frame[key]) < len(result['frames']):
+                        frame[reftbl[key]] = int(frame[key])
                 frame.pop(key, None)
         self._addMetadataFrameInformation(result, channels)
         return result
