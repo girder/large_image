@@ -12,6 +12,8 @@
 - Reformat metadata for non-uniform axis values ([#1832](../../pull/1832))
 - Reorder zarr axes in read mode ([#1833](../../pull/1833))
 - Allow selecting inverted histogram ranges in the UI ([#1839](../../pull/1839))
+- Jupyter: Increase default zoom on small images ([#1843](../../pull/1843))
+- Debounce histogram requests in the frame selector ([#1844](../../pull/1844))
 
 ### Changes
 
@@ -21,6 +23,7 @@
 
 - Zarr Sink: Allow X and Y to have length 1 ([#1837](../../pull/1837))
 - Ask zarr to use zero rather than empty arrays ([#1840](../../pull/1840))
+- Harden the ometiff reader against erroneous axis values ([#1847](../../pull/1847))
 
 ## 1.31.1
 
