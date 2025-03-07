@@ -21,7 +21,8 @@ module.exports = {
             compositeLayerInfo: {},
             expandedRows: [],
             autoRangeForAll: undefined,
-            showKeyboardShortcuts: false
+            showKeyboardShortcuts: false,
+            queuedRequests: undefined
         };
     },
     computed: {
@@ -51,7 +52,22 @@ module.exports = {
             }
         },
         histogramParams() {
-            this.getFrameHistogram(this.histogramParams);
+            this.queueHistogramRequest(this.histogramParams);
+        },
+        frameHistograms() {
+            if (this.queuedRequests) {
+                let requests = this.queuedRequests[this.currentFrame];
+                if (!requests) this.queuedRequests = undefined;
+                const receivedFrames = Object.keys(this.frameHistograms).map((v) => parseInt(v));
+                requests = requests.filter((r) => !receivedFrames.includes(r.frame));
+                if (!requests.length) this.queuedRequests = undefined;
+                else {
+                    this.getFrameHistogram(requests[0]);
+                    this.queuedRequests = {
+                        [this.currentFrame]: requests.slice(1)
+                    };
+                }
+            }
         }
     },
     mounted() {
@@ -82,6 +98,20 @@ module.exports = {
         }
     },
     methods: {
+        queueHistogramRequest(params) {
+            if (this.queuedRequests === undefined) {
+                this.getFrameHistogram(params);
+                this.queuedRequests = {};
+            } else {
+                if (!this.queuedRequests[this.currentFrame]) {
+                    this.queuedRequests[this.currentFrame] = [];
+                }
+                this.queuedRequests[this.currentFrame] = [
+                    ...this.queuedRequests[this.currentFrame],
+                    Object.assign({}, params)
+                ];
+            }
+        },
         keyHandler(e) {
             let numericKey = parseFloat(e.key);
             if (e.ctrlKey && !isNaN(numericKey)) {
@@ -143,7 +173,6 @@ module.exports = {
                     usedColors.push(chosenColor);
                 }
             });
-            this.getFrameHistogram(this.histogramParams);
         },
         initializeStateFromStyle() {
             this.enabledLayers = [];
@@ -446,7 +475,7 @@ module.exports = {
                 :layer-index="index"
                 :current-frame="currentFrame"
                 :frame-histograms="frameHistograms"
-                :get-frame-histogram="getFrameHistogram"
+                :get-frame-histogram="queueHistogramRequest"
                 :histogram-params="histogramParams"
                 :framedelta="framedelta"
                 :auto-range="autoRange"

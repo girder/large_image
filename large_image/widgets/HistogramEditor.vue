@@ -134,19 +134,23 @@ module.exports = {
             this.fetchHistogram();
         },
         frameHistograms() {
-            if (this.framedelta !== undefined) {
-                const targetFrame = this.currentFrame + this.framedelta;
-                if (this.frameHistograms[targetFrame]) {
-                    this.histogram = this.frameHistograms[targetFrame][0];
-                }
+            const framedelta = this.framedelta || 0;
+            const targetFrame = this.currentFrame + framedelta;
+            if (this.frameHistograms[targetFrame]) {
+                this.histogram = this.frameHistograms[targetFrame][0];
             }
         },
         histogram() {
             this.xRange = [5, this.$refs.svg.clientWidth];
-            this.vRange = [this.histogram.min, this.histogram.max];
-            this.drawHistogram(
-                this.simplifyHistogram(this.histogram.hist)
-            );
+            if (this.histogram) {
+                this.vRange = [this.histogram.min, this.histogram.max];
+                this.drawHistogram(
+                    this.simplifyHistogram(this.histogram.hist)
+                );
+            } else {
+                this.vRange = [0, 1];
+                this.drawHistogram([0, 0, 0]);
+            }
             makeDraggableSVG(
                 this.$refs.svg,
                 this.validateHandleDrag,
