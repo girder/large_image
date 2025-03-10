@@ -8,6 +8,7 @@ export default {
         'histogramParamStyle',
         'frameHistograms',
         'getFrameHistogram',
+        'dtype',
         'layers',
         'layerMap',
         'active',
@@ -20,7 +21,8 @@ export default {
             compositeLayerInfo: {},
             expandedRows: [],
             autoRangeForAll: undefined,
-            showKeyboardShortcuts: false
+            showKeyboardShortcuts: false,
+            queuedRequests: undefined
         };
     },
     computed: {
@@ -50,7 +52,22 @@ export default {
             }
         },
         histogramParams() {
-            this.getFrameHistogram(this.histogramParams);
+            this.queueHistogramRequest(this.histogramParams);
+        },
+        frameHistograms() {
+            if (this.queuedRequests) {
+                let requests = this.queuedRequests[this.currentFrame];
+                if (!requests) this.queuedRequests = undefined;
+                const receivedFrames = Object.keys(this.frameHistograms).map((v) => parseInt(v));
+                requests = requests.filter((r) => !receivedFrames.includes(r.frame));
+                if (!requests.length) this.queuedRequests = undefined;
+                else {
+                    this.getFrameHistogram(requests[0]);
+                    this.queuedRequests = {
+                        [this.currentFrame]: requests.slice(1)
+                    };
+                }
+            }
         }
     },
     mounted() {
@@ -81,6 +98,20 @@ export default {
         }
     },
     methods: {
+        queueHistogramRequest(params) {
+            if (this.queuedRequests === undefined) {
+                this.getFrameHistogram(params);
+                this.queuedRequests = {};
+            } else {
+                if (!this.queuedRequests[this.currentFrame]) {
+                    this.queuedRequests[this.currentFrame] = [];
+                }
+                this.queuedRequests[this.currentFrame] = [
+                    ...this.queuedRequests[this.currentFrame],
+                    Object.assign({}, params)
+                ];
+            }
+        },
         keyHandler(e) {
             let numericKey = parseFloat(e.key);
             if (e.ctrlKey && !isNaN(numericKey)) {
@@ -142,7 +173,6 @@ export default {
                     usedColors.push(chosenColor);
                 }
             });
-            this.getFrameHistogram(this.histogramParams);
         },
         initializeStateFromStyle() {
             this.enabledLayers = [];
@@ -241,16 +271,18 @@ export default {
             this.updateStyle();
         },
         updateLayerMin(layer, newVal) {
-            const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            const valid = Number.isFinite(newVal);
+            const newMinVal = valid ? parseFloat(newVal) : newVal;
             this.compositeLayerInfo[layer].min = newMinVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo); // for reactivity
-            this.updateStyle();
+            if (valid) this.updateStyle();
         },
         updateLayerMax(layer, newVal) {
-            const newMaxVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            const valid = Number.isFinite(newVal);
+            const newMaxVal = valid ? parseFloat(newVal) : newVal;
             this.compositeLayerInfo[layer].max = newMaxVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo); // for reactivity
-            this.updateStyle();
+            if (valid) this.updateStyle();
         },
         updateActiveLayers() {
             this.layers.forEach((layer) => {
@@ -443,12 +475,13 @@ export default {
                 :layer-index="index"
                 :current-frame="currentFrame"
                 :frame-histograms="frameHistograms"
-                :get-frame-histogram="getFrameHistogram"
+                :get-frame-histogram="queueHistogramRequest"
                 :histogram-params="histogramParams"
                 :framedelta="framedelta"
                 :auto-range="autoRange"
                 :current-min="min"
                 :current-max="max"
+                :dtype="dtype"
                 :active="active"
                 :update-min="(v, d) => updateLayerMin(layerName, v, d)"
                 :update-max="(v, d) => updateLayerMax(layerName, v, d)"
