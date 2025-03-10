@@ -148,6 +148,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._threadLock = threading.RLock()
         self._processLock = multiprocessing.Lock()
         self._framecount = 0
+        self._minWidth = None
+        self._minHeight = None
         self._mm_x = 0
         self._mm_y = 0
         self._channelNames = []
@@ -281,7 +283,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         elif check == results['best']:
             results['series'].append((group, arr))
         if not any(group is g for g, _ in results['associated']):
-            axes = {k: v for k, v in axes.items() if arr.shape[axes[k]] > 1}
+            axes = {k: v for k, v in axes.items() if arr.shape[axes[k]] > 1 or k in {'x', 'y'}}
             if (len(axes) <= 3 and
                     self._minAssociatedImageSize <= arr.shape[axes['x']] <=
                     self._maxAssociatedImageSize and
@@ -371,7 +373,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._frameValues = None
             frame_values_shape = [baseArray.shape[self._axes[a]] for a in self.frameAxes]
             frame_values_shape.append(len(frame_values_shape))
-            frame_values = np.empty(frame_values_shape, dtype=object)
+            frame_values = np.zeros(frame_values_shape, dtype=object)
             all_frame_specs = self.getMetadata().get('frames')
             for axis, values in axes_values.items():
                 if axis in self.frameAxes:
@@ -453,10 +455,16 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         stride = 1
         self._strides = {}
         self._axisCounts = {}
-        for _, k in sorted(
-            (-self._axes.get(k, 'tzc'.index(k) if k in 'tzc' else -1), k)
-            for k in self._axes if k not in 'xys'
-        ):
+        # If we aren't in editable mode, prefer the channel axis to have a
+        # stride of 1, then the z axis, then the t axis, then sorted by the
+        # axis name.
+        axisOrder = ((-'tzc'.index(k) if k in 'tzc' else 1, k)
+                     for k in self._axes if k not in {'x', 'y', 's'})
+        # In editable mode, prefer the order that the axes are being written.
+        if self._editable:
+            axisOrder = ((-self._axes.get(k, 'tzc'.index(k) if k in 'tzc' else -1), k)
+                         for k in self._axes if k not in {'x', 'y', 's'})
+        for _, k in sorted(axisOrder):
             self._strides[k] = stride
             self._axisCounts[k] = baseArray.shape[self._axes[k]]
             stride *= baseArray.shape[self._axes[k]]
@@ -629,7 +637,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _validateNewTile(self, tile, mask, placement, axes):
         if not isinstance(tile, np.ndarray) or axes is None:
-            axes = 'yxs'
+            axes = self._axes if hasattr(self, '_axes') else 'yxs'
             tile, mode = _imageToNumpy(tile)
         elif not isinstance(axes, str) and not isinstance(axes, list):
             err = 'Invalid type for axes. Must be str or list[str].'
@@ -637,6 +645,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         axes = [x.lower() for x in axes]
         if axes[-1] != 's':
             axes.append('s')
+            tile = tile[..., np.newaxis]
         if mask is not None and len(axes) - 1 == len(mask.shape):
             mask = mask[:, :, np.newaxis]
         if 'x' not in axes or 'y' not in axes:
@@ -689,7 +698,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     arr,
                     [(0, s - arr.shape[i]) for i, s in enumerate(new_shape)],
                 )
-                new_arr = zarr.empty(new_shape, chunks=chunking, dtype=arr.dtype)
+                new_arr = zarr.zeros(
+                    new_shape, chunks=chunking, dtype=arr.dtype,
+                    write_empty_chunks=False)
                 new_arr[:] = arr[:]
                 arr = new_arr
             else:
@@ -765,12 +776,22 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         self._zarr_store.rmdir(path)
             chunking = None
             if store_path not in current_arrays:
-                arr = np.empty(tuple(new_dims.values()), dtype=tile.dtype)
                 chunking = tuple([
                     self._tileSize if a in ['x', 'y'] else
                     new_dims.get('s') if a == 's' else 1
                     for a in axes
                 ])
+                # If we have to create the array, do so with the desired store
+                # and chunking so we don't have to immediately rechunk it
+                arr = zarr.zeros(
+                    tuple(new_dims.values()),
+                    dtype=tile.dtype,
+                    chunks=chunking,
+                    store=self._zarr_store,
+                    path=store_path,
+                    write_empty_chunks=False,
+                )
+                chunking = None
             else:
                 arr = current_arrays[store_path]
                 new_shape = tuple(
@@ -992,6 +1013,32 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._crop = (x, y, w, h)
 
     @property
+    def minWidth(self):
+        return self._minWidth
+
+    @minWidth.setter
+    def minWidth(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            msg = 'minWidth must be positive or None'
+            raise TileSourceError(msg)
+        self._minWidth = value
+
+    @property
+    def minHeight(self):
+        return self._minHeight
+
+    @minHeight.setter
+    def minHeight(self, value):
+        self._checkEditable()
+        value = int(value) if value is not None else None
+        if value is not None and value <= 0:
+            msg = 'minHeight must be positive or None'
+            raise TileSourceError(msg)
+        self._minHeight = value
+
+    @property
     def mm_x(self):
         return self._mm_x
 
@@ -1209,6 +1256,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         axes=list(self._axes.keys()),
                         **frame_position,
                     )
+
+        if self.minWidth or self.minHeight:
+            old_axes = self._axes if hasattr(self, '_axes') else {}
+            current_arrays = dict(self._zarr.arrays())
+            arr = current_arrays['0']
+            new_shape = tuple(
+                max(
+                    v,
+                    self.minWidth if self.minWidth is not None and k == 'x' else
+                    self.minHeight if self.minHeight is not None and k == 'y' else
+                    arr.shape[old_axes[k]],
+                )
+                for k, v in old_axes.items()
+            )
+            self._resizeImage(arr, new_shape, {}, None)
 
         source._validateZarr()
 

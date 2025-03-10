@@ -411,6 +411,8 @@ You may also choose to read tiles from one source and write modified tiles to a 
             }
             modified_tile = modify_tile(tile_data)
             new_source.addTile(modified_tile, x=x, y=y, **kwargs)
+    # Copy over the names of the channels, if known
+    new_source.channelNames = original_source.channelNames
     new_source.write('path/to/new/image.tiff', lossy=False)
 
 Multiple processes

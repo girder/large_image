@@ -419,6 +419,10 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             lastX, lastY = rdr.getSizeX(), rdr.getSizeY()
             for idx in range(1, self._metadata['seriesCount']):
                 rdr.setSeries(idx)
+                try:
+                    self._bioimage.read(series=idx, rescale=False, XYWH=(0, 0, 1, 1))
+                except Exception:
+                    continue
                 if (rdr.getSizeX() == self._metadata['sizeX'] and
                         rdr.getSizeY() == self._metadata['sizeY'] and
                         rdr.getImageCount() == self._metadata['imageCount']):

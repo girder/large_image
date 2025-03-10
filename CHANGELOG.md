@@ -1,15 +1,47 @@
 # Change Log
 
+## 1.31.2
+
+### Improvements
+
+- Apply background color information from openslide sources ([#1819](../../pull/1819))
+- Memoize a check for DICOM series UID ([#1827](../../pull/1827))
+- Speed up finding adjacent DICOM files in girder ([#1829](../../pull/1829), [#1836](../../pull/1836))
+- Ipyleaflet region indicator ([#1815](../../pull/1815))
+- Add minWidth and minHeight to zarr sink ([#1831](../../pull/1831))
+- Reformat metadata for non-uniform axis values ([#1832](../../pull/1832))
+- Reorder zarr axes in read mode ([#1833](../../pull/1833))
+- Allow selecting inverted histogram ranges in the UI ([#1839](../../pull/1839))
+- Jupyter: Increase default zoom on small images ([#1843](../../pull/1843))
+- Debounce histogram requests in the frame selector ([#1844](../../pull/1844))
+
+### Changes
+
+- Require a minimum version of Pillow to avoid a CVE ([#1828](../../pull/1828))
+
+### Bug Fixes
+
+- Zarr Sink: Allow X and Y to have length 1 ([#1837](../../pull/1837))
+- Ask zarr to use zero rather than empty arrays ([#1840](../../pull/1840))
+- Harden the ometiff reader against erroneous axis values ([#1847](../../pull/1847))
+
 ## 1.31.1
 
 ### Improvements
 
 - Improve how we use vips to read lower tile levels ([#1794](../../pull/1794))
 - Be more specific in casting when converting images via vips ([#1795](../../pull/1795))
+- Improve how ometiff internal metadata is exposed ([#1806](../../pull/1806))
+- Show histogram auto range calculated values ([#1803](../../pull/1803))
+- Test reading from lower tile levels in bioformats ([#1810](../../pull/1810))
 
 ### Bug Fixes
 
 - Fix an issue with lazy tiles that have non power of two scaling ([#1797](../../pull/1797))
+- Use zarr.empty not np.empty when creating large zarr sinks ([#1801](../../pull/1801))
+- Fix zarr sink addTile when no samples axis is specified ([#1805](../../pull/1805))
+- Fix zarr sink adding an xy axis ([#1807](../../pull/1807))
+- Fix adding axes one at a time with zarr sink ([#1808](../../pull/1808))
 
 ## 1.31.0
 
