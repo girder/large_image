@@ -53,7 +53,7 @@ export default {
                         } else {
                             // non-uniform values have a value for every frame
                             // labels will change with currentFrame, so only populate current label
-                            let currentLabel = info.values[this.currentFrame];
+                            let currentLabel = this.imageMetadata.frames[this.currentFrame][key];
                             if (typeof currentLabel === 'number') currentLabel = Number(currentLabel.toPrecision(5));
                             labels[labelKey] = new Array(this.indexInfo[labelKey].range + 1).fill('');
                             labels[labelKey][this.indexInfo[labelKey].current] = currentLabel;
@@ -394,6 +394,7 @@ export default {
         :histogram-param-style="histogramParamStyles[2]"
         :frame-histograms="frameHistograms"
         :get-frame-histogram="getFrameHistogram"
+        :dtype="metadata.dtype"
         :layers="metadata.channels"
         :layer-map="metadata.channelmap"
         :active="currentModeId === 2"
@@ -410,6 +411,7 @@ export default {
         :histogram-param-style="histogramParamStyles[3]"
         :frame-histograms="frameHistograms"
         :get-frame-histogram="getFrameHistogram"
+        :dtype="metadata.dtype"
         :layers="metadata.bands"
         :layer-map="undefined"
         :active="currentModeId === 3"

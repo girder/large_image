@@ -355,10 +355,46 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         for frame in result['frames']:
             for key in reftbl:
                 if key in frame and reftbl[key] not in frame:
-                    frame[reftbl[key]] = int(frame[key])
+                    if int(frame[key]) < len(result['frames']):
+                        frame[reftbl[key]] = int(frame[key])
                 frame.pop(key, None)
         self._addMetadataFrameInformation(result, channels)
         return result
+
+    def _reduceInternalMetadata(self, result, entry, prefix=''):  # noqa
+        starts = ['StructuredAnnotations:OriginalMetadata:Series 0 ',
+                  'StructuredAnnotations:OriginalMetadata:']
+        for start in starts:
+            if prefix.startswith(start):
+                prefix = prefix[len(start):]
+        if isinstance(entry, dict):
+            for key, val in entry.items():
+                pkey = f'{prefix}:{key}'.strip(':')
+                if pkey in starts or (pkey + ':') in starts:
+                    pkey = ''
+                if isinstance(val, dict):
+                    if 'ID' in val and 'Value' in val:
+                        self._reduceInternalMetadata(result, val['Value'], prefix)
+                    elif 'Key' in val and 'Value' in val:
+                        result[f'{pkey}:{val["Key"]}'.strip(':')] = val['Value']
+                    else:
+                        self._reduceInternalMetadata(result, val, pkey)
+                elif isinstance(val, list):
+                    for subidx, subval in enumerate(val):
+                        if isinstance(subval, dict):
+                            if 'ID' in subval and 'Value' in subval:
+                                self._reduceInternalMetadata(result, subval['Value'], prefix)
+                            elif 'Key' in subval and 'Value' in subval:
+                                result[f'{pkey}:{subval["Key"]}'] = subval['Value']
+                            else:
+                                self._reduceInternalMetadata(
+                                    result, subval, f'{pkey}:{subidx}'.strip(':'))
+                        elif not isinstance(subval, list):
+                            result[f'{pkey}:{subidx}'.strip(':')] = subval
+                elif key == 'ID' and str(val).split(':')[0] in prefix:
+                    continue
+                elif val != '' and pkey:
+                    result[pkey] = val
 
     def getInternalMetadata(self, **kwargs):
         """
@@ -368,7 +404,13 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: a dictionary of data or None.
         """
-        return {'omeinfo': self._omeinfo}
+        result = {'omeinfo': self._omeinfo}
+        try:
+            result['omereduced'] = {}
+            self._reduceInternalMetadata(result['omereduced'], self._omeinfo)
+        except Exception:
+            pass
+        return result
 
     def getNativeMagnification(self):
         """

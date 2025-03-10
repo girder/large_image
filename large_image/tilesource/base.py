@@ -1377,14 +1377,9 @@ class TileSource(IPyLeafletMixin):
             if hasattr(self, 'frameUnits') and self.frameUnits is not None:
                 units = self.frameUnits.get(axis_name)
             uniform = all(len(set(value_list)) <= 1 for value_list in value_mapping.values())
-            if uniform:
-                # for uniform values, only record values at each axis index
-                values = [
-                    value_list[0] for value_list in value_mapping.values() if len(value_list)
-                ]
-            else:
-                # for non-uniform axes, record values at every frame
-                values = [frame.get(key) for frame in frames]
+            values = [
+                value_list[0] for value_list in value_mapping.values() if len(value_list)
+            ]
             try:
                 min_val = min(values)
                 max_val = max(values)

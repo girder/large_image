@@ -108,7 +108,7 @@ setup(
     install_requires=[
         'cachetools',
         'palettable',
-        'Pillow',
+        'Pillow>=10.3',
         'numpy',
         'typing-extensions',
     ],
