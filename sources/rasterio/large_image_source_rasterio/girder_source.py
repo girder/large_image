@@ -32,7 +32,10 @@ class RasterioGirderTileSource(RasterioFileTileSource, GirderTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        projection = kwargs.get('projection', args[1] if len(args) >= 2 else getConfig('default_projection'))
+        projection = kwargs.get(
+            'projection',
+            args[1] if len(args) >= 2 else getConfig('default_projection'),
+        )
         unitPerPixel = kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None)
 
         return (
