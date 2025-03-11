@@ -4,7 +4,6 @@ import large_image
 from large_image.config import getConfig, setConfig
 
 
-
 def testConfigFunctions():
     assert isinstance(getConfig(), dict)
     setConfig('cache_backend', 'python')
