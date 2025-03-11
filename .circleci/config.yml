@@ -18,17 +18,21 @@ commands:
       - run:
           name: Upgrade virtualenv and tox
           command: pip install -U virtualenv tox
-      # - run:
-      #     name: Preinstall phantomjs to work around an npm permission issue
-      #     command: npm install -g phantomjs-prebuilt --unsafe-perm
       - run:
           name: Run tests via tox
+          environment:
+            GIRDER_CLIENT_TESTING_MONGO_URI: mongodb://localhost:27017
+            COVERAGE_CORE: sysmon
+            PYTEST_NUMPROCESSES: 3
+            LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM: 3
+            PYTEST_ADDOPTS: "--reruns=3"
+            HEADLESS: "true"
+            _JAVA_OPTIONS: "-Xmx2g"
           # Piping through cat does less buffering of the output but can
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: _JAVA_OPTIONS="-Xmx2g" LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=3 COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv
-            >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: << parameters.environ >> tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
@@ -133,11 +137,30 @@ commands:
             npm ci
             npm run build
           working_directory: girder/girder_large_image/web_client
+      - run:
+          name: Install and build large_image_annotation plugin
+          command: |
+            npm ci
+            npm run build
+          working_directory: girder_annotation/girder_large_image_annotation/web_client
+      - run:
+          name: Install and build large_image_source_dicom plugin
+          command: |
+            npm ci
+            npm run build
+          working_directory: sources/dicom/large_image_source_dicom/web_client
       - save_cache:
           name: Save nvm cache
           key: v1-nvm-cache-<< parameters.node >>
           paths:
             - /opt/circleci/.nvm/.cache
+      - run:
+          name: Install playwright with dependencies
+          environment:
+            DEBIAN_FRONTEND: noninteractive
+          command: |
+            npx playwright install --with-deps
+          working_directory: girder/girder_large_image/web_client
       - run:
           name: Check node versions
           command: |
