@@ -42,7 +42,7 @@ class GirderTileSource(tilesource.FileTileSource):
         return '%s,%s,%s,%s,%s,%s,%s,__STYLESTART__,%s,__STYLEEND__' % (
             args[0]['largeImage']['fileId'],
             args[0]['updated'],
-            kwargs.get('encoding', 'JPEG'),
+            kwargs.get('encoding', config.getConfig('default_encoding')),
             kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0),
             kwargs.get('tiffCompression', 'raw'),
