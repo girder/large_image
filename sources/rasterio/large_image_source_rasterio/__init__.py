@@ -144,7 +144,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
 
-        if projection is None:
+        if projection is None and self.isGeospatial(self.dataset):
             projection = config.getConfig('default_projection')
         self.projection = make_crs(projection) if projection else None
 
@@ -1049,20 +1049,18 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         return isValid
 
     @staticmethod
-    def isGeospatial(path):
+    def isGeospatial(ds):
         """
-        Check if a path is likely to be a geospatial file.
+        Check if a RasterIO Dataset or file path is likely to be geospatial.
 
-        :param path: The path to the file
+        :param ds: A RasterIO Dataset or the path to the file
         :returns: True if geospatial.
         """
         _lazyImport()
 
-        if isinstance(path, rio.io.DatasetReaderBase):
-            ds = path
-        else:
+        if not isinstance(ds, rio.io.DatasetReaderBase):
             try:
-                ds = rio.open(path)
+                ds = rio.open(ds)
             except Exception:
                 return False
         if ds.crs or (ds.transform and ds.transform != rio.Affine(1, 0, 0, 0, 1, 0)):

@@ -141,7 +141,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
-        if projection is None:
+        if projection is None and self.isGeospatial(self.dataset):
             projection = config.getConfig('default_projection')
         if projection and projection.lower().startswith('epsg:'):
             projection = projection.lower()
@@ -1028,19 +1028,20 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         return True
 
     @staticmethod
-    def isGeospatial(path):
+    def isGeospatial(ds):
         """
-        Check if a path is likely to be a geospatial file.
+        Check if a GDAL Dataset or file path is likely to be geospatial.
 
-        :param path: The path to the file
+        :param ds: A GDAL Dataset or the path to the file
         :returns: True if geospatial.
         """
         _lazyImport()
 
-        try:
-            ds = gdal.Open(str(path), gdalconst.GA_ReadOnly)
-        except Exception:
-            return False
+        if not isinstance(ds, gdal.Dataset):
+            try:
+                ds = gdal.Open(str(ds), gdalconst.GA_ReadOnly)
+            except Exception:
+                return False
         if ds:
             if ds.GetGCPs() and ds.GetGCPProjection():
                 return True
