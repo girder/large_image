@@ -1,5 +1,6 @@
 from test.datastore import datastore
 
+import pytest
 import large_image
 from large_image.config import getConfig, setConfig
 
@@ -21,6 +22,7 @@ def testConfigFunctions():
     assert getConfig('default_projection') == 'EPSG:3857'
 
 
+@pytest.mark.singular
 def testChangeDefaultEncodingCacheMiss():
     imagePath = datastore.fetch('sample_Easy1.png')
     setConfig('default_encoding', 'JPEG')

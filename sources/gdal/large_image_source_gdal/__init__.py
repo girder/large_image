@@ -340,10 +340,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     def getLRUHash(*args, **kwargs):
         return super(GDALFileTileSource, GDALFileTileSource).getLRUHash(
             *args, **kwargs) + ',%s,%s' % (
-                kwargs.get(
-                    'projection',
-                    args[1] if len(args) >= 2 else config.getConfig('default_projection'),
-                ),
+                kwargs.get('projection', args[1] if len(args) >= 2 else None) or
+                config.getConfig('default_projection'),
                 kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
 
     def getState(self):
