@@ -343,7 +343,7 @@ class TileSource(IPyLeafletMixin):
         :returns: a string hash value.
         """
         return strhash(
-            kwargs.get('encoding') or config.getConfig('default_projection'),
+            kwargs.get('encoding') or config.getConfig('default_encoding'),
             kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
@@ -2642,7 +2642,7 @@ class FileTileSource(TileSource):
     def getLRUHash(*args, **kwargs) -> str:
         return strhash(
             args[0],
-            kwargs.get('encoding') or config.getConfig('default_projection'),
+            kwargs.get('encoding') or config.getConfig('default_encoding'),
             kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
