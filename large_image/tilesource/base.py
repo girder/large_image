@@ -72,7 +72,7 @@ class TileSource(IPyLeafletMixin):
     _initValues: Tuple[Tuple[Any, ...], Dict[str, Any]]
     _iccprofilesObjects: List[Any]
 
-    def __init__(self, encoding: str = 'JPEG', jpegQuality: int = 95,
+    def __init__(self, encoding: Optional[str] = None, jpegQuality: int = 95,
                  jpegSubsampling: int = 0, tiffCompression: str = 'raw',
                  edge: Union[bool, str] = False,
                  style: Optional[Union[str, Dict[str, int]]] = None,
@@ -166,6 +166,7 @@ class TileSource(IPyLeafletMixin):
         self._dtype: Optional[Union[npt.DTypeLike, str]] = None
         self._bandCount: Optional[int] = None
 
+        encoding = encoding or config.getConfig('default_encoding')
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
 
@@ -342,7 +343,8 @@ class TileSource(IPyLeafletMixin):
         :returns: a string hash value.
         """
         return strhash(
-            kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            kwargs.get('encoding') or config.getConfig('default_encoding'),
+            kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
             '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
@@ -2639,7 +2641,9 @@ class FileTileSource(TileSource):
     @staticmethod
     def getLRUHash(*args, **kwargs) -> str:
         return strhash(
-            args[0], kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            args[0],
+            kwargs.get('encoding') or config.getConfig('default_encoding'),
+            kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
             '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
