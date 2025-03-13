@@ -23,6 +23,7 @@ import PIL.Image
 from large_image_source_gdal import GDALFileTileSource
 from osgeo import gdal, gdalconst
 
+from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError
@@ -93,6 +94,8 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             projections that are not latlong (is_geographic is False) must
             specify unitsPerPixel.
         """
+        if projection is None:
+            projection = config.getConfig('default_projection')
         if projection and projection.lower().startswith('epsg'):
             projection = projection.lower()
         super().__init__(
