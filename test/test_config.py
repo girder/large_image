@@ -6,6 +6,13 @@ import large_image
 from large_image.config import getConfig, setConfig
 
 
+@pytest.fixture
+def default_projection():
+    setConfig('default_projection', 'EPSG:3857')
+    yield getConfig('default_projection')
+    setConfig('default_projection', None)
+
+
 @pytest.mark.singular
 def testConfigFunctions():
     assert isinstance(getConfig(), dict)
@@ -40,13 +47,12 @@ def testChangeDefaultEncodingCacheMiss():
     assert source_2.encoding == 'JPEG'
 
 
-def testGDALDefaultProjection():
+def testGDALDefaultProjection(default_projection):
     import large_image_source_gdal
 
     path = 'test/test_files/rgba_geotiff.tiff'
     src = large_image_source_gdal.open(path)
-    proj = getConfig('default_projection')
-    assert src.projection == proj.lower().encode()
+    assert src.projection == default_projection.lower().encode()
 
 
 def testGDALDefaultNoProjection():
@@ -57,14 +63,13 @@ def testGDALDefaultNoProjection():
     assert src.projection is None
 
 
-def testRasterioDefaultProjection():
+def testRasterioDefaultProjection(default_projection):
     import large_image_source_rasterio
     import rasterio
 
     path = 'test/test_files/rgba_geotiff.tiff'
     src = large_image_source_rasterio.open(path)
-    proj = getConfig('default_projection')
-    assert src.projection == rasterio.CRS.from_string(proj)
+    assert src.projection == rasterio.CRS.from_string(default_projection)
 
 
 def testRasterioDefaultNoProjection():
