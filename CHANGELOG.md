@@ -1,6 +1,10 @@
 # Change Log
 
-## 1.31.2
+## 1.32.0
+
+### Features
+
+- Add default_encoding and default_projection config values ([#1846](../../pull/1846))
 
 ### Improvements
 
@@ -12,7 +16,7 @@
 - Reformat metadata for non-uniform axis values ([#1832](../../pull/1832))
 - Reorder zarr axes in read mode ([#1833](../../pull/1833))
 - Allow selecting inverted histogram ranges in the UI ([#1839](../../pull/1839))
-- Jupyter: Increase default zoom on small images ([#1843](../../pull/1843))
+- Jupyter: Increase default zoom on small images ([#1843](../../pull/1843), [#1852](../../pull/1852))
 - Debounce histogram requests in the frame selector ([#1844](../../pull/1844))
 
 ### Changes
