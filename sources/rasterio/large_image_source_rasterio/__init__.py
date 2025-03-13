@@ -93,7 +93,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
     cacheName = 'tilesource'
     name = 'rasterio'
 
-    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
+    def __init__(self, path, projection=PROJECTION_SENTINEL, unitsPerPixel=None, **kwargs):
         """Initialize the tile class.
 
         See the base class for other available parameters.
@@ -145,8 +145,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
 
-        if projection == PROJECTION_SENTINEL and self.isGeospatial(self.dataset):
-            projection = config.getConfig('default_projection')
+        if projection == PROJECTION_SENTINEL:
+            if self.isGeospatial(self.dataset):
+                projection = config.getConfig('default_projection')
+            else:
+                projection = None
         self.projection = make_crs(projection) if projection else None
 
         # get width and height parameters
