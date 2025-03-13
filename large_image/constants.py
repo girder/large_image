@@ -41,6 +41,9 @@ TILE_FORMAT_NUMPY = 'numpy'
 NEW_IMAGE_PATH_FLAG = '__new_image__'
 
 
+PROJECTION_SENTINEL = '__default__'
+
+
 TileOutputMimeTypes = {
     'JPEG': 'image/jpeg',
     'PNG': 'image/png',

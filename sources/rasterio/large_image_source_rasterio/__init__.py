@@ -30,9 +30,10 @@ import PIL.Image
 import large_image
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
+from large_image.constants import (PROJECTION_SENTINEL, TILE_FORMAT_IMAGE,
+                                   TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
+                                   SourcePriority, TileInputUnits,
+                                   TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
@@ -144,7 +145,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
 
-        if projection is None and self.isGeospatial(self.dataset):
+        if projection == PROJECTION_SENTINEL and self.isGeospatial(self.dataset):
             projection = config.getConfig('default_projection')
         self.projection = make_crs(projection) if projection else None
 
