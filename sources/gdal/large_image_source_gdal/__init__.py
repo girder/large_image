@@ -28,9 +28,9 @@ import PIL.Image
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, _cacheClearFuncs, methodcache
-from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileOutputMimeTypes)
+from large_image.constants import (PROJECTION_SENTINEL, TILE_FORMAT_IMAGE,
+                                   TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
+                                   SourcePriority, TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
@@ -103,7 +103,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
     VECTOR_IMAGE_SIZE = 256 * 1024  # for vector files without projections
     PROJECTED_VECTOR_IMAGE_SIZE = 32 * 1024  # if the file has a projection
 
-    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):  # noqa
+    def __init__(self, path, projection=PROJECTION_SENTINEL, unitsPerPixel=None, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -141,8 +141,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self.tileSize = 256
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
-        if projection is None and self.isGeospatial(self.dataset):
-            projection = config.getConfig('default_projection')
+        if projection == PROJECTION_SENTINEL:
+            if self.isGeospatial(self.dataset):
+                projection = config.getConfig('default_projection')
+            else:
+                projection = None
         if projection and projection.lower().startswith('epsg:'):
             projection = projection.lower()
         if projection and not isinstance(projection, bytes):
@@ -338,10 +341,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
+        proj = kwargs.get('projection', args[1] if len(args) >= 2 else PROJECTION_SENTINEL)
+        proj = proj if proj != PROJECTION_SENTINEL else config.getConfig('default_projection')
         return super(GDALFileTileSource, GDALFileTileSource).getLRUHash(
             *args, **kwargs) + ',%s,%s' % (
-                kwargs.get('projection', args[1] if len(args) >= 2 else None) or
-                config.getConfig('default_projection'),
+                proj,
                 kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
 
     def getState(self):

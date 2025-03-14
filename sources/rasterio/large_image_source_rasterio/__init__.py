@@ -30,9 +30,10 @@ import PIL.Image
 import large_image
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
+from large_image.constants import (PROJECTION_SENTINEL, TILE_FORMAT_IMAGE,
+                                   TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
+                                   SourcePriority, TileInputUnits,
+                                   TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
@@ -92,7 +93,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
     cacheName = 'tilesource'
     name = 'rasterio'
 
-    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
+    def __init__(self, path, projection=PROJECTION_SENTINEL, unitsPerPixel=None, **kwargs):
         """Initialize the tile class.
 
         See the base class for other available parameters.
@@ -144,8 +145,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
 
-        if projection is None and self.isGeospatial(self.dataset):
-            projection = config.getConfig('default_projection')
+        if projection == PROJECTION_SENTINEL:
+            if self.isGeospatial(self.dataset):
+                projection = config.getConfig('default_projection')
+            else:
+                projection = None
         self.projection = make_crs(projection) if projection else None
 
         # get width and height parameters
@@ -304,15 +308,13 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        projection = kwargs.get(
-            'projection',
-            args[1] if len(args) >= 2 else None,
-        ) or config.getConfig('default_projection')
+        proj = kwargs.get('projection', args[1] if len(args) >= 2 else PROJECTION_SENTINEL)
+        proj = proj if proj != PROJECTION_SENTINEL else config.getConfig('default_projection')
         unitsPerPixel = kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None)
 
         source = super(RasterioFileTileSource, RasterioFileTileSource)
         lru = source.getLRUHash(*args, **kwargs)
-        info = f',{projection},{unitsPerPixel}'
+        info = f',{proj},{unitsPerPixel}'
 
         return lru + info
 
