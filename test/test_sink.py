@@ -1003,3 +1003,36 @@ def testSingleBandAndSingleX(tmp_path):
     sink = large_image_source_zarr.new()
     sink.addTile(np.zeros((1, 1024, 1), dtype=np.uint8))
     sink.write(output_file)
+
+
+def testGeoreferencing(tmp_path):
+    output_file = tmp_path / 'test.tiff'
+    sink = large_image_source_zarr.new()
+
+    sink.addTile(np.random.random((256, 256, 3)) * 10, x=0, y=0)
+
+    sink.projection = 4326
+    bbox = [
+        # covers lincoln memorial
+        [-77.050923, 38.888728],
+        [-77.049437, 38.889805]
+    ]
+    # TODO: test with only two gcps on opposite corners
+    # TODO: test a bunch of edge cases and only apply constraints where failures occur
+    sink.gcps = [
+        (bbox[0][0], bbox[0][1], 0, 0),
+        (bbox[0][0], bbox[1][1], 0, 256),
+        (bbox[1][0], bbox[1][1], 256, 256),
+        (bbox[1][0], bbox[0][1], 256, 0),
+    ]
+    sink.write(output_file)
+
+    written = large_image.open(output_file)
+    metadata = written.getMetadata()
+    assert metadata['geospatial']
+    sb = metadata['sourceBounds']
+    assert sb['srs'] == '+proj=longlat +datum=WGS84 +no_defs'
+    assert sb['xmin'] == bbox[0][0]
+    assert sb['xmax'] == bbox[1][0]
+    assert sb['ymin'] == bbox[0][1]
+    assert sb['ymax'] == bbox[1][1]

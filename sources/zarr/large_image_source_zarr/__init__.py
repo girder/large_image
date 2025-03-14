@@ -165,6 +165,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frameValues = None
         self._frameAxes = None
         self._frameUnits = None
+        self._projection = None
+        self._gcps = None
         if not self._created:
             try:
                 self._validateZarr()
@@ -1183,6 +1185,28 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frameValues = a
         self._writeInternalMetadata()
 
+    @property
+    def projection(self):
+        return self._projection
+
+    @projection.setter
+    def projection(self, proj):
+        self._checkEditable()
+        # TODO: check for valid value
+        self._projection = proj
+        self._writeInternalMetadata()
+
+    @property
+    def gcps(self):
+        return self._gcps
+
+    @gcps.setter
+    def gcps(self, proj):
+        self._checkEditable()
+        # TODO: check for valid value
+        self._gcps = proj
+        self._writeInternalMetadata()
+
     def _generateDownsampledLevels(self, resample_method):
         self._checkEditable()
         current_arrays = dict(self._zarr.arrays())
@@ -1354,6 +1378,18 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 params['compression'] = 'jpeg'
             params.update(converterParams)
             convert(str(attrs_path), path, overwrite=overwriteAllowed, **params)
+
+            if (
+                self.projection is not None and
+                self.gcps is not None and
+                len(self.gcps)
+            ):
+                import tifftools
+
+                tifftools.tiff_set(path, setlist=[
+                    ('projection', self.projection),
+                    ('gcps', self.gcps),
+                ], overwrite=True)
 
 
 def open(*args, **kwargs):
