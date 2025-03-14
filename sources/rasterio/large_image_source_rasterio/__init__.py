@@ -308,15 +308,13 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        projection = kwargs.get(
-            'projection',
-            args[1] if len(args) >= 2 else None,
-        ) or config.getConfig('default_projection')
+        proj = kwargs.get('projection', args[1] if len(args) >= 2 else PROJECTION_SENTINEL)
+        proj = proj if proj != PROJECTION_SENTINEL else config.getConfig('default_projection')
         unitsPerPixel = kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None)
 
         source = super(RasterioFileTileSource, RasterioFileTileSource)
         lru = source.getLRUHash(*args, **kwargs)
-        info = f',{projection},{unitsPerPixel}'
+        info = f',{proj},{unitsPerPixel}'
 
         return lru + info
 
