@@ -1066,12 +1066,34 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @property
     def imageDescription(self):
+        if isinstance(self._imageDescription, dict):
+            return self._imageDescription.get('description')
         return self._imageDescription
 
     @imageDescription.setter
     def imageDescription(self, description):
         self._checkEditable()
-        self._imageDescription = description
+        if isinstance(self._imageDescription, dict):
+            self._imageDescription['description'] = description
+        else:
+            self._imageDescription = description
+
+    @property
+    def additionalMetadata(self):
+        if isinstance(self._imageDescription, dict):
+            return self._imageDescription.get('additionalMetadata')
+        return None
+
+    @additionalMetadata.setter
+    def additionalMetadata(self, data):
+        self._checkEditable()
+        if isinstance(self._imageDescription, dict):
+            self._imageDescription['additionalMetadata'] = data
+        else:
+            self.imageDescription = dict(
+                description = self._imageDescription,
+                additionalMetadata=data
+            )
 
     @property
     def channelNames(self):
