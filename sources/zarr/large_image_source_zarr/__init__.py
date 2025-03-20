@@ -1091,8 +1091,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._imageDescription['additionalMetadata'] = data
         else:
             self.imageDescription = dict(
-                description = self._imageDescription,
-                additionalMetadata=data
+                description=self._imageDescription,
+                additionalMetadata=data,
             )
 
     @property
