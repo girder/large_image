@@ -29,6 +29,7 @@
 - Zarr Sink: Allow X and Y to have length 1 ([#1837](../../pull/1837))
 - Ask zarr to use zero rather than empty arrays ([#1840](../../pull/1840))
 - Harden the ometiff reader against erroneous axis values ([#1847](../../pull/1847))
+- The annotation geojson output was erroneously requiring a closed flag ([#1859](../../pull/1859))
 
 ## 1.31.1
 
