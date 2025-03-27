@@ -909,3 +909,32 @@ def testNegativeMinHeight():
     with pytest.raises(TileSourceError) as e:
         sink.minHeight = -10
     assert str(e.value) == 'minHeight must be positive or None'
+
+
+def testDescriptionAndAdditionalMetadata(tmp_path):
+    output_file = tmp_path / 'test.tiff'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=0, y=0)
+
+    description = 'This is a test description.'
+    additional_metadata = dict(
+        name='Test',
+        values=[1, 2, 3],
+        nested=dict(hello='world'),
+    )
+    both = dict(
+        description=description,
+        additionalMetadata=additional_metadata,
+    )
+
+    sink.imageDescription = description
+    assert sink._imageDescription == description
+    sink.additionalMetadata = additional_metadata
+    assert sink._imageDescription == both
+    assert sink.imageDescription == description
+    assert sink.additionalMetadata == additional_metadata
+
+    sink.write(output_file)
+    written = large_image.open(output_file)
+    internal = written.getInternalMetadata()['xml']['internal']['zarr']['base']
+    assert internal['multiscales'][0]['metadata']['description'] == both
