@@ -419,6 +419,32 @@ class ImageItem(Item):
         return self.getAndCacheImageOrDataRun(
             checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs)
 
+    def _saveDataFile(self, item, imageMime, dataStored, key, pickleCache, keylock, lockkey):
+        with keylock:
+            # Save the data as a file
+            try:
+                datafile = Upload().uploadFromFile(
+                    io.BytesIO(dataStored), size=len(dataStored),
+                    name='_largeImageThumbnail', parentType='item', parent=item,
+                    user=None, mimeType=imageMime, attachParent=True)
+                if not len(dataStored) and 'received' in datafile:
+                    datafile = Upload().finalizeUpload(
+                        datafile, Assetstore().load(datafile['assetstoreId']))
+                datafile.update({
+                    'isLargeImageThumbnail' if not pickleCache else
+                    'isLargeImageData': True,
+                    'thumbnailKey': key,
+                })
+                # Ideally, we would check that the file is still wanted before
+                # we save it.  This is probably impossible without true
+                # transactions in Mongo.
+                File().save(datafile)
+            except (GirderException, PermissionError):
+                logger.warning('Could not cache data for large image')
+            finally:
+                with self._getAndCacheImageOrDataLock['lock']:
+                    self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
+
     def getAndCacheImageOrDataRun(
             self, checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs):
         """
@@ -426,8 +452,9 @@ class ImageItem(Item):
         """
         with self._getAndCacheImageOrDataLock['lock']:
             if lockkey not in self._getAndCacheImageOrDataLock['keys']:
-                self._getAndCacheImageOrDataLock['keys'][lockkey] = threading.Lock()
+                self._getAndCacheImageOrDataLock['keys'][lockkey] = threading.RLock()
             keylock = self._getAndCacheImageOrDataLock['keys'][lockkey]
+        nounlock = False
         with keylock:
             logger.debug('Computing %r', (lockkey, ))
             try:
@@ -452,30 +479,16 @@ class ImageItem(Item):
                         pickleCache or isinstance(imageData, bytes))):
                     dataStored = imageData if not pickleCache else pickle.dumps(
                         imageData, protocol=4)
-                    # Save the data as a file
-                    try:
-                        datafile = Upload().uploadFromFile(
-                            io.BytesIO(dataStored), size=len(dataStored),
-                            name='_largeImageThumbnail', parentType='item', parent=item,
-                            user=None, mimeType=imageMime, attachParent=True)
-                        if not len(dataStored) and 'received' in datafile:
-                            datafile = Upload().finalizeUpload(
-                                datafile, Assetstore().load(datafile['assetstoreId']))
-                        datafile.update({
-                            'isLargeImageThumbnail' if not pickleCache else
-                            'isLargeImageData': True,
-                            'thumbnailKey': key,
-                        })
-                        # Ideally, we would check that the file is still wanted before
-                        # we save it.  This is probably impossible without true
-                        # transactions in Mongo.
-                        File().save(datafile)
-                    except (GirderException, PermissionError):
-                        logger.warning('Could not cache data for large image')
+                    threading.Thread(
+                        target=self._saveDataFile,
+                        args=(item, imageMime, dataStored, key, pickleCache, keylock, lockkey),
+                        daemon=True)
+                    nounlock = True
                 return imageData, imageMime
             finally:
-                with self._getAndCacheImageOrDataLock['lock']:
-                    self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
+                if not nounlock:
+                    with self._getAndCacheImageOrDataLock['lock']:
+                        self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
 
     def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None,
                              onlyList=False, **kwargs):

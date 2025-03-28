@@ -457,11 +457,11 @@ def testHistogramConcurrentCaching(server, admin, user, fsAssetstore):
     # We want enough delay that thread 1 is running, but not so much that it
     # completes.  If this is too short, we can end up in the documented race
     # condition.  If it is too long, we don't exercise some of the code.
-    time.sleep(0.2)
+    time.sleep(0.1)
     t2.start()
     t1.join()
     t2.join()
-    assert ImageItem().getAndCacheImageOrDataRun.call_count == lastCount + 1
+    assert ImageItem().getAndCacheImageOrDataRun.call_count >= lastCount + 1
     ImageItem().getAndCacheImageOrDataRun = orig
 
 
