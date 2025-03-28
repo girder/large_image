@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.3
+
+### Improvements
+
+- Parallelize storing cached thumbnails and images ([#1885](../../pull/1885))
+
 ## 1.32.2
 
 ### Improvements

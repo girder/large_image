@@ -719,6 +719,7 @@ def testContentDisposition(server, admin, fsAssetstore):
     assert (
         resp.headers.get('Content-Disposition') is None or
         'largeImageThumbnail' in resp.headers['Content-Disposition'])
+    ImageItem().cacheSaveDataManagement(None)
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
@@ -736,6 +737,7 @@ def testContentDispositionFilename(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     assert resp.headers['Content-Disposition'].startswith('attachment')
     assert resp.headers['Content-Disposition'].endswith('.jpg')
+    ImageItem().cacheSaveDataManagement(None)
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
@@ -1169,6 +1171,7 @@ def testTilesAssociatedImages(server, admin, fsAssetstore):
     assert utilities.respStatus(resp) == 200
     image = utilities.getBody(resp, text=False)
     assert image == b''
+    ImageItem().cacheSaveDataManagement(None)
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
@@ -1234,6 +1237,7 @@ def testTilesHistogram(server, admin, fsAssetstore):
                 'roundRange': True, 'bins': 512})
     assert len(resp.json) == 3
     assert len(resp.json[0]['hist']) == 256
+    ImageItem().cacheSaveDataManagement(None)
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
@@ -1507,6 +1511,7 @@ def testThumbnailMaintenance(server, admin, fsAssetstore):
     resp = server.request(path='/item/%s/tiles/thumbnail' % itemId,
                           user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
+    ImageItem().cacheSaveDataManagement(None)
 
     # Check that we list a thumbnail
     resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
@@ -1533,6 +1538,7 @@ def testThumbnailMaintenance(server, admin, fsAssetstore):
     resp = server.request(path='/item/%s/tiles/thumbnail' % itemId,
                           user=admin, isJson=False)
     assert utilities.respStatus(resp) == 200
+    ImageItem().cacheSaveDataManagement(None)
     thumb = utilities.getBody(resp, text=False)
     resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
     assert utilities.respStatus(resp) == 200
@@ -1552,6 +1558,7 @@ def testThumbnailMaintenance(server, admin, fsAssetstore):
         path='/item/%s/tiles/thumbnails' % itemId, method='POST', user=admin,
         params={'key': key}, body=thumb, type='application/octet-stream')
 
+    ImageItem().cacheSaveDataManagement(None)
     resp = server.request(path='/item/%s/tiles/thumbnails' % itemId, user=admin)
     assert utilities.respStatus(resp) == 200
     assert len(resp.json) == 1
