@@ -92,6 +92,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._initNew(path, **kwargs)
         else:
             self._initOpen(**kwargs)
+            internal = self.getInternalMetadata().get('zarr', {}).get('base', {})
+            multiscale = internal.get('multiscales', [None])[0]
+            if multiscale is not None:
+                self._imageDescription = multiscale.get('metadata', {}).get('description')
         self._tileLock = threading.RLock()
 
     def _initOpen(self, **kwargs):

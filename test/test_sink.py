@@ -951,6 +951,26 @@ def testDescriptionAndAdditionalMetadata(tmp_path):
     assert internal['multiscales'][0]['metadata']['description'] == both
 
 
+def testRehydrateDescriptionAndAdditionalMetadata(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=0, y=0)
+
+    description = 'This is a test description.'
+    additional_metadata = dict(
+        name='Test',
+        values=[1, 2, 3],
+        nested=dict(hello='world'),
+    )
+    sink.imageDescription = description
+    sink.additionalMetadata = additional_metadata
+
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    assert written.imageDescription == description
+    assert written.additionalMetadata == additional_metadata
+
+
 def testNoneDescriptionAndAdditionalMetadata():
     sink = large_image_source_zarr.new()
     assert sink.imageDescription is None
