@@ -1179,10 +1179,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     output=iterator_output,
                     resample=False,  # TODO: incorporate resampling in core
                 ):
-                    tile_data = tile['tile']
-                    if tile_data.shape[-1] == 1:
-                        tile_data = tile_data[..., 0]
-                    new_tile = downsampleTileHalfRes(tile_data, resample_method)
+                    new_tile = downsampleTileHalfRes(
+                        np.squeeze(tile['tile'], axis=(-1,)),
+                        resample_method,
+                    )
                     overlap = {k: int(v / 2) for k, v in tile['tile_overlap'].items()}
                     new_tile = new_tile[
                         slice(overlap['top'], new_tile.shape[0] - overlap['bottom']),
