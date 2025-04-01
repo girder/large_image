@@ -282,8 +282,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             scale = None
         return {
             'magnification': None,
-            'mm_x': scale * 100 if scale else None,
-            'mm_y': scale * 100 if scale else None,
+            'mm_x': scale * 1000 if scale else None,
+            'mm_y': scale * 1000 if scale else None,
         }
 
     def getTileCorners(self, z: int, x: float, y: float) -> Tuple[float, float, float, float]:
