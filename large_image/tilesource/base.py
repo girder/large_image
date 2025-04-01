@@ -2357,7 +2357,13 @@ class TileSource(IPyLeafletMixin):
                 pixels is in the specified magnification pixels.  mm is in the
                 specified magnification scale.  fraction is a scale of 0 to 1.
                 pixels and mm are only available if the magnification and mm
-                per pixel are defined for the image.
+                per pixel are defined for the image.  For geospatial sources,
+                this can also be 'projection', or a case-insensitive string
+                starting with 'proj4:', 'epsg:' or a enumerated value like
+                'wgs84'.
+            :unitsWH: if not specified, this is the same as `units`.
+                Otherwise, these units will be used for the width and height if
+                specified.  If can take the same values as `units`.
 
         :param output: a dictionary of optional values which specify the size
             of the output.
