@@ -446,6 +446,11 @@ class _GDALBaseSourceTest(_BaseGeoTests):
             style={'bands': [{'band': 1, 'max': 100, 'min': 5, 'nodata': 0}]})
         assert source.getThumbnail()[0]
 
+    def testScale(self):
+        imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
+        source = self.basemodule.open(imagePath)
+        assert 13500 < source.metadata['mm_x'] < 14000
+
     def testGetTiledRegionWithProjection(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
         ts = self.basemodule.open(imagePath, projection='EPSG:3857')
