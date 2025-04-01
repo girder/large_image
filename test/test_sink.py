@@ -934,7 +934,24 @@ def testDescriptionAndAdditionalMetadata(tmp_path):
     assert sink.imageDescription == description
     assert sink.additionalMetadata == additional_metadata
 
+    # modify values and check again
+    description = 'This is another test description'
+    both['description'] = description
+    additional_metadata['name'] = 'Test 2'
+    both['additionalMetadata'] = additional_metadata
+    sink.imageDescription = description
+    sink.additionalMetadata = additional_metadata
+    assert sink._imageDescription == both
+    assert sink.imageDescription == description
+    assert sink.additionalMetadata == additional_metadata
+
     sink.write(output_file)
     written = large_image.open(output_file)
     internal = written.getInternalMetadata()['xml']['internal']['zarr']['base']
     assert internal['multiscales'][0]['metadata']['description'] == both
+
+
+def testNoneDescriptionAndAdditionalMetadata():
+    sink = large_image_source_zarr.new()
+    assert sink.imageDescription is None
+    assert sink.additionalMetadata is None
