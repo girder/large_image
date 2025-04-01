@@ -1,3 +1,4 @@
+import json
 import math
 import multiprocessing
 import os
@@ -1079,6 +1080,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @imageDescription.setter
     def imageDescription(self, description):
         self._checkEditable()
+        try:
+            json.dumps(description)
+        except TypeError:
+            msg = 'Description must be JSON serializable'
+            raise TileSourceError(msg)
         if (
             hasattr(self, '_imageDescription') and
             isinstance(self._imageDescription, dict)
@@ -1098,6 +1104,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @additionalMetadata.setter
     def additionalMetadata(self, data):
         self._checkEditable()
+        try:
+            json.dumps(data)
+        except TypeError:
+            msg = 'Metadata must be JSON serializable'
+            raise TileSourceError(msg)
         if (
             hasattr(self, '_imageDescription') and
             isinstance(self._imageDescription, dict)

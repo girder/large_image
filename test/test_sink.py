@@ -1,4 +1,5 @@
 import subprocess
+from datetime import datetime, timezone
 from multiprocessing.pool import Pool, ThreadPool
 from os import sys
 
@@ -969,6 +970,19 @@ def testRehydrateDescriptionAndAdditionalMetadata(tmp_path):
     written = large_image_source_zarr.open(output_file)
     assert written.imageDescription == description
     assert written.additionalMetadata == additional_metadata
+
+
+def testNonserializableDescriptionAndAdditionalMetadata(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=0, y=0)
+
+    created = datetime.now(tz=timezone.utc)
+    with pytest.raises(TileSourceError):
+        sink.imageDescription = created
+    with pytest.raises(TileSourceError):
+        sink.additionalMetadata = dict(created=created)
+    sink.write(output_file)
 
 
 def testNoneDescriptionAndAdditionalMetadata():
