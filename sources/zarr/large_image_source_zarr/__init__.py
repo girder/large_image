@@ -1066,6 +1066,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @property
     def imageDescription(self):
+        if not hasattr(self, '_imageDescription'):
+            return None
         if isinstance(self._imageDescription, dict):
             return self._imageDescription.get('description')
         return self._imageDescription
@@ -1073,13 +1075,18 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @imageDescription.setter
     def imageDescription(self, description):
         self._checkEditable()
-        if isinstance(self._imageDescription, dict):
+        if (
+            hasattr(self, '_imageDescription') and
+            isinstance(self._imageDescription, dict)
+        ):
             self._imageDescription['description'] = description
         else:
             self._imageDescription = description
 
     @property
     def additionalMetadata(self):
+        if not hasattr(self, '_imageDescription'):
+            return None
         if isinstance(self._imageDescription, dict):
             return self._imageDescription.get('additionalMetadata')
         return None
@@ -1087,7 +1094,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     @additionalMetadata.setter
     def additionalMetadata(self, data):
         self._checkEditable()
-        if isinstance(self._imageDescription, dict):
+        if (
+            hasattr(self, '_imageDescription') and
+            isinstance(self._imageDescription, dict)
+        ):
             self._imageDescription['additionalMetadata'] = data
         else:
             self.imageDescription = dict(
