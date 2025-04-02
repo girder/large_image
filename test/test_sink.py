@@ -990,7 +990,7 @@ def testNoneDescriptionAndAdditionalMetadata():
     assert sink.imageDescription is None
     assert sink.additionalMetadata is None
 
-    
+
 def testSingleBand(tmp_path):
     output_file = tmp_path / 'test.db'
     sink = large_image_source_zarr.new()
