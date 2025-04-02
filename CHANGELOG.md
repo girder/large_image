@@ -1,6 +1,10 @@
 # Change Log
 
-## 1.31.2
+## 1.32.0
+
+### Features
+
+- Add default_encoding and default_projection config values ([#1846](../../pull/1846), [#1854](../../pull/1854))
 
 ### Improvements
 
@@ -12,8 +16,9 @@
 - Reformat metadata for non-uniform axis values ([#1832](../../pull/1832))
 - Reorder zarr axes in read mode ([#1833](../../pull/1833))
 - Allow selecting inverted histogram ranges in the UI ([#1839](../../pull/1839))
-- Jupyter: Increase default zoom on small images ([#1843](../../pull/1843))
+- Jupyter: Increase default zoom on small images ([#1843](../../pull/1843), [#1852](../../pull/1852))
 - Debounce histogram requests in the frame selector ([#1844](../../pull/1844))
+- Better parse ImageJ channel names ([#1857](../../pull/1857))
 
 ### Changes
 
@@ -24,6 +29,8 @@
 - Zarr Sink: Allow X and Y to have length 1 ([#1837](../../pull/1837))
 - Ask zarr to use zero rather than empty arrays ([#1840](../../pull/1840))
 - Harden the ometiff reader against erroneous axis values ([#1847](../../pull/1847))
+- The annotation geojson output was erroneously requiring a closed flag ([#1859](../../pull/1859))
+- Fix a scale error in geospatial native magnification ([#1864](../../pull/1864))
 
 ## 1.31.1
 

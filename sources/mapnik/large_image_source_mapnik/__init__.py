@@ -25,7 +25,7 @@ from osgeo import gdal, gdalconst
 
 from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import TILE_FORMAT_PIL, SourcePriority
+from large_image.constants import PROJECTION_SENTINEL, TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError
 from large_image.tilesource.utilities import JSONDict
 
@@ -63,7 +63,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
         'image/x-tiff': SourcePriority.LOWER,
     }
 
-    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
+    def __init__(self, path, projection=PROJECTION_SENTINEL, unitsPerPixel=None, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -94,7 +94,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
             projections that are not latlong (is_geographic is False) must
             specify unitsPerPixel.
         """
-        if projection is None:
+        if projection == PROJECTION_SENTINEL:
             projection = config.getConfig('default_projection')
         if projection and projection.lower().startswith('epsg'):
             projection = projection.lower()

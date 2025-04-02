@@ -27,7 +27,7 @@ Some functionality of large_image is controlled through configuration parameters
        .. _config_default_encoding:
    * - ``default_encoding`` :ref:`🔗 <config_default_encoding>`
      - Default encoding for tile sources.
-     - ``'JPEG' | 'PNG' | 'TIFF' | 'TILED' | None``
+     - ``'JPEG' | 'PNG' | 'TIFF' | 'TILED'``
      - ``None``
 
        .. _config_default_projection:
