@@ -46,13 +46,14 @@ repos:
         files: README.rst
         name: rst-linter of README.rst
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.0
+    rev: v2.4.1
     hooks:
       - id: codespell
         args:
+          - --ignore-regex
+          - '(^\s*"image/\S+": ".*)'
           - --ignore-words-list
           - "hist,indext,pixelx,thex,subtile,slippy,fram,thet"
-        exclude: '.*\.ipynb$'
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.18
     hooks:
@@ -72,7 +73,7 @@ repos:
           - --py38-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.2
+    rev: v0.11.2
     hooks:
       - id: ruff
         args:
@@ -87,11 +88,11 @@ repos:
     hooks:
       - id: autopep8
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.1
+    rev: 7.1.2
     hooks:
       - id: flake8
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 6.0.1
     hooks:
       - id: isort
         name: isort (python)

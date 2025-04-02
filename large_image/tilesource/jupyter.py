@@ -407,16 +407,16 @@ class Map:
                         x0, y0 = transformer.transform(xmin, ymin)
                         x1, y1 = transformer.transform(xmax, ymax)
                         bounds = metadata['bounds']
-                        x0, x1 = [
+                        x0, x1 = (
                             round((v - bounds['xmin']) /
                                   (bounds['xmax'] - bounds['xmin']) *
                                   width) for v in [x0, x1]
-                        ]
-                        y0, y1 = [
+                        )
+                        y0, y1 = (
                             round((v - bounds['ymax']) /
                                   (bounds['ymin'] - bounds['ymax']) *
                                   height) for v in [y1, y0]
-                        ]
+                        )
                         info.append(f'X/Y ROI: [{x0}, {y0}, {x1 - x0}, {y1 - y0}]')
                     else:
                         xmin, xmax = round(xmin), round(xmax)

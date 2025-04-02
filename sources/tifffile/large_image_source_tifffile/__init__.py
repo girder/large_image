@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import os
+import re
 import threading
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
@@ -325,9 +326,28 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def _handle_imagej(self):
         try:
             ijm = self._tf.pages[0].tags['IJMetadata'].value
+            info = None
+            if 'Info' in ijm:
+                info = {l.split('=', 1)[0].strip(): l.split('=', 1)[1].strip()
+                        for l in ijm['Info'].replace('\r', '\n').split('\n') if '=' in l}
+                for k in list(info.keys()):
+                    mat = re.match(r'^(.+) #(\d+)$', k)
+                    if mat:
+                        key = mat.group(1)
+                        idx = int(mat.group(2))
+                        if key not in info or (
+                                isinstance(info[key], list) and len(info[key]) == idx - 1):
+                            info.setdefault(key, [])
+                            info[key].append(info[k])
+                            info.pop(k)
             if (ijm['Labels'] and len(ijm['Labels']) == self._framecount and
                     not getattr(self, '_channels', None)):
                 self._channels = ijm['Labels']
+            if ((not getattr(self, '_channels', None) or
+                    all(label.startswith('c:') for label in self._channels)) and
+                    info and isinstance(info.get('Biomarker'), list) and
+                    len(info['Biomarker']) == self._framecount):
+                self._channels = info['Biomarker']
         except Exception:
             pass
 

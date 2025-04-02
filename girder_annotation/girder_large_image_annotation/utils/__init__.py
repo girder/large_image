@@ -171,7 +171,7 @@ class AnnotationGeoJSON:
         geom['coordinates'] = element['center']
 
     def polylineType(self, element, geom, prop):
-        if element['closed']:
+        if element.get('closed'):
             geom['type'] = 'Polygon'
             geom['coordinates'] = [element['points'][:]]
             geom['coordinates'][0].append(geom['coordinates'][0][0])
