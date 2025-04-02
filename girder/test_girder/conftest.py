@@ -7,29 +7,27 @@ pytestmark = pytest.mark.girder
 
 
 @pytest.fixture
-def unavailableWorker(db):
+def unavailableWorker(db, monkeypatch):
     """
     Make sure that Girder Worker can't be reached and times out quickly.
     """
-    from girder_plugin_worker.constants import PluginSettings as WorkerSettings
-
-    from girder.models.setting import Setting
-
     # Use an invalid broker to make sure we don't connect to girder_worker so
     # this will be incomplete.  We don't want to use amqp as it will retry a
     # very long time.  The mongodb backend is deprecated and throws many
     # warnings, but works for this test condition.
-    Setting().set(WorkerSettings.BROKER, 'mongodb://0.0.0.0')
-    Setting().set(WorkerSettings.BACKEND, 'mongodb://0.0.0.0')
-    yield True
-    Setting().unset(WorkerSettings.BROKER)
-    Setting().unset(WorkerSettings.BACKEND)
+    monkeypatch.setenv('GIRDER_WORKER_BROKER', 'mongodb://0.0.0.0')
+    monkeypatch.setenv('GIRDER_WORKER_BACKEND', 'mongodb://0.0.0.0')
+    return True
 
 
 @pytest.fixture(scope='session')
 def girderWorkerProcess():
+    oldbroker = os.environ.get('GIRDER_WORKER_BROKER')
+    oldbackend = os.environ.get('GIRDER_WORKER_BACKEND')
     broker = 'amqp://guest@127.0.0.1'
     backend = 'rpc://guest@127.0.0.1'
+    os.environ['GIRDER_WORKER_BROKER'] = broker
+    os.environ['GIRDER_WORKER_BACKEND'] = backend
     env = os.environ.copy()
     env['C_FORCE_ROOT'] = 'true'
     proc = subprocess.Popen([
@@ -39,25 +37,25 @@ def girderWorkerProcess():
     yield True
     proc.terminate()
     proc.wait()
+    if oldbroker is not None:
+        os.environ['GIRDER_WORKER_BROKER'] = oldbroker
+    else:
+        os.environ.pop('GIRDER_WORKER_BROKER')
+    if oldbackend is not None:
+        os.environ['GIRDER_WORKER_BACKEND'] = oldbackend
+    else:
+        os.environ.pop('GIRDER_WORKER_BACKEND')
 
 
 @pytest.fixture
-def girderWorker(db, girderWorkerProcess):
+def girderWorker(db, girderWorkerProcess, monkeypatch):
     """
     Run an instance of Girder worker, connected to rabbitmq.  The rabbitmq
     service must be running.
     """
-    from girder_plugin_worker.constants import PluginSettings as WorkerSettings
-
-    from girder.models.setting import Setting
-
-    broker = 'amqp://guest@127.0.0.1'
-    backend = 'rpc://guest@127.0.0.1'
-    Setting().set(WorkerSettings.BROKER, broker)
-    Setting().set(WorkerSettings.BACKEND, backend)
-    yield True
-    Setting().unset(WorkerSettings.BROKER)
-    Setting().unset(WorkerSettings.BACKEND)
+    monkeypatch.setenv('GIRDER_WORKER_BROKER', 'amqp://guest@127.0.0.1')
+    monkeypatch.setenv('GIRDER_WORKER_BACKEND', 'rpc://guest@127.0.0.1')
+    return True
 
 
 def unbindGirderEventsByHandlerName(handlerName):
