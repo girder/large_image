@@ -252,7 +252,7 @@ class _BaseGeoTests:
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
         assert result[0] == pytest.approx(147, 1)
         assert result[1] == pytest.approx(149, 1)
-        assert result[2:] == (None, None, 'base_pixels')
+        assert result[2:] == (None, None, None, None, 'base_pixels')
 
         result = tsNoProj._convertProjectionUnits(
             None, None, -13080040, 3961860, None, None, 'EPSG:3857')
@@ -275,7 +275,7 @@ class _BaseGeoTests:
             -117.5, 33, None, None, 0.5, 0.5, 'EPSG:4326', unitsWH='base_pixels')
         assert result[0] == pytest.approx(96, 1)
         assert result[1] == pytest.approx(149, 1)
-        assert result[2:] == (None, None, 'base_pixels')
+        assert result[2:] == (None, None, 0.5, 0.5, 'base_pixels')
 
         with pytest.raises(TileSourceError, match='Cannot convert'):
             tsNoProj._convertProjectionUnits(
@@ -286,7 +286,7 @@ class _BaseGeoTests:
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
         assert result[0] == pytest.approx(-13024380, 1)
         assert result[1] == pytest.approx(3895303, 1)
-        assert result[2:] == (None, None, 'projection')
+        assert result[2:] == (None, None, None, None, 'projection')
 
     def testGuardAgainstBadLatLong(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
