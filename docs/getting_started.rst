@@ -127,6 +127,21 @@ In the following example, we use ``'EPSG:4326'`` and specify the region with lat
             format=large_image.constants.TILE_FORMAT_NUMPY
         )
 
+You can also specify a region with a single corner point and distances for width and height:
+
+.. code-block:: python
+
+    import large_image
+    source = large_image.open('geo_sample.tiff')
+    if source.geospatial:
+        nparray, mime_type = source.getRegion(
+            region=dict(
+                top=42.3008, left=-71.1143, units='EPSG:4326',
+                width=3, height=4, unitsWH='km'
+            ),
+            format=large_image.constants.TILE_FORMAT_NUMPY
+        )
+
 Tile Serving
 ------------
 
