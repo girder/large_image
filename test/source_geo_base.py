@@ -356,9 +356,46 @@ class _GDALBaseSourceTest(_BaseGeoTests):
     def testGetRegionWithProjection(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
         ts = self.basemodule.open(imagePath, projection='EPSG:3857')
-        region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
-                                 format=constants.TILE_FORMAT_NUMPY)
+        region, _ = ts.getRegion(
+            output=dict(maxWidth=1024, maxHeight=1024),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
         assert region.shape == (1024, 1024, 3)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=39.45,
+                left=-79.25,
+                bottom=39.377943,
+                right=-79.366177,
+                units='EPSG:4326',
+            ),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
+        assert region.shape == (17, 21, 3)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=39.45,
+                left=-79.25,
+                units='EPSG:4326',
+                width=10,
+                height=8,
+                unitsWH='kilometer',
+            ),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
+        assert region.shape == (17, 21, 3)
+        region, _ = ts.getRegion(
+            region=dict(
+                bottom=39.377943,
+                right=-79.366177,
+                units='EPSG:4326',
+                width=10,
+                height=8,
+                unitsWH='kilometer',
+            ),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
+        assert region.shape == (17, 21, 3)
 
     def testGCPProjection(self):
         imagePath = datastore.fetch('region_gcp.tiff')
