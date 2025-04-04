@@ -1,4 +1,5 @@
 .g-annotation-list-header
+  input.g-annotation-select(type='checkbox' title='Select all annotations for bulk actions')
   i.icon-pencil
   |  Annotations
   .btn-group.pull-right
@@ -17,9 +18,7 @@
 if annotations.length
   table.g-annotation-list.table.table-hover.table-condensed
     thead
-      //
-        th.g-annotation-select
-          input.g-select-all(type='checkbox')
+      th
       th.g-annotation-toggle
         a.g-annotation-toggle-all(class=canDraw ? 'disabled' : '', title='Hide or show all annotations')
           - let anyDrawn = annotations.models.some((annotation) => drawn.has(annotation.id))
@@ -44,9 +43,8 @@ if annotations.length
           var updatedModel = users.get(annotation.get('updatedId'));
           var updater = updatedModel ? updatedModel.get('login') : annotation.get('updatedId');
         tr.g-annotation-row(data-annotation-id=annotation.id)
-          //
-            td.g-annotation-select
-              input(type='checkbox', title='Select annotation for bulk actions')
+          td.g-annotation-select
+            input(type='checkbox', title='Select annotation for bulk actions')
           td.g-annotation-toggle
             a.g-annotation-toggle-select(class=canDraw ? 'disabled' : '', title='Show annotation')
               if drawn.has(annotation.id)
