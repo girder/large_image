@@ -453,7 +453,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             'epsg:', or '+proj=' or a enumerated value like 'wgs84', or one of
             the super's values.
         :param kwargs: optional parameters.
-        :returns: left, top, right, bottom, units.  The new bounds in the
+        :returns: left, top, right, bottom, width, height, units.  The new bounds in the
             either pixel or class projection units.
         """
         if not kwargs.get('unitsWH') or kwargs.get('unitsWH') == units:
@@ -465,6 +465,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 top = bottom - height
             if bottom is None and top is not None and height is not None:
                 bottom = top + height
+        else:
+            left, top, right, bottom, width, height, units = self._applyUnitsWH(
+                left, top, right, bottom, width, height, units, kwargs.get('unitsWH'),
+            )
+
         if (left is None and right is None) or (top is None and bottom is None):
             msg = ('Cannot convert from projection unless at least one of '
                    'left and right and at least one of top and bottom is '
@@ -495,7 +500,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         top = ptop if top is not None else None
         right = pright if right is not None else None
         bottom = pbottom if bottom is not None else None
-        return left, top, right, bottom, units
+        return left, top, right, bottom, width, height, units
 
     def pixelToProjection(self, x, y, level=None):
         """

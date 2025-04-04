@@ -402,7 +402,7 @@ class TileSource(IPyLeafletMixin):
                 msg = 'No magnification to use for units'
                 raise ValueError(msg)
             scaleX = scaleY = cast(Dict[str, float], desiredMagnification)['scale']
-        elif units == 'mm':
+        elif units in ['nm', 'um', 'mm', 'm', 'km']:
             if (not (desiredMagnification or {}).get('scale') or
                     not (desiredMagnification or {}).get('mm_x') or
                     not (desiredMagnification or {}).get('mm_y')):
@@ -418,6 +418,9 @@ class TileSource(IPyLeafletMixin):
                       desiredMagnification['mm_x'])
             scaleY = (desiredMagnification['scale'] /
                       desiredMagnification['mm_y'])
+            factors = dict(nm=1000000, um=1000, mm=1, m=0.001, km=0.000001)
+            scaleX /= factors[units]
+            scaleY /= factors[units]
         elif units in ('base_pixels', None):
             pass
         else:
