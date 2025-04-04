@@ -23,6 +23,7 @@ const AnnotationListWidget = View.extend({
     events: {
         'click .g-annotation-toggle-select': '_displayAnnotation',
         'click .g-annotation-toggle-all': '_displayAllAnnotations',
+        'click .g-annotation-select' : '_selectAnnotation',
         'click .g-annotation-delete': '_deleteAnnotation',
         'click .g-annotation-upload': '_uploadAnnotation',
         'click .g-annotation-permissions': '_changePermissions',
@@ -180,6 +181,26 @@ const AnnotationListWidget = View.extend({
             this.$el.find(`.g-annotation-row[data-annotation-id="${id}"] .g-annotation-toggle-select i`).toggleClass('icon-eye', !!isDrawn).toggleClass('icon-eye-off', !isDrawn);
         });
         this.$el.find('th.g-annotation-toggle i').toggleClass('icon-eye', !anyOn).toggleClass('icon-eye-off', !!anyOn);
+    },
+
+    _selectAnnotation(evt) {
+        // Prevent event from bubbling up to the row click handler
+        // that toggles the annotation on and off
+        evt.stopPropagation();
+
+        const $el = $(evt.currentTarget);
+        const id = $el.parents('.g-annotation-row').data('annotationId');
+        const allChecks = this.$el.find('.g-annotation-select input[type=checkbox]')
+
+        if (!id) {
+            if ($el.is(':checked')) {
+                allChecks.prop('checked', true);
+            }
+            if (!$el.is(':checked')) {
+                allChecks.prop('checked', false);
+            }
+            return;
+        }
     },
 
     _deleteAnnotation(evt) {
