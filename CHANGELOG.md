@@ -23,6 +23,7 @@
 ### Changes
 
 - Require a minimum version of Pillow to avoid a CVE ([#1828](../../pull/1828))
+- Work around how bioformats handles DICOMs in Monochrome1 ([#1834](../../pull/1834))
 
 ### Bug Fixes
 
