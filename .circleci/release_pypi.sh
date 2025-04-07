@@ -5,7 +5,11 @@ set -e
 ROOTPATH=`pwd`
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=`python -m setuptools_scm | sed "s/.* //"`
-if [ ${CIRCLE_BRANCH-:} = "master" ]; then export SETUPTOOLS_SCM_PRETEND_VERSION=`echo $SETUPTOOLS_SCM_PRETEND_VERSION | sed "s/\+.*$//"`; fi
+if [ ${CIRCLE_BRANCH-:} = "master" ]; then
+    export SETUPTOOLS_SCM_PRETEND_VERSION=`echo $SETUPTOOLS_SCM_PRETEND_VERSION | sed "s/\+.*$//"`
+elif [ "${CIRCLE_BRANCH}" == "girder-5" ]; then
+    export SETUPTOOLS_SCM_PRETEND_VERSION=$(python -c "import re; print(re.sub(r'(\d+\.\d+\.\d+)dev(\d+)', r'\1a\2', get_version()))")
+fi
 
 python setup.py sdist
 pip wheel . --no-deps -w dist
