@@ -207,20 +207,31 @@ const AnnotationListWidget = View.extend({
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
         if (!id) {
-            confirm({
-                text: `Are you sure you want to delete <b>ALL</b> annotations?`,
-                escapedHtml: true,
-                yesText: 'Delete',
-                confirmCallback: () => {
-                    restRequest({
-                        url: `annotation/item/${this.model.id}`,
-                        method: 'DELETE'
-                    }).done(() => {
-                        this.collection.fetch(null, true);
-                    });
-                }
-            });
-            return;
+            const checkedAnnotations = this.$el.find('.g-annotation-select input[type=checkbox]:checked');
+            const checkedAnnotationIds = [];
+            for (let i = 0; i < checkedAnnotations.length; i++) {
+                const annotationId = $(checkedAnnotations[i]).parents('.g-annotation-row').data('annotationId');
+                checkedAnnotationIds.push(annotationId);
+            }
+            if (checkedAnnotations.length !== 0) {
+                confirm({
+                    text: `Are you sure you want to delete the following annotations?
+                        <ul>${_.map(checkedAnnotationIds, (annotationId) => {
+                            const model = this.collection.get(annotationId);
+                            return `<li>${_.escape(model.get('annotation').name)}</li>`;
+                        }).join('')}</ul>`,
+                    escapedHtml: true,
+                    yesText: 'Delete',
+                    confirmCallback: () => {
+                        for (let i = 0; i < checkedAnnotationIds.length; i++) {
+                            this._drawn.delete(checkedAnnotationIds[i]);
+                            const model = this.collection.get(checkedAnnotationIds[i]);
+                            model.destroy();
+                        }
+                    }
+                });
+                return;
+            }
         }
         const model = this.collection.get(id);
 
