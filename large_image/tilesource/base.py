@@ -394,6 +394,7 @@ class TileSource(IPyLeafletMixin):
             vertical directions.
         """
         scaleX = scaleY = 1.0
+        mmConversionDict = dict(nm=1000000, um=1000, mm=1, m=0.001, km=0.000001)
         if units == 'fraction':
             scaleX = metadata['sizeX']
             scaleY = metadata['sizeY']
@@ -402,7 +403,7 @@ class TileSource(IPyLeafletMixin):
                 msg = 'No magnification to use for units'
                 raise ValueError(msg)
             scaleX = scaleY = cast(Dict[str, float], desiredMagnification)['scale']
-        elif units in ['nm', 'um', 'mm', 'm', 'km']:
+        elif units in mmConversionDict:
             if (not (desiredMagnification or {}).get('scale') or
                     not (desiredMagnification or {}).get('mm_x') or
                     not (desiredMagnification or {}).get('mm_y')):
@@ -418,9 +419,8 @@ class TileSource(IPyLeafletMixin):
                       desiredMagnification['mm_x'])
             scaleY = (desiredMagnification['scale'] /
                       desiredMagnification['mm_y'])
-            factors = dict(nm=1000000, um=1000, mm=1, m=0.001, km=0.000001)
-            scaleX /= factors[units]
-            scaleY /= factors[units]
+            scaleX /= mmConversionDict[units]
+            scaleY /= mmConversionDict[units]
         elif units in ('base_pixels', None):
             pass
         else:
