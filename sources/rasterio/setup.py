@@ -16,15 +16,10 @@ except (ImportError, LookupError):
 
 setup(
     name='large-image-source-rasterio',
-    use_scm_version={
-        'root': '../..',
-
-        'fallback_version': 'development',
-    },
     description=description,
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    license='Apache Software License 2.0',
+    license='Apache-2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     classifiers=[
