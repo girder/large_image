@@ -500,7 +500,7 @@ class PlottableItemData:
         is stored in self._moreItems.  The items are listed in self.items.
 
         :param item: the item to use as the base.  If adjacentItems is false,
-            this is the entire self.items data set.
+            this is the entirety of the self.items data set.
         :param adjacentItems: if truthy, find adjacent items.
         """
         self._columns = None

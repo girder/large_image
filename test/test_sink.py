@@ -1,4 +1,5 @@
 import subprocess
+from datetime import datetime, timezone
 from multiprocessing.pool import Pool, ThreadPool
 from os import sys
 
@@ -909,3 +910,96 @@ def testNegativeMinHeight():
     with pytest.raises(TileSourceError) as e:
         sink.minHeight = -10
     assert str(e.value) == 'minHeight must be positive or None'
+
+
+def testDescriptionAndAdditionalMetadata(tmp_path):
+    output_file = tmp_path / 'test.tiff'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=0, y=0)
+
+    description = 'This is a test description.'
+    additional_metadata = dict(
+        name='Test',
+        values=[1, 2, 3],
+        nested=dict(hello='world'),
+    )
+    both = dict(
+        description=description,
+        additionalMetadata=additional_metadata,
+    )
+
+    sink.imageDescription = description
+    assert sink._imageDescription == description
+    sink.additionalMetadata = additional_metadata
+    assert sink._imageDescription == both
+    assert sink.imageDescription == description
+    assert sink.additionalMetadata == additional_metadata
+
+    # modify values and check again
+    description = 'This is another test description'
+    both['description'] = description
+    additional_metadata['name'] = 'Test 2'
+    both['additionalMetadata'] = additional_metadata
+    sink.imageDescription = description
+    sink.additionalMetadata = additional_metadata
+    assert sink._imageDescription == both
+    assert sink.imageDescription == description
+    assert sink.additionalMetadata == additional_metadata
+
+    sink.write(output_file)
+    written = large_image.open(output_file)
+    internal = written.getInternalMetadata()['xml']['internal']['zarr']['base']
+    assert internal['multiscales'][0]['metadata']['description'] == both
+
+
+def testRehydrateDescriptionAndAdditionalMetadata(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=0, y=0)
+
+    description = 'This is a test description.'
+    additional_metadata = dict(
+        name='Test',
+        values=[1, 2, 3],
+        nested=dict(hello='world'),
+    )
+    sink.imageDescription = description
+    sink.additionalMetadata = additional_metadata
+
+    sink.write(output_file)
+    written = large_image_source_zarr.open(output_file)
+    assert written.imageDescription == description
+    assert written.additionalMetadata == additional_metadata
+
+
+def testNonserializableDescriptionAndAdditionalMetadata(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((256, 256, 1), dtype=np.uint8), x=0, y=0)
+
+    created = datetime.now(tz=timezone.utc)
+    with pytest.raises(TileSourceError):
+        sink.imageDescription = created
+    with pytest.raises(TileSourceError):
+        sink.additionalMetadata = dict(created=created)
+    sink.write(output_file)
+
+
+def testNoneDescriptionAndAdditionalMetadata():
+    sink = large_image_source_zarr.new()
+    assert sink.imageDescription is None
+    assert sink.additionalMetadata is None
+
+
+def testSingleBand(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((1024, 1024, 1), dtype=np.uint8))
+    sink.write(output_file)
+
+
+def testSingleBandAndSingleX(tmp_path):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.zeros((1, 1024, 1), dtype=np.uint8))
+    sink.write(output_file)

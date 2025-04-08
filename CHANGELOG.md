@@ -19,10 +19,12 @@
 - Jupyter: Increase default zoom on small images ([#1843](../../pull/1843), [#1852](../../pull/1852))
 - Debounce histogram requests in the frame selector ([#1844](../../pull/1844))
 - Better parse ImageJ channel names ([#1857](../../pull/1857))
+- Allow users to specify arbitrary additional metadata in Zarr Sink ([#1855](../../pull/1855))
 
 ### Changes
 
 - Require a minimum version of Pillow to avoid a CVE ([#1828](../../pull/1828))
+- Pin numcodecs since we require zarr<2 ([#1867](../../pull/1867))
 
 ### Bug Fixes
 
@@ -31,6 +33,7 @@
 - Harden the ometiff reader against erroneous axis values ([#1847](../../pull/1847))
 - The annotation geojson output was erroneously requiring a closed flag ([#1859](../../pull/1859))
 - Fix a scale error in geospatial native magnification ([#1864](../../pull/1864))
+- Zarr Sink: Fix downsampled level generation for single-band images ([#1862](../../pull/1862))
 
 ## 1.31.1
 
