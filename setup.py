@@ -3,27 +3,10 @@ import os
 
 from setuptools import setup
 
-
-def prerelease_local_scheme(version):
-    """
-    Return local scheme version unless building on master in CircleCI.
-
-    This function returns the local scheme version number
-    (e.g. 0.0.0.dev<N>+g<HASH>) unless building on CircleCI for a
-    pre-release in which case it ignores the hash and produces a
-    PEP440 compliant pre-release version number (e.g. 0.0.0.dev<N>).
-    """
-    from setuptools_scm.version import get_local_node_and_date
-
-    if os.getenv('CIRCLE_BRANCH') in ('master', ):
-        return ''
-    return get_local_node_and_date(version)
-
-
 try:
     from setuptools_scm import get_version
 
-    version = get_version(local_scheme=prerelease_local_scheme)
+    version = get_version()
     limit_version = f'>={version}' if '+' not in version and not os.getenv('TOX_ENV_NAME') else ''
 except (ImportError, LookupError):
     limit_version = ''
@@ -86,8 +69,7 @@ extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for 
 
 setup(
     name='large-image',
-    use_scm_version={'local_scheme': prerelease_local_scheme,
-                     'fallback_version': '0.0.0'},
+    use_scm_version={'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
     long_description_content_type='text/x-rst',
