@@ -514,7 +514,9 @@ workflows:
             tags:
               only: /^v.*/
             branches:
-              only: master
+              only:
+                - master
+                - girder-5
       - docs-deploy:
           requires:
             - py38
