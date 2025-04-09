@@ -187,7 +187,6 @@ const AnnotationListWidget = View.extend({
         // Prevent event from bubbling up to the row click handler
         // that toggles the annotation on and off
         evt.stopPropagation();
-
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
         const allChecks = this.$el.find('.g-annotation-select input[type=checkbox]')
@@ -206,17 +205,19 @@ const AnnotationListWidget = View.extend({
     _deleteAnnotation(evt) {
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
+        const checkedAnnotations = this.$el.find('.g-annotation-select input[type=checkbox]:checked');
+        const checkedAnnotationIds = [];
         if (!id) {
-            const checkedAnnotations = this.$el.find('.g-annotation-select input[type=checkbox]:checked');
-            const checkedAnnotationIds = [];
             for (let i = 0; i < checkedAnnotations.length; i++) {
                 const annotationId = $(checkedAnnotations[i]).parents('.g-annotation-row').data('annotationId');
                 checkedAnnotationIds.push(annotationId);
             }
             if (checkedAnnotations.length !== 0) {
                 confirm({
-                    text: `Are you sure you want to delete the following annotations?
-                        <ul>${_.map(checkedAnnotationIds, (annotationId) => {
+                    text: `<h3>Are you sure you want to delete the following annotations?</h3>
+                        <ul
+                          style="max-height: 200px; padding-left: 0; overflow-y: auto;"
+                        >${_.map(checkedAnnotationIds, (annotationId) => {
                             const model = this.collection.get(annotationId);
                             return `<li>${_.escape(model.get('annotation').name)}</li>`;
                         }).join('')}</ul>`,
