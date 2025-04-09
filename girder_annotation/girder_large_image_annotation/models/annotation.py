@@ -1212,7 +1212,7 @@ class Annotation(AccessControlledModel):
         result['_id'] = result.pop('annotationId', result['_id'])
         return result
 
-    def revertVersion(self, id, version=None, user=None, force=False):
+    def revertVersion(self, id, version=None, user=None, force=False, justCheck=False):
         """
         Revert to a previous version of an annotation.
 
@@ -1223,6 +1223,7 @@ class Annotation(AccessControlledModel):
         :param user: the user doing the reversion.
         :param force: if True don't authenticate the user with the associated
             item access.
+        :param justCheck: if True, only check if this can be done, don't do it.
         """
         if version is None:
             oldVersions = list(Annotation().versionList(id, limit=2, force=True))
@@ -1238,6 +1239,8 @@ class Annotation(AccessControlledModel):
         if not annotation.get('_active', True):
             if not force:
                 self.requireAccess(annotation, user=user, level=AccessType.WRITE)
+            if justCheck:
+                return annotation
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
         return annotation
 
@@ -1326,7 +1329,7 @@ class Annotation(AccessControlledModel):
             self.update({'_id': doc['_id']}, {'$set': {'access': doc['access']}})
         return doc
 
-    def removeOldAnnotations(self, remove=False, minAgeInDays=30, keepInactiveVersions=5):  # noqa
+    def removeOldAnnotations(self, remove=False, minAgeInDays=30, keepInactiveVersions=5, justCheck=False):  # noqa
         """
         Remove annotations that (a) have no item or (b) are inactive and at
         least (1) a minimum age in days and (2) not the most recent inactive
@@ -1345,8 +1348,10 @@ class Annotation(AccessControlledModel):
             raise ValidationException(msg)
         age = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(-minAgeInDays)
         if keepInactiveVersions < 0:
-            msg = 'keepInactiveVersions mist be non-negative'
+            msg = 'keepInactiveVersions must be non-negative'
             raise ValidationException(msg)
+        if justCheck:
+            return None
         logger.info('Checking old annotations')
         logtime = time.time()
         report = {'fromDeletedItems': 0, 'oldVersions': 0, 'abandonedVersions': 0}
