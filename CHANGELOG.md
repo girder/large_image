@@ -1,5 +1,12 @@
 # Change Log
 
+## 1.32.1
+
+### Improvements
+
+- Use unitsWH in getRegion for geospatial images opened with a projection ([#1866](../../pull/1866))
+- Accept more SI units (nm, um, m, km) for getRegion ([#1866](../../pull/1866))
+
 ## 1.32.0
 
 ### Features
