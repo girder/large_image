@@ -1,3 +1,4 @@
+import json
 import math
 import multiprocessing
 import os
@@ -92,6 +93,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._initNew(path, **kwargs)
         else:
             self._initOpen(**kwargs)
+            internal = self.getInternalMetadata().get('zarr', {}).get('base', {})
+            multiscale = internal.get('multiscales', [None])[0]
+            if multiscale is not None:
+                self._imageDescription = multiscale.get('metadata', {}).get('description')
         self._tileLock = threading.RLock()
 
     def _initOpen(self, **kwargs):
@@ -1066,12 +1071,54 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @property
     def imageDescription(self):
+        if not hasattr(self, '_imageDescription'):
+            return None
+        if isinstance(self._imageDescription, dict):
+            return self._imageDescription.get('description')
         return self._imageDescription
 
     @imageDescription.setter
     def imageDescription(self, description):
         self._checkEditable()
-        self._imageDescription = description
+        try:
+            json.dumps(description)
+        except TypeError:
+            msg = 'Description must be JSON serializable'
+            raise TileSourceError(msg)
+        if (
+            hasattr(self, '_imageDescription') and
+            isinstance(self._imageDescription, dict)
+        ):
+            self._imageDescription['description'] = description
+        else:
+            self._imageDescription = description
+
+    @property
+    def additionalMetadata(self):
+        if not hasattr(self, '_imageDescription'):
+            return None
+        if isinstance(self._imageDescription, dict):
+            return self._imageDescription.get('additionalMetadata')
+        return None
+
+    @additionalMetadata.setter
+    def additionalMetadata(self, data):
+        self._checkEditable()
+        try:
+            json.dumps(data)
+        except TypeError:
+            msg = 'Metadata must be JSON serializable'
+            raise TileSourceError(msg)
+        if (
+            hasattr(self, '_imageDescription') and
+            isinstance(self._imageDescription, dict)
+        ):
+            self._imageDescription['additionalMetadata'] = data
+        else:
+            self.imageDescription = dict(
+                description=self._imageDescription,
+                additionalMetadata=data,
+            )
 
     @property
     def channelNames(self):

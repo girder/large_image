@@ -699,7 +699,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 top = bottom - height
             if bottom is None and top is not None and height is not None:
                 bottom = top + height
-        else:
+        elif self.projection:
             left, top, right, bottom, width, height, units = self._applyUnitsWH(
                 left, top, right, bottom, width, height, units, kwargs.get('unitsWH'),
             )

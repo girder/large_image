@@ -397,6 +397,43 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         )
         assert region.shape == (17, 21, 3)
 
+    def testGetRegionWithoutProjection(self):
+        imagePath = datastore.fetch('TC_NG_SFBay_US_Geo_COG.tif')
+        ts = self.basemodule.open(imagePath)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=37.84,
+                left=-122.49,
+                units='EPSG:4326',
+                width=4000000,
+                height=4000000,
+                unitsWH='mm'),
+            format='numpy',
+        )
+        assert region.shape == (289, 289, 4)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=37.84,
+                left=-122.49,
+                units='EPSG:4326',
+                width=4000,
+                height=4000,
+                unitsWH='m'),
+            format='numpy',
+        )
+        assert region.shape == (289, 289, 4)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=37.84,
+                left=-122.49,
+                units='EPSG:4326',
+                width=4,
+                height=4,
+                unitsWH='km'),
+            format='numpy',
+        )
+        assert region.shape == (289, 289, 4)
+
     def testGCPProjection(self):
         imagePath = datastore.fetch('region_gcp.tiff')
         source = self.basemodule.open(imagePath)
