@@ -22,6 +22,7 @@ import time
 import cherrypy
 import orjson
 from bson.objectid import ObjectId
+from girder_large_image.rest import jsonResponse, longRestResponse
 from girder_large_image.rest.tiles import _handleETag
 
 from girder.api import access
@@ -33,7 +34,6 @@ from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.user import User
 from girder.utility import JsonEncoder
-from girder.utility.progress import setResponseTimeLimit
 
 from .. import constants, utils
 from ..models.annotation import Annotation, AnnotationSchema
@@ -184,7 +184,7 @@ class AnnotationResource(Resource):
         if annotation is None:
             msg = 'Annotation not found'
             raise RestException(msg, 404)
-        return self._getAnnotation(annotation, params)
+        return longRestResponse(self._getAnnotation(annotation, params))
 
     @autoDescribeRoute(
         Description('Get an annotation by id in a specific format.')
@@ -218,8 +218,6 @@ class AnnotationResource(Resource):
         :param params: paging and region parameters for the annotation.
         :returns: a function that will return a generator.
         """
-        # Set the response time limit to a very long value
-        setResponseTimeLimit(86400)
         # Ensure that we have read access to the parent item.  We could fail
         # faster when there are permissions issues if we didn't load the
         # annotation elements before checking the item access permissions.
@@ -232,6 +230,10 @@ class AnnotationResource(Resource):
         base = json.dumps(annotation, sort_keys=True, allow_nan=False,
                           cls=JsonEncoder).encode('utf8').split(breakStr)
         centroids = str(params.get('centroids')).lower() == 'true'
+        if centroids:
+            setResponseHeader('Content-Type', 'application/octet-stream')
+        else:
+            setResponseHeader('Content-Type', 'application/json')
 
         def generateResult():
             info = {}
@@ -286,10 +288,6 @@ class AnnotationResource(Resource):
                 info, sort_keys=True, allow_nan=False, cls=JsonEncoder).encode('utf8')
             yield b'}'
 
-        if centroids:
-            setResponseHeader('Content-Type', 'application/octet-stream')
-        else:
-            setResponseHeader('Content-Type', 'application/json')
         return generateResult
 
     @describeRoute(
@@ -360,41 +358,47 @@ class AnnotationResource(Resource):
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='annotation', plugin='large_image', level=AccessType.WRITE)
-    @filtermodel(model='annotation', plugin='large_image')
     def updateAnnotation(self, annotation, params):
-        # Set the response time limit to a very long value
-        setResponseTimeLimit(86400)
+        setResponseHeader('Content-Type', 'application/json')
         user = self.getCurrentUser()
         item = Item().load(annotation.get('itemId'), force=True)
         if item is not None:
             Item().hasAccessFlags(
                 item, user, constants.ANNOTATION_ACCESS_FLAG) or Item().requireAccess(
                     item, user=user, level=AccessType.WRITE)
-        # If we have a content length, then we have replacement JSON.  If
-        # elements are not included, don't replace them
-        returnElements = True
+        reqbody = None
         if cherrypy.request.body.length:
-            oldElements = annotation.get('annotation', {}).get('elements')
-            annotation['annotation'] = self.getBodyJson()
-            if 'elements' not in annotation['annotation'] and oldElements:
-                annotation['annotation']['elements'] = oldElements
-                returnElements = False
-        if params.get('itemId'):
-            newitem = Item().load(params['itemId'], force=True)
-            Item().hasAccessFlags(
-                newitem, user, constants.ANNOTATION_ACCESS_FLAG) or Item().requireAccess(
-                    newitem, user=user, level=AccessType.WRITE)
-            annotation['itemId'] = newitem['_id']
-        try:
-            annotation = Annotation().updateAnnotation(annotation, updateUser=user)
-        except ValidationException as exc:
-            logger.exception('Failed to validate annotation')
-            raise RestException(
-                "Validation Error: JSON doesn't follow schema (%r)." % (
-                    exc.args, ))
-        if not returnElements and 'elements' in annotation['annotation']:
-            del annotation['annotation']['elements']
-        return annotation
+            reqbody = self.getBodyJson()
+
+        def process():
+            annot = annotation
+            # If we have a content length, then we have replacement JSON.  If
+            # elements are not included, don't replace them
+            returnElements = True
+            if reqbody is not None:
+                oldElements = annot.get('annotation', {}).get('elements')
+                annot['annotation'] = reqbody
+                if 'elements' not in annot['annotation'] and oldElements:
+                    annot['annotation']['elements'] = oldElements
+                    returnElements = False
+            if params.get('itemId'):
+                newitem = Item().load(params['itemId'], force=True)
+                Item().hasAccessFlags(
+                    newitem, user, constants.ANNOTATION_ACCESS_FLAG) or Item().requireAccess(
+                        newitem, user=user, level=AccessType.WRITE)
+                annot['itemId'] = newitem['_id']
+            try:
+                annot = Annotation().updateAnnotation(annot, updateUser=user)
+            except ValidationException as exc:
+                logger.exception('Failed to validate annotation')
+                raise RestException(
+                    "Validation Error: JSON doesn't follow schema (%r)." % (
+                        exc.args, ))
+            if not returnElements and 'elements' in annot['annotation']:
+                del annot['annotation']['elements']
+            return jsonResponse(Annotation().filter(annot, user))
+
+        return longRestResponse(process)
 
     @describeRoute(
         Description('Delete an annotation.')
@@ -406,6 +410,7 @@ class AnnotationResource(Resource):
     # Load with a limit of 1 so that we don't bother getting most annotations
     @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.WRITE)
     def deleteAnnotation(self, annotation, params):
+        setResponseHeader('Content-Type', 'application/json')
         # Ensure that we have write access to the parent item
         item = Item().load(annotation.get('itemId'), force=True)
         if item is not None:
@@ -413,8 +418,11 @@ class AnnotationResource(Resource):
             Item().hasAccessFlags(
                 item, user, constants.ANNOTATION_ACCESS_FLAG) or Item().requireAccess(
                     item, user, level=AccessType.WRITE)
-        setResponseTimeLimit(86400)
-        Annotation().remove(annotation)
+
+        def process():
+            return jsonResponse(Annotation().remove(annotation))
+
+        return longRestResponse(process)
 
     @describeRoute(
         Description('Search for annotated images.')
@@ -520,15 +528,24 @@ class AnnotationResource(Resource):
     )
     @access.public(scope=TokenScope.DATA_WRITE)
     def revertAnnotationHistory(self, id, version):
-        setResponseTimeLimit(86400)
-        annotation = Annotation().revertVersion(id, version, self.getCurrentUser())
+        setResponseHeader('Content-Type', 'application/json')
+        user = self.getCurrentUser()
+        annotation = Annotation().revertVersion(id, version, user, justCheck=True)
         if not annotation:
             msg = 'Annotation history version not found.'
             raise RestException(msg)
-        # Don't return the elements -- it can be too verbose
-        if 'elements' in annotation['annotation']:
-            del annotation['annotation']['elements']
-        return annotation
+
+        def process():
+            annotation = Annotation().revertVersion(id, version, user)
+            if not annotation:
+                msg = 'Annotation history version not found.'
+                raise RestException(msg)
+            # Don't return the elements -- it can be too verbose
+            if 'elements' in annotation['annotation']:
+                del annotation['annotation']['elements']
+            return jsonResponse(annotation)
+
+        return longRestResponse(process)
 
     @autoDescribeRoute(
         Description('Get all annotations for an item.')
@@ -541,25 +558,25 @@ class AnnotationResource(Resource):
     def getItemAnnotations(self, item):
         user = self.getCurrentUser()
         query = {'_active': {'$ne': False}, 'itemId': item['_id']}
+        setResponseHeader('Content-Type', 'application/json')
 
         def generateResult():
             yield b'['
             first = True
             for annotation in Annotation().find(query, limit=0, sort=[('_id', 1)]):
-                if not first:
-                    yield b',\n'
                 try:
                     annotation = Annotation().load(
                         annotation['_id'], user=user, level=AccessType.READ, getElements=False)
                     annotationGenerator = self._getAnnotation(annotation, {})()
                 except AccessException:
                     continue
+                if not first:
+                    yield b',\n'
                 yield from annotationGenerator
                 first = False
             yield b']'
 
-        setResponseHeader('Content-Type', 'application/json')
-        return generateResult
+        return longRestResponse(generateResult)
 
     @autoDescribeRoute(
         Description('Create multiple annotations on an item.')
@@ -609,17 +626,20 @@ class AnnotationResource(Resource):
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     def deleteItemAnnotations(self, item):
-        setResponseTimeLimit(86400)
+        setResponseHeader('Content-Type', 'application/json')
         user = self.getCurrentUser()
         query = {'_active': {'$ne': False}, 'itemId': item['_id']}
 
-        count = 0
-        for annotation in Annotation().find(query, limit=0, sort=[('_id', 1)]):
-            annot = Annotation().load(annotation['_id'], user=user, getElements=False)
-            if annot:
-                Annotation().remove(annot)
-                count += 1
-        return count
+        def process():
+            count = 0
+            for annotation in Annotation().find(query, limit=0, sort=[('_id', 1)]):
+                annot = Annotation().load(annotation['_id'], user=user, getElements=False)
+                if annot:
+                    Annotation().remove(annot)
+                    count += 1
+            return jsonResponse(count)
+
+        return longRestResponse(process)
 
     @autoDescribeRoute(
         Description('Get a list of plottable data related to an item and its annotations.')
@@ -848,25 +868,29 @@ class AnnotationResource(Resource):
     )
     @access.user(scope=TokenScope.DATA_OWN)
     def setFolderAnnotationAccess(self, id, params):
-        setResponseTimeLimit(86400)
+        setResponseHeader('Content-Type', 'application/json')
         user = self.getCurrentUser()
         if not user:
             return []
         access = json.loads(params['access'])
         public = self.boolParam('public', params, False)
-        count = 0
-        for annotation in self.getFolderAnnotations(id, params['recurse'], user):
-            annot = Annotation().load(annotation['_id'], user=user, getElements=False)
-            annot = Annotation().setPublic(annot, public)
-            annot = Annotation().setAccessList(
-                annot, access, user=user)
-            Annotation().update({'_id': annot['_id']}, {'$set': {
-                key: annot[key] for key in ('access', 'public', 'publicFlags')
-                if key in annot
-            }})
-            count += 1
 
-        return {'updated': count}
+        def process():
+            count = 0
+            for annotation in self.getFolderAnnotations(id, params['recurse'], user):
+                annot = Annotation().load(annotation['_id'], user=user, getElements=False)
+                annot = Annotation().setPublic(annot, public)
+                annot = Annotation().setAccessList(
+                    annot, access, user=user)
+                Annotation().update({'_id': annot['_id']}, {'$set': {
+                    key: annot[key] for key in ('access', 'public', 'publicFlags')
+                    if key in annot
+                }})
+                count += 1
+
+            return jsonResponse({'updated': count})
+
+        return longRestResponse(process)
 
     @autoDescribeRoute(
         Description('Delete all user-owned annotations from the items in a folder')
@@ -877,17 +901,20 @@ class AnnotationResource(Resource):
     )
     @access.user(scope=TokenScope.DATA_WRITE)
     def deleteFolderAnnotations(self, id, params):
-        setResponseTimeLimit(86400)
+        setResponseHeader('Content-Type', 'application/json')
         user = self.getCurrentUser()
         if not user:
             return []
-        count = 0
-        for annotation in self.getFolderAnnotations(id, params['recurse'], user):
-            annot = Annotation().load(annotation['_id'], user=user, getElements=False)
-            Annotation().remove(annot)
-            count += 1
 
-        return {'deleted': count}
+        def process():
+            count = 0
+            for annotation in self.getFolderAnnotations(id, params['recurse'], user):
+                annot = Annotation().load(annotation['_id'], user=user, getElements=False)
+                Annotation().remove(annot)
+                count += 1
+            return jsonResponse({'deleted': count})
+
+        return longRestResponse(process)
 
     @autoDescribeRoute(
         Description('Report on old annotations.')
@@ -899,8 +926,13 @@ class AnnotationResource(Resource):
     )
     @access.admin(scope=TokenScope.DATA_READ)
     def getOldAnnotations(self, age, versions):
-        setResponseTimeLimit(86400)
-        return Annotation().removeOldAnnotations(False, age, versions)
+        Annotation().removeOldAnnotations(False, age, versions, justCheck=True)
+        setResponseHeader('Content-Type', 'application/json')
+
+        def process():
+            return jsonResponse(Annotation().removeOldAnnotations(False, age, versions))
+
+        return longRestResponse(process)
 
     @autoDescribeRoute(
         Description('Delete old annotations.')
@@ -912,8 +944,13 @@ class AnnotationResource(Resource):
     )
     @access.admin(scope=TokenScope.DATA_WRITE)
     def deleteOldAnnotations(self, age, versions):
-        setResponseTimeLimit(86400)
-        return Annotation().removeOldAnnotations(True, age, versions)
+        Annotation().removeOldAnnotations(True, age, versions, justCheck=True)
+        setResponseHeader('Content-Type', 'application/json')
+
+        def process():
+            return jsonResponse(Annotation().removeOldAnnotations(True, age, versions))
+
+        return longRestResponse(process)
 
     @access.public(scope=TokenScope.DATA_READ)
     @autoDescribeRoute(

@@ -1,13 +1,21 @@
 import collections
 import json
 import logging
+import queue
+import threading
+import types
 
+import cherrypy
+
+import girder.api.rest
+import large_image.constants
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import boundHandler
+from girder.api.rest import boundHandler, setResponseHeader
 from girder.constants import AccessType, TokenScope
 from girder.models.folder import Folder
 from girder.models.item import Item
+from girder.utility import JsonEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -271,3 +279,99 @@ def putYAMLConfigFile(self, folder, name, config, user_context):
         Folder().requireAccess(folder, user, AccessType.WRITE)
     config = config.read().decode('utf8')
     return yamlConfigFileWrite(folder, name, user, config, user_context)
+
+
+def mimeTypeFromEncoding(mimeTypeOrEncoding):
+    if mimeTypeOrEncoding and mimeTypeOrEncoding.startswith('pickle'):
+        return 'application/octet-stream'
+    mimeType = large_image.constants.TileOutputMimeTypes.get(
+        mimeTypeOrEncoding, mimeTypeOrEncoding)
+    if '/' not in str(mimeType):
+        raise ValueError('Invalid encoding "%s"' % mimeTypeOrEncoding)
+    return mimeType
+
+
+def jsonResponse(response):
+    return json.dumps(response, sort_keys=True, allow_nan=False,
+                      cls=JsonEncoder).encode('utf8')
+
+
+def longRestResponse(genOrFunc):  # noqa
+    q = queue.Queue()
+    exc = None
+
+    def process():
+        try:
+            result = genOrFunc()
+
+            while callable(result):
+                result = result()
+            if isinstance(result, types.GeneratorType):
+                for record in result:
+                    if callable(record):
+                        record = record()
+                        if isinstance(result, types.GeneratorType):
+                            for subrecord in record:
+                                q.put(subrecord)
+                        else:
+                            q.put(record)
+                    else:
+                        q.put(record)
+            else:
+                q.put(result)
+        except Exception as e:
+            nonlocal exc
+            exc = e
+        q.put(None)
+
+    thread = threading.Thread(target=process)
+    thread.start()
+    record = False
+    try:
+        record = q.get(timeout=15)
+    except queue.Empty:
+        record = b''
+    if exc:
+        thread.join()
+        try:
+            raise exc
+        except ValueError as e:
+            e = girder.exceptions.RestException('Value Error: %s' % e.args[0])
+            cherrypy.response.status = e.code
+            return jsonResponse(girder.api.rest._createResponse(
+                girder.api.rest._handleRestException(e)))
+        except girder.exceptions.RestException as e:
+            cherrypy.response.status = e.code
+            return jsonResponse(girder.api.rest._createResponse(
+                girder.api.rest._handleRestException(e)))
+        except girder.exceptions.AccessException as e:
+            cherrypy.response.status = 401 if girder.api.rest.getCurrentUser() is None else 403
+            return jsonResponse(girder.api.rest._createResponse(
+                girder.api.rest._handleAccessException(e)))
+        except girder.exceptions.GirderException as e:
+            cherrypy.response.status = 500
+            return jsonResponse(girder.api.rest._createResponse(
+                girder.api.rest._handleGirderException(e)))
+        except girder.exceptions.ValidationException as e:
+            cherrypy.response.status = 400
+            return jsonResponse(girder.api.rest._createResponse(
+                girder.api.rest._handleValidationException(e)))
+
+    if record is not None:
+        setResponseHeader('Transfer-Encoding', 'chunked')
+
+        def response():
+            nonlocal record
+            yield record
+            while exc is None:
+                try:
+                    record = q.get(timeout=15)
+                    if record is None:
+                        break
+                    yield record
+                except queue.Empty:
+                    yield b''
+            thread.join()
+
+        return response
+    return b''
