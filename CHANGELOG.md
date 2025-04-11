@@ -7,6 +7,10 @@
 - Use unitsWH in getRegion for geospatial images opened with a projection ([#1866](../../pull/1866))
 - Accept more SI units (nm, um, m, km) for getRegion ([#1866](../../pull/1866))
 
+### Bug Fixes
+
+- Fix an issue converting float32 bit data that really should by uint8 ([#1873](../../pull/1873))
+
 ## 1.32.0
 
 ### Features
