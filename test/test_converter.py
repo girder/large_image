@@ -322,3 +322,13 @@ def testConvertImageJ(tmpdir):
     large_image_converter.convert(imagePath, outputPath, compression='jpeg', quality=50)
     info = tifftools.read_tiff(outputPath)
     assert len(info['ifds']) == 44
+
+
+def testConvertFloat328BitRange(tmpdir):
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'sample_float32_8bit_range.zarr.zip')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath)
+    ts = large_image.open(outputPath)
+    pixel = ts.getPixel(x=0, y=0)
+    assert pixel['value'] == [132, 131, 122, 255]
