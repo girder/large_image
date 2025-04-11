@@ -107,6 +107,41 @@ You can specify the size in physical coordinates:
     # Since our source image had mm_x = 0.00025 for its scale, this has the
     # same result as the previous example.
 
+If the image is geospatial, you can specify the region with projection coordinates.
+The projection is passed to the region's ``units`` argument as a string.
+If ``units`` is ``'projection'``, the source's default projection will be used.
+If ``units`` starts with ``'proj4:'`` or ``'epsg:'`` (case-insensitive), the projection interpreted from that string will be used.
+In the following example, we use ``'EPSG:4326'`` and specify the region with latitude and longitude values.
+
+.. code-block:: python
+
+    import large_image
+    source = large_image.open('geo_sample.tiff')
+    if source.geospatial:
+        nparray, mime_type = source.getRegion(
+            region=dict(
+                top=42.3008, bottom=42.3006,
+                left=-71.1143, right=-71.1140,
+                units='EPSG:4326'
+            ),
+            format=large_image.constants.TILE_FORMAT_NUMPY
+        )
+
+You can also specify a region with a single corner point and distances for width and height:
+
+.. code-block:: python
+
+    import large_image
+    source = large_image.open('geo_sample.tiff')
+    if source.geospatial:
+        nparray, mime_type = source.getRegion(
+            region=dict(
+                top=42.3008, left=-71.1143, units='EPSG:4326',
+                width=3, height=4, unitsWH='km'
+            ),
+            format=large_image.constants.TILE_FORMAT_NUMPY
+        )
+
 Tile Serving
 ------------
 
