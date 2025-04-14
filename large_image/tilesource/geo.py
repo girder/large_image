@@ -85,7 +85,9 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         """
         raise NotImplementedError
 
-    def _convertProjectionUnits(self, *args, **kwargs) -> Tuple[float, float, float, float, str]:
+    def _convertProjectionUnits(self, *args, **kwargs) -> Tuple[
+        float, float, float, float, float, float, str,
+    ]:
         raise NotImplementedError
 
     def pixelToProjection(self, *args, **kwargs) -> Tuple[float, float]:
@@ -385,7 +387,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         if (units and (units.lower().startswith('proj4:') or
                        units.lower().startswith('epsg:') or
                        units.lower().startswith('+proj='))):
-            left, top, right, bottom, units = self._convertProjectionUnits(
+            left, top, right, bottom, width, height, units = self._convertProjectionUnits(
                 left, top, right, bottom, width, height, units, **kwargs)
 
         if units == 'projection' and self.projection:
@@ -420,6 +422,39 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         return super()._getRegionBounds(
             metadata, left, top, right, bottom, width, height, units,
             desiredMagnification, cropToImage, **kwargs)
+
+    def _applyUnitsWH(self, left, top, right, bottom, width, height, units, unitsWH):
+        if unitsWH is not None:
+            unitsWH = TileInputUnits.get(unitsWH.lower())
+        unitsWH_factors = dict(nm=0.000000001, mm=0.001, m=1, km=1000)
+        if unitsWH in unitsWH_factors:
+            import pyproj
+
+            # apply width and height as distance with pyproj forward transform
+            width *= unitsWH_factors[unitsWH]
+            height *= unitsWH_factors[unitsWH]
+            geod = pyproj.Geod(ellps='WGS84')
+            if (
+                (top is not None or bottom is not None) and
+                (left is not None or right is not None) and
+                width is not None and height is not None
+            ):
+                x1 = left or right
+                y1 = top or bottom
+                x_az = -90 if left is not None else 90
+                y_az = 180 if top is not None else 0
+                x2, _, _ = geod.fwd(lons=x1, lats=y1, az=x_az, dist=width)
+                _, y2, _ = geod.fwd(lons=x1, lats=y1, az=y_az, dist=height)
+                if x_az == -90:
+                    right = x2
+                else:
+                    left = x2
+                if y_az == 180:
+                    bottom = y2
+                else:
+                    top = y2
+                width = height = None
+        return left, top, right, bottom, width, height, units
 
     @methodcache()
     def getThumbnail(

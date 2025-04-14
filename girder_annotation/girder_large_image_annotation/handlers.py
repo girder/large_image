@@ -5,6 +5,7 @@ import uuid
 
 import cachetools
 import orjson
+from girder_worker.app import app
 
 import large_image.config
 from girder.constants import AccessType
@@ -106,10 +107,9 @@ def resolveAnnotationGirderIds(event, results, data, possibleGirderIds):
     return True
 
 
-def process_annotations(event):  # noqa: C901
-    # TODO this should become a celery task
-    """Add annotations to an image on a ``data.process`` event"""
-    results = _itemFromEvent(event, 'LargeImageAnnotationUpload')
+@app.task(queue='local')
+def processAnnotationsTask(event, referenceName, removeSingularFileItem=False):  # noqa C901
+    results = _itemFromEvent(event, referenceName)
     if not results:
         return
     item = results['item']
@@ -166,3 +166,12 @@ def process_annotations(event):  # noqa: C901
             raise
     if str(file['itemId']) == str(item['_id']):
         File().remove(file)
+    if removeSingularFileItem:
+        item = Item().load(file['itemId'], force=True)
+        if item and len(list(Item().childFiles(item, limit=2))) == 1:
+            Item().remove(item)
+
+
+def process_annotations(event):
+    """Add annotations to an image on a ``data.process`` event"""
+    processAnnotationsTask.delay(event, 'LargeImageAnnotationUpload')

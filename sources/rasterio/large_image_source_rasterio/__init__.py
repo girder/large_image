@@ -686,7 +686,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             or '+proj=' or a enumerated value like 'wgs84', or one of the super's values.
         :param kwargs: optional parameters.
 
-        :returns: left, top, right, bottom, units.  The new bounds in the either
+        :returns: left, top, right, bottom, width, height, units.  The new bounds in the either
             pixel or class projection units.
         """
         # build the different corner from the parameters
@@ -699,6 +699,10 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 top = bottom - height
             if bottom is None and top is not None and height is not None:
                 bottom = top + height
+        elif self.projection:
+            left, top, right, bottom, width, height, units = self._applyUnitsWH(
+                left, top, right, bottom, width, height, units, kwargs.get('unitsWH'),
+            )
 
         # raise error if we didn't build one of the coordinates
         if (left is None and right is None) or (top is None and bottom is None):
@@ -743,7 +747,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         right = pright if right is not None else None
         bottom = pbottom if bottom is not None else None
 
-        return left, top, right, bottom, units
+        return left, top, right, bottom, width, height, units
 
     def _getRegionBounds(
         self,
@@ -789,7 +793,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         # convert the coordinates if a projection exist
         if isUnits and isProj:
-            left, top, right, bottom, units = self._convertProjectionUnits(
+            left, top, right, bottom, width, height, units = self._convertProjectionUnits(
                 left, top, right, bottom, width, height, units, **kwargs,
             )
 

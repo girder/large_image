@@ -342,14 +342,14 @@ def _vipsCast(image: Any, mustBe8Bit: bool = False,
         target, offset, multiplier = preferredCast
     else:
         target, offset, multiplier = formats[image.format]
-    if image.format in {pyvips.BandFormat.DOUBLE, pyvips.BandFormat.FLOAT}:
-        maxVal = image.max()
-        # These thresholds are higher than 256 and 65536 because bicubic and
-        # other interpolations can cause value spikes
-        if maxVal >= 2 and maxVal < 2**9:
-            multiplier = 256
-        elif maxVal >= 256 and maxVal < 2**17:
-            multiplier = 1
+        if image.format in {pyvips.BandFormat.DOUBLE, pyvips.BandFormat.FLOAT}:
+            maxVal = image.max()
+            # These thresholds are higher than 256 and 65536 because bicubic and
+            # other interpolations can cause value spikes
+            if maxVal >= 2 and maxVal < 2**9:
+                multiplier = 256
+            elif maxVal >= 256 and maxVal < 2**17:
+                multiplier = 1
     if mustBe8Bit and target != pyvips.BandFormat.UCHAR:
         target = pyvips.BandFormat.UCHAR
         multiplier /= 256
