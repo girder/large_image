@@ -69,11 +69,10 @@ extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for 
 
 setup(
     name='large-image',
-    use_scm_version={'fallback_version': '0.0.0'},
     description=description,
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    license='Apache Software License 2.0',
+    license='Apache-2.0',
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     classifiers=[
