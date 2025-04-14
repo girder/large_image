@@ -5,6 +5,8 @@ import uuid
 
 import cachetools
 import orjson
+from girder_large_image_annotation.models.annotation import Annotation
+from girder_large_image_annotation.utils import isGeoJSON
 from girder_worker.app import app
 
 import large_image.config
@@ -12,9 +14,6 @@ from girder.constants import AccessType
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.user import User
-
-from .models.annotation import Annotation
-from .utils import isGeoJSON
 
 _recentIdentifiers = cachetools.TTLCache(maxsize=100, ttl=86400)
 logger = logging.getLogger(__name__)
@@ -29,7 +28,7 @@ def _itemFromEvent(event, identifierEnding, itemAccessLevel=AccessType.READ):
     :param identifierEnding: the required end of the identifier.
     :returns: a dictionary with item, user, and file if there was a match.
     """
-    info = event.info
+    info = getattr(event, 'info', event)
     identifier = None
     reference = info.get('reference', None)
     if reference is not None:
@@ -116,7 +115,7 @@ def processAnnotationsTask(event, referenceName, removeSingularFileItem=False): 
     user = results['user']
 
     file = File().load(
-        event.info.get('file', {}).get('_id'),
+        getattr(event, 'info', event).get('file', {}).get('_id'),
         level=AccessType.READ, user=user,
     )
     startTime = time.time()
@@ -172,6 +171,8 @@ def processAnnotationsTask(event, referenceName, removeSingularFileItem=False): 
             Item().remove(item)
 
 
-def process_annotations(event):
+def process_annotations(
+        event, referenceName='LargeImageAnnotationUpload', removeSingularFileItem=False):
     """Add annotations to an image on a ``data.process`` event"""
-    processAnnotationsTask.delay(event, 'LargeImageAnnotationUpload')
+    processAnnotationsTask.delay(
+        getattr(event, 'info', event), referenceName, removeSingularFileItem)
