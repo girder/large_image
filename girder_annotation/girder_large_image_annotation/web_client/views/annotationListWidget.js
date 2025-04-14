@@ -279,13 +279,19 @@ const AnnotationListWidget = View.extend({
     _changePermissions(evt) {
         const $el = $(evt.currentTarget);
         let id = $el.parents('.g-annotation-row').data('annotationId');
+        const checkedAnnotations = this.$el.find('.g-annotation-select input[type=checkbox]:checked');
+        const checkedAnnotationIds = [];
         if (!id && this.collection.length === 1) {
             id = this.collection.at(0).id;
         }
         const model = id ? this.collection.get(id) : this.collection.at(0).clone();
         if (!id) {
-            // if id is not set, override widget's saveAccessList
-            model.get('annotation').name = 'All Annotations';
+            // if id is not set, override widget's saveAccessList with selected annotations
+            for (let i = 0; i < checkedAnnotations.length; i++) {
+                const annotationId = $(checkedAnnotations[i]).parents('.g-annotation-row').data('annotationId');
+                checkedAnnotationIds.push(annotationId);
+            }
+            model.get('annotation').name = 'Selected Annotations';
             model.save = () => {};
             model.updateAccess = () => {
                 const access = {
@@ -293,10 +299,14 @@ const AnnotationListWidget = View.extend({
                     public: model.get('public'),
                     publicFlags: model.get('publicFlags')
                 };
-                this.collection.each((loopmodel) => {
-                    loopmodel.set(access);
-                    loopmodel.updateAccess();
-                });
+                for (let i = 0; i < checkedAnnotationIds.length; i++) {
+                    let selectedModel = this.collection.get(checkedAnnotationIds[i]);
+                    if (!selectedModel) {
+                        continue;
+                    }
+                    selectedModel.set(access);
+                    selectedModel.updateAccess();
+                }
                 this.collection.fetch(null, true);
                 model.trigger('g:accessListSaved');
             };
