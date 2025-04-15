@@ -7,6 +7,7 @@ import pytest
 @pytest.mark.parametrize(('notebook', 'execute'), [
     ('docs/notebooks/large_image_examples.ipynb', False),
     ('docs/notebooks/zarr_sink_example.ipynb', False),
+    ('docs/notebooks/frame_viewer_example.ipynb', False),
 ])
 def test_notebook_exec(notebook, execute, tmp_path):
     import nbformat
