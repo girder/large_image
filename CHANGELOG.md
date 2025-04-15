@@ -10,6 +10,7 @@
 ### Bug Fixes
 
 - Fix an issue converting float32 bit data that really should by uint8 ([#1873](../../pull/1873))
+- Fix interactive image layout height in Google Colab ([#1879](../../pull/1879))
 
 ## 1.32.0
 
