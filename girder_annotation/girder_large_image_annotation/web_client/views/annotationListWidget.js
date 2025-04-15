@@ -24,6 +24,7 @@ const AnnotationListWidget = View.extend({
         'click .g-annotation-toggle-select': '_displayAnnotation',
         'click .g-annotation-toggle-all': '_displayAllAnnotations',
         'click .g-annotation-select' : '_selectAnnotation',
+        'click .g-annotation-download-selected' : '_downloadSelectedAnnotations',
         'click .g-annotation-delete': '_deleteAnnotation',
         'click .g-annotation-upload': '_uploadAnnotation',
         'click .g-annotation-permissions': '_changePermissions',
@@ -201,6 +202,32 @@ const AnnotationListWidget = View.extend({
             return;
         }
     },
+
+    _downloadSelectedAnnotations(evt) {
+        evt.preventDefault();
+
+        const selectedAnnotations = this.$('.g-annotation-select input:checked')
+        .closest('.g-annotation-row')
+        .map((_, el) => $(el).data('annotationId'))
+        .get();
+
+        selectedAnnotations.forEach((id) => {
+            const annotation = this.collection.get(id);
+            if (annotation) {
+                annotation.fetch().then(() => {
+                    const url = `${getApiRoot()}/annotation/${annotation.id}`;
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute('href', url);
+                    downloadAnchor.setAttribute('download', `${annotation.get('annotation').name}.json`);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    document.body.removeChild(downloadAnchor);
+                });
+            }
+        });
+
+    },
+
 
     _deleteAnnotation(evt) {
         const $el = $(evt.currentTarget);
