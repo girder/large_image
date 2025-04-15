@@ -7,7 +7,7 @@
       a.g-annotation-upload(title='Upload annotation')
         i.icon-upload
     if annotations.length
-      a.g-annotation-download(href=`${apiRoot}/annotation/item/${item.id}`, title='Download annotations', download=`${item.get('name')}_annotations.json`)
+      a.g-annotation-download-selected(title='Download selected annotations')
         i.icon-download
     if accessLevel >= AccessType.ADMIN && annotations.length
       a.g-annotation-permissions(title='Adjust permissions')
