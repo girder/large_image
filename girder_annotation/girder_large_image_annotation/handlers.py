@@ -192,6 +192,8 @@ def processAnnotationsTask(event, referenceName, removeSingularFileItem=False): 
 def process_annotations(
         event, referenceName='LargeImageAnnotationUpload', removeSingularFileItem=False):
     """Add annotations to an image on a ``data.process`` event"""
+    if not itemFromEvent(event, referenceName):
+        return
     processAnnotationsTask.delay(
         getattr(event, 'info', event), referenceName, removeSingularFileItem,
         girder_job_title='Process Annotations')
