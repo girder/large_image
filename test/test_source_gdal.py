@@ -1,4 +1,5 @@
 import os
+import tempfile
 from unittest import TestCase
 
 import large_image_source_gdal
@@ -36,6 +37,21 @@ class GDALSourceTests(_GDALBaseSourceTest, TestCase):
         assert tileMetadata['bounds']['ymin'] == pytest.approx(2149548, 1)
         assert '+proj=aea' in tileMetadata['bounds']['srs']
         region.unlink()
+
+    def testGetTiledRegionAsFile(self):
+        imagePath = datastore.fetch('landcover_sample_1000.tif')
+        ts = self.basemodule.open(imagePath)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            resultPath = os.path.join(temp_dir, 'test_files', 'region.tiff')
+            region, _ = ts.getRegion(
+                output=dict(maxWidth=1024, maxHeight=1024, path=resultPath),
+                encoding='TILED',
+            )
+            assert region.exists()
+            assert region.name == 'region.tiff'
+            assert os.path.exists(resultPath)
+            assert os.path.getsize(resultPath) == 152321
+            region.unlink()
 
     def testGetTiledRegion16Bit(self):
         imagePath = datastore.fetch('region_gcp.tiff')
