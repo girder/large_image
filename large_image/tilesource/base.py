@@ -2031,8 +2031,15 @@ class TileSource(IPyLeafletMixin):
                 (maxHeight - image['height']) // 2 if not corner else 0)
         if image['mm_x'] and image['mm_y']:
             vimg = vimg.copy(xres=1 / image['mm_x'], yres=1 / image['mm_y'])
-        fd, outputPath = tempfile.mkstemp('.tiff', 'tiledRegion_')
-        os.close(fd)
+
+        outputPath = kwargs.get('output', {}).get('path')
+        if outputPath is not None:
+            outputPath = pathlib.Path(outputPath)
+            outputPath.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            fd, outputPath = tempfile.mkstemp('.tiff', 'tiledRegion_')
+            os.close(fd)
+
         try:
             vimg.write_to_file(outputPath, **convertParams)
             return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
