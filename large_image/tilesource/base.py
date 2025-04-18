@@ -2032,7 +2032,7 @@ class TileSource(IPyLeafletMixin):
         if image['mm_x'] and image['mm_y']:
             vimg = vimg.copy(xres=1 / image['mm_x'], yres=1 / image['mm_y'])
 
-        outputPath = kwargs.get('output').get('path')
+        outputPath = kwargs.get('output', {}).get('path')
         if outputPath is not None:
             outputPath = pathlib.Path(outputPath)
             outputPath.parent.mkdir(parents=True, exist_ok=True)

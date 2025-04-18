@@ -986,7 +986,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         width = iterInfo['output']['width']
         height = iterInfo['output']['height']
 
-        outputPath = kwargs.get('output').get('path')
+        outputPath = kwargs.get('output', {}).get('path')
         if outputPath is not None:
             outputPath = pathlib.Path(outputPath)
             outputPath.parent.mkdir(parents=True, exist_ok=True)

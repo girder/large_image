@@ -985,7 +985,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             '-ts', str(int(math.floor(outWidth))), str(int(math.floor(outHeight))),
         ]
 
-        outputPath = kwargs.get('output').get('path')
+        outputPath = kwargs.get('output', {}).get('path')
         if outputPath is not None:
             outputPath = pathlib.Path(outputPath)
             outputPath.parent.mkdir(parents=True, exist_ok=True)
