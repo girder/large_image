@@ -2,6 +2,7 @@ import glob
 import io
 import json
 import os
+import tempfile
 
 import numpy as np
 import PIL.Image
@@ -555,7 +556,22 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         assert tileMetadata['bounds']['srs']
         region.unlink()
 
-    def testIsGeospaital(self):
+    def testGetTiledRegionAsFile(self):
+        imagePath = datastore.fetch('landcover_sample_1000.tif')
+        ts = self.basemodule.open(imagePath, projection='epsg:3857')
+        with tempfile.TemporaryDirectory() as temp_dir:
+            resultPath = os.path.join(temp_dir, 'test_files', 'region.tiff')
+            region, _ = ts.getRegion(
+                output=dict(maxWidth=1024, maxHeight=1024, path=resultPath),
+                encoding='TILED',
+            )
+            self.basemodule.open(str(region))
+            assert region.exists()
+            assert region.name == 'region.tiff'
+            assert os.path.exists(resultPath)
+            region.unlink()
+
+    def testIsGeospatial(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
         assert self.baseclass.isGeospatial(imagePath) is True

@@ -986,9 +986,16 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         width = iterInfo['output']['width']
         height = iterInfo['output']['height']
 
-        with self._getDatasetLock, tempfile.NamedTemporaryFile(
-            suffix='.tiff', prefix='tiledGeoRegion_', delete=False,
-        ) as output:
+        outputPath = kwargs.get('output').get('path')
+        if outputPath is not None:
+            outputPath = pathlib.Path(outputPath)
+            outputPath.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            outputPath = pathlib.Path(tempfile.NamedTemporaryFile(
+                suffix='.tiff', prefix='tiledGeoRegion_', delete=False,
+            ).name)
+
+        with self._getDatasetLock:
 
             xres = (right - left) / width
             yres = (top - bottom) / height
@@ -1016,14 +1023,14 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 'width': width,
                 'transform': dst_transform,
             })
-            with rio.open(output.name, 'w', **profile) as dst:
+            with rio.open(outputPath, 'w', **profile) as dst:
                 dst.write(data)
                 # Write colormaps if available
                 for i in range(data.shape[0]):
                     if self.dataset.colorinterp[i].name.lower() == 'palette':
                         dst.write_colormap(i + 1, self.dataset.colormap(i + 1))
 
-            return pathlib.Path(output.name), TileOutputMimeTypes['TILED']
+            return outputPath, TileOutputMimeTypes['TILED']
 
     def validateCOG(self, strict=True, warn=True):
         """Check if this image is a valid Cloud Optimized GeoTiff.
