@@ -913,31 +913,33 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         with self._threadLock and self._processLock:
             name = str(self._tempdir.name).split('/')[-1]
             arrays = dict(self._zarr.arrays())
-            channel_axis = self._axes.get('c', self._axes.get('s'))
             datasets = []
             axes = []
             channels = []
-            rdefs = {'model': 'color' if len(self._channelColors) else 'greyscale'}
-            sorted_axes = [a[0] for a in sorted(self._axes.items(), key=lambda item: item[1])]
-            for arr_name in arrays:
-                level = int(arr_name)
-                scale = [1.0 for a in sorted_axes]
-                scale[self._axes.get('x')] = (self._mm_x or 0) * (2 ** level)
-                scale[self._axes.get('y')] = (self._mm_y or 0) * (2 ** level)
-                dataset_metadata = {
-                    'path': arr_name,
-                    'coordinateTransformations': [{
-                        'type': 'scale',
-                        'scale': scale,
-                    }],
-                }
-                datasets.append(dataset_metadata)
-            for a in sorted_axes:
-                if a == 't':
-                    rdefs['defaultT'] = 0
-                elif a == 'z':
-                    rdefs['defaultZ'] = 0
-                axes.append(self._getAxisInternalMetadata(a))
+            channel_axis = rdefs = None
+            if hasattr(self, '_axes'):
+                channel_axis = self._axes.get('c', self._axes.get('s'))
+                rdefs = {'model': 'color' if len(self._channelColors) else 'greyscale'}
+                sorted_axes = [a[0] for a in sorted(self._axes.items(), key=lambda item: item[1])]
+                for arr_name in arrays:
+                    level = int(arr_name)
+                    scale = [1.0 for a in sorted_axes]
+                    scale[self._axes.get('x')] = (self._mm_x or 0) * (2 ** level)
+                    scale[self._axes.get('y')] = (self._mm_y or 0) * (2 ** level)
+                    dataset_metadata = {
+                        'path': arr_name,
+                        'coordinateTransformations': [{
+                            'type': 'scale',
+                            'scale': scale,
+                        }],
+                    }
+                    datasets.append(dataset_metadata)
+                for a in sorted_axes:
+                    if a == 't':
+                        rdefs['defaultT'] = 0
+                    elif a == 'z':
+                        rdefs['defaultZ'] = 0
+                    axes.append(self._getAxisInternalMetadata(a))
             if channel_axis is not None and len(arrays) > 0:
                 base_array = list(arrays.values())[0]
                 base_shape = base_array.shape
@@ -1191,8 +1193,14 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     @projection.setter
     def projection(self, proj):
+        import pyproj
+
         self._checkEditable()
-        # TODO: check for valid value
+        try:
+            pyproj.CRS.from_string(str(proj))
+        except Exception as e:
+            msg = f'Invalid projection value. Cannot be interpreted by pyproj: {str(e)}'
+            raise TileSourceError(msg)
         self._projection = proj
         self._writeInternalMetadata()
 
@@ -1201,10 +1209,52 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return self._gcps
 
     @gcps.setter
-    def gcps(self, proj):
+    def gcps(self, gcps):
         self._checkEditable()
-        # TODO: check for valid value
-        self._gcps = proj
+        if isinstance(gcps, str):
+            gcps = list(zip(*[iter(gcps.split())] * 4))
+        if (isinstance(gcps, list) or isinstance(gcps, tuple)):
+            gcps = [
+                [float(v) for v in gcp.split()]
+                if isinstance(gcp, str) else gcp
+                for gcp in gcps
+            ]
+            if any(
+                not isinstance(gcp, list) and not isinstance(gcp, tuple)
+                for gcp in gcps
+            ):
+                msg = 'Each GCP must be specified as a list, tuple, or space-separated string.'
+                raise TileSourceError(msg)
+            if any(len(gcp) != 4 for gcp in gcps):
+                msg = (
+                    'Each GCP must contain four values: '
+                    '[projected_x, projected_y, pixel_x, pixel_y].'
+                )
+                raise TileSourceError(msg)
+            unique_gcps = []
+            dup_gcps = []
+            for gcp in gcps:
+                if not any(
+                    u[0:2] == gcp[0:2] or u[2:4] == gcp[2:4]
+                    for u in unique_gcps
+                ):
+                    unique_gcps.append(gcp)
+                else:
+                    dup_gcps.append(gcp)
+            gcps = unique_gcps
+            if len(dup_gcps):
+                msg = (
+                    f'Removed duplicate GCPs {dup_gcps} from list; shared projected '
+                    'coordinate or pixel coordinate with another GCP.'
+                )
+                warnings.warn(msg, stacklevel=2)
+            if len(gcps) < 2:
+                msg = 'Must specify at least 2 unique GCPs.'
+                raise TileSourceError(msg)
+        else:
+            msg = 'GCPs must be specified as a list, tuple, or space-separated string.'
+            raise TileSourceError(msg)
+        self._gcps = gcps
         self._writeInternalMetadata()
 
     def _generateDownsampledLevels(self, resample_method):
@@ -1272,6 +1322,32 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         level=level,
                     )
             self._validateZarr()  # refresh self._levels before continuing
+
+    def _applyGeoReferencing(self, path):
+        if self.projection is not None and self.gcps is None:
+            msg = (
+                'Projection was specified but GCPs were not specified. '
+                'Output will not be georeferenced.'
+            )
+            warnings.warn(msg, stacklevel=2)
+        if self.projection is None and self.gcps is not None:
+            msg = (
+                'GCPs were specified but projection was not specified. '
+                'Output will not be georeferenced.'
+            )
+            warnings.warn(msg, stacklevel=2)
+
+        if (
+            self.projection is not None and
+            self.gcps is not None and
+            len(self.gcps)
+        ):
+            import tifftools
+
+            tifftools.tiff_set(path, setlist=[
+                ('projection', self.projection),
+                ('gcps', self.gcps),
+            ], overwrite=True)
 
     def write(
         self,
@@ -1379,17 +1455,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             params.update(converterParams)
             convert(str(attrs_path), path, overwrite=overwriteAllowed, **params)
 
-            if (
-                self.projection is not None and
-                self.gcps is not None and
-                len(self.gcps)
-            ):
-                import tifftools
-
-                tifftools.tiff_set(path, setlist=[
-                    ('projection', self.projection),
-                    ('gcps', self.gcps),
-                ], overwrite=True)
+            self._applyGeoReferencing(path)
 
 
 def open(*args, **kwargs):

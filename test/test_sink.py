@@ -1005,7 +1005,8 @@ def testSingleBandAndSingleX(tmp_path):
     sink.write(output_file)
 
 
-def testGeoreferencing(tmp_path):
+@pytest.mark.parametrize(('n_gcps', 't_gcps'), [(2, list), (2, str), (4, list), (4, str)])
+def testGeoreferencing(tmp_path, n_gcps, t_gcps):
     output_file = tmp_path / 'test.tiff'
     sink = large_image_source_zarr.new()
 
@@ -1015,16 +1016,19 @@ def testGeoreferencing(tmp_path):
     bbox = [
         # covers lincoln memorial
         [-77.050923, 38.888728],
-        [-77.049437, 38.889805]
+        [-77.049437, 38.889805],
     ]
-    # TODO: test with only two gcps on opposite corners
-    # TODO: test a bunch of edge cases and only apply constraints where failures occur
-    sink.gcps = [
+    gcps = [
         (bbox[0][0], bbox[0][1], 0, 0),
         (bbox[0][0], bbox[1][1], 0, 256),
         (bbox[1][0], bbox[1][1], 256, 256),
         (bbox[1][0], bbox[0][1], 256, 0),
     ]
+    if n_gcps == 2:
+        gcps = [gcps[0], gcps[2]]
+    if t_gcps is str:
+        gcps = ' '.join(' '.join(str(v) for v in gcp) for gcp in gcps)
+    sink.gcps = gcps
     sink.write(output_file)
 
     written = large_image.open(output_file)
@@ -1036,3 +1040,70 @@ def testGeoreferencing(tmp_path):
     assert sb['xmax'] == bbox[1][0]
     assert sb['ymin'] == bbox[0][1]
     assert sb['ymax'] == bbox[1][1]
+
+
+def testGeoreferencingNoProjection(tmp_path):
+    output_file = tmp_path / 'test.tiff'
+    sink = large_image_source_zarr.new()
+
+    sink.addTile(np.random.random((256, 256, 3)) * 10, x=0, y=0)
+
+    bbox = [
+        # covers lincoln memorial
+        [-77.050923, 38.888728],
+        [-77.049437, 38.889805],
+    ]
+    sink.gcps = [
+        (bbox[0][0], bbox[0][1], 0, 0),
+        (bbox[1][0], bbox[1][1], 256, 256),
+    ]
+    with pytest.warns(Warning):
+        sink.write(output_file)
+    written = large_image.open(output_file)
+    metadata = written.getMetadata()
+    assert metadata.get('geospatial') is None
+
+
+def testGeoreferencingNoGCPs(tmp_path):
+    output_file = tmp_path / 'test.tiff'
+    sink = large_image_source_zarr.new()
+
+    sink.addTile(np.random.random((256, 256, 3)) * 10, x=0, y=0)
+
+    sink.projection = 4326
+    with pytest.warns(Warning):
+        sink.write(output_file)
+    written = large_image.open(output_file)
+    metadata = written.getMetadata()
+    assert metadata.get('geospatial') is None
+
+
+@pytest.mark.parametrize('projection', ['', 'invalid', 'epsg:0', 0])
+def testGeoreferencingInvalidProjection(tmp_path, projection):
+    sink = large_image_source_zarr.new()
+
+    with pytest.raises(TileSourceError):
+        sink.projection = projection
+
+
+@pytest.mark.parametrize('gcps', [
+    '', 0, [], [()], [(), ()], ['50', '100'], [(-77, 38, 0, 0)], '-77 38 0 0',
+])
+def testGeoreferencingInvalidGCPs(tmp_path, gcps):
+    sink = large_image_source_zarr.new()
+
+    with pytest.raises(TileSourceError):
+        sink.gcps = gcps
+
+
+def testGeoreferencingDuplicateGCPs(tmp_path):
+    sink = large_image_source_zarr.new()
+    gcps = [
+        (-77, -38, 0, 0),
+        (-77, -38, 10, 10),
+        (-76, -39, 0, 0),
+        (-76, -39, 10, 10),
+    ]
+    with pytest.warns(Warning):
+        sink.gcps = gcps
+    assert sink.gcps == [(-77, -38, 0, 0), (-76, -39, 10, 10)]
