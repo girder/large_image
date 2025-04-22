@@ -123,6 +123,15 @@ const AnnotationListWidget = View.extend({
             confList: this._confList,
             AccessType
         }));
+        const anySelected = this.$('.g-annotation-select input:checked').length > 0;
+
+        ['.g-annotation-download-selected', '.g-annotation-delete', '.g-annotation-permissions'].forEach(selector => {
+            this.$(`thead ${selector}`)
+            .prop('disabled', !anySelected)
+            .toggleClass('disabled', !anySelected)
+            .css('color', !anySelected ? 'grey' : '');
+        });
+
         return this;
     },
 
@@ -188,9 +197,16 @@ const AnnotationListWidget = View.extend({
         // Prevent event from bubbling up to the row click handler
         // that toggles the annotation on and off
         evt.stopPropagation();
+
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
         const allChecks = this.$el.find('.g-annotation-select input[type=checkbox]')
+        const anySelected = this.$('.g-annotation-select input:checked').length > 0;
+
+        this.$('thead .g-annotation-download-selected, thead .g-annotation-delete, thead .g-annotation-permissions')
+            .prop('disabled', !anySelected)
+            .toggleClass('disabled', !anySelected)
+            .css('color', anySelected ? '' : 'grey');
 
         if (!id) {
             if ($el.is(':checked')) {
