@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.2
+
+### Bug Fixes
+
+- Fix an order of operations issue with config values ([#1886](../../pull/1886))
+
 ## 1.32.1
 
 ### Improvements
