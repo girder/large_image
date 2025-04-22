@@ -10,7 +10,7 @@ if annotations.length
   table.g-annotation-list.table.table-hover.table-condensed
     thead
       th.g-annotation-select
-        input.g-annotation-select-all(type='checkbox' title='Select all annotations for bulk actions' class='pr-2')
+        input.pr-2(type='checkbox', title='Select all annotations for bulk actions')
       th.g-annotation-toggle
         a.g-annotation-toggle-all(class=canDraw ? 'disabled' : '', title='Hide or show all annotations')
           - let anyDrawn = annotations.models.some((annotation) => drawn.has(annotation.id))

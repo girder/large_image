@@ -23,8 +23,8 @@ const AnnotationListWidget = View.extend({
     events: {
         'click .g-annotation-toggle-select': '_displayAnnotation',
         'click .g-annotation-toggle-all': '_displayAllAnnotations',
-        'click .g-annotation-select' : '_selectAnnotation',
-        'click .g-annotation-download-selected' : '_downloadSelectedAnnotations',
+        'click .g-annotation-select': '_selectAnnotation',
+        'click .g-annotation-download-selected': '_downloadSelectedAnnotations',
         'click .g-annotation-delete': '_deleteAnnotation',
         'click .g-annotation-upload': '_uploadAnnotation',
         'click .g-annotation-permissions': '_changePermissions',
@@ -125,11 +125,11 @@ const AnnotationListWidget = View.extend({
         }));
         const anySelected = this.$('.g-annotation-select input:checked').length > 0;
 
-        ['.g-annotation-download-selected', '.g-annotation-delete', '.g-annotation-permissions'].forEach(selector => {
+        ['.g-annotation-download-selected', '.g-annotation-delete', '.g-annotation-permissions'].forEach((selector) => {
             this.$(`thead ${selector}`)
-            .prop('disabled', !anySelected)
-            .toggleClass('disabled', !anySelected)
-            .css('color', !anySelected ? 'grey' : '');
+                .prop('disabled', !anySelected)
+                .toggleClass('disabled', !anySelected)
+                .css('color', !anySelected ? 'grey' : '');
         });
 
         return this;
@@ -200,22 +200,20 @@ const AnnotationListWidget = View.extend({
 
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
-        const allChecks = this.$el.find('.g-annotation-select input[type=checkbox]')
+        const allChecks = this.$el.find('.g-annotation-select input[type=checkbox]');
         const anySelected = this.$('.g-annotation-select input:checked').length > 0;
 
         this.$('thead .g-annotation-download-selected, thead .g-annotation-delete, thead .g-annotation-permissions')
             .prop('disabled', !anySelected)
             .toggleClass('disabled', !anySelected)
             .css('color', anySelected ? '' : 'grey');
-
         if (!id) {
-            if ($el.is(':checked')) {
+            if ($el.find('input').is(':checked')) {
                 allChecks.prop('checked', true);
             }
-            if (!$el.is(':checked')) {
+            if (!$el.find('input').is(':checked')) {
                 allChecks.prop('checked', false);
             }
-            return;
         }
     },
 
@@ -223,9 +221,9 @@ const AnnotationListWidget = View.extend({
         evt.preventDefault();
 
         const selectedAnnotations = this.$('.g-annotation-select input:checked')
-        .closest('.g-annotation-row')
-        .map((_, el) => $(el).data('annotationId'))
-        .get();
+            .closest('.g-annotation-row')
+            .map((_, el) => $(el).data('annotationId'))
+            .get();
 
         selectedAnnotations.forEach((id) => {
             const annotation = this.collection.get(id);
@@ -238,12 +236,11 @@ const AnnotationListWidget = View.extend({
                     document.body.appendChild(downloadAnchor);
                     downloadAnchor.click();
                     document.body.removeChild(downloadAnchor);
+                    return null;
                 });
             }
         });
-
     },
-
 
     _deleteAnnotation(evt) {
         const $el = $(evt.currentTarget);
@@ -261,9 +258,9 @@ const AnnotationListWidget = View.extend({
                         <ul
                           style="max-height: 200px; padding-left: 0; overflow-y: auto;"
                         >${_.map(checkedAnnotationIds, (annotationId) => {
-                            const model = this.collection.get(annotationId);
-                            return `<li>${_.escape(model.get('annotation').name)}</li>`;
-                        }).join('')}</ul>`,
+        const model = this.collection.get(annotationId);
+        return `<li>${_.escape(model.get('annotation').name)}</li>`;
+    }).join('')}</ul>`,
                     escapedHtml: true,
                     yesText: 'Delete',
                     confirmCallback: () => {
@@ -343,7 +340,7 @@ const AnnotationListWidget = View.extend({
                     publicFlags: model.get('publicFlags')
                 };
                 for (let i = 0; i < checkedAnnotationIds.length; i++) {
-                    let selectedModel = this.collection.get(checkedAnnotationIds[i]);
+                    const selectedModel = this.collection.get(checkedAnnotationIds[i]);
                     if (!selectedModel) {
                         continue;
                     }
