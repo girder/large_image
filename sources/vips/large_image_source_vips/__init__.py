@@ -21,8 +21,8 @@ from large_image.tilesource.utilities import _imageToNumpy, _newFromFileLock, ne
 logging.getLogger('pyvips').setLevel(logging.ERROR)
 
 # Default to ignoring files with no extension and some specific extensions.
-config.ConfigValues['source_vips_ignored_names'] = \
-    r'(^[^.]*|\.(yml|yaml|json|png|svs|mrxs))$'
+config.ConfigValues.setdefault(
+    'source_vips_ignored_names', r'(^[^.]*|\.(yml|yaml|json|png|svs|mrxs))$')
 
 
 def _clearVipsCache():
