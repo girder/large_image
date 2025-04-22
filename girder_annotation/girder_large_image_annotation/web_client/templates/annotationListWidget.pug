@@ -1,24 +1,16 @@
 .g-annotation-list-header
-  input.g-annotation-select(type='checkbox' title='Select all annotations for bulk actions' class='pr-2')
   i.icon-pencil
   |  Annotations
   .btn-group.pull-right
     if creationAccess
       a.g-annotation-upload(title='Upload annotation')
         i.icon-upload
-    if annotations.length
-      a.g-annotation-download-selected(title='Download selected annotations')
-        i.icon-download
-    if accessLevel >= AccessType.ADMIN && annotations.length
-      a.g-annotation-permissions(title='Adjust permissions')
-        i.icon-lock
-      a.g-annotation-delete(title='Delete')
-        i.icon-cancel
 
 if annotations.length
   table.g-annotation-list.table.table-hover.table-condensed
     thead
-      th
+      th.g-annotation-select
+        input.g-annotation-select-all(type='checkbox' title='Select all annotations for bulk actions' class='pr-2')
       th.g-annotation-toggle
         a.g-annotation-toggle-all(class=canDraw ? 'disabled' : '', title='Hide or show all annotations')
           - let anyDrawn = annotations.models.some((annotation) => drawn.has(annotation.id))
@@ -34,6 +26,14 @@ if annotations.length
             else
               = `${column.value.substr(0, 1).toUpperCase()}${column.value.substr(1)}`
       th.g-annotation-actions
+        if annotations.length
+          a.g-annotation-download-selected(title='Download selected annotations')
+            i.icon-download
+        if accessLevel >= AccessType.ADMIN && annotations.length
+          a.g-annotation-permissions(title='Adjust permissions')
+            i.icon-lock
+          a.g-annotation-delete(title='Delete')
+            i.icon-cancel
     tbody
       for annotation in annotations.models
         -
