@@ -81,6 +81,7 @@ RUN apt-get update && \
       dnsutils \
       automake \
       rsync \
+      universal-ctags \
       && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
@@ -88,18 +89,6 @@ RUN apt-get update && \
     rm -r /etc/ssh/ssh_host* && \
     rm -rf /usr/share/vim/vim91/doc/* /usr/share/vim/vim91/tutor/* /usr/share/doc && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/*
-
-RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
-    cd ./ctags && \
-    ./autogen.sh && \
-    ./configure && \
-    export CFLAGS="-g0 -Os -DNDEBUG" && \
-    export LDFLAGS="-Wl,--strip-debug,--strip-discarded,--discard-locals" && \
-    make -j `nproc` && \
-    make install -j `nproc`  && \
-    cd .. && \
-    rm -rf ./ctags && \
-    rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /usr/local/bin
 
 RUN pyenv update && \
     pyenv install --list && \
