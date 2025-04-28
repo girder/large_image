@@ -6,6 +6,10 @@
 
 - Allow specifying output path for getRegion ([#1881](../../pull/1881))
 
+### Changes
+
+- Track associated image directory numbers in the tiff source ([#1888](../../pull/1888))
+
 ### Bug Fixes
 
 - Fix an order of operations issue with config values ([#1886](../../pull/1886))
