@@ -2,6 +2,10 @@
 
 ## 1.32.2
 
+### Improvements
+
+- Allow specifying output path for getRegion ([#1881](../../pull/1881))
+
 ### Bug Fixes
 
 - Fix an order of operations issue with config values ([#1886](../../pull/1886))
