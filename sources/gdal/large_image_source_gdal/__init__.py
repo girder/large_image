@@ -985,8 +985,13 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             '-ts', str(int(math.floor(outWidth))), str(int(math.floor(outHeight))),
         ]
 
-        fd, outputPath = tempfile.mkstemp('.tiff', 'tiledGeoRegion_')
-        os.close(fd)
+        outputPath = kwargs.get('output', {}).get('path')
+        if outputPath is not None:
+            outputPath = pathlib.Path(outputPath)
+            outputPath.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            fd, outputPath = tempfile.mkstemp('.tiff', 'tiledGeoRegion_')
+            os.close(fd)
         try:
             self.logger.info('Using gdal warp %r', gdalParams)
             ds = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
