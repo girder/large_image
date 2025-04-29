@@ -28,6 +28,8 @@ class FrameSelector(ipyvue.VueTemplate):  # type: ignore
     updateFrameCallback: Union[Callable, None] = None
     getFrameHistogram: Union[Callable, None] = None
 
+    # register_component_from_file function does not work in Google Colab;
+    # register child components from strings instead
     components = traitlets.Dict({
         'dual-input': dual_input,
         'composite-layers': composite_layers,
