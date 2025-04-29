@@ -29,7 +29,7 @@ def _in_notebook() -> bool:
     :returns: True if we think we are in an interactive notebook.
     """
     try:
-        return get_ipython() is not None
+        return get_ipython() is not None  # type: ignore[name-defined]
     except NameError:
         return False
 
