@@ -29,14 +29,7 @@ def _in_notebook() -> bool:
     :returns: True if we think we are in an interactive notebook.
     """
     try:
-        shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
-        # Jupyter
-        if shell == 'ZMQInteractiveShell':
-            return True
-        # Google Colab
-        if shell == 'Shell':
-            return True
-        return False
+        return get_ipython() is not None
     except NameError:
         return False
 
