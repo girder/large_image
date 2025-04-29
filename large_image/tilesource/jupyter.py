@@ -27,7 +27,7 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 import numpy as np
 
 import large_image
-from large_image.exceptions import TileSourceXYZRangeError, TileSourceError
+from large_image.exceptions import TileSourceError, TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
