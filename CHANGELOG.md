@@ -9,6 +9,7 @@
 ### Changes
 
 - Track associated image directory numbers in the tiff source ([#1888](../../pull/1888))
+- Improve tools to round-trip ometiff xml  ([#1890](../../pull/1890))
 
 ### Bug Fixes
 

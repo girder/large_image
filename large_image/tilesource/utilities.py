@@ -577,9 +577,9 @@ def dictToEtree(
             dictToEtree(v, elem)
         else:
             if k == 'text':
-                root.text = v
+                root.text = str(v)
             else:
-                root.set(k, v)
+                root.set(k, str(v))
     return root
 
 
