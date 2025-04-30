@@ -27,7 +27,7 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 import numpy as np
 
 import large_image
-from large_image.exceptions import TileSourceXYZRangeError
+from large_image.exceptions import TileSourceError, TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
@@ -98,6 +98,10 @@ class IPyLeafletMixin:
 
     def as_leaflet_layer(self, **kwargs) -> Any:
         # NOTE: `as_leaflet_layer` is supported by ipyleaflet.Map.add
+
+        if not getattr(self, '_noCache', False):
+            msg = 'Cannot set the style of a cached source'
+            raise TileSourceError(msg)
 
         if self._jupyter_server_manager is None:
             # Must relaunch to ensure style updates work

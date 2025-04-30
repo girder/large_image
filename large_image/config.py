@@ -24,16 +24,12 @@ fallbackLogger.addHandler(fallbackLogHandler)
 
 def _in_notebook() -> bool:
     """
-    Try to detect if we are in an interactvie notebook.
+    Try to detect if we are in an interactive notebook.
 
     :returns: True if we think we are in an interactive notebook.
     """
     try:
-        shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
-        # Jupyter
-        if shell == 'ZMQInteractiveShell':
-            return True
-        return False
+        return get_ipython() is not None  # type: ignore[name-defined]
     except NameError:
         return False
 

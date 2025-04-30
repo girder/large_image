@@ -6,13 +6,14 @@ import ipyvue
 import traitlets
 
 parent = Path(__file__).parent
-colors_file = parent / 'colors.json'
-with open(colors_file) as f:
+with open(parent / 'colors.json') as f:
     colors_data = json.load(f)
-
-ipyvue.register_component_from_file(None, 'dual-input', parent / 'DualInput.vue')
-ipyvue.register_component_from_file(None, 'composite-layers', parent / 'CompositeLayers.vue')
-ipyvue.register_component_from_file(None, 'histogram-editor', parent / 'HistogramEditor.vue')
+with open(parent / 'DualInput.vue') as f:
+    dual_input = f.read()
+with open(parent / 'CompositeLayers.vue') as f:
+    composite_layers = f.read()
+with open(parent / 'HistogramEditor.vue') as f:
+    histogram_editor = f.read()
 
 
 class FrameSelector(ipyvue.VueTemplate):  # type: ignore
@@ -26,6 +27,14 @@ class FrameSelector(ipyvue.VueTemplate):  # type: ignore
 
     updateFrameCallback: Union[Callable, None] = None
     getFrameHistogram: Union[Callable, None] = None
+
+    # register_component_from_file function does not work in Google Colab;
+    # register child components from strings instead
+    components = traitlets.Dict({
+        'dual-input': dual_input,
+        'composite-layers': composite_layers,
+        'histogram-editor': histogram_editor,
+    }).tag(sync=True)
 
     def vue_frameUpdate(self, data=None):
         frame = int(data.get('frame', 0))

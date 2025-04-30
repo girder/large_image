@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 def testJupyterIpyleafletGeospatial():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    source = large_image.open(imagePath, projection='EPSG:3857')
+    source = large_image.open(imagePath, projection='EPSG:3857', noCache=True)
     assert source.geospatial
     assert source.projection
     source._ipython_display_()  # smoke test
@@ -32,7 +32,7 @@ def testJupyterIpyleafletGeospatial():
 async def testJupyterIpyleafletMultiFrame():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'multi_channels.yml')
-    source = large_image.open(imagePath, projection='EPSG:3857')
+    source = large_image.open(imagePath, projection='EPSG:3857', noCache=True)
     assert source.frames
 
     # get display in same method as _ipython_display_
@@ -76,7 +76,7 @@ async def testJupyterIpyleafletMultiFrame():
 async def testJupyterIpyleaflet():
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'test_orient0.tif')
-    source = large_image.open(imagePath)
+    source = large_image.open(imagePath, noCache=True)
     source._ipython_display_()  # smoke test
     port = source._jupyter_server_manager.port
 
@@ -98,7 +98,7 @@ def testJupyterIpyleafletMapRegion():
 
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'test_orient0.tif')
-    source = large_image.open(imagePath)
+    source = large_image.open(imagePath, noCache=True)
     display = source._map.make_map(
         source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326'),
     )
@@ -134,7 +134,7 @@ def testJupyterIpyleafletMapGeospatialRegion():
 
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
-    source = large_image.open(imagePath, projection='EPSG:3857')
+    source = large_image.open(imagePath, projection='EPSG:3857', noCache=True)
     display = source._map.make_map(
         source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326'),
     )
