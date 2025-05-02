@@ -1324,30 +1324,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._validateZarr()  # refresh self._levels before continuing
 
     def _applyGeoReferencing(self, path):
-        if self.projection is not None and self.gcps is None:
+        if self.projection and not self.gcps:
             msg = (
                 'Projection was specified but GCPs were not specified. '
-                'Output will not be georeferenced.'
+                'Cannot write georeferenced file.'
             )
-            warnings.warn(msg, stacklevel=2)
-        if self.projection is None and self.gcps is not None:
-            msg = (
-                'GCPs were specified but projection was not specified. '
-                'Output will not be georeferenced.'
-            )
-            warnings.warn(msg, stacklevel=2)
+            raise TileSourceError(msg)
+        import tifftools
 
-        if (
-            self.projection is not None and
-            self.gcps is not None and
-            len(self.gcps)
-        ):
-            import tifftools
+        setlist = []
+        if self.projection is not None:
+            setlist.append(('projection', self.projection))
+        if self.gcps is not None and len(self.gcps):
+            setlist.append(('gcps', self.gcps))
 
-            tifftools.tiff_set(path, setlist=[
-                ('projection', self.projection),
-                ('gcps', self.gcps),
-            ], overwrite=True)
+        tifftools.tiff_set(path, setlist=setlist, overwrite=True)
 
     def write(
         self,

@@ -1057,8 +1057,7 @@ def testGeoreferencingNoProjection(tmp_path):
         (bbox[0][0], bbox[0][1], 0, 0),
         (bbox[1][0], bbox[1][1], 256, 256),
     ]
-    with pytest.warns(Warning):
-        sink.write(output_file)
+    sink.write(output_file)
     written = large_image.open(output_file)
     metadata = written.getMetadata()
     assert metadata.get('geospatial') is None
@@ -1071,7 +1070,7 @@ def testGeoreferencingNoGCPs(tmp_path):
     sink.addTile(np.random.random((256, 256, 3)) * 10, x=0, y=0)
 
     sink.projection = 4326
-    with pytest.warns(Warning):
+    with pytest.raises(TileSourceError):
         sink.write(output_file)
     written = large_image.open(output_file)
     metadata = written.getMetadata()
