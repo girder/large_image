@@ -6,6 +6,10 @@
 
 - Parallelize storing cached thumbnails and images ([#1885](../../pull/1885))
 
+### Bug Fixes
+
+- Fix Frame Selector component in Colab Notebooks ([#1889](../../pull/1889))
+
 ## 1.32.2
 
 ### Improvements
