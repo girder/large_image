@@ -39,6 +39,9 @@ from .. import constants, girder_tilesource
 
 
 class ImageItem(Item):
+    _cacheSaveDataLock = threading.RLock()
+    _cacheSaveDataThreads = []
+
     # We try these sources in this order.  The first entry is the fallback for
     # items that antedate there being multiple options.
     def initialize(self):
@@ -419,6 +422,58 @@ class ImageItem(Item):
         return self.getAndCacheImageOrDataRun(
             checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs)
 
+    def _saveDataFile(self, item, imageMime, dataStored, key, pickleCache, keylock, lockkey):
+        with keylock:
+            # Save the data as a file
+            try:
+                datafile = Upload().uploadFromFile(
+                    io.BytesIO(dataStored), size=len(dataStored),
+                    name='_largeImageThumbnail', parentType='item', parent=item,
+                    user=None, mimeType=imageMime, attachParent=True)
+                if not len(dataStored) and 'received' in datafile:
+                    datafile = Upload().finalizeUpload(
+                        datafile, Assetstore().load(datafile['assetstoreId']))
+                datafile.update({
+                    'isLargeImageThumbnail' if not pickleCache else
+                    'isLargeImageData': True,
+                    'thumbnailKey': key,
+                })
+                # Ideally, we would check that the file is still wanted before
+                # we save it.  This is probably impossible without true
+                # transactions in Mongo.
+                File().save(datafile)
+            except (GirderException, PermissionError, FileNotFoundError):
+                logger.warning('Could not cache data for large image')
+            finally:
+                with self._getAndCacheImageOrDataLock['lock']:
+                    self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
+
+    def cacheSaveDataManagement(self, timeout=0.0):
+        """
+        Check any of the threads used for caching data from slow functions and
+        join those that are finished.
+
+        :param timeout: 0 to return without blocking, just harvesting the
+            finished threads.  None to block until all are finished.  Since all
+            threads will be checked, specifying a positive timeout will
+            possibly take that long times the number of threads.
+        :returns: the number of active threads
+        """
+        with self._cacheSaveDataLock:
+            numthreads = len(self._cacheSaveDataThreads)
+        for idx in range(numthreads - 1, -1, -1):
+            with self._cacheSaveDataLock:
+                if idx >= len(self._cacheSaveDataThreads):
+                    continue
+                t = self._cacheSaveDataThreads[idx]
+            t.join(timeout)
+            if not t.is_alive():
+                with self._cacheSaveDataLock:
+                    self._cacheSaveDataThreads.remove(t)
+        with self._cacheSaveDataLock:
+            numthreads = len(self._cacheSaveDataThreads)
+        return numthreads
+
     def getAndCacheImageOrDataRun(
             self, checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs):
         """
@@ -428,6 +483,7 @@ class ImageItem(Item):
             if lockkey not in self._getAndCacheImageOrDataLock['keys']:
                 self._getAndCacheImageOrDataLock['keys'][lockkey] = threading.Lock()
             keylock = self._getAndCacheImageOrDataLock['keys'][lockkey]
+        nounlock = False
         with keylock:
             logger.debug('Computing %r', (lockkey, ))
             try:
@@ -452,30 +508,20 @@ class ImageItem(Item):
                         pickleCache or isinstance(imageData, bytes))):
                     dataStored = imageData if not pickleCache else pickle.dumps(
                         imageData, protocol=4)
-                    # Save the data as a file
-                    try:
-                        datafile = Upload().uploadFromFile(
-                            io.BytesIO(dataStored), size=len(dataStored),
-                            name='_largeImageThumbnail', parentType='item', parent=item,
-                            user=None, mimeType=imageMime, attachParent=True)
-                        if not len(dataStored) and 'received' in datafile:
-                            datafile = Upload().finalizeUpload(
-                                datafile, Assetstore().load(datafile['assetstoreId']))
-                        datafile.update({
-                            'isLargeImageThumbnail' if not pickleCache else
-                            'isLargeImageData': True,
-                            'thumbnailKey': key,
-                        })
-                        # Ideally, we would check that the file is still wanted before
-                        # we save it.  This is probably impossible without true
-                        # transactions in Mongo.
-                        File().save(datafile)
-                    except (GirderException, PermissionError):
-                        logger.warning('Could not cache data for large image')
+                    self.cacheSaveDataManagement()
+                    with self._cacheSaveDataLock:
+                        t = threading.Thread(
+                            target=self._saveDataFile,
+                            args=(item, imageMime, dataStored, key, pickleCache, keylock, lockkey),
+                            daemon=True)
+                        t.start()
+                        self._cacheSaveDataThreads.append(t)
+                    nounlock = True
                 return imageData, imageMime
             finally:
-                with self._getAndCacheImageOrDataLock['lock']:
-                    self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
+                if not nounlock:
+                    with self._getAndCacheImageOrDataLock['lock']:
+                        self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
 
     def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None,
                              onlyList=False, **kwargs):

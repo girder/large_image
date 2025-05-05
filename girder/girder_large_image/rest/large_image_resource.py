@@ -102,7 +102,10 @@ def createThumbnailsJobLog(job, info, prefix='', status=None):
         msg += 'Failed on %d thumbnail file%s (last failure on item %s)\n' % (
             info['failed'],
             's' if info['failed'] != 1 else '', info['lastFailed'])
-    job = Job().updateJob(job, log=msg, status=status)
+    try:
+        job = Job().updateJob(job, log=msg, status=status)
+    except TypeError:
+        pass
     return job, msg
 
 
@@ -115,7 +118,7 @@ def cursorNextOrNone(cursor):
     :returns: the next value or None.
     """
     try:
-        return cursor.next()
+        return cursor.next()  # B305
     except StopIteration:
         return None
 
