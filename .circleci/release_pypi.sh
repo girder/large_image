@@ -5,7 +5,7 @@ set -e
 ROOTPATH=`pwd`
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=`python -m setuptools_scm | sed "s/.* //"`
-if [ ${CIRCLE_BRANCH-:} = "master" ]; then
+if [ "${CIRCLE_BRANCH-:}" = "master" ]; then
     export SETUPTOOLS_SCM_PRETEND_VERSION=`echo $SETUPTOOLS_SCM_PRETEND_VERSION | sed "s/\+.*$//"`
 elif [ "${CIRCLE_BRANCH-:}" == "girder-5" ]; then
     pip install setuptools-scm

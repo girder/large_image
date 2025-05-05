@@ -361,7 +361,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         self._addMetadataFrameInformation(result, channels)
         return result
 
-    def _reduceInternalMetadata(self, result, entry, prefix=''):  # noqa
+    def _reduceInternalMetadata(self, result, entry, prefix='', refs=None):  # noqa
         starts = ['StructuredAnnotations:OriginalMetadata:Series 0 ',
                   'StructuredAnnotations:OriginalMetadata:']
         for start in starts:
@@ -374,27 +374,38 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                     pkey = ''
                 if isinstance(val, dict):
                     if 'ID' in val and 'Value' in val:
-                        self._reduceInternalMetadata(result, val['Value'], prefix)
+                        self._reduceInternalMetadata(result, val['Value'], prefix, refs)
                     elif 'Key' in val and 'Value' in val:
-                        result[f'{pkey}:{val["Key"]}'.strip(':')] = val['Value']
+                        rkey = f'{pkey}:{val["Key"]}'.strip(':')
+                        result[rkey] = val['Value']
+                        if refs:
+                            refs[rkey] = (entry, key, None, 'Value')
                     else:
-                        self._reduceInternalMetadata(result, val, pkey)
+                        self._reduceInternalMetadata(result, val, pkey, refs)
                 elif isinstance(val, list):
                     for subidx, subval in enumerate(val):
                         if isinstance(subval, dict):
                             if 'ID' in subval and 'Value' in subval:
-                                self._reduceInternalMetadata(result, subval['Value'], prefix)
+                                self._reduceInternalMetadata(result, subval['Value'], prefix, refs)
                             elif 'Key' in subval and 'Value' in subval:
-                                result[f'{pkey}:{subval["Key"]}'] = subval['Value']
+                                rkey = f'{pkey}:{subval["Key"]}'
+                                result[rkey] = subval['Value']
+                                if refs:
+                                    refs[rkey] = (entry, key, subidx, 'Value')
                             else:
                                 self._reduceInternalMetadata(
-                                    result, subval, f'{pkey}:{subidx}'.strip(':'))
+                                    result, subval, f'{pkey}:{subidx}'.strip(':'), refs)
                         elif not isinstance(subval, list):
-                            result[f'{pkey}:{subidx}'.strip(':')] = subval
+                            rkey = f'{pkey}:{subidx}'.strip(':')
+                            result[rkey] = subval
+                            if refs:
+                                refs[rkey] = (entry, key, subidx, None)
                 elif key == 'ID' and str(val).split(':')[0] in prefix:
                     continue
                 elif val != '' and pkey:
                     result[pkey] = val
+                    if refs:
+                        refs[pkey] = (entry, key, None, None)
 
     def getInternalMetadata(self, **kwargs):
         """

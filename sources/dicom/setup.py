@@ -43,7 +43,6 @@ setup(
     author_email='kitware@kitware.com',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',

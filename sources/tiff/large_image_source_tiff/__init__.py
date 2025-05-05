@@ -514,6 +514,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
            image.
         :param imageId: if specified, use this as the image name.
         """
+        if not hasattr(self, '_associatedImagesDir'):
+            self._associatedImagesDir = {'images': {}, 'dirs': {}}
+        self._associatedImagesDir['dirs'][directoryNum] = None
         try:
             associated = self.getTiffDir(directoryNum, mustBeTiled)
             id = ''
@@ -548,6 +551,8 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     return
                 image = self._reorient_numpy_image(image, associated._tiffInfo.get('orientation'))
                 self._associatedImages[id] = image
+                self._associatedImagesDir['images'][id] = directoryNum
+                self._associatedImagesDir['dirs'][directoryNum] = id
         except (TiffError, AttributeError):
             # If we can't validate or read an associated image or it has no
             # useful imagedescription, fail quietly without adding an

@@ -60,8 +60,8 @@ except PackageNotFoundError:
 warnings.filterwarnings('ignore', category=UserWarning, module='.*PIL.*')
 
 # Default to ignoring files with some specific extensions.
-config.ConfigValues['source_pil_ignored_names'] = \
-    r'(\.mrxs|\.vsi)$'
+config.ConfigValues.setdefault(
+    'source_pil_ignored_names', r'(\.mrxs|\.vsi)$')
 
 
 def getMaxSize(size=None, maxDefault=4096):

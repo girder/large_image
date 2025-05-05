@@ -1,5 +1,30 @@
 # Change Log
 
+## 1.32.3
+
+### Improvements
+
+- Parallelize storing cached thumbnails and images ([#1885](../../pull/1885))
+
+### Bug Fixes
+
+- Fix Frame Selector component in Colab Notebooks ([#1889](../../pull/1889))
+
+## 1.32.2
+
+### Improvements
+
+- Allow specifying output path for getRegion ([#1881](../../pull/1881))
+
+### Changes
+
+- Track associated image directory numbers in the tiff source ([#1888](../../pull/1888))
+- Improve tools to round-trip ometiff xml  ([#1890](../../pull/1890))
+
+### Bug Fixes
+
+- Fix an order of operations issue with config values ([#1886](../../pull/1886))
+
 ## 1.32.1
 
 ### Improvements

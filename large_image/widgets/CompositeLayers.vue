@@ -504,14 +504,14 @@ export default {
     cursor: pointer;
 }
 .picker{
-    background-color: white;
+    background-color: transparent;
     border: none;
     width: 100%
 }
 .table-header {
     position: sticky;
     top: 0px;
-    background-color: white;
+    background-color: transparent;
     z-index: 2;
     border-bottom: 3px solid !important;
 }
