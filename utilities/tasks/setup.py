@@ -27,7 +27,6 @@ setup(
     author_email='kitware@kitware.com',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
-        'License :: OSI Approved :: Apache Software License',
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
