@@ -372,8 +372,9 @@ describe('AnnotationListWidget', function () {
             }, 'the upload to finish');
         });
         it('test header permission editor link', function () {
-            var $el = $('.g-annotation-list-header');
-            expect($el.find('.g-annotation-permissions').length).toBe(1);
+            var $el = $('.g-annotation-list');
+            expect($el.find('th .g-annotation-permissions').length).toBe(1);
+            $el.find('th.g-annotation-select input').click();
             $el.find('.g-annotation-permissions').click();
 
             girderTest.waitForDialog();
@@ -384,8 +385,9 @@ describe('AnnotationListWidget', function () {
             girderTest.waitForLoad();
         });
         it('test header delete link', function () {
-            var $el = $('.g-annotation-list-header');
-            expect($el.find('.g-annotation-delete').length).toBe(1);
+            var $el = $('.g-annotation-list');
+            expect($el.find('th .g-annotation-delete').length).toBe(1);
+            $el.find('th.g-annotation-select input').click();
             $el.find('.g-annotation-delete').click();
 
             girderTest.waitForDialog();
