@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.4
+
+### Improvements
+
+- Zarr sink: Set projection and GCPs ([#1882](../../pull/1882))
+
 ## 1.32.3
 
 ### Improvements
