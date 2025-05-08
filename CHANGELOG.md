@@ -5,10 +5,12 @@
 ### Improvements
 
 - Zarr sink: Set projection and GCPs ([#1882](../../pull/1882))
+- Debounce frame update in FrameSelector in jupyter widget ([#1894](../../pull/1894))
 
 ### Bug Fixes
 
-- Change where locking occurs with bioformats ([#1896](../../pull/1896), [#1897](../../pull/1897))
+- Change where locking occurs with bioformats ([#1896](../../pull/1896), [#1898](../../pull/1898))
+- vips could use too much memory during image conversion ([#1899](../../pull/1899))
 
 ## 1.32.3
 
