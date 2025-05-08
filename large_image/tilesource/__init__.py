@@ -321,7 +321,7 @@ def listMimeTypes(
 
 __all__ = [
     'TileSource', 'FileTileSource',
-    'exceptions', 'TileGeneralError', 'TileSourceError',
+    'TileGeneralError', 'TileSourceError',
     'TileSourceAssetstoreError', 'TileSourceFileNotFoundError',
     'TileGeneralException', 'TileSourceException', 'TileSourceAssetstoreException',
     'TileOutputMimeTypes', 'TILE_FORMAT_IMAGE', 'TILE_FORMAT_PIL', 'TILE_FORMAT_NUMPY',

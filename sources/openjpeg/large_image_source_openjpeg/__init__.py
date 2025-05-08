@@ -251,7 +251,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _readbox(self, box):
         if box.length > 16 * 1024 * 1024:
-            return
+            return None
         try:
             fp = builtins.open(self._largeImagePath, 'rb')
             headerLength = 16

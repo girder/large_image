@@ -22,6 +22,7 @@ from osgeo import gdal
 
 from girder import logger
 from girder.models.file import File
+from large_image.config import getConfig
 
 from . import GDALFileTileSource
 
@@ -37,7 +38,8 @@ class GDALGirderTileSource(GDALFileTileSource, GirderTileSource):
     @staticmethod
     def getLRUHash(*args, **kwargs):
         return GirderTileSource.getLRUHash(*args, **kwargs) + ',%s,%s' % (
-            kwargs.get('projection', args[1] if len(args) >= 2 else None),
+            kwargs.get('projection', args[1] if len(args) >= 2 else None) or
+            getConfig('default_projection'),
             kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None))
 
     def _getLargeImagePath(self):
@@ -53,7 +55,7 @@ class GDALGirderTileSource(GDALFileTileSource, GirderTileSource):
                     not largeImageFile.get('assetstoreId') and
                     re.match(r'(http(|s)|ftp)://', largeImageFile['linkUrl'])):
                 largeImagePath = '/vsicurl/' + largeImageFile['linkUrl']
-                logger.info('Using %s' % largeImagePath)
+                logger.info('Using %s', largeImagePath)
                 return largeImagePath
         except Exception:
             pass

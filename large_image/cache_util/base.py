@@ -30,7 +30,7 @@ class BaseCache(cachetools.Cache):
         """
         curtime = time.time()
         key = (err, func)
-        if (curtime - self.lastError.get(key, {}).get('time', 0) > self.throttleErrors):
+        if curtime - self.lastError.get(key, {}).get('time', 0) > self.throttleErrors:
             skipped = self.lastError.get(key, {}).get('skipped', 0)
             if skipped:
                 msg += '  (%d similar messages)' % skipped

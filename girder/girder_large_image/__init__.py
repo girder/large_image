@@ -240,7 +240,7 @@ def checkForLargeImageFiles(event):  # noqa
                 pass
     # We couldn't automatically set this as a large image
     girder.logger.info(
-        'Saved file %s cannot be automatically used as a largeImage' % str(file['_id']))
+        'Saved file %s cannot be automatically used as a largeImage', str(file['_id']))
 
 
 def removeThumbnails(event):
@@ -411,7 +411,7 @@ def metadataSearchHandler(  # noqa
         return []
     filter = {'$and': filter} if len(filter) > 1 else filter[0]
     result = {}
-    logger.debug('Metadata search uses filter: %r' % filter)
+    logger.debug('Metadata search uses filter: %r', filter)
     for model in searchModels or types:
         modelInst = ModelImporter.model(*model if isinstance(model, tuple) else [model])
         if searchModels is None:
@@ -428,11 +428,16 @@ def metadataSearchHandler(  # noqa
                 if id in foundIds:
                     continue
                 foundIds.add(id)
-                entry = resultModelInst.load(id=id, user=user, level=level, exc=False)
+                try:
+                    entry = resultModelInst.load(id=id, user=user, level=level, exc=False)
+                except Exception:
+                    # We might have permission to view an annotation but not
+                    # the item
+                    continue
                 if entry is not None and offset:
                     offset -= 1
                     continue
-                elif entry is not None:
+                if entry is not None:
                     result[searchModels[model]['model']].append(resultModelInst.filter(entry, user))
                     if limit and len(result[searchModels[model]['model']]) == limit:
                         break
@@ -500,14 +505,17 @@ def adjustConfigForUser(config, user):
     return config
 
 
-def addSettingsToConfig(config, user):
+def addSettingsToConfig(config, user, name=None):
     """
     Add the settings for showing thumbnails and images in item lists to a
     config file if the itemList or itemListDialog options are not set.
 
     :param config: the config dictionary to modify.
     :param user: the current user.
+    :param name: the name of the config file.
     """
+    if name and name != '.large_image_config.yaml':
+        return
     columns = []
 
     showThumbnails = Setting().get(constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS)
@@ -533,7 +541,7 @@ def addSettingsToConfig(config, user):
                 columns.append({'type': 'image', 'value': value, 'title': value.title()})
 
     columns.append({'type': 'record', 'value': 'name', 'title': 'Name'})
-    columns.append({'type': 'record', 'value': 'controls', 'title': 'Contols'})
+    columns.append({'type': 'record', 'value': 'controls', 'title': 'Controls'})
     columns.append({'type': 'record', 'value': 'size', 'title': 'Size'})
 
     if 'itemList' not in config:
@@ -558,7 +566,7 @@ def yamlConfigFile(folder, name, user):
         if item:
             for file in Item().childFiles(item):
                 if file['size'] > 10 * 1024 ** 2:
-                    logger.info('Not loading %s -- too large' % file['name'])
+                    logger.info('Not loading %s -- too large', file['name'])
                     continue
                 with File().open(file) as fptr:
                     config = yaml.safe_load(fptr)
@@ -596,7 +604,7 @@ def yamlConfigFile(folder, name, user):
             folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
 
     addConfig = {} if addConfig is None else addConfig
-    addSettingsToConfig(addConfig, user)
+    addSettingsToConfig(addConfig, user, name)
     return addConfig
 
 
@@ -650,7 +658,7 @@ def validateBoolean(doc):
     val = doc['value']
     if str(val).lower() not in ('false', 'true', ''):
         raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
-    doc['value'] = (str(val).lower() != 'false')
+    doc['value'] = str(val).lower() != 'false'
 
 
 @setting_utilities.validator({
@@ -667,7 +675,7 @@ def validateBooleanOrICCIntent(doc):
         if str(val).lower() not in ('false', 'true', ''):
             raise ValidationException(
                 '%s must be a boolean or a named intent.' % doc['key'], 'value')
-        doc['value'] = (str(val).lower() != 'false')
+        doc['value'] = str(val).lower() != 'false'
 
 
 @setting_utilities.validator({

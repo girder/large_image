@@ -105,6 +105,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             msg = 'Not a recognized OME Tiff'
             raise TileSourceError(msg)
         info = getattr(base, '_description_record', None)
+        self._associatedImages = {}
         if not info or not info.get('OME'):
             msg = 'Not an OME Tiff'
             raise TileSourceError(msg)
@@ -115,6 +116,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         except KeyError:
             msg = 'Not a recognized OME Tiff'
             raise TileSourceError(msg)
+        usesSubIfds = self._checkForSubIfds(base)
         omeimages = [
             entry['Pixels'] for entry in self._omeinfo['Image'] if
             len(entry['Pixels']['TiffData']) == len(self._omebase['TiffData'])]
@@ -125,10 +127,16 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         omebylevel = dict(zip(levels, omeimages))
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
         if base._tiffInfo.get('istiled'):
+            if usesSubIfds:
+                self._omeLevels = [None] * max(usesSubIfds) + [self._omeLevels[-1]]
             self._tiffDirectories = [
                 self.getTiffDir(int(entry['TiffData'][0].get('IFD', 0)))
                 if entry else None
                 for entry in self._omeLevels]
+            if usesSubIfds:
+                for lvl in usesSubIfds:
+                    if self._tiffDirectories[lvl] is None:
+                        self._tiffDirectories[lvl] = False
         else:
             self._tiffDirectories = [
                 self.getTiffDir(0, mustBeTiled=None)
@@ -149,7 +157,6 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         # We can get the embedded images, but we don't currently use non-tiled
         # images as associated images.  This would require enumerating tiff
         # directories not mentioned by the ome list.
-        self._associatedImages = {}
         self._checkForInefficientDirectories()
 
     def _checkForOMEZLoop(self):
@@ -199,10 +206,47 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         info['Image']['Pixels']['PlanesFromZloop'] = 'true'
         info['Image']['Pixels']['SizeZ'] = str(zloop)
 
+    def _checkForSubIfds(self, base):
+        """
+        Check if the first ifd has sub-ifds.  If so, expect lower resolutions
+        to be in subifds, not in primary ifds.
+
+        :param base: base tiff directory
+        :returns: either False if no subifds are lower resolution, or a
+            dictionary of levels (keys) and values that are subifd numbers.
+        """
+        try:
+            levels = int(max(0, math.ceil(max(
+                math.log(float(base.imageWidth) / base.tileWidth),
+                math.log(float(base.imageHeight) / base.tileHeight)) / math.log(2))) + 1)
+            filled = {}
+            for z in range(levels - 2, -1, -1):
+                subdir = levels - 1 - z
+                scale = int(2 ** subdir)
+                try:
+                    dir = self.getTiffDir(0, mustBeTiled=True, subDirectoryNum=subdir)
+                except Exception:
+                    continue
+                if (dir is not None and
+                        (dir.tileWidth in {base.tileWidth, dir.imageWidth}) and
+                        (dir.tileHeight in {base.tileHeight, dir.imageHeight}) and
+                        abs(dir.imageWidth * scale - base.imageWidth) <= scale and
+                        abs(dir.imageHeight * scale - base.imageHeight) <= scale):
+                    filled[z] = subdir
+            if not len(filled):
+                return False
+            filled[levels - 1] = 0
+            return filled
+        except TiffError:
+            return False
+
     def _parseOMEInfo(self):  # noqa
         if isinstance(self._omeinfo['Image'], dict):
             self._omeinfo['Image'] = [self._omeinfo['Image']]
         for img in self._omeinfo['Image']:
+            if isinstance(img['Pixels'], list):
+                msg = 'OME Tiff has multiple pixels'
+                raise TileSourceError(msg)
             if isinstance(img['Pixels'].get('TiffData'), dict):
                 img['Pixels']['TiffData'] = [img['Pixels']['TiffData']]
             if isinstance(img['Pixels'].get('Plane'), dict):
@@ -241,6 +285,32 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                     for entry in self._omebase['TiffData']}) > 1:
                 msg = 'OME Tiff references multiple files'
                 raise TileSourceError(msg)
+            if (len(self._omebase['TiffData']) ==
+                    int(self._omebase['SizeT']) * int(self._omebase['SizeZ'])):
+                self._omebase['SizeC'] = 1
+                for img in self._omeinfo['Image'][1:]:
+                    try:
+                        if img['Name'] and img['Pixels']['TiffData'][0]['IFD']:
+                            self._addAssociatedImage(
+                                int(img['Pixels']['TiffData'][0]['IFD']),
+                                None, None, img['Name'].split()[0])
+                    except Exception:
+                        pass
+            elif len(self._omeinfo['Image']) > 1:
+                multiple = False
+                for img in self._omeinfo['Image'][1:]:
+                    try:
+                        bpix = self._omeinfo['Image'][0]['Pixels']
+                        imgpix = img['Pixels']
+                        if imgpix['SizeX'] == bpix['SizeX'] and imgpix['SizeY'] == bpix['SizeY']:
+                            multiple = True
+                            break
+                    except Exception:
+                        multiple = True
+                if multiple:
+                    # We should handle this as SizeXY
+                    msg = 'OME Tiff references multiple images'
+                    raise TileSourceError(msg)
             if (len(self._omebase['TiffData']) != int(self._omebase['SizeC']) *
                     int(self._omebase['SizeT']) * int(self._omebase['SizeZ']) or
                     len(self._omebase['TiffData']) != len(
@@ -285,10 +355,57 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         for frame in result['frames']:
             for key in reftbl:
                 if key in frame and reftbl[key] not in frame:
-                    frame[reftbl[key]] = int(frame[key])
+                    if int(frame[key]) < len(result['frames']):
+                        frame[reftbl[key]] = int(frame[key])
                 frame.pop(key, None)
         self._addMetadataFrameInformation(result, channels)
         return result
+
+    def _reduceInternalMetadata(self, result, entry, prefix='', refs=None):  # noqa
+        starts = ['StructuredAnnotations:OriginalMetadata:Series 0 ',
+                  'StructuredAnnotations:OriginalMetadata:']
+        for start in starts:
+            if prefix.startswith(start):
+                prefix = prefix[len(start):]
+        if isinstance(entry, dict):
+            for key, val in entry.items():
+                pkey = f'{prefix}:{key}'.strip(':')
+                if pkey in starts or (pkey + ':') in starts:
+                    pkey = ''
+                if isinstance(val, dict):
+                    if 'ID' in val and 'Value' in val:
+                        self._reduceInternalMetadata(result, val['Value'], prefix, refs)
+                    elif 'Key' in val and 'Value' in val:
+                        rkey = f'{pkey}:{val["Key"]}'.strip(':')
+                        result[rkey] = val['Value']
+                        if refs:
+                            refs[rkey] = (entry, key, None, 'Value')
+                    else:
+                        self._reduceInternalMetadata(result, val, pkey, refs)
+                elif isinstance(val, list):
+                    for subidx, subval in enumerate(val):
+                        if isinstance(subval, dict):
+                            if 'ID' in subval and 'Value' in subval:
+                                self._reduceInternalMetadata(result, subval['Value'], prefix, refs)
+                            elif 'Key' in subval and 'Value' in subval:
+                                rkey = f'{pkey}:{subval["Key"]}'
+                                result[rkey] = subval['Value']
+                                if refs:
+                                    refs[rkey] = (entry, key, subidx, 'Value')
+                            else:
+                                self._reduceInternalMetadata(
+                                    result, subval, f'{pkey}:{subidx}'.strip(':'), refs)
+                        elif not isinstance(subval, list):
+                            rkey = f'{pkey}:{subidx}'.strip(':')
+                            result[rkey] = subval
+                            if refs:
+                                refs[rkey] = (entry, key, subidx, None)
+                elif key == 'ID' and str(val).split(':')[0] in prefix:
+                    continue
+                elif val != '' and pkey:
+                    result[pkey] = val
+                    if refs:
+                        refs[pkey] = (entry, key, None, None)
 
     def getInternalMetadata(self, **kwargs):
         """
@@ -298,7 +415,13 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
 
         :returns: a dictionary of data or None.
         """
-        return {'omeinfo': self._omeinfo}
+        result = {'omeinfo': self._omeinfo}
+        try:
+            result['omereduced'] = {}
+            self._reduceInternalMetadata(result['omereduced'], self._omeinfo)
+        except Exception:
+            pass
+        return result
 
     def getNativeMagnification(self):
         """
@@ -343,8 +466,8 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         if subdir:
             scale = int(2 ** subdir)
             if (dir is None or
-                    (dir.tileWidth != self.tileWidth and dir.tileWidth != dir.imageWidth) or
-                    (dir.tileHeight != self.tileHeight and dir.tileHeight != dir.imageHeight) or
+                    (dir.tileWidth not in {self.tileWidth, dir.imageWidth}) or
+                    (dir.tileHeight not in {self.tileHeight, dir.imageHeight}) or
                     abs(dir.imageWidth * scale - self.sizeX) > scale or
                     abs(dir.imageHeight * scale - self.sizeY) > scale):
                 return super().getTile(

@@ -18,7 +18,6 @@
 # Constants representing the setting keys for this plugin
 class PluginSettings:
     LARGE_IMAGE_AUTO_SET = 'large_image.auto_set'
-    LARGE_IMAGE_AUTO_USE_ALL_FILES = 'large_image.auto_use_all_files'
     LARGE_IMAGE_CONFIG_FOLDER = 'large_image.config_folder'
     LARGE_IMAGE_DEFAULT_VIEWER = 'large_image.default_viewer'
     LARGE_IMAGE_ICC_CORRECTION = 'large_image.icc_correction'

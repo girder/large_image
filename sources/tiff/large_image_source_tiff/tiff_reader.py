@@ -447,12 +447,11 @@ class TiledTiffDirectory:
 
         if tileByteCountsLibtiffType == libtiff_ctypes.TIFFDataType.TIFF_LONG8:
             return ctypes.c_uint64
-        elif tileByteCountsLibtiffType == \
+        if tileByteCountsLibtiffType == \
                 libtiff_ctypes.TIFFDataType.TIFF_SHORT:
             return ctypes.c_uint16
-        else:
-            raise IOTiffError(
-                'Invalid type for TIFFTAG_TILEBYTECOUNTS: %s' % tileByteCountsLibtiffType)
+        raise IOTiffError(
+            'Invalid type for TIFFTAG_TILEBYTECOUNTS: %s' % tileByteCountsLibtiffType)
 
     def _getJpegFrameSize(self, tileNum):
         """
@@ -529,10 +528,10 @@ class TiledTiffDirectory:
         if bytesRead == -1:
             msg = 'Failed to read raw tile'
             raise IOTiffError(msg)
-        elif bytesRead < rawTileSize:
+        if bytesRead < rawTileSize:
             msg = 'Buffer underflow when reading tile'
             raise IOTiffError(msg)
-        elif bytesRead > rawTileSize:
+        if bytesRead > rawTileSize:
             # It's unlikely that this will ever occur, but incomplete reads will
             # be checked for by looking for the JPEG end marker
             msg = 'Buffer overflow when reading tile'
@@ -788,11 +787,13 @@ class TiledTiffDirectory:
 
         if (not self._tiffInfo.get('istiled') or
                 self._tiffInfo.get('compression') not in {
-                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33005, 34712} or
+                    libtiff_ctypes.COMPRESSION_JPEG, 33003, 33004, 33005, 34712} or
                 self._tiffInfo.get('bitspersample') != 8 or
                 self._tiffInfo.get('sampleformat') not in {
                     None, libtiff_ctypes.SAMPLEFORMAT_UINT} or
-                (asarray and self._tiffInfo.get('compression') not in {33003, 33005, 34712} and (
+                (asarray and self._tiffInfo.get('compression') not in {
+                    33003, 33004, 33005, 34712,
+                } and (
                     self._tiffInfo.get('compression') != libtiff_ctypes.COMPRESSION_JPEG or
                     self._tiffInfo.get('photometric') != libtiff_ctypes.PHOTOMETRIC_YCBCR))):
             return self._getUncompressedTile(tileNum)
@@ -811,7 +812,7 @@ class TiledTiffDirectory:
         # Get the whole frame, which is in a JPEG or JPEG 2000 format
         frame = self._getJpegFrame(tileNum, True)
         # For JP2K, see if we can convert it faster than PIL
-        if self._tiffInfo.get('compression') in {33003, 33005}:
+        if self._tiffInfo.get('compression') in {33003, 33004, 33005, 34712}:
             try:
                 import openjpeg
 
@@ -836,7 +837,7 @@ class TiledTiffDirectory:
         self._embeddedImages = {}
 
         if not meta:
-            return
+            return None
         if not isinstance(meta, str):
             meta = meta.decode(errors='ignore')
         try:
@@ -858,7 +859,7 @@ class TiledTiffDirectory:
                         meta.split('|MPP = ', 1)[1].split('|')[0].strip()) * 0.001
                 except Exception:
                     pass
-            return
+            return None
         try:
             image = xml.find(
                 ".//DataObject[@ObjectType='DPScannedImage']")
@@ -894,3 +895,26 @@ class TiledTiffDirectory:
         except Exception:
             pass
         return True
+
+    def read_image(self):
+        """
+        Use the underlying _tiffFile to read an image.  But, if it is in a jp2k
+        encoding, read the raw data and convert it.
+        """
+        if self._tiffInfo.get('compression') not in {33003, 33004, 33005, 34712}:
+            return self._tiffFile.read_image()
+        output = None
+        for yidx, y in enumerate(range(0, self.imageHeight, self.tileHeight)):
+            for xidx, x in enumerate(range(0, self.imageWidth, self.tileWidth)):
+                tile = self.getTile(xidx, yidx, asarray=True)
+                if len(tile.shape) == 2:
+                    tile = tile[:, :, np.newaxis]
+                if output is None:
+                    output = np.zeros(
+                        (self.imageHeight, self.imageWidth, tile.shape[2]), dtype=tile.dtype)
+                if tile.shape[0] > self.imageHeight - y:
+                    tile = tile[:self.imageHeight - y, :, :]
+                if tile.shape[1] > self.imageWidth - x:
+                    tile = tile[:, :self.imageWidth - x, :]
+                output[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
+        return output
