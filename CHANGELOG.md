@@ -8,7 +8,7 @@
 
 ### Bug Fixes
 
-- Change where locking occurs with bioformats ([#1896](../../pull/1896))
+- Change where locking occurs with bioformats ([#1896](../../pull/1896), [#1897](../../pull/1897))
 
 ## 1.32.3
 
