@@ -6,6 +6,10 @@
 
 - Zarr sink: Set projection and GCPs ([#1882](../../pull/1882))
 
+### Bug Fixes
+
+- Change where locking occurs with bioformats ([#1896](../../pull/1896))
+
 ## 1.32.3
 
 ### Improvements
