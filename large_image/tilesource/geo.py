@@ -1,3 +1,4 @@
+import math
 import pathlib
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urlencode, urlparse
@@ -29,7 +30,8 @@ def make_vsi(url: Union[str, pathlib.Path, Dict[Any, Any]], **options) -> str:
         gdal_options = {
             'url': str(url),
             'use_head': 'no',
-            'list_dir': 'no',
+            'list_dir': 'no',  # don't search for adjacent files
+            'empty_dir': 'yes',  # don't probe for sidecar files
         }
         gdal_options.update(options)
         vsi = f'/vsicurl?{urlencode(gdal_options)}'
@@ -83,7 +85,9 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         """
         raise NotImplementedError
 
-    def _convertProjectionUnits(self, *args, **kwargs) -> Tuple[float, float, float, float, str]:
+    def _convertProjectionUnits(self, *args, **kwargs) -> Tuple[
+        float, float, float, float, float, float, str,
+    ]:
         raise NotImplementedError
 
     def pixelToProjection(self, *args, **kwargs) -> Tuple[float, float]:
@@ -185,7 +189,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         self._bandNames = {}
         for idx, band in self.getBandInformation().items():
             if band.get('interpretation'):
-                self._bandNames[band['interpretation'].lower()] = idx
+                self._bandNames[str(band['interpretation']).lower()] = idx
         if isinstance(getattr(self, '_style', None), dict) and (
                 not self._style or 'icc' in self._style and len(self._style) == 1):
             return
@@ -276,10 +280,12 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         :return: width of a pixel in mm, height of a pixel in mm.
         """
         scale = self.getPixelSizeInMeters()
+        if scale and not math.isfinite(scale):
+            scale = None
         return {
             'magnification': None,
-            'mm_x': scale * 100 if scale else None,
-            'mm_y': scale * 100 if scale else None,
+            'mm_x': scale * 1000 if scale else None,
+            'mm_y': scale * 1000 if scale else None,
         }
 
     def getTileCorners(self, z: int, x: float, y: float) -> Tuple[float, float, float, float]:
@@ -381,7 +387,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         if (units and (units.lower().startswith('proj4:') or
                        units.lower().startswith('epsg:') or
                        units.lower().startswith('+proj='))):
-            left, top, right, bottom, units = self._convertProjectionUnits(
+            left, top, right, bottom, width, height, units = self._convertProjectionUnits(
                 left, top, right, bottom, width, height, units, **kwargs)
 
         if units == 'projection' and self.projection:
@@ -416,6 +422,39 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         return super()._getRegionBounds(
             metadata, left, top, right, bottom, width, height, units,
             desiredMagnification, cropToImage, **kwargs)
+
+    def _applyUnitsWH(self, left, top, right, bottom, width, height, units, unitsWH):
+        if unitsWH is not None:
+            unitsWH = TileInputUnits.get(unitsWH.lower())
+        unitsWH_factors = dict(nm=0.000000001, mm=0.001, m=1, km=1000)
+        if unitsWH in unitsWH_factors:
+            import pyproj
+
+            # apply width and height as distance with pyproj forward transform
+            width *= unitsWH_factors[unitsWH]
+            height *= unitsWH_factors[unitsWH]
+            geod = pyproj.Geod(ellps='WGS84')
+            if (
+                (top is not None or bottom is not None) and
+                (left is not None or right is not None) and
+                width is not None and height is not None
+            ):
+                x1 = left or right
+                y1 = top or bottom
+                x_az = -90 if left is not None else 90
+                y_az = 180 if top is not None else 0
+                x2, _, _ = geod.fwd(lons=x1, lats=y1, az=x_az, dist=width)
+                _, y2, _ = geod.fwd(lons=x1, lats=y1, az=y_az, dist=height)
+                if x_az == -90:
+                    right = x2
+                else:
+                    left = x2
+                if y_az == 180:
+                    bottom = y2
+                else:
+                    top = y2
+                width = height = None
+        return left, top, right, bottom, width, height, units
 
     @methodcache()
     def getThumbnail(

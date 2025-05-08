@@ -22,7 +22,19 @@ RUN userdel -r ubuntu 2>/dev/null
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       # general utilities \
-      software-properties-common \
+      #  We had been installing \
+      # software-properties-common \
+      #  but this includes a copy of python which we will install later, so \
+      #  install its component parts without python (see \
+      #  https://packages.debian.org/stable/software-properties-common) \
+      ca-certificates \
+      distro-info-data \
+      gir1.2-glib-2.0 \
+      gir1.2-packagekitglib-1.0 \
+      gpg \
+      iso-codes \
+      lsb-release \
+      packagekit \
       # as specified by \
       # https://github.com/pyenv/pyenv/wiki#suggested-build-environment \
       build-essential \
@@ -69,25 +81,14 @@ RUN apt-get update && \
       dnsutils \
       automake \
       rsync \
+      universal-ctags \
       && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -r /etc/ssh/ssh_host* && \
-    rm -rf /usr/share/vim/vim91/{doc,tutor}/* /usr/share/doc && \
+    rm -rf /usr/share/vim/vim91/doc/* /usr/share/vim/vim91/tutor/* /usr/share/doc && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/*
-
-RUN git clone "https://github.com/universal-ctags/ctags.git" "./ctags" && \
-    cd ./ctags && \
-    ./autogen.sh && \
-    ./configure && \
-    export CFLAGS="-g0 -Os -DNDEBUG" && \
-    export LDFLAGS="-Wl,--strip-debug,--strip-discarded,--discard-locals" && \
-    make -j `nproc` && \
-    make install -j `nproc`  && \
-    cd .. && \
-    rm -rf ./ctags && \
-    rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /usr/local/bin
 
 RUN pyenv update && \
     pyenv install --list && \

@@ -1,25 +1,23 @@
 Large Image
 ===========
 
-|build-status| |codecov-io| |license-badge| |doi-badge| |pypi-badge|
+.. image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
+  :target: https://circleci.com/gh/girder/large_image
+  :alt: Build Status
 
-.. |build-status| image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
-    :target: https://circleci.com/gh/girder/large_image
-    :alt: Build Status
+.. image:: https://img.shields.io/badge/license-Apache%202-blue.svg
+  :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
+  :alt: License
 
-.. |license-badge| image:: https://img.shields.io/badge/license-Apache%202-blue.svg
-    :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
-    :alt: License
+.. image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
+  :target: https://codecov.io/github/girder/large_image?branch=master
+  :alt: codecov.io
 
-.. |codecov-io| image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
-   :target: https://codecov.io/github/girder/large_image?branch=master
-   :alt: codecov.io
+.. image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4562625-blue.svg
+  :target: https://doi.org/10.5281/zenodo.4562625
 
-.. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue.svg
-   :target: https://zenodo.org/badge/latestdoi/45569214
-
-.. |pypi-badge| image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
-   :target: https://pypi.org/project/large-image/
+.. image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
+  :target: https://pypi.org/project/large-image/
 
 *Python modules to work with large, multiresolution images.*
 

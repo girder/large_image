@@ -87,7 +87,7 @@ class LazyTileDict(dict):
             self['tile_x'] = self.get('tile_x', self['x'])
             self['tile_y'] = self.get('tile_y', self['y'])
             self['tile_width'] = self.get('tile_width', self.width)
-            self['tile_height'] = self.get('tile_width', self.height)
+            self['tile_height'] = self.get('tile_height', self.height)
             if self.get('magnification', None):
                 self['tile_magnification'] = self.get('tile_magnification', self['magnification'])
             self['tile_mm_x'] = self.get('mm_x')
@@ -156,7 +156,7 @@ class LazyTileDict(dict):
                 elif tileData.shape[2] < retile.shape[2]:
                     retile = retile[:, :, :tileData.shape[2]]
                 retile[y0:y0 + th, x0:x0 + tw] = tileData[
-                    :th, :tw, :retile.shape[2]]  # type: ignore[misc]
+                    :th, :tw, :retile.shape[2]]
         return cast(np.ndarray, retile)
 
     def _resample(self, tileData: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray]) -> Tuple[
@@ -175,7 +175,7 @@ class LazyTileDict(dict):
         if self.resample in (False, None) or not self.requestedScale:
             return tileData, pilData
         pilResize = True
-        if (isinstance(tileData, np.ndarray) and tileData.dtype.kind != np.uint8 and
+        if (isinstance(tileData, np.ndarray) and tileData.dtype != np.uint8 and
                 TILE_FORMAT_NUMPY in self.format and self.resample in {True, 2, 3}):
             try:
                 import skimage.transform
@@ -197,7 +197,7 @@ class LazyTileDict(dict):
             tileData = skimage.transform.resize(
                 cast(np.ndarray, tileData),
                 (self['width'], self['height'],
-                 cast(np.ndarray, tileData).shape[2]),  # type: ignore[misc]
+                 cast(np.ndarray, tileData).shape[2]),
                 order=3 if self.resample is True else self.resample)
         return tileData, pilData
 
@@ -254,8 +254,7 @@ class LazyTileDict(dict):
                     tileData = pilData if pilData is not None else _imageToPIL(tileData)
                     tileFormat = TILE_FORMAT_PIL
                 elif TILE_FORMAT_IMAGE in self.format:
-                    tileData, mimeType = _encodeImage(
-                        tileData, **self.imageKwargs)
+                    tileData, _ = _encodeImage(tileData, **self.imageKwargs)
                     tileFormat = TILE_FORMAT_IMAGE
                 if tileFormat not in self.format:
                     raise exceptions.TileSourceError(

@@ -20,6 +20,7 @@ import os
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
+import numpy as np
 import openslide
 import PIL
 import tifftools
@@ -94,6 +95,13 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     tifftools.Tag.ICCProfile.value]['data']]
         except Exception:
             pass
+        if hasattr(self, '_tiffinfo'):
+            for ifd in self._tiffinfo['ifds']:
+                if (tifftools.Tag.NDPI_FOCAL_PLANE.value in ifd['tags'] and
+                        ifd['tags'][tifftools.Tag.NDPI_FOCAL_PLANE.value]['data'][0] != 0):
+                    msg = ('File will not be opened via OpenSlide; '
+                           'non-zero focal planes would be missed.')
+                    raise TileSourceError(msg)
 
         svsAvailableLevels = self._getAvailableLevels(self._largeImagePath)
         if not len(svsAvailableLevels):
@@ -179,6 +187,12 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._svslevels = self._svslevels[prevlevels - self.levels:]
         except Exception:
             pass
+        try:
+            self._background = tuple(int(
+                self._openslide.properties['openslide.background-color']
+                [i * 2:i * 2 + 2], 16) for i in range(3))
+        except Exception:
+            self._background = None
         self._populatedLevels = len({l['svslevel'] for l in self._svslevels})
 
     def _getTileSize(self):
@@ -349,6 +363,10 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     retries -= 1
                     if retries <= 0:
                         raise TileSourceError(msg)
+            if tile.mode == 'RGBA' and self._background:
+                tile = np.array(tile)
+                tile[tile[:, :, -1] == 0, :3] = self._background
+                tile = PIL.Image.fromarray(tile, 'RGBA')
             # Always scale to the svs level 0 tile size.
             if svslevel['scale'] != 1:
                 tile = tile.resize((self.tileWidth, self.tileHeight),

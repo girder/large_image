@@ -2,6 +2,9 @@
 requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
+
 [tool.ruff]
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 exclude = [
@@ -10,10 +13,10 @@ exclude = [
     "*/*egg*/*",
 ]
 lint.ignore = [
-    "B017",
-    "B026",
-    "B904",
-    "B905",
+    "B017",  # assert raises exception
+    "B026",  # star arg unpacking after keyword arg
+    "B904",  # raise without from inside except
+    "C408",  # unnecessary collection call (would prohibit dict())
     "D100",
     "D101",
     "D102",
@@ -31,35 +34,41 @@ lint.ignore = [
     "D401",
     "D404",
     "D415",
-    "E741",
-    "C408",
-    "PT011",
-    "PT012",
-    "PT017",
+    "E741",  # ambiguous variable name
+    "NPY002",  # numpy-legacy-random
+    "PT011",  # pytest-raises-too-broad
+    "PT012",  # pytest-raises-with-multiple-statements
+    "PT017",  # pytest-assert-in-except
+    "RET503",  # implict-return on function that can return non-none
+    "RET504",  # unncessary-assign before return
 ]
 line-length = 100
 lint.select = [
-    "B",  # bugbear
-    "C90",  # mccabe
-    "D",  # pydocstyle
-    "E",  # pycodestyle errors
-    "F",  # pyflakes
-    "Q",  # flake8-quotes
-    # "I",  # isort
-    "W",  # pycodestyle warnings
-    "YTT",
     "ASYNC",
-    "COM",
+    "B",  # bugbear
     "C4",
+    "C90",  # mccabe
+    "COM",
+    "D",  # pydocstyle
+    "DTZ",
+    "E",  # pycodestyle errors
     "EM",
     "EXE",
-    "ISC",
+    "F",  # pyflakes
     "G",
+    # "I",  # isort
+    "ISC",
+    # "N",  # pep8-naming
+    "NPY",
     "PIE",
-    "PYI",
     "PT",
+    "PYI",
+    "Q",  # flake8-quotes
+    "RET",
     "RSE",
     "T",  # print statements
+    "W",  # pycodestyle warnings
+    "YTT",  # flake8-2020
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -28,10 +28,12 @@ import numpy as np
 import PIL.Image
 
 import large_image
+from large_image import config
 from large_image.cache_util import LruCacheMetaclass, methodcache
-from large_image.constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY,
-                                   TILE_FORMAT_PIL, SourcePriority,
-                                   TileInputUnits, TileOutputMimeTypes)
+from large_image.constants import (PROJECTION_SENTINEL, TILE_FORMAT_IMAGE,
+                                   TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
+                                   SourcePriority, TileInputUnits,
+                                   TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
                                     TileSourceInefficientError)
@@ -91,7 +93,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
     cacheName = 'tilesource'
     name = 'rasterio'
 
-    def __init__(self, path, projection=None, unitsPerPixel=None, **kwargs):
+    def __init__(self, path, projection=PROJECTION_SENTINEL, unitsPerPixel=None, **kwargs):
         """Initialize the tile class.
 
         See the base class for other available parameters.
@@ -142,6 +144,12 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         self._bounds = {}
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
+
+        if projection == PROJECTION_SENTINEL:
+            if self.isGeospatial(self.dataset):
+                projection = config.getConfig('default_projection')
+            else:
+                projection = None
         self.projection = make_crs(projection) if projection else None
 
         # get width and height parameters
@@ -300,12 +308,13 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        projection = kwargs.get('projection', args[1] if len(args) >= 2 else None)
+        proj = kwargs.get('projection', args[1] if len(args) >= 2 else PROJECTION_SENTINEL)
+        proj = proj if proj != PROJECTION_SENTINEL else config.getConfig('default_projection')
         unitsPerPixel = kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None)
 
         source = super(RasterioFileTileSource, RasterioFileTileSource)
         lru = source.getLRUHash(*args, **kwargs)
-        info = f',{projection},{unitsPerPixel}'
+        info = f',{proj},{unitsPerPixel}'
 
         return lru + info
 
@@ -380,7 +389,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         # set bounds to none and exit if no crs is set for the dataset
         if not srcCrs:
             self._bounds[strDstCrs] = None
-            return
+            return None
 
         # compute the corner coordinates using the affine transformation as
         # longitudes and latitudes. Cannot only rely on bounds because of
@@ -642,7 +651,11 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     width=self.tileWidth,
                     add_alpha=add_alpha,
                 ) as vrt:
-                    tile = vrt.read(resampling=rio.enums.Resampling.nearest)
+                    try:
+                        tile = vrt.read(resampling=rio.enums.Resampling.nearest)
+                    except Exception:
+                        self.logger.exception('Failed to getTile')
+                        tile = np.zeros((1, 1))
 
         # necessary for multispectral images:
         # set the coordinates first and the bands at the end
@@ -673,7 +686,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             or '+proj=' or a enumerated value like 'wgs84', or one of the super's values.
         :param kwargs: optional parameters.
 
-        :returns: left, top, right, bottom, units.  The new bounds in the either
+        :returns: left, top, right, bottom, width, height, units.  The new bounds in the either
             pixel or class projection units.
         """
         # build the different corner from the parameters
@@ -686,6 +699,10 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 top = bottom - height
             if bottom is None and top is not None and height is not None:
                 bottom = top + height
+        elif self.projection:
+            left, top, right, bottom, width, height, units = self._applyUnitsWH(
+                left, top, right, bottom, width, height, units, kwargs.get('unitsWH'),
+            )
 
         # raise error if we didn't build one of the coordinates
         if (left is None and right is None) or (top is None and bottom is None):
@@ -730,7 +747,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         right = pright if right is not None else None
         bottom = pbottom if bottom is not None else None
 
-        return left, top, right, bottom, units
+        return left, top, right, bottom, width, height, units
 
     def _getRegionBounds(
         self,
@@ -776,7 +793,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         # convert the coordinates if a projection exist
         if isUnits and isProj:
-            left, top, right, bottom, units = self._convertProjectionUnits(
+            left, top, right, bottom, width, height, units = self._convertProjectionUnits(
                 left, top, right, bottom, width, height, units, **kwargs,
             )
 
@@ -969,9 +986,16 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         width = iterInfo['output']['width']
         height = iterInfo['output']['height']
 
-        with self._getDatasetLock, tempfile.NamedTemporaryFile(
-            suffix='.tiff', prefix='tiledGeoRegion_', delete=False,
-        ) as output:
+        outputPath = kwargs.get('output', {}).get('path')
+        if outputPath is not None:
+            outputPath = pathlib.Path(outputPath)
+            outputPath.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            outputPath = pathlib.Path(tempfile.NamedTemporaryFile(
+                suffix='.tiff', prefix='tiledGeoRegion_', delete=False,
+            ).name)
+
+        with self._getDatasetLock:
 
             xres = (right - left) / width
             yres = (top - bottom) / height
@@ -999,14 +1023,14 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                 'width': width,
                 'transform': dst_transform,
             })
-            with rio.open(output.name, 'w', **profile) as dst:
+            with rio.open(outputPath, 'w', **profile) as dst:
                 dst.write(data)
                 # Write colormaps if available
                 for i in range(data.shape[0]):
                     if self.dataset.colorinterp[i].name.lower() == 'palette':
                         dst.write_colormap(i + 1, self.dataset.colormap(i + 1))
 
-            return pathlib.Path(output.name), TileOutputMimeTypes['TILED']
+            return outputPath, TileOutputMimeTypes['TILED']
 
     def validateCOG(self, strict=True, warn=True):
         """Check if this image is a valid Cloud Optimized GeoTiff.
@@ -1041,20 +1065,18 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
         return isValid
 
     @staticmethod
-    def isGeospatial(path):
+    def isGeospatial(ds):
         """
-        Check if a path is likely to be a geospatial file.
+        Check if a RasterIO Dataset or file path is likely to be geospatial.
 
-        :param path: The path to the file
+        :param ds: A RasterIO Dataset or the path to the file
         :returns: True if geospatial.
         """
         _lazyImport()
 
-        if isinstance(path, rio.io.DatasetReaderBase):
-            ds = path
-        else:
+        if not isinstance(ds, rio.io.DatasetReaderBase):
             try:
-                ds = rio.open(path)
+                ds = rio.open(ds)
             except Exception:
                 return False
         if ds.crs or (ds.transform and ds.transform != rio.Affine(1, 0, 0, 0, 1, 0)):
@@ -1073,6 +1095,15 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             for ext in rasterio.drivers.raster_driver_extensions():
                 if ext not in cls.extensions:
                     cls.extensions[ext] = SourcePriority.IMPLICIT
+            # This list was compiled by trying to read the test files in GDAL's
+            # repo.
+            for ext in {
+                    'adf', 'aux', 'demtif', 'dim', 'doq', 'flt', 'fst', 'gsc',
+                    'h3', 'lan', 'los', 'lrc', 'mint.bin', 'mtw', 'nsf', 'nws',
+                    'on9', 'pjg', 'png.ovr', 'prj', 'ptf', 'rasterlite', 'rdb',
+                    'tif.grd', 'til', 'vic', 'xlb'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):

@@ -17,6 +17,8 @@
 import packaging.version  # noqa F401
 from girder_large_image.girder_tilesource import GirderTileSource
 
+from large_image.config import getConfig
+
 from . import RasterioFileTileSource
 
 
@@ -30,7 +32,10 @@ class RasterioGirderTileSource(RasterioFileTileSource, GirderTileSource):
 
     @staticmethod
     def getLRUHash(*args, **kwargs):
-        projection = kwargs.get('projection', args[1] if len(args) >= 2 else None)
+        projection = kwargs.get(
+            'projection',
+            args[1] if len(args) >= 2 else None,
+        ) or getConfig('default_projection')
         unitPerPixel = kwargs.get('unitsPerPixel', args[3] if len(args) >= 4 else None)
 
         return (

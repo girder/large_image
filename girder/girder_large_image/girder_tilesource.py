@@ -42,12 +42,12 @@ class GirderTileSource(tilesource.FileTileSource):
         return '%s,%s,%s,%s,%s,%s,%s,__STYLESTART__,%s,__STYLEEND__' % (
             args[0]['largeImage']['fileId'],
             args[0]['updated'],
-            kwargs.get('encoding', 'JPEG'),
+            kwargs.get('encoding') or config.getConfig('default_encoding'),
             kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0),
             kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
-            kwargs.get('style', None))
+            kwargs.get('style'))
 
     def getState(self):
         if hasattr(self, '_classkey'):
@@ -211,7 +211,7 @@ def getGirderTileSource(item, file=None, *args, **kwargs):
     :returns: A girder tilesource for the item.
     """
     if not isinstance(item, dict):
-        item = Item().load(item, user=kwargs.get('user', None), level=AccessType.READ)
+        item = Item().load(item, user=kwargs.get('user'), level=AccessType.READ)
     sourceName = getGirderTileSourceName(item, file, *args, **kwargs)
     if sourceName:
         return AvailableGirderTileSources[sourceName](item, *args, **kwargs)

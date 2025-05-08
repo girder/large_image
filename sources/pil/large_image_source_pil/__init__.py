@@ -19,6 +19,7 @@ import json
 import math
 import os
 import threading
+import warnings
 
 import numpy as np
 import PIL.Image
@@ -56,9 +57,11 @@ except PackageNotFoundError:
     # package is not installed
     pass
 
+warnings.filterwarnings('ignore', category=UserWarning, module='.*PIL.*')
+
 # Default to ignoring files with some specific extensions.
-config.ConfigValues['source_pil_ignored_names'] = \
-    r'(\.mrxs|\.vsi)$'
+config.ConfigValues.setdefault(
+    'source_pil_ignored_names', r'(\.mrxs|\.vsi)$')
 
 
 def getMaxSize(size=None, maxDefault=4096):
@@ -98,6 +101,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'jpg': SourcePriority.LOW,
         'jpeg': SourcePriority.LOW,
         'jpe': SourcePriority.LOW,
+        'nef': SourcePriority.LOW,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK_HIGH,
@@ -138,7 +142,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if self._pilImage is None:
             try:
                 self._pilImage = PIL.Image.open(largeImagePath)
-            except OSError:
+            except (OSError, ValueError, NotImplementedError):
                 if not os.path.isfile(largeImagePath):
                     raise TileSourceFileNotFoundError(largeImagePath) from None
                 msg = 'File cannot be opened via PIL.'
@@ -175,7 +179,11 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 msg = 'PIL cannot find loader for this file.'
                 raise TileSourceError(msg)
-            maxval = 256 ** math.ceil(math.log(float(np.max(imgdata)) + 1, 256)) - 1
+            try:
+                maxval = 256 ** math.ceil(math.log(float(np.max(imgdata)) + 1, 256)) - 1
+            except Exception:
+                msg = 'PIL cannot load this file.'
+                raise TileSourceError(msg)
             self._factor = 255.0 / max(maxval, 1)
             self._pilImage = PIL.Image.fromarray(np.uint8(np.multiply(
                 imgdata, self._factor)))
@@ -209,17 +217,26 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 self._frames = None
                 self._frameCount = 1
-                self._pilImage.seek(0)
+                self._pilImage = PIL.Image.open(self._getLargeImagePath())
 
     def _fromRawpy(self, largeImagePath):
         """
         Try to use rawpy to read an image.
         """
-        # if rawpy is present, try reading via that library first
+        # if rawpy is present, try reading via that library first, but only
+        # if PIL reports a single frame
         try:
+            img = PIL.Image.open(largeImagePath)
+            if len(list(PIL.ImageSequence.Iterator(img))) > 1:
+                return
+        except Exception:
+            pass
+        try:
+            import builtins
+
             import rawpy
 
-            with contextlib.redirect_stderr(open(os.devnull, 'w')):
+            with contextlib.redirect_stderr(builtins.open(os.devnull, 'w')):
                 rgb = rawpy.imread(largeImagePath).postprocess()
                 rgb = large_image.tilesource.utilities._imageToNumpy(rgb)[0]
                 if rgb.shape[2] == 2:
@@ -316,6 +333,10 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             for mimeType in PIL.Image.MIME.values():
                 if mimeType not in cls.mimeTypes:
                     cls.mimeTypes[mimeType] = SourcePriority.IMPLICIT_HIGH
+            # These were found by reading various test files.
+            for ext in {'ppg'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):

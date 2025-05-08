@@ -24,7 +24,6 @@
         "jsonlint-mod": "^1.7.6",
         "sinon": "^2.1.0",
         "vue": "~2.6.14",
-        "vue-color": "^2.8.1",
         "vue-loader": "~15.9.8",
         "vue-template-compiler": "~2.6.14",
         "vuedraggable": "^2.24.3",
@@ -68,7 +67,8 @@
             "promise/no-return-in-finally": "error",
             "promise/no-return-wrap": "error",
             "vue/require-prop-types": "off",
-            "vue/multiline-html-element-content-newline": "off"
+            "vue/multiline-html-element-content-newline": "off",
+            "vue/html-self-closing": "off"
         },
         "root": true
     },

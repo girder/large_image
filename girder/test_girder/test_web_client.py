@@ -22,6 +22,7 @@ def testWebClient(boundServer, fsAssetstore, db, spec, girderWorker):
     runWebClientTest(boundServer, spec, 15000)
 
 
+@pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
 @pytest.mark.parametrize('spec', [

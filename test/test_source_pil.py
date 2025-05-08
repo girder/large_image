@@ -38,6 +38,10 @@ def testTilesFromPIL():
     utilities.checkTilesZXY(source, tileMetadata)
 
 
+# Singular because if we read the file in a styled manner, such as in the
+# general read tests, it gets caches and therefore will be more efficiently
+# read from memory than from the file for the redirect
+@pytest.mark.singular
 def testTileRedirects():
     # Test redirects, use a JPEG
     imagePath = datastore.fetch('sample_Easy1.jpeg')

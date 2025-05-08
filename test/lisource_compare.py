@@ -145,8 +145,7 @@ def source_compare(sourcePath, opts):  # noqa
            (getattr(opts, 'usesource', None) is None or k in opts.usesource)}
     canread = large_image.canReadList(sourcePath, availableSources=sublist)
     if opts.can_read and not len([cr for cr in canread if cr[1]]):
-        return
-    large_image.cache_util.cachesClear()
+        return None
     slen = max([len(source) for source, _ in canread] + [10])
     sys.stdout.write('Source' + ' ' * (slen - 6))
     sys.stdout.write('  Width Height')
@@ -208,14 +207,17 @@ def source_compare(sourcePath, opts):  # noqa
                     '_geospatial_source', None):
                 continue
             result = results['styles'][-1]['sources'][source] = {}
-            sys.stdout.write('%s' % (source + ' ' * (slen - len(source))))
-            sys.stdout.flush()
-            large_image.cache_util.cachesClear()
+            if couldread:
+                large_image.cache_util.cachesClear()
             try:
                 t = time.time()
                 ts = large_image.tilesource.AvailableTileSources[source](sourcePath, **kwargs)
                 opentime = time.time() - t
             except Exception as exp:
+                if opts.can_read and projection and None in projections:
+                    continue
+                sys.stdout.write('%s' % (source + ' ' * (slen - len(source))))
+                sys.stdout.flush()
                 result['exception'] = str(exp)
                 result['error'] = 'open'
                 sexp = str(exp).replace('\n', ' ').replace('  ', ' ').strip()
@@ -224,6 +226,8 @@ def source_compare(sourcePath, opts):  # noqa
                 sys.stdout.write('%s %s\n' % (' ' * slen, sexp[78 - slen: 2 * (78 - slen)]))
                 sys.stdout.flush()
                 continue
+            sys.stdout.write('%s' % (source + ' ' * (slen - len(source))))
+            sys.stdout.flush()
             sizeX, sizeY = ts.sizeX, ts.sizeY
             result['sizeX'], result['sizeY'] = ts.sizeX, ts.sizeY
             try:
@@ -304,7 +308,13 @@ def source_compare(sourcePath, opts):  # noqa
             sys.stdout.flush()
             write_thumb(img[0], source, thumbs, 'thumbnail', opts, styleidx, projidx)
             t = time.time()
-            img = ts.getTile(tx0, ty0, tz0, sparseFallback=True)
+            try:
+                img = ts.getTile(tx0, ty0, tz0, sparseFallback=True)
+            except Exception as exp:
+                result['exception'] = str(exp)
+                result['error'] = 'gettile'
+                sys.stdout.write(' fail\n')
+                continue
             tile0time = time.time() - t
             result['tile0time'] = tile0time
             sys.stdout.write(' %8.3fs' % tile0time)
@@ -395,11 +405,19 @@ def source_compare(sourcePath, opts):  # noqa
                 onlyMinMax=True, output=dict(maxWidth=2048, maxHeight=2048),
                 resample=0, **kwargs)
             if 'max' not in h:
+                result['error'] = 'max'
                 sys.stdout.write(' fail\n')
                 sys.stdout.flush()
                 continue
-            maxval = max(h['max'].tolist())
-            maxval = 2 ** (int(math.log(maxval or 1) / math.log(2)) + 1) if maxval > 1 else 1
+            try:
+                maxval = max(h['max'].tolist())
+                maxval = 2 ** (int(math.log(maxval or 1) / math.log(2)) + 1) if maxval > 1 else 1
+            except (TypeError, OverflowError) as exp:
+                result['exception'] = str(exp)
+                result['error'] = 'maxval'
+                sys.stdout.write(' fail\n')
+                sys.stdout.flush()
+                continue
             # thumbnail histogram
             h = ts.histogram(bins=9, output=dict(maxWidth=256, maxHeight=256),
                              range=[0, maxval], resample=0, **kwargs)
@@ -550,6 +568,7 @@ def command():
     if not large_image.tilesource.AvailableTileSources:
         large_image.tilesource.loadTileSources()
     if opts.all:
+        large_image.config.setConfig('max_small_image_size', 16384)
         for key in list(large_image.config.ConfigValues):
             if '_ignored_names' in key:
                 del large_image.config.ConfigValues[key]

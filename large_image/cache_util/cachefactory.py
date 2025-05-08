@@ -17,7 +17,7 @@
 import math
 import threading
 from importlib.metadata import entry_points
-from typing import Dict, Optional, Tuple, Type
+from typing import Dict, Optional, Tuple, Type, cast
 
 import cachetools
 
@@ -95,7 +95,7 @@ def pickAvailableCache(
     return numItems
 
 
-def getFirstAvailableCache() -> Tuple[cachetools.Cache, Optional[threading.Lock]]:
+def getFirstAvailableCache() -> Tuple[Optional[cachetools.Cache], Optional[threading.Lock]]:
     cacheBackend = config.getConfig('cache_backend', None)
     if cacheBackend is not None:
         msg = 'cache_backend already set'
@@ -104,7 +104,9 @@ def getFirstAvailableCache() -> Tuple[cachetools.Cache, Optional[threading.Lock]
     cache, cacheLock = None, None
     for cacheBackend in _availableCaches:
         try:
-            cache, cacheLock = _availableCaches[cacheBackend].getCache()  # type: ignore
+            cache, cacheLock = cast(
+                Tuple[cachetools.Cache, Optional[threading.Lock]],
+                _availableCaches[cacheBackend].getCache())  # type: ignore
             break
         except TileCacheError:
             continue

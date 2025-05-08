@@ -260,7 +260,7 @@ def main(args=sys.argv[1:]):
             desc = json.loads(info['ifds'][0]['tags'][tifftools.Tag.ImageDescription.value]['data'])
         except Exception:
             logger.debug('Cannot generate statistics.')
-            return
+            return None
         desc['large_image_converter']['conversion_stats'] = {
             'time': end_time - start_time,
             'filesize': os.path.getsize(dest),

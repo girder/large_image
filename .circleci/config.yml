@@ -30,7 +30,8 @@ commands:
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: _JAVA_OPTIONS="-Xmx2g" LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=3 COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv
+            >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:
@@ -245,7 +246,7 @@ jobs:
           node: v14
       - tox:
           toxenv: test-py313
-          environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
+          # environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
       - coverage
       - store_artifacts:
           path: build/test/artifacts
@@ -272,7 +273,7 @@ jobs:
     steps:
       - checkout
       - tox:
-          toxenv: compare-py311
+          toxenv: compare-py313
       - store_artifacts:
           path: build/tox/compare.txt
       - store_artifacts:
@@ -457,7 +458,9 @@ workflows:
             tags:
               only: /^v.*/
             branches:
-              only: master
+              only:
+                - master
+                - girder-5
       - docs-deploy:
           requires:
             - py38

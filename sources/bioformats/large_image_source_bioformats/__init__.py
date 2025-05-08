@@ -57,12 +57,15 @@ javabridge = None
 
 _javabridgeStarted = None
 _javabridgeStartLock = threading.Lock()
+_javabridgeAttachLock = threading.Lock()
 _bioformatsVersion = None
 _openImages = []
 
 
 # Default to ignoring files with no extension and some specific extensions.
-config.ConfigValues['source_bioformats_ignored_names'] = r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|isyntax|mrxs|zip|zarr(\.db|\.zip)))$'  # noqa
+config.ConfigValues.setdefault(
+    'source_bioformats_ignored_names',
+    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|geojson|fits|isyntax|mrxs|zip|zarr(\.db|\.zip)))$')  # noqa
 
 
 def _monitor_thread():
@@ -70,7 +73,8 @@ def _monitor_thread():
     main_thread.join()
     if len(_openImages):
         try:
-            javabridge.attach()
+            with _javabridgeAttachLock:
+                javabridge.attach()
             while len(_openImages):
                 source = _openImages.pop()
                 source = source()
@@ -85,8 +89,9 @@ def _monitor_thread():
         except Exception:
             pass
         finally:
-            if javabridge.get_env():
-                javabridge.detach()
+            with _javabridgeAttachLock:
+                if javabridge.get_env():
+                    javabridge.detach()
     _stopJavabridge()
 
 
@@ -232,7 +237,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._tileLock = threading.RLock()
 
         try:
-            javabridge.attach()
+            with _javabridgeAttachLock:
+                javabridge.attach()
             try:
                 self._bioimage = bioformats.ImageReader(largeImagePath, perform_init=False)
                 try:
@@ -311,8 +317,9 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'The bioformats reader threw an unhandled exception.'
             raise TileSourceError(msg)
         finally:
-            if javabridge.get_env():
-                javabridge.detach()
+            with _javabridgeAttachLock:
+                if javabridge.get_env():
+                    javabridge.detach()
 
         if self.levels < 1:
             msg = 'Bioformats image must have at least one level.'
@@ -321,8 +328,15 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if self.sizeX <= 0 or self.sizeY <= 0:
             msg = 'Bioformats tile size is invalid.'
             raise TileSourceError(msg)
+        if ('JPEG' in self._metadata['readerClassName'] and
+                (self._metadata['optimalTileWidth'] > 16384 or
+                 self._metadata['optimalTileHeight'] > 16384)):
+            msg = 'Bioformats will be too inefficient to read this file.'
+            raise TileSourceError(msg)
         try:
+            self._lastGetTileException = 'raise'
             self.getTile(0, 0, self.levels - 1)
+            delattr(self, '_lastGetTileException')
         except Exception as exc:
             raise TileSourceError('Bioformats cannot read a tile: %r' % exc)
         self._populatedLevels = len([
@@ -331,15 +345,17 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:
             try:
-                javabridge.attach()
+                with _javabridgeAttachLock:
+                    javabridge.attach()
                 self._bioimage.close()
                 del self._bioimage
                 _openImages.remove(weakref.ref(self))
             except Exception:
                 pass
             finally:
-                if javabridge.get_env():
-                    javabridge.detach()
+                with _javabridgeAttachLock:
+                    if javabridge.get_env():
+                        javabridge.detach()
 
     def _metadataForCurrentSeries(self, rdr):
         self._metadata = getattr(self, '_metadata', {})
@@ -370,6 +386,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             'optimalTileWidth': rdr.getOptimalTileWidth(),
             'optimalTileHeight': rdr.getOptimalTileHeight(),
             'resolutionCount': rdr.getResolutionCount(),
+            'readerClassName': rdr.get_class_name(),
         })
 
     def _getSeriesStarts(self, rdr):  # noqa
@@ -411,6 +428,10 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             lastX, lastY = rdr.getSizeX(), rdr.getSizeY()
             for idx in range(1, self._metadata['seriesCount']):
                 rdr.setSeries(idx)
+                try:
+                    self._bioimage.read(series=idx, rescale=False, XYWH=(0, 0, 1, 1))
+                except Exception:
+                    continue
                 if (rdr.getSizeX() == self._metadata['sizeX'] and
                         rdr.getSizeY() == self._metadata['sizeY'] and
                         rdr.getImageCount() == self._metadata['imageCount']):
@@ -509,13 +530,15 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _computeMagnification(self):
         self._magnification = {}
-        metadata = self._metadata['metadata']
+        metadata = self._metadata.get('seriesMetadata', {}).copy()
+        metadata.update(self._metadata['metadata'])
         valuekeys = {
             'x': [('Scaling|Distance|Value #1', 1e3)],
             'y': [('Scaling|Distance|Value #2', 1e3)],
         }
         tuplekeys = [
             ('Physical pixel size', 1e-3),
+            ('0028,0030 Pixel Spacing', 1),
         ]
         magkeys = [
             'Information|Instrument|Objective|NominalMagnification #1',
@@ -528,11 +551,11 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if 'mm_x' not in self._magnification and 'mm_y' not in self._magnification:
             for key, units in tuplekeys:
                 if metadata.get(key):
-                    found = re.match(r'^\D*(\d+(|\.\d+))\D+(\d+(|\.\d+))\D*$', metadata[key])
+                    found = re.match(r'^[^0-9.]*(\d*\.?\d+)[^0-9.]+(\d*\.?\d+)\D*$', metadata[key])
                     if found:
                         try:
                             self._magnification['mm_x'], self._magnification['mm_y'] = (
-                                float(found.groups()[0]) * units, float(found.groups()[2]) * units)
+                                float(found.groups()[0]) * units, float(found.groups()[1]) * units)
                         except Exception:
                             pass
         for key in magkeys:
@@ -611,7 +634,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return self._metadata
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
+    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):  # noqa
         self._xyzInRange(x, y, z)
         ft = fc = fz = 0
         fseries = self._metadata['frameSeries'][0]
@@ -648,28 +671,37 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
             format = TILE_FORMAT_NUMPY
         else:
-            with self._tileLock:
-                try:
-                    javabridge.attach()
-                    if width > 0 and height > 0:
+            with _javabridgeAttachLock:
+                javabridge.attach()
+            try:
+                if width > 0 and height > 0:
+                    with self._tileLock:
                         tile = self._bioimage.read(
-                            c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                            c=fc, z=fz, t=ft,
+                            series=fseries['series'][seriesLevel],
                             rescale=False,  # return internal data types
                             XYWH=(offsetx, offsety, width, height))
-                    else:
-                        # We need the same dtype, so read 1x1 at 0x0
+                else:
+                    # We need the same dtype, so read 1x1 at 0x0
+                    with self._tileLock:
                         tile = self._bioimage.read(
                             c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
                             rescale=False,  # return internal data types
                             XYWH=(0, 0, 1, 1))
-                        tile = np.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
-                    format = TILE_FORMAT_NUMPY
-                except javabridge.JavaException as exc:
-                    es = javabridge.to_string(exc.throwable)
+                    tile = np.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
+                format = TILE_FORMAT_NUMPY
+            except javabridge.JavaException as exc:
+                es = javabridge.to_string(exc.throwable)
+                self.logger.exception('Failed to getTile (%r)', es)
+                if getattr(self, '_lastGetTileException', None) == 'raise':
                     raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
                         fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx,
                         offsety, width, height)))
-                finally:
+                self._lastGetTileException = repr(es)
+                tile = np.zeros((1, 1))
+                format = TILE_FORMAT_NUMPY
+            finally:
+                with _javabridgeAttachLock:
                     if javabridge.get_env():
                         javabridge.detach()
             if scale > 1:
@@ -710,20 +742,22 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         info = self._metadata['seriesAssociatedImages'].get(imageKey)
         if info is None:
-            return
+            return None
         series = info['seriesNum']
-        with self._tileLock:
-            try:
-                javabridge.attach()
+        with _javabridgeAttachLock:
+            javabridge.attach()
+        try:
+            with self._tileLock:
                 image = self._bioimage.read(
                     series=series,
                     rescale=False,  # return internal data types
                     XYWH=(0, 0, info['sizeX'], info['sizeY']))
-            except javabridge.JavaException as exc:
-                es = javabridge.to_string(exc.throwable)
-                raise TileSourceError('Failed to get Bioformat series (%s, %r).' % (es, (
-                    series, info['sizeX'], info['sizeY'])))
-            finally:
+        except javabridge.JavaException as exc:
+            es = javabridge.to_string(exc.throwable)
+            raise TileSourceError('Failed to get Bioformat series (%s, %r).' % (es, (
+                series, info['sizeX'], info['sizeY'])))
+        finally:
+            with _javabridgeAttachLock:
                 if javabridge.get_env():
                     javabridge.detach()
         return large_image.tilesource.base._imageToPIL(image)
@@ -739,6 +773,23 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 ext = dotext.strip('.')
                 if ext not in cls.extensions:
                     cls.extensions[ext] = SourcePriority.IMPLICIT
+            # The python modules doesn't list all the extensions that can be
+            # read, so supplement from the jar
+            readerlist = zipfile.ZipFile(
+                pathlib.Path(bioformats.__file__).parent /
+                'jars/bioformats_package.jar',
+            ).open('loci/formats/readers.txt').read(100000).decode().split('\n')
+            pattern = re.compile(r'^loci\.formats\.in\..* # (?:.*?\b(\w{2,})\b(?:,|\s|$))')
+            for line in readerlist:
+                for ext in set(pattern.findall(line)) - {
+                        'pattern', 'urlreader', 'screen', 'zip', 'zarr', 'db',
+                        'fake', 'no'}:
+                    if ext not in cls.extensions:
+                        cls.extensions[ext] = SourcePriority.IMPLICIT
+            # These were found by reading some OMERO test files
+            for ext in {'columbusidx', 'dv_vol', 'lifext'}:
+                if ext.lower() not in cls.extensions:
+                    cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
 
 
 def open(*args, **kwargs):

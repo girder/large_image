@@ -45,7 +45,7 @@ A band definition is an object which can contain the following keys:
 
 - ``min``: the value to map to the first palette value.  Defaults to 0.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported minimum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'min:0.02' would exclude at most the dimmest 2% of values by using an appropriate value for the minimum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported minimum would otherwise be used.  'full' is the same as specifying 0.
 
-- ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 0 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'max:0.02' would exclude at most the brightest 2% of values by using an appropriate value for the maximum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported maximum would otherwise be used.  'full' uses a value based on the data type of the band.  This will be 1 for a float data type, 255 for a uint8 data type, and 65535 for a uint16 data type.
+- ``max``: the value to map to the last palette value.  Defaults to 255.  'auto' to use 255 if the reported minimum and maximum of the band are between [0, 255] or use the reported maximum otherwise.  'min' or 'max' to always uses the reported minimum or maximum.  'min:<threshold>' and 'max:<threshold>' pick a value that excludes a threshold amount from the histogram; for instance, 'max:0.02' would exclude at most the brightest 2% of values by using an appropriate value for the maximum based on a computed histogram with some default binning options.  'auto:<threshold>' works like auto, though it applies the threshold if the reported maximum would otherwise be used.  'full' uses a value based on the data type of the band.  This will be 1 for a float data type, 255 for a uint8 data type, and 65535 for a uint16 data type.
 
 - ``palette``: This is a single color string, a palette name, or a list of two or more colors. The values between min and max are interpolated using a piecewise linear algorithm or a nearest value algorithm (depending on the ``scheme``) to map to the specified palette values.  It can be specified in a variety of ways:
 
@@ -111,7 +111,7 @@ A band definition is an object which can contain the following keys:
 
     - ``band``: the band numpy image in a band stage.
 
-    - ``mask``: a mask numpy image to use when applying the band.
+    - ``mask``: a mask numpy image to use when applying the band.  None for no mask (this is the equivalent of the mask being all True).
 
     - ``palette``: the normalized palette for a band.
 

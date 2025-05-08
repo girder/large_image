@@ -63,13 +63,13 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm)',  # noqa
-        'skip': r'nokeyframe\.ome\.tiff$',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi)',  # noqa
+        'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff$',
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
         'read': r'(\.(jpg|jpeg|png|tif.*)|18[-0-9a-f]{34}\.dcm)$',
-        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview|indica)',  # noqa
+        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview|indica|TCGA-55.*\.ome\.tiff)',  # noqa
     },
     'rasterio': {
         'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
@@ -83,7 +83,7 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|ndpi|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm)$)' +  # noqa
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm)$)' +  # noqa
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
         'skip': r'indica' if sys.version_info < (3, 9) else '^$',
@@ -198,6 +198,7 @@ def testSourcesTilesAndMethods(filename, source):
     tileMetadata = ts.getMetadata()
     assert ts.metadata['sizeX'] == tileMetadata['sizeX']
     assert ts.bandCount == tileMetadata['bandCount']
+    assert ts.channelNames == tileMetadata.get('channels')
     utilities.checkTilesZXY(ts, tileMetadata)
     # All of these should succeed
     assert ts.getInternalMetadata() is not None
@@ -369,6 +370,26 @@ def testTileOverlapWithRegionOffset():
         tile_overlap=dict(x=400, y=400))
     firstTile = next(tileIter)
     assert firstTile['tile_overlap']['right'] == 200
+
+
+def testLazyTileWithScale():
+    imagePath = datastore.fetch('sample_Easy1.png')
+    ts = large_image.open(imagePath)
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=3)
+    assert tile['width'] == 31
+    assert tile['height'] == 256
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=4)
+    assert tile['width'] == 256
+    assert tile['height'] == 211
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=7)
+    assert tile['width'] == 31
+    assert tile['height'] == 211
 
 
 def testGetRegionAutoOffset():

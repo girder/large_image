@@ -1,5 +1,186 @@
 # Change Log
 
+## 1.32.4
+
+### Improvements
+
+- Zarr sink: Set projection and GCPs ([#1882](../../pull/1882))
+- Debounce frame update in FrameSelector in jupyter widget ([#1894](../../pull/1894))
+
+### Bug Fixes
+
+- Change where locking occurs with bioformats ([#1896](../../pull/1896), [#1898](../../pull/1898))
+- vips could use too much memory during image conversion ([#1899](../../pull/1899))
+
+## 1.32.3
+
+### Improvements
+
+- Parallelize storing cached thumbnails and images ([#1885](../../pull/1885))
+
+### Bug Fixes
+
+- Fix Frame Selector component in Colab Notebooks ([#1889](../../pull/1889))
+
+## 1.32.2
+
+### Improvements
+
+- Allow specifying output path for getRegion ([#1881](../../pull/1881))
+
+### Changes
+
+- Track associated image directory numbers in the tiff source ([#1888](../../pull/1888))
+- Improve tools to round-trip ometiff xml  ([#1890](../../pull/1890))
+
+### Bug Fixes
+
+- Fix an order of operations issue with config values ([#1886](../../pull/1886))
+
+## 1.32.1
+
+### Improvements
+
+- Use unitsWH in getRegion for geospatial images opened with a projection ([#1866](../../pull/1866))
+- Accept more SI units (nm, um, m, km) for getRegion ([#1866](../../pull/1866))
+
+### Bug Fixes
+
+- Fix an issue converting float32 bit data that really should by uint8 ([#1873](../../pull/1873))
+- Fix interactive image layout height in Google Colab ([#1879](../../pull/1879))
+
+## 1.32.0
+
+### Features
+
+- Add default_encoding and default_projection config values ([#1846](../../pull/1846), [#1854](../../pull/1854))
+
+### Improvements
+
+- Apply background color information from openslide sources ([#1819](../../pull/1819))
+- Memoize a check for DICOM series UID ([#1827](../../pull/1827))
+- Speed up finding adjacent DICOM files in girder ([#1829](../../pull/1829), [#1836](../../pull/1836))
+- Ipyleaflet region indicator ([#1815](../../pull/1815))
+- Add minWidth and minHeight to zarr sink ([#1831](../../pull/1831))
+- Reformat metadata for non-uniform axis values ([#1832](../../pull/1832))
+- Reorder zarr axes in read mode ([#1833](../../pull/1833))
+- Allow selecting inverted histogram ranges in the UI ([#1839](../../pull/1839))
+- Jupyter: Increase default zoom on small images ([#1843](../../pull/1843), [#1852](../../pull/1852))
+- Debounce histogram requests in the frame selector ([#1844](../../pull/1844))
+- Better parse ImageJ channel names ([#1857](../../pull/1857))
+- Allow users to specify arbitrary additional metadata in Zarr Sink ([#1855](../../pull/1855))
+
+### Changes
+
+- Require a minimum version of Pillow to avoid a CVE ([#1828](../../pull/1828))
+- Pin numcodecs since we require zarr<2 ([#1867](../../pull/1867))
+
+### Bug Fixes
+
+- Zarr Sink: Allow X and Y to have length 1 ([#1837](../../pull/1837))
+- Ask zarr to use zero rather than empty arrays ([#1840](../../pull/1840))
+- Harden the ometiff reader against erroneous axis values ([#1847](../../pull/1847))
+- The annotation geojson output was erroneously requiring a closed flag ([#1859](../../pull/1859))
+- Fix a scale error in geospatial native magnification ([#1864](../../pull/1864))
+- Zarr Sink: Fix downsampled level generation for single-band images ([#1862](../../pull/1862))
+
+## 1.31.1
+
+### Improvements
+
+- Improve how we use vips to read lower tile levels ([#1794](../../pull/1794))
+- Be more specific in casting when converting images via vips ([#1795](../../pull/1795))
+- Improve how ometiff internal metadata is exposed ([#1806](../../pull/1806))
+- Show histogram auto range calculated values ([#1803](../../pull/1803))
+- Test reading from lower tile levels in bioformats ([#1810](../../pull/1810))
+
+### Bug Fixes
+
+- Fix an issue with lazy tiles that have non power of two scaling ([#1797](../../pull/1797))
+- Use zarr.empty not np.empty when creating large zarr sinks ([#1801](../../pull/1801))
+- Fix zarr sink addTile when no samples axis is specified ([#1805](../../pull/1805))
+- Fix zarr sink adding an xy axis ([#1807](../../pull/1807))
+- Fix adding axes one at a time with zarr sink ([#1808](../../pull/1808))
+
+## 1.31.0
+
+### Features
+
+- Add utility functions for converting between frame and axes ([#1778](../../pull/1778))
+- Jupyter frame selector ([#1738](../../pull/1738), [#1792](../../pull/1792), [#1793](../../pull/1793))
+
+### Improvements
+
+- Better report if rasterized vector files are geospatial ([#1769](../../pull/1769))
+- Provide some latitude in vips multiframe detection ([#1770](../../pull/1770))
+- Don't read multiplane ndpi files with openslide ([#1772](../../pull/1772))
+- Harden sources based on more fuzz testing ([#1774](../../pull/1774))
+- Default to not caching source in notebooks ([#1776](../../pull/1776))
+- Automatically set the JUPYTER_PROXY value ([#1781](../../pull/1781))
+- Add a general channelNames property to tile sources ([#1783](../../pull/1783))
+- Speed up compositing styles ([#1784](../../pull/1784))
+- Better repr of large_image classes ([#1787](../../pull/1787))
+- Better detect multiframe images in PIL ([#1791](../../pull/1791))
+
+### Changes
+
+- Allow umap-learn for graphing in girder annotations in python 3.13 ([#1780](../../pull/1780))
+- List a few more known extensions for different sources ([#1790](../../pull/1790))
+
+### Bug Fixes
+
+- Fix scaling tiles from stripped tiffs in some instances ([#1773](../../pull/1773))
+- Updated jupyter support for ipyleaflet ([#1775](../../pull/1775))
+
+## 1.30.6
+
+### Features
+
+- Allow gdal to read and rasterize vector formats ([#1763](../../pull/1763))
+
+### Improvements
+
+- Harden the geojson annotation parser ([#1743](../../pull/1743))
+- Add more color palettes ([#1746](../../pull/1746))
+- Improve the list of extensions the bioformats source reports ([#1748](../../pull/1748))
+- Improve handling of ome-tiff files generated by bioformats ([#1750](../../pull/1750))
+- Read jp2k compressed associated images in tiff files ([#1754](../../pull/1754))
+- Improve writing to zarr sinks from multiple processes ([#1713](../../pull/1713))
+- Slightly faster GDAL validateCOG ([#1761](../../pull/1761))
+- Improve clearing caches ([#1766](../../pull/1766))
+- Harden many of the source reads ([#1768](../../pull/1768))
+
+### Changes
+
+- Suppress a warning about nd2 files that we can't do anything about ([#1749](../../pull/1749))
+- Zero empty areas in tile frames ([#1755](../../pull/1755))
+- Don't include cache libraries in [common] deployments ([#1758](../../pull/1758))
+- Specify empty_dir=yes when constructing vsicurl parameters ([#1760](../../pull/1760))
+- Update how some associated images are read in tiff files ([#1763](../../pull/1763))
+- Pin zarr < 3 ([#1767](../../pull/1767))
+
+### Bug Fixes
+
+- Harden the tile cache between python versions and numpy versions ([#1751](../../pull/1751))
+- Cast histogram ranges to floats ([#1762](../../pull/1762))
+
+## 1.30.5
+
+### Improvements
+
+- When using the multisource to composite multiple images with alpha channels, use nearest neighbor for upper tiles ([#1736](../../pull/1736))
+- Read magnification values from DICOM when reading them via bioformats ([#1741](../../pull/1741))
+
+### Changes
+
+- Adjust how compositing is done on styled images by adjusting the expected full alpha value ([#1735](../../pull/1735))
+
+## 1.30.4
+
+### Bug Fixes
+
+- Fix a bug handling pure uint8 data introduced in #1725 ([#1734](../../pull/1734))
+
 ## 1.30.3
 
 ### Improvements
@@ -9,6 +190,9 @@
 - Better handle IndicaLabs tiff files ([#1717](../../pull/1717))
 - Better detect files with geotransform data that aren't geospatial ([#1718](../../pull/1718))
 - Better scale float-valued tiles ([#1725](../../pull/1725))
+- Tile iterators now report their length ([#1730](../../pull/1730))
+- When using griddata annotations as heatmaps, allow setting scaleWithZoom ([#1731](../../pull/1731))
+- Handle any sort of label as an extra property when importing geojson annotations ([#1732](../../pull/1732))
 
 ### Changes
 
@@ -18,6 +202,7 @@
 
 - Fix an issue searching for annotation metadata on items that a user doesn't have permissions to view ([#1723](../../pull/1723))
 - Fix a typo in a column header ([#1727](../../pull/1727))
+- Guard against switching on and off overlay layers quickly ([#1729](../../pull/1729))
 
 ## 1.30.2
 

@@ -193,9 +193,9 @@ near by values aggregate together when viewed.
                                        # false, the rangeValues are in the
                                        # value domain.  Defaults to true.  Optional
     "scaleWithZoom": true              # If true, scale the size of points with the zoom level of
-                                       # the map. Defaults to false. In this case, radius is in
-                                       # pixels of the associated image.  If false or unspecified,
-                                       # radius is in screen pixels. Optional
+                                       # the map. In this case, radius is in pixels of the
+                                       # associated image.  If false or unspecified, radius is in
+                                       # screen pixels. Defaults to false. Optional
   }
 
 Grid Data
@@ -211,7 +211,7 @@ choropleth, a grid with a list of values can be specified.
     <id, label, group, user>           # Optional general shape properties
     "interpretation": "contour",       # One of heatmap, contour, or choropleth
     "gridWidth": 6,                    # Number of values across the grid.  Required
-    "origin": [0, 0, 0],               # Origin including fized x value.  Optional
+    "origin": [0, 0, 0],               # Origin including fixed z value.  Optional
     "dx": 32,                          # Grid spacing in x.  Optional
     "dy": 32,                          # Grid spacing in y.  Optional
     "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"], # A list of colors corresponding to
@@ -227,6 +227,13 @@ choropleth, a grid with a list of values can be specified.
     "maxColor": "rgba(255, 255, 0, 1)", # The color of data above the maximum range.  Optional
     "stepped": true,                   # For contours, whether discrete colors or continuous colors
                                        # should be used.  Default false.  Optional
+    "radius": 25,                      # Positive number.  Optional.  The size of the gaussian
+                                       # point when using the heatman interprettation
+    "scaleWithZoom": true              # If true, when using the heatmap interprettation,  scale
+                                       # the size of points with the zoom level of the map. In
+                                       # this case, radius is in pixels of the associated image.
+                                       # If false or unspecified, radius is in screen pixels.
+                                       # Defaults to false. Optional
     "values": [
       0.508,
       0.806,

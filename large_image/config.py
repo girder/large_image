@@ -21,9 +21,26 @@ fallbackLogHandler = logging.NullHandler()
 fallbackLogHandler.setLevel(logging.NOTSET)
 fallbackLogger.addHandler(fallbackLogHandler)
 
+
+def _in_notebook() -> bool:
+    """
+    Try to detect if we are in an interactive notebook.
+
+    :returns: True if we think we are in an interactive notebook.
+    """
+    try:
+        return get_ipython() is not None  # type: ignore[name-defined]
+    except NameError:
+        return False
+
+
 ConfigValues = {
     'logger': fallbackLogger,
     'logprint': fallbackLogger,
+
+    # Encoding and Projection
+    'default_encoding': 'PNG' if _in_notebook() else 'JPEG',
+    'default_projection': 'EPSG:3857' if _in_notebook() else None,
 
     # For tiles
     'cache_backend': None,  # 'python', 'redis' or 'memcached'
@@ -40,7 +57,7 @@ ConfigValues = {
     # substantial performance penalties if sources are used multiple times, so
     # should only be set in singular dynamic environments such as experimental
     # notebooks.
-    'cache_sources': True,
+    'cache_sources': not _in_notebook(),
 
     # Generally, these keys are the form of "cache_<cacheName>_<key>"
 
@@ -135,7 +152,7 @@ def _ignoreSourceNames(
     """
     ignored_names = getConfig('source_%s_ignored_names' % configKey) or default
     if not ignored_names or not os.path.isfile(path):
-        return None
+        return
     if re.search(ignored_names, os.path.basename(path), flags=re.IGNORECASE):
         raise exceptions.TileSourceError('File will not be opened by %s reader' % configKey)
 
@@ -157,12 +174,8 @@ def cpu_count(logical: bool = True) -> int:
         count = min(count, len(os.sched_getaffinity(0)))
     except AttributeError:
         pass
-    try:
-        import psutil
-
+    if HAS_PSUTIL:
         count = min(count, psutil.cpu_count(logical) or count)
-    except ImportError:
-        pass
     return max(1, count)
 
 

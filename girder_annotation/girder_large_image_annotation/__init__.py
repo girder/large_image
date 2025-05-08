@@ -55,7 +55,7 @@ def validateBoolean(doc):
     val = doc['value']
     if str(val).lower() not in ('false', 'true', ''):
         raise ValidationException('%s must be a boolean.' % doc['key'], 'value')
-    doc['value'] = (str(val).lower() != 'false')
+    doc['value'] = str(val).lower() != 'false'
 
 
 # Defaults

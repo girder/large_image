@@ -27,9 +27,10 @@ class SourcePriority(enum.IntEnum):
     LOWER = 6
     IMPLICIT_HIGH = 7
     IMPLICIT = 8
-    FALLBACK_HIGH = 9
-    FALLBACK = 10
-    MANUAL = 11  # This and higher values will never be selected automatically
+    IMPLICIT_LOW = 9
+    FALLBACK_HIGH = 10
+    FALLBACK = 11
+    MANUAL = 12  # This and higher values will never be selected automatically
 
 
 TILE_FORMAT_IMAGE = 'image'
@@ -38,6 +39,9 @@ TILE_FORMAT_NUMPY = 'numpy'
 
 
 NEW_IMAGE_PATH_FLAG = '__new_image__'
+
+
+PROJECTION_SENTINEL = '__default__'
 
 
 TileOutputMimeTypes = {
@@ -67,9 +71,24 @@ TileInputUnits = {
     'mag_pixels': 'mag_pixels',
     'magnification_pixel': 'mag_pixels',
     'magnification_pixels': 'mag_pixels',
+    'nm': 'nm',
+    'nanometer': 'nm',
+    'nanometers': 'nm',
+    'um': 'um',
+    'μm': 'um',
+    'micrometers': 'um',
+    'micrometer': 'um',
+    'microns': 'um',
+    'micron': 'um',
     'mm': 'mm',
     'millimeter': 'mm',
     'millimeters': 'mm',
+    'm': 'm',
+    'meter': 'm',
+    'meters': 'm',
+    'km': 'km',
+    'kilometer': 'km',
+    'kilometers': 'km',
     'fraction': 'fraction',
     'projection': 'projection',
     'proj': 'projection',

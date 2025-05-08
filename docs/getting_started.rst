@@ -107,6 +107,41 @@ You can specify the size in physical coordinates:
     # Since our source image had mm_x = 0.00025 for its scale, this has the
     # same result as the previous example.
 
+If the image is geospatial, you can specify the region with projection coordinates.
+The projection is passed to the region's ``units`` argument as a string.
+If ``units`` is ``'projection'``, the source's default projection will be used.
+If ``units`` starts with ``'proj4:'`` or ``'epsg:'`` (case-insensitive), the projection interpreted from that string will be used.
+In the following example, we use ``'EPSG:4326'`` and specify the region with latitude and longitude values.
+
+.. code-block:: python
+
+    import large_image
+    source = large_image.open('geo_sample.tiff')
+    if source.geospatial:
+        nparray, mime_type = source.getRegion(
+            region=dict(
+                top=42.3008, bottom=42.3006,
+                left=-71.1143, right=-71.1140,
+                units='EPSG:4326'
+            ),
+            format=large_image.constants.TILE_FORMAT_NUMPY
+        )
+
+You can also specify a region with a single corner point and distances for width and height:
+
+.. code-block:: python
+
+    import large_image
+    source = large_image.open('geo_sample.tiff')
+    if source.geospatial:
+        nparray, mime_type = source.getRegion(
+            region=dict(
+                top=42.3008, left=-71.1143, units='EPSG:4326',
+                width=3, height=4, unitsWH='km'
+            ),
+            format=large_image.constants.TILE_FORMAT_NUMPY
+        )
+
 Tile Serving
 ------------
 
@@ -296,6 +331,9 @@ Many image formats (such as TIFF) can contain multiple images within a single fi
 
 By default, the ``getTile``, ``getRegion``, and ``tileIterator`` methods will return all of the bands of a single frame.  The specific bands returned can be modified using the ``style`` parameter.  The specific frame, including any channel or other axes, is specified with the ``frame`` parameter.
 
+Since if can be useful to ask for a specific frame based on the axes values there are ``frameFromAxes`` and ``axesFromFrame`` utility functions.
+
+
 Styles - Changing colors, scales, and other properties
 ------------------------------------------------------
 
@@ -408,12 +446,19 @@ You may also choose to read tiles from one source and write modified tiles to a 
             }
             modified_tile = modify_tile(tile_data)
             new_source.addTile(modified_tile, x=x, y=y, **kwargs)
+    # Copy over the names of the channels, if known
+    new_source.channelNames = original_source.channelNames
     new_source.write('path/to/new/image.tiff', lossy=False)
 
 Multiple processes
 ~~~~~~~~~~~~~~~~~~
 
-In some cases, it may be beneficial to write to a single image from multiple processes or threads:
+In some cases, it may be beneficial to write to a single image from multiple processes or threads.
+
+There is one important thing to note about writing an image with multiple processes.
+In order to properly record the set of values along each frame axis, prior to any multiprocess concurrency,
+the first tile added should be at the maximum position so that the size of each dimension is preallocated.
+The following example demonstrates this step.
 
 .. code-block:: python
 

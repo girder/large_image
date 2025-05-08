@@ -1,3 +1,4 @@
+import functools
 import math
 import os
 import re
@@ -93,9 +94,30 @@ def dicom_to_dict(ds, base=None):
     return info
 
 
+@functools.lru_cache(maxsize=10000)
+def _getSeriesUIDForPath(path):
+    """
+    Check if the current path can be opened via dicom and returns a
+    SeriesInstanceUID.
+
+    :param path: a path to a potential dicom.
+    :returns: the SeriesInstanceUID if present; None if not or not a DICOM.
+    """
+    _lazyImportPydicom()
+
+    try:
+        series_uid = pydicom.filereader.dcmread(
+            path, stop_before_pixels=True, specific_tags=['SeriesInstanceUID'],
+        )[pydicom.tag.Tag('SeriesInstanceUID')].value
+        return series_uid
+    except Exception:
+        return None
+
+
 class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     """
-    Provides tile access to dicom files the dicom or dicomreader library can read.
+    Provides tile access to dicom files the dicom or dicomreader library can
+    read.
     """
 
     cacheName = 'tilesource'
@@ -186,9 +208,8 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if isinstance(path, dict):
             # Use the DICOMweb open method
             return self._open_wsi_dicomweb(path)
-        else:
-            # Use the regular open method
-            return wsidicom.WsiDicom.open(path)
+        # Use the regular open method
+        return wsidicom.WsiDicom.open(path)
 
     def _open_wsi_dicomweb(self, info):
         # These are the required keys in the info dict
@@ -247,24 +268,10 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not mightbe and re.match(r'^DCM_\d+$', path):
             mightbe = True
         if mightbe and basepath:
-            try:
-                _lazyImportPydicom()
-                base = pydicom.filereader.dcmread(basepath, stop_before_pixels=True)
-            except Exception as exc:
-                msg = f'File cannot be opened via dicom tile source ({exc}).'
-                raise TileSourceError(msg)
-            try:
-                base_series_uid = base[pydicom.tag.Tag('SeriesInstanceUID')].value
-            except Exception:
-                base_series_uid = None
+            base_series_uid = _getSeriesUIDForPath(basepath)
             if base_series_uid:
-                try:
-                    series_uid = pydicom.filereader.dcmread(
-                        origpath, stop_before_pixels=True,
-                    )[pydicom.tag.Tag('SeriesInstanceUID')].value
-                    mightbe = base_series_uid == series_uid
-                except Exception:
-                    mightbe = False
+                series_uid = _getSeriesUIDForPath(origpath)
+                mightbe = series_uid is not None and base_series_uid == series_uid
         return mightbe
 
     def getNativeMagnification(self):
@@ -333,22 +340,21 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             study_uid = self._dicom.uids.study_instance
             series_uid = self._dicom.uids.series_instance
             return get_dicomweb_metadata(client, study_uid, series_uid)
-        else:
-            # Find the first volume instance and extract the metadata
-            volume = None
-            for level in self._dicom.pyramids[0]:
-                for ds in level.datasets:
-                    if ds.image_type.value == 'VOLUME':
-                        volume = ds
-                        break
-
-                if volume:
+        # Find the first volume instance and extract the metadata
+        volume = None
+        for level in self._dicom.pyramids[0]:
+            for ds in level.datasets:
+                if ds.image_type.value == 'VOLUME':
+                    volume = ds
                     break
 
-            if not volume:
-                return None
+            if volume:
+                break
 
-            return extract_dicom_metadata(volume)
+        if not volume:
+            return None
+
+        return extract_dicom_metadata(volume)
 
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):

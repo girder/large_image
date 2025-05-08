@@ -2,6 +2,7 @@ import io
 import json
 import os
 import struct
+import tempfile
 
 import large_image_source_tiff
 import numpy as np
@@ -511,6 +512,22 @@ def testRegionTiledOutputIsTiled():
     assert tifftools.Tag.StripOffsets.value not in info['ifds'][0]['tags']
     assert tifftools.Tag.TileOffsets.value in info['ifds'][0]['tags']
     os.unlink(image)
+
+
+def testGetTiledRegionAsFile():
+    imagePath = datastore.fetch('sample_image.ptif')
+    ts = large_image_source_tiff.open(imagePath)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        resultPath = os.path.join(temp_dir, 'test_files', 'region.tiff')
+        region, _ = ts.getRegion(
+            output=dict(maxWidth=1024, maxHeight=1024, path=resultPath),
+            encoding='TILED',
+        )
+        large_image_source_tiff.open(str(region))
+        assert region.exists()
+        assert region.name == 'region.tiff'
+        assert os.path.exists(resultPath)
+        region.unlink()
 
 
 def testRegionTiledOutputLetterbox():

@@ -146,8 +146,8 @@ def testConvertJp2kCompression(tmpdir):
     image, _ = source.getRegion(
         output={'maxWidth': 200, 'maxHeight': 200}, format=constants.TILE_FORMAT_NUMPY)
     # Without or with icc adjustment
-    assert ((image[12][167] == [215, 135, 172]).all() or
-            (image[12][167] == [216, 134, 172]).all())
+    assert ((image[12][167][:3] == [215, 135, 172]).all() or
+            (image[12][167][:3] == [216, 134, 172]).all())
 
     outputPath2 = os.path.join(tmpdir, 'out2.tiff')
     large_image_converter.convert(imagePath, outputPath2, compression='jp2k', psnr=50)
@@ -322,3 +322,13 @@ def testConvertImageJ(tmpdir):
     large_image_converter.convert(imagePath, outputPath, compression='jpeg', quality=50)
     info = tifftools.read_tiff(outputPath)
     assert len(info['ifds']) == 44
+
+
+def testConvertFloat328BitRange(tmpdir):
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'sample_float32_8bit_range.zarr.zip')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath)
+    ts = large_image.open(outputPath)
+    pixel = ts.getPixel(x=0, y=0)
+    assert pixel['value'] == [132, 131, 122, 255]

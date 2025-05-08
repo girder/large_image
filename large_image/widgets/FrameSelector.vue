@@ -1,19 +1,19 @@
 <script>
-import Vue from 'vue';
-
-import {getChannelColor, OTHER_COLORS} from '../utils/colors';
-
-import CompositeLayers from './CompositeLayers.vue';
-import DualInput from './DualInput.vue';
-import PresetsMenu from './PresetsMenu.vue';
-
-export default Vue.extend({
-    components: {CompositeLayers, DualInput, PresetsMenu},
-    props: ['itemId', 'imageMetadata', 'frameUpdate', 'liConfig'],
+module.exports = {
+    name: 'FrameSelector',
+    props: [
+        'currentFrame',
+        'itemId',
+        'imageMetadata',
+        'frameUpdate',
+        'liConfig',
+        'colors',
+        'getFrameHistogram',
+        'frameHistograms'
+    ],
     data() {
         return {
             loaded: false,
-            currentFrame: 0,
             maxFrame: 0,
             sliderModes: [],
             currentModeId: 0,
@@ -21,7 +21,8 @@ export default Vue.extend({
             indexInfo: {},
             style: {},
             modesShown: {1: true},
-            histogramParamStyles: {}
+            histogramParamStyles: {},
+            frameUpdateTimeout: null
         };
     },
     computed: {
@@ -52,7 +53,7 @@ export default Vue.extend({
                         } else {
                             // non-uniform values have a value for every frame
                             // labels will change with currentFrame, so only populate current label
-                            let currentLabel = info.values[this.currentFrame];
+                            let currentLabel = this.imageMetadata.frames[this.currentFrame][key];
                             if (typeof currentLabel === 'number') currentLabel = Number(currentLabel.toPrecision(5));
                             labels[labelKey] = new Array(this.indexInfo[labelKey].range + 1).fill('');
                             labels[labelKey][this.indexInfo[labelKey].current] = currentLabel;
@@ -78,11 +79,14 @@ export default Vue.extend({
         this.loaded = true;
     },
     methods: {
+        updateCurrentFrame(value) {
+            this.currentFrame = +value;
+        },
         setCurrentMode(mode) {
             this.currentModeId = mode.id;
         },
         setCurrentFrame(frame) {
-            this.currentFrame = frame;
+            this.currentFrame = +frame;
             this.indexInfo = Object.fromEntries(
                 Object.entries(this.indexInfo)
                     .map(([index, info]) => {
@@ -125,8 +129,8 @@ export default Vue.extend({
             this.updateHistogramParamStyles();
         },
         updateFrameSlider(frame) {
-            this.currentFrame = frame;
-            this.frameUpdate(frame, undefined);
+            this.currentFrame = +frame;
+            this.frameUpdate({frame, undefined});
         },
         update() {
             let frame = 0;
@@ -138,11 +142,16 @@ export default Vue.extend({
                     }
                 }
             });
-            this.currentFrame = frame;
+            this.currentFrame = +frame;
             let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined;
             if (style && style.preset) delete style.preset;
             style = this.maxMergeStyle(style);
-            this.frameUpdate(frame, style);
+
+            // debounce frame update
+            window.clearTimeout(this.frameUpdateTimeout);
+            this.frameUpdateTimeout = window.setTimeout(() => {
+                this.frameUpdate({frame, style});
+            }, 300);
         },
         maxMergeStyle(style) {
             const bandsArray = (style ? style.bands : []) || [];
@@ -185,8 +194,8 @@ export default Vue.extend({
                     const {bands} = this.metadata;
                     const usedColors = [];
                     bands.forEach((b, i) => {
-                        let bandPalette = getChannelColor(b, usedColors);
-                        if (!bandPalette) bandPalette = OTHER_COLORS.find((c) => !usedColors.includes(c));
+                        let bandPalette = this.getChannelColor(b, usedColors);
+                        if (!bandPalette) bandPalette = this.colors.other.find((c) => !usedColors.includes(c));
                         frameDeltas.forEach((framedelta) => {
                             newBandsArray.push({
                                 band: i + 1,
@@ -294,9 +303,18 @@ export default Vue.extend({
                     {id: 3, name: 'Band Compositing'}
                 );
             }
+        },
+        getChannelColor(name, usedColors) {
+            // Search for case-insensitive regex match among known channel-colors
+            for (const [channelPattern, color] of Object.entries(this.colors.channel)) {
+                if (!usedColors.includes(color) && name.match(new RegExp(channelPattern, 'i'))) {
+                    usedColors.push(color);
+                    return color;
+                }
+            }
         }
     }
-});
+};
 </script>
 
 <template>
@@ -307,11 +325,15 @@ export default Vue.extend({
     <div
       id="current_image_frame"
       class="invisible"
-    >{{ currentFrame }}</div>
+    >
+      {{ currentFrame }}
+    </div>
     <div
       id="current_image_style"
       class="invisible"
-    >{{ currentStyle }}</div>
+    >
+      {{ currentStyle }}
+    </div>
     <div>
       <label for="mode">Image control mode: </label>
       <select
@@ -327,6 +349,7 @@ export default Vue.extend({
         </option>
       </select>
       <presets-menu
+        v-if="itemId"
         :item-id="itemId"
         :li-config="liConfig"
         :image-metadata="imageMetadata"
@@ -365,29 +388,37 @@ export default Vue.extend({
     <div class="image-frame-simple-control">
       <composite-layers
         v-if="metadata.channels && modesShown[2]"
-        key="channels"
+        key="Channel"
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[2]"
         :histogram-param-style="histogramParamStyles[2]"
+        :frame-histograms="frameHistograms"
+        :get-frame-histogram="getFrameHistogram"
+        :dtype="metadata.dtype"
         :layers="metadata.channels"
         :layer-map="metadata.channelmap"
         :active="currentModeId === 2"
         :class="currentModeId === 2 ? '' : 'invisible'"
-        @updateStyle="(style) => updateStyle(2, style)"
+        :colors="colors"
+        :style-update="(style) => updateStyle(2, style)"
       />
       <composite-layers
         v-if="metadata.bands && modesShown[3]"
-        key="bands"
+        key="Band"
         :item-id="itemId"
         :current-frame="currentFrame"
         :current-style="style[3]"
         :histogram-param-style="histogramParamStyles[3]"
+        :frame-histograms="frameHistograms"
+        :get-frame-histogram="getFrameHistogram"
+        :dtype="metadata.dtype"
         :layers="metadata.bands"
         :layer-map="undefined"
         :active="currentModeId === 3"
         :class="currentModeId === 3 ? '' : 'invisible'"
-        @updateStyle="(style) => updateStyle(3, style)"
+        :colors="colors"
+        :style-update="(style) => updateStyle(3, style)"
       />
     </div>
   </div>
@@ -400,6 +431,7 @@ export default Vue.extend({
 .image-frame-control-box {
     display: flex;
     flex-direction: column;
+    padding-bottom: 5px;
 }
 .image-frame-simple-control {
     display: flex;

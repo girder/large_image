@@ -24,6 +24,18 @@ Some functionality of large_image is controlled through configuration parameters
      - ``logging.Logger``
      - This defaults to the standard python logger using the name large_image. When using Girder, this default to Girder's logger, which allows colored console output.
 
+       .. _config_default_encoding:
+   * - ``default_encoding`` :ref:`🔗 <config_default_encoding>`
+     - Default encoding for tile sources.
+     - ``'JPEG' | 'PNG' | 'TIFF' | 'TILED'``
+     - ``None``
+
+       .. _config_default_projection:
+   * - ``default_projection`` :ref:`🔗 <config_default_projection>`
+     - Default projection for geospatial tile sources. Use a proj4 projection string or a case-insensitive string of the form 'EPSG:<epsg number>'.
+     - ``str | None``
+     - ``None``
+
        .. _config_cache_backend:
    * - ``cache_backend`` :ref:`🔗 <config_cache_backend>`
      - String specifying how tiles are cached.  If memcached is not available for any reason, the python cache is used instead.

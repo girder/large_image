@@ -17,6 +17,7 @@
 import math
 import os
 import threading
+import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
@@ -49,6 +50,9 @@ def _lazyImport():
         except ImportError:
             msg = 'nd2 module not found.'
             raise TileSourceError(msg)
+        # the dask module emits a warning about an open handle even those we
+        # close file handles properly.  Suppress them
+        warnings.filterwarnings('ignore', category=UserWarning, module='.*dask.*')
 
 
 def namedtupleToDict(obj):
