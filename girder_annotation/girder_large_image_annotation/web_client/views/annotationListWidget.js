@@ -23,6 +23,8 @@ const AnnotationListWidget = View.extend({
     events: {
         'click .g-annotation-toggle-select': '_displayAnnotation',
         'click .g-annotation-toggle-all': '_displayAllAnnotations',
+        'click .g-annotation-select': '_selectAnnotation',
+        'click .g-annotation-download-selected': '_downloadSelectedAnnotations',
         'click .g-annotation-delete': '_deleteAnnotation',
         'click .g-annotation-upload': '_uploadAnnotation',
         'click .g-annotation-permissions': '_changePermissions',
@@ -121,6 +123,15 @@ const AnnotationListWidget = View.extend({
             confList: this._confList,
             AccessType
         }));
+        const anySelected = this.$('.g-annotation-select input:checked').length > 0;
+
+        ['.g-annotation-download-selected', '.g-annotation-delete', '.g-annotation-permissions'].forEach((selector) => {
+            this.$(`thead ${selector}`)
+                .prop('disabled', !anySelected)
+                .toggleClass('disabled', !anySelected)
+                .css('color', !anySelected ? 'grey' : '');
+        });
+
         return this;
     },
 
@@ -182,24 +193,86 @@ const AnnotationListWidget = View.extend({
         this.$el.find('th.g-annotation-toggle i').toggleClass('icon-eye', !anyOn).toggleClass('icon-eye-off', !!anyOn);
     },
 
+    _selectAnnotation(evt) {
+        // Prevent event from bubbling up to the row click handler
+        // that toggles the annotation on and off
+        evt.stopPropagation();
+
+        const $el = $(evt.currentTarget);
+        const id = $el.parents('.g-annotation-row').data('annotationId');
+        const allChecks = this.$el.find('.g-annotation-select input[type=checkbox]');
+        const anySelected = this.$('.g-annotation-select input:checked').length > 0;
+
+        this.$('thead .g-annotation-download-selected, thead .g-annotation-delete, thead .g-annotation-permissions')
+            .prop('disabled', !anySelected)
+            .toggleClass('disabled', !anySelected)
+            .css('color', anySelected ? '' : 'grey');
+        if (!id) {
+            if ($el.find('input').is(':checked')) {
+                allChecks.prop('checked', true);
+            }
+            if (!$el.find('input').is(':checked')) {
+                allChecks.prop('checked', false);
+            }
+        }
+    },
+
+    _downloadSelectedAnnotations(evt) {
+        evt.preventDefault();
+
+        const selectedAnnotations = this.$('.g-annotation-select input:checked')
+            .closest('.g-annotation-row')
+            .map((_, el) => $(el).data('annotationId'))
+            .get();
+
+        selectedAnnotations.forEach((id) => {
+            const annotation = this.collection.get(id);
+            if (annotation) {
+                annotation.fetch().then(() => {
+                    const url = `${getApiRoot()}/annotation/${annotation.id}`;
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute('href', url);
+                    downloadAnchor.setAttribute('download', `${annotation.get('annotation').name}.json`);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    document.body.removeChild(downloadAnchor);
+                    return null;
+                });
+            }
+        });
+    },
+
     _deleteAnnotation(evt) {
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
+        const checkedAnnotations = this.$el.find('.g-annotation-select input[type=checkbox]:checked');
+        const checkedAnnotationIds = [];
         if (!id) {
-            confirm({
-                text: `Are you sure you want to delete <b>ALL</b> annotations?`,
-                escapedHtml: true,
-                yesText: 'Delete',
-                confirmCallback: () => {
-                    restRequest({
-                        url: `annotation/item/${this.model.id}`,
-                        method: 'DELETE'
-                    }).done(() => {
-                        this.collection.fetch(null, true);
-                    });
-                }
-            });
-            return;
+            for (let i = 0; i < checkedAnnotations.length; i++) {
+                const annotationId = $(checkedAnnotations[i]).parents('.g-annotation-row').data('annotationId');
+                checkedAnnotationIds.push(annotationId);
+            }
+            if (checkedAnnotations.length !== 0) {
+                confirm({
+                    text: `<h3>Are you sure you want to delete the following annotations?</h3>
+                        <ul
+                          style="max-height: 200px; padding-left: 0; overflow-y: auto;"
+                        >${_.map(checkedAnnotationIds, (annotationId) => {
+        const model = this.collection.get(annotationId);
+        return `<li>${_.escape(model.get('annotation').name)}</li>`;
+    }).join('')}</ul>`,
+                    escapedHtml: true,
+                    yesText: 'Delete',
+                    confirmCallback: () => {
+                        for (let i = 0; i < checkedAnnotationIds.length; i++) {
+                            this._drawn.delete(checkedAnnotationIds[i]);
+                            const model = this.collection.get(checkedAnnotationIds[i]);
+                            model.destroy();
+                        }
+                    }
+                });
+                return;
+            }
         }
         const model = this.collection.get(id);
 
@@ -246,13 +319,19 @@ const AnnotationListWidget = View.extend({
     _changePermissions(evt) {
         const $el = $(evt.currentTarget);
         let id = $el.parents('.g-annotation-row').data('annotationId');
+        const checkedAnnotations = this.$el.find('.g-annotation-select input[type=checkbox]:checked');
+        const checkedAnnotationIds = [];
         if (!id && this.collection.length === 1) {
             id = this.collection.at(0).id;
         }
         const model = id ? this.collection.get(id) : this.collection.at(0).clone();
         if (!id) {
-            // if id is not set, override widget's saveAccessList
-            model.get('annotation').name = 'All Annotations';
+            // if id is not set, override widget's saveAccessList with selected annotations
+            for (let i = 0; i < checkedAnnotations.length; i++) {
+                const annotationId = $(checkedAnnotations[i]).parents('.g-annotation-row').data('annotationId');
+                checkedAnnotationIds.push(annotationId);
+            }
+            model.get('annotation').name = 'Selected Annotations';
             model.save = () => {};
             model.updateAccess = () => {
                 const access = {
@@ -260,10 +339,14 @@ const AnnotationListWidget = View.extend({
                     public: model.get('public'),
                     publicFlags: model.get('publicFlags')
                 };
-                this.collection.each((loopmodel) => {
-                    loopmodel.set(access);
-                    loopmodel.updateAccess();
-                });
+                for (let i = 0; i < checkedAnnotationIds.length; i++) {
+                    const selectedModel = this.collection.get(checkedAnnotationIds[i]);
+                    if (!selectedModel) {
+                        continue;
+                    }
+                    selectedModel.set(access);
+                    selectedModel.updateAccess();
+                }
                 this.collection.fetch(null, true);
                 model.trigger('g:accessListSaved');
             };
