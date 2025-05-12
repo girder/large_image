@@ -378,7 +378,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                     elif 'Key' in val and 'Value' in val:
                         rkey = f'{pkey}:{val["Key"]}'.strip(':')
                         result[rkey] = val['Value']
-                        if refs:
+                        if refs is not None:
                             refs[rkey] = (entry, key, None, 'Value')
                     else:
                         self._reduceInternalMetadata(result, val, pkey, refs)
@@ -390,7 +390,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                             elif 'Key' in subval and 'Value' in subval:
                                 rkey = f'{pkey}:{subval["Key"]}'
                                 result[rkey] = subval['Value']
-                                if refs:
+                                if refs is not None:
                                     refs[rkey] = (entry, key, subidx, 'Value')
                             else:
                                 self._reduceInternalMetadata(
@@ -398,13 +398,13 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
                         elif not isinstance(subval, list):
                             rkey = f'{pkey}:{subidx}'.strip(':')
                             result[rkey] = subval
-                            if refs:
+                            if refs is not None:
                                 refs[rkey] = (entry, key, subidx, None)
                 elif key == 'ID' and str(val).split(':')[0] in prefix:
                     continue
                 elif val != '' and pkey:
                     result[pkey] = val
-                    if refs:
+                    if refs is not None:
                         refs[pkey] = (entry, key, None, None)
 
     def getInternalMetadata(self, **kwargs):
