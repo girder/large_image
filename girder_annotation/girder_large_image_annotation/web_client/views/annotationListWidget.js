@@ -257,17 +257,26 @@ const AnnotationListWidget = View.extend({
                     text: `<h3>Are you sure you want to delete the following annotations?</h3>
                         <ul
                           style="max-height: 200px; padding-left: 0; overflow-y: auto;"
-                        >${_.map(checkedAnnotationIds, (annotationId) => {
-        const model = this.collection.get(annotationId);
-        return `<li>${_.escape(model.get('annotation').name)}</li>`;
+    >${_.map(checkedAnnotationIds, (annotationId) => {
+        if (annotationId !== undefined) {
+            const model = this.collection.get(annotationId);
+
+            if (model) {
+                const annotationName = model.get('annotation').name;
+                return `<li>${_.escape(annotationName)}</li>`;
+            }
+        }
+        return '';
     }).join('')}</ul>`,
                     escapedHtml: true,
                     yesText: 'Delete',
                     confirmCallback: () => {
                         for (let i = 0; i < checkedAnnotationIds.length; i++) {
-                            this._drawn.delete(checkedAnnotationIds[i]);
-                            const model = this.collection.get(checkedAnnotationIds[i]);
-                            model.destroy();
+                            if (checkedAnnotationIds[i] !== undefined) {
+                                this._drawn.delete(checkedAnnotationIds[i]);
+                                const model = this.collection.get(checkedAnnotationIds[i]);
+                                model.destroy();
+                            }
                         }
                     }
                 });
