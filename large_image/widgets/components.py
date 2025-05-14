@@ -5,6 +5,8 @@ from typing import Callable, Union
 import ipyvue
 import traitlets
 
+from ipywidgets import DOMWidget, register
+
 parent = Path(__file__).parent
 with open(parent / 'colors.json') as f:
     colors_data = json.load(f)
@@ -14,6 +16,15 @@ with open(parent / 'CompositeLayers.vue') as f:
     composite_layers = f.read()
 with open(parent / 'HistogramEditor.vue') as f:
     histogram_editor = f.read()
+
+@register
+class HistogramEditor(DOMWidget):
+    _view_name = traitlets.Unicode('histogram-editor').tag(sync=True)
+    _view_module = traitlets.Unicode('histogram_editor').tag(sync=True)
+    _view_module_version = traitlets.Unicode('0.1.0').tag(sync=True)
+
+    name = traitlets.Unicode('histogram-editor').tag(sync=True)
+    component = traitlets.Unicode(histogram_editor).tag(sync=True)
 
 
 class FrameSelector(ipyvue.VueTemplate):  # type: ignore
@@ -33,7 +44,6 @@ class FrameSelector(ipyvue.VueTemplate):  # type: ignore
     components = traitlets.Dict({
         'dual-input': dual_input,
         'composite-layers': composite_layers,
-        'histogram-editor': histogram_editor,
     }).tag(sync=True)
 
     def vue_frameUpdate(self, data=None):
@@ -45,3 +55,5 @@ class FrameSelector(ipyvue.VueTemplate):  # type: ignore
     def vue_getFrameHistogram(self, params=None):
         if self.getFrameHistogram is not None:
             self.getFrameHistogram(params)
+
+print('test updated 5')
