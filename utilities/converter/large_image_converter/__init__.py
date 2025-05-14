@@ -573,6 +573,14 @@ def _convert_large_image_frame(
     maxbands = max(strip.bands for strip in strips)
     if minbands != maxbands:
         strips = [strip[:minbands] for strip in strips]
+    # Persist the strips to temp files to build them into single objects;
+    # otherwise vips will use arbitrarily large amounts of memory
+    for sidx in range(len(strips)):
+        _pool_log(len(strips) - sidx, len(strips), 'resolving strips')
+        strip = strips[sidx]
+        vimgTemp = pyvips.Image.new_temp_file('%s.v')
+        strip.write(vimgTemp)
+        strips[sidx] = vimgTemp
     img = strips[0]
     for stripidx in range(1, len(strips)):
         img = img.insert(strips[stripidx], 0, stripidx * _iterTileSize, expand=True)

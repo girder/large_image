@@ -22,7 +22,8 @@ export default {
             indexInfo: {},
             style: {},
             modesShown: {1: true},
-            histogramParamStyles: {}
+            histogramParamStyles: {},
+            frameUpdateTimeout: null
         };
     },
     computed: {
@@ -150,7 +151,12 @@ export default {
             let style = this.currentModeId > 1 ? Object.assign({}, this.style[this.currentModeId]) : undefined;
             if (style && style.preset) delete style.preset;
             style = this.maxMergeStyle(style);
-            this.frameUpdate({frame, style});
+
+            // debounce frame update
+            window.clearTimeout(this.frameUpdateTimeout);
+            this.frameUpdateTimeout = window.setTimeout(() => {
+                this.frameUpdate({frame, style});
+            }, 300);
         },
         maxMergeStyle(style) {
             const bandsArray = (style ? style.bands : []) || [];

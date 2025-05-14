@@ -1,5 +1,24 @@
 # Change Log
 
+## 1.32.5
+
+### Bug Fixes
+
+- Always use api root where appropriate ([#1902](../../pull/1902))
+
+## 1.32.4
+
+### Improvements
+
+- Zarr sink: Set projection and GCPs ([#1882](../../pull/1882))
+- Debounce frame update in FrameSelector in jupyter widget ([#1894](../../pull/1894))
+
+### Bug Fixes
+
+- Change where locking occurs with bioformats ([#1896](../../pull/1896), [#1898](../../pull/1898))
+- vips could use too much memory during image conversion ([#1899](../../pull/1899))
+- Fix checking for storing references for round-trip ometiff xml ([#1900](../../pull/1900))
+
 ## 1.32.3
 
 ### Improvements

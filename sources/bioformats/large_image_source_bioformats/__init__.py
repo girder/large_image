@@ -57,6 +57,7 @@ javabridge = None
 
 _javabridgeStarted = None
 _javabridgeStartLock = threading.Lock()
+_javabridgeAttachLock = threading.Lock()
 _bioformatsVersion = None
 _openImages = []
 
@@ -72,7 +73,8 @@ def _monitor_thread():
     main_thread.join()
     if len(_openImages):
         try:
-            javabridge.attach()
+            with _javabridgeAttachLock:
+                javabridge.attach()
             while len(_openImages):
                 source = _openImages.pop()
                 source = source()
@@ -87,8 +89,9 @@ def _monitor_thread():
         except Exception:
             pass
         finally:
-            if javabridge.get_env():
-                javabridge.detach()
+            with _javabridgeAttachLock:
+                if javabridge.get_env():
+                    javabridge.detach()
     _stopJavabridge()
 
 
@@ -234,7 +237,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._tileLock = threading.RLock()
 
         try:
-            javabridge.attach()
+            with _javabridgeAttachLock:
+                javabridge.attach()
             try:
                 self._bioimage = bioformats.ImageReader(largeImagePath, perform_init=False)
                 try:
@@ -313,8 +317,9 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'The bioformats reader threw an unhandled exception.'
             raise TileSourceError(msg)
         finally:
-            if javabridge.get_env():
-                javabridge.detach()
+            with _javabridgeAttachLock:
+                if javabridge.get_env():
+                    javabridge.detach()
 
         if self.levels < 1:
             msg = 'Bioformats image must have at least one level.'
@@ -340,15 +345,17 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:
             try:
-                javabridge.attach()
+                with _javabridgeAttachLock:
+                    javabridge.attach()
                 self._bioimage.close()
                 del self._bioimage
                 _openImages.remove(weakref.ref(self))
             except Exception:
                 pass
             finally:
-                if javabridge.get_env():
-                    javabridge.detach()
+                with _javabridgeAttachLock:
+                    if javabridge.get_env():
+                        javabridge.detach()
 
     def _metadataForCurrentSeries(self, rdr):
         self._metadata = getattr(self, '_metadata', {})
@@ -664,33 +671,37 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tile = large_image.tilesource.base._imageToNumpy(tile)[0]
             format = TILE_FORMAT_NUMPY
         else:
-            with self._tileLock:
-                try:
-                    javabridge.attach()
-                    if width > 0 and height > 0:
+            with _javabridgeAttachLock:
+                javabridge.attach()
+            try:
+                if width > 0 and height > 0:
+                    with self._tileLock:
                         tile = self._bioimage.read(
-                            c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
+                            c=fc, z=fz, t=ft,
+                            series=fseries['series'][seriesLevel],
                             rescale=False,  # return internal data types
                             XYWH=(offsetx, offsety, width, height))
-                    else:
-                        # We need the same dtype, so read 1x1 at 0x0
+                else:
+                    # We need the same dtype, so read 1x1 at 0x0
+                    with self._tileLock:
                         tile = self._bioimage.read(
                             c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
                             rescale=False,  # return internal data types
                             XYWH=(0, 0, 1, 1))
-                        tile = np.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
-                    format = TILE_FORMAT_NUMPY
-                except javabridge.JavaException as exc:
-                    es = javabridge.to_string(exc.throwable)
-                    self.logger.exception('Failed to getTile (%r)', es)
-                    if getattr(self, '_lastGetTileException', None) == 'raise':
-                        raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
-                            fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx,
-                            offsety, width, height)))
-                    self._lastGetTileException = repr(es)
-                    tile = np.zeros((1, 1))
-                    format = TILE_FORMAT_NUMPY
-                finally:
+                    tile = np.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
+                format = TILE_FORMAT_NUMPY
+            except javabridge.JavaException as exc:
+                es = javabridge.to_string(exc.throwable)
+                self.logger.exception('Failed to getTile (%r)', es)
+                if getattr(self, '_lastGetTileException', None) == 'raise':
+                    raise TileSourceError('Failed to get Bioformat region (%s, %r).' % (es, (
+                        fc, fz, ft, fseries, self.sizeX, self.sizeY, offsetx,
+                        offsety, width, height)))
+                self._lastGetTileException = repr(es)
+                tile = np.zeros((1, 1))
+                format = TILE_FORMAT_NUMPY
+            finally:
+                with _javabridgeAttachLock:
                     if javabridge.get_env():
                         javabridge.detach()
             if scale > 1:
@@ -733,18 +744,20 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if info is None:
             return None
         series = info['seriesNum']
-        with self._tileLock:
-            try:
-                javabridge.attach()
+        with _javabridgeAttachLock:
+            javabridge.attach()
+        try:
+            with self._tileLock:
                 image = self._bioimage.read(
                     series=series,
                     rescale=False,  # return internal data types
                     XYWH=(0, 0, info['sizeX'], info['sizeY']))
-            except javabridge.JavaException as exc:
-                es = javabridge.to_string(exc.throwable)
-                raise TileSourceError('Failed to get Bioformat series (%s, %r).' % (es, (
-                    series, info['sizeX'], info['sizeY'])))
-            finally:
+        except javabridge.JavaException as exc:
+            es = javabridge.to_string(exc.throwable)
+            raise TileSourceError('Failed to get Bioformat series (%s, %r).' % (es, (
+                series, info['sizeX'], info['sizeY'])))
+        finally:
+            with _javabridgeAttachLock:
                 if javabridge.get_env():
                     javabridge.detach()
         return large_image.tilesource.base._imageToPIL(image)
