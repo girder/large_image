@@ -58,14 +58,16 @@ module.exports = {
             if (this.queuedRequests) {
                 let requests = this.queuedRequests[this.currentFrame];
                 if (!requests) this.queuedRequests = undefined;
-                const receivedFrames = Object.keys(this.frameHistograms).map((v) => parseInt(v));
-                requests = requests.filter((r) => !receivedFrames.includes(r.frame));
-                if (!requests.length) this.queuedRequests = undefined;
                 else {
-                    this.getFrameHistogram(requests[0]);
-                    this.queuedRequests = {
-                        [this.currentFrame]: requests.slice(1)
-                    };
+                    const receivedFrames = Object.keys(this.frameHistograms).map((v) => parseInt(v));
+                    requests = requests.filter((r) => !receivedFrames.includes(r.frame));
+                    if (!requests.length) this.queuedRequests = undefined;
+                    else {
+                        this.getFrameHistogram(requests[0]);
+                        this.queuedRequests = {
+                            [this.currentFrame]: requests.slice(1)
+                        };
+                    }
                 }
             }
         }
