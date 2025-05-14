@@ -1,10 +1,9 @@
 import $ from 'jquery';
 import _ from 'underscore';
 import Backbone from 'backbone';
-
 import events from '@girder/core/events';
 import {wrap} from '@girder/core/utilities/PluginUtils';
-import {restRequest} from '@girder/core/rest';
+import {restRequest, getApiRoot} from '@girder/core/rest';
 
 import convertAnnotation from '../../annotations/geojs/convert';
 
@@ -163,7 +162,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
             if (_.isFunction(layerParams.url) || levelDifference) {
-                layerParams.url = (x, y, z) => 'api/v1/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                layerParams.url = (x, y, z) => getApiRoot() + '/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             } else {
                 layerParams.url = layerParams.url + '?encoding=PNG';
             }
@@ -210,7 +209,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileWidth, overlayImageMetadata.tileHeight
             );
             params.layer.useCredentials = true;
-            params.layer.url = `api/v1/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
+            params.layer.url = `${getApiRoot()}/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
             if (this._countDrawnImageOverlays() <= 6) {
                 params.layer.autoshareRenderer = false;
             } else {
@@ -224,7 +223,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             levelDifference -= this._getOverlayRelativeScale(overlay);
 
             if (this.levels !== overlayImageMetadata.levels) {
-                params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
                 params.layer.minLevel = levelDifference;
                 params.layer.maxLevel += levelDifference;
 
@@ -247,7 +246,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference);
             } else if (overlay.hasAlpha) {
                 params.layer.keepLower = false;
-                params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             }
             return params.layer;
         },
