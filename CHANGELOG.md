@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.5
+
+### Bug Fixes
+
+- Always use api root where appropriate ([#1902](../../pull/1902))
+
 ## 1.32.4
 
 ### Improvements

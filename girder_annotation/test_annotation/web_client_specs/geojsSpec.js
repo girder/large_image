@@ -235,7 +235,7 @@ $(function () {
             };
             const pixelmapLayerParams = viewer._generateOverlayLayerParams(overlayMetadata, overlayId, pixelMapElement);
             const expectedUrl = 'api/v1/item/' + overlayId + '/tiles/zxy/{z}/{x}/{y}?encoding=PNG';
-            expect(pixelmapLayerParams.url).toBe(expectedUrl);
+            expect(pixelmapLayerParams.url.endsWith(expectedUrl)).toBe(true);
             expect(pixelmapLayerParams.data).toEqual(pixelMapElement.values);
 
             pixelMapElement.boundaries = true;
