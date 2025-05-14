@@ -375,7 +375,7 @@ describe('AnnotationListWidget', function () {
             var $el = $('.g-annotation-list');
             expect($el.find('th .g-annotation-permissions').length).toBe(1);
             $el.find('th.g-annotation-select input').click();
-            $el.find('.g-annotation-permissions').click();
+            $el.find('th .g-annotation-permissions').click();
 
             girderTest.waitForDialog();
             runs(function () {
@@ -388,7 +388,7 @@ describe('AnnotationListWidget', function () {
             var $el = $('.g-annotation-list');
             expect($el.find('th .g-annotation-delete').length).toBe(1);
             $el.find('th.g-annotation-select input').click();
-            $el.find('.g-annotation-delete').click();
+            $el.find('th .g-annotation-delete').click();
 
             girderTest.waitForDialog();
             runs(function () {
