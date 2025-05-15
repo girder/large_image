@@ -5,6 +5,7 @@
 ### Bug Fixes
 
 - Always use api root where appropriate ([#1902](../../pull/1902))
+- Fix listing updated time in customized annotation lists ([#1903](../../pull/1903))
 
 ## 1.32.4
 
