@@ -142,10 +142,12 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         self.tileWidth = self.tileSize
         self.tileHeight = self.tileSize
         if projection == PROJECTION_SENTINEL:
-            if self.isGeospatial(self.dataset):
-                projection = config.getConfig('default_projection')
-            else:
-                projection = None
+            projection = None
+            try:
+                if self.isGeospatial(self.dataset):
+                    projection = config.getConfig('default_projection')
+            except RuntimeError:
+                pass
         if projection and projection.lower().startswith('epsg:'):
             projection = projection.lower()
         if projection and not isinstance(projection, bytes):
