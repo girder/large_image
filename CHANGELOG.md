@@ -2,6 +2,10 @@
 
 ## 1.32.5
 
+### Improvements
+
+- Add a PATCH annotation endpoint ([#1904](../../pull/1904))
+
 ### Bug Fixes
 
 - Always use api root where appropriate ([#1902](../../pull/1902))
