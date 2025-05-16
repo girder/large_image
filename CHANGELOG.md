@@ -6,6 +6,10 @@
 
 - Add a PATCH annotation endpoint ([#1904](../../pull/1904))
 
+### Changes
+
+- Tweak a few source priorities ([#1907](../../pull/1907))
+
 ### Bug Fixes
 
 - Always use api root where appropriate ([#1902](../../pull/1902))
