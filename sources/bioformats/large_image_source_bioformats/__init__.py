@@ -188,14 +188,14 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     name = 'bioformats'
     extensions = {
         None: SourcePriority.FALLBACK,
-        'czi': SourcePriority.PREFERRED,
+        'czi': SourcePriority.HIGH,
         'ets': SourcePriority.LOW,  # part of vsi
         'lif': SourcePriority.MEDIUM,
         'vsi': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
-        'image/czi': SourcePriority.PREFERRED,
+        'image/czi': SourcePriority.HIGH,
         'image/vsi': SourcePriority.PREFERRED,
     }
 
