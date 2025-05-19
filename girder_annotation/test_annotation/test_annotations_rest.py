@@ -7,7 +7,8 @@ import pytest
 from . import girder_utilities as utilities
 from .test_annotations import (makeLargeSampleAnnotation, sampleAnnotation,
                                sampleAnnotationEmpty,
-                               sampleAnnotationWithMetadata)
+                               sampleAnnotationWithMetadata,
+                               sampleAnnotationWithPointsAndMetadata)
 
 pytestmark = pytest.mark.girder
 
@@ -904,6 +905,75 @@ class TestLargeImageAnnotationElementGroups:
         )
         assert utilities.respStatus(resp) == 200
         assert len(resp.json['columns']) >= 2
+
+    def testPatchAnnotation(self, server, admin):
+        publicFolder = utilities.namedFolder(admin, 'Public')
+        item = Item().createItem('sample', admin, publicFolder)
+        annot = Annotation().createAnnotation(item, admin, sampleAnnotationWithPointsAndMetadata)
+        resp = server.request(path='/annotation/%s' % annot['_id'], user=admin)
+        assert utilities.respStatus(resp) == 200
+
+        # These should all work
+        for record, testfunc in [(
+            [{'op': 'remove', 'path': 'name'}],
+            lambda a: (a['annotation']['name'] != 'sample'),
+        ), (
+            [{'op': 'replace', 'path': 'name', 'value': 'Test 1'}],
+            lambda a: (a['annotation']['name'] == 'Test 1'),
+        ), (
+            [{'op': 'replace', 'path': 'attributes', 'value': {'key1': 'value2'}}],
+            lambda a: (a['annotation']['attributes']['key1'] == 'value2'),
+        ), (
+            [{'op': 'replace', 'path': 'attributes/key1', 'value': 'value3'}],
+            lambda a: (a['annotation']['attributes']['key1'] == 'value3'),
+        ), (
+            [{'op': 'replace', 'path': 'elements/id:0123456789abcdef01234560', 'value': {
+                'lineColor': 'rgb(0, 255, 0)',
+                'fillColor': 'rgba(0, 255, 0, 0.25)',
+                'type': 'point',
+                'center': [25608, 21928, 0],
+                'group': 'Green',
+            }}],
+            lambda a: (a['annotation']['elements'][0]['group'] == 'Green'),
+        ), (
+            [{'op': 'replace', 'path': 'elements/id:0123456789abcdef01234560/group',
+              'value': 'Blue'}],
+            lambda a: (a['annotation']['elements'][0]['group'] == 'Blue'),
+        ), (
+            [{'op': 'replace', 'path': 'elements/id:0123456789abcdef01234560/center/1',
+              'value': 20000}],
+            lambda a: (a['annotation']['elements'][0]['center'][1] == 20000),
+        ), (
+            [{'op': 'remove', 'path': 'elements/id:0123456789abcdef01234560'}],
+            lambda a: (len(a['annotation']['elements']) == 2),
+        )]:
+            resp = server.request(
+                '/annotation/%s' % annot['_id'], method='PATCH', user=admin,
+                type='application/json', body=json.dumps(record), isJson=False)
+            assert utilities.respStatus(resp) == 204
+            assert testfunc(Annotation().load(annot['_id'], user=admin))
+
+        # These should all fail
+        for record in [
+            [{'path': 'name', 'value': 'no op'}],
+            [{'op': 'add', 'value': 'no path'}],
+            [{'op': 'not an op', 'path': 'name', 'value': 'not an op'}],
+            [{'op': 'add', 'path': 'name', 'value': 'Test 1'}],
+            [{'op': 'replace', 'path': 'name/key', 'value': 'Test 1'}],
+            [{'op': 'replace', 'path': 'name', 'value': [0, 1]}],
+            [{'op': 'replace', 'path': 'name'}],
+            [{'op': 'replace', 'path': 'elements', 'value': {}}],
+            [{'op': 'replace', 'path': 'elements/0123456789abcdef01234500', 'value': {}}],
+            [{'op': 'replace', 'path': 'elements/id:0123456789abcdef01234500', 'value': {}}],
+            [{'op': 'replace', 'path': 'elements/id:0123456789abcdef01234560/center/a',
+              'value': 20000}],
+            [{'op': 'replace', 'path': 'elements/id:0123456789abcdef01234560/center/1',
+              'value': 'abc'}],
+        ]:
+            resp = server.request(
+                '/annotation/%s' % annot['_id'], method='PATCH', user=admin,
+                type='application/json', body=json.dumps(record))
+            assert utilities.respStatus(resp) == 400
 
 
 @pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')

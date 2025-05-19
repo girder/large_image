@@ -1,5 +1,22 @@
 # Change Log
 
+## 1.32.5
+
+### Improvements
+
+- Add a PATCH annotation endpoint ([#1904](../../pull/1904))
+
+### Changes
+
+- Tweak a few source priorities ([#1907](../../pull/1907))
+
+### Bug Fixes
+
+- Always use api root where appropriate ([#1902](../../pull/1902))
+- Fix listing updated time in customized annotation lists ([#1903](../../pull/1903))
+- Guard isGeopatial when called on an image GDAL can open but not read ([#1906](../../pull/1906))
+- Improve handling of large annotation elements ([#1908](../../pull/1908))
+
 ## 1.32.4
 
 ### Improvements
@@ -11,6 +28,7 @@
 
 - Change where locking occurs with bioformats ([#1896](../../pull/1896), [#1898](../../pull/1898))
 - vips could use too much memory during image conversion ([#1899](../../pull/1899))
+- Fix checking for storing references for round-trip ometiff xml ([#1900](../../pull/1900))
 
 ## 1.32.3
 

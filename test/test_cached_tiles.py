@@ -1,4 +1,5 @@
 import gc
+import os
 import time
 
 import large_image_source_test
@@ -161,6 +162,7 @@ class TestMemcachedCache(LargeImageCachedTilesTest):
         config.setConfig('cache_backend', 'memcached')
 
 
+@pytest.mark.skipif(os.getenv('REDIS_TEST_URL') is None, reason='REDIS_TEST_URL is not set')
 class TestRedisCache(LargeImageCachedTilesTest):
     @classmethod
     def setup_class(cls):
