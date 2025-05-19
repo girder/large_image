@@ -5,6 +5,7 @@
 ### Improvements
 
 - Add a PATCH annotation endpoint ([#1904](../../pull/1904))
+- Add an option to merge dicom files in the same series and study and folder ([#1912](../../pull/1912))
 
 ### Changes
 
