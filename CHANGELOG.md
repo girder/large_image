@@ -8,7 +8,7 @@
 
 ### Changes
 
-- Tweak a few source priorities ([#1907](../../pull/1907))
+- Tweak a few source priorities ([#1907](../../pull/1907), [#19098](../../pull/19098))
 
 ### Bug Fixes
 
