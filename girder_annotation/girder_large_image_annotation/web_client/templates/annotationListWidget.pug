@@ -62,7 +62,7 @@ if annotations.length
                 } else if (column.type === 'record' && column.value === 'updatedId') {
                   value = updater || creator;
                 } else if (column.type === 'record' && column.value === 'updated') {
-                  value = value || annotation.get('created')
+                  value = annotation.get('updated') || annotation.get('created')
                 } else if (column.type === 'metadata') {
                   value = annotation.get('annotation').attributes || {};
                   column.value.split('.').forEach((part) => {

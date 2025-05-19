@@ -55,6 +55,7 @@ class AnnotationResource(Resource):
         self.route('GET', (':id',), self.getAnnotation)
         self.route('GET', (':id', ':format'), self.getAnnotationWithFormat)
         self.route('PUT', (':id',), self.updateAnnotation)
+        self.route('PATCH', (':id',), self.patchAnnotation)
         self.route('DELETE', (':id',), self.deleteAnnotation)
         self.route('GET', (':id', 'access'), self.getAnnotationAccess)
         self.route('PUT', (':id', 'access'), self.updateAnnotationAccess)
@@ -399,6 +400,130 @@ class AnnotationResource(Resource):
             return jsonResponse(Annotation().filter(annot, user))
 
         return longRestResponse(process)
+
+    def _patchElement(self, elements, fullpath, op, value, elementdict):
+        logger.debug('Patch element %s %s', op, fullpath)
+        elpath = fullpath.split(':', 1)[1]
+        if 'empty' in elementdict:
+            elementdict.pop('empty')
+            for el in elements:
+                elementdict[el['id']] = el
+        if '/' in elpath:
+            return self._patchEntry(elementdict, elpath, op, value, fullpath)
+        elid = elpath.split('/', 1)[0].lower()
+        if op == 'add' and elid in elementdict:
+            msg = f'Cannot add element {elid} as it already exists'
+            raise ValidationException(msg)
+        if op == 'remove':
+            elementdict.pop(elid, None)
+        else:
+            value['id'] = elid
+            elementdict[elid] = value
+
+    def _patchEntry(self, record, path, op, value, fullpath=None):
+        logger.debug('Patch entry %s %s', op, path)
+        if fullpath is None:
+            fullpath = path
+        basepath, key = path.split('/', 1)
+        if isinstance(record, list):
+            record = record[int(basepath)]
+        else:
+            record = record[basepath]
+        if '/' in key:
+            return self._patchEntry(record, key, op, value, fullpath)
+        if isinstance(record, list):
+            idx = int(key)
+            if op == 'remove':
+                record[idx:idx + 1] = []
+            elif idx == len(record):
+                record.append(value)
+            elif idx < len(record) and op == 'replace':
+                record[idx] = value
+            else:
+                msg = f'Cannot {op} {fullpath}'
+                raise ValidationException(msg)
+        else:
+            if op != 'remove':
+                if op == 'add' and record[basepath][key]:
+                    msg = f'Cannot add {fullpath} as it already exists'
+                    raise ValidationException(msg)
+                record[key] = value
+            else:
+                record.pop(key, None)
+
+    def _patchAnnotation(self, annotation, patchlist):
+        """
+        Apply a patch list to an annotation.
+
+        :param annotation: an annotation doc.
+        :param patchlist: a patch list.
+        """
+        logger.debug('Patch annotation %r', annotation['_id'])
+        elementdict = {'empty': True}
+        for patch in patchlist:
+            if 'op' not in patch or 'path' not in patch:
+                msg = 'patch missing op or path'
+                raise ValidationException(msg)
+            op = patch['op']
+            path = patch['path'].strip('/')
+            value = patch.get('value')
+            if op not in {'add', 'replace', 'remove'} or value is None and op != 'remove':
+                msg = 'patch has invalid op'
+                raise ValidationException(msg)
+            try:
+                if path.startswith('elements/id:'):
+                    self._patchElement(
+                        annotation['annotation']['elements'], path, op, value, elementdict)
+                elif '/' not in path and path != 'elements':
+                    if op != 'remove':
+                        if op == 'add' and annotation['annotation'][path]:
+                            msg = f'Cannot add {path} as it already exists'
+                            raise ValidationException(msg)
+                        annotation['annotation'][path] = value
+                    else:
+                        annotation['annotation'].pop(path, None)
+                elif not path.startswith('elements/'):
+                    self._patchEntry(annotation['annotation'], path, op, value)
+                else:
+                    msg = f'patch path {path} is not handled'
+                    raise ValidationException(msg)
+            except (KeyError, ValueError, TypeError):
+                msg = f'patch path {path} does not exist'
+                raise ValidationException(msg)
+        if 'empty' not in elementdict:
+            annotation['annotation']['elements'] = list(elementdict.values())
+        return annotation
+
+    @describeRoute(
+        Description('Patch an annotation or its elements.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .param('body', 'A JSON object containing the annotation patch.  This '
+               'is a list.  Each entry is an operation that contains "op", '
+               '"path", and possibly "value".  "op" can be any of "replace", '
+               '"add", or "remove".  "path" is either a root property (e.g., '
+               '"name"), or "elements/id:{element id}".  Any path to a '
+               'dictionary or list can be extended via .../(key or index) '
+               'components.  Add and replace operations must include the '
+               'value.',
+               paramType='body', required=True)
+        # This isn't an error, but girder's swagger wrapper only exposes this
+        # method to add to possible responses
+        .errorResponse('No Content; the annotation was successfully updated '
+                       'but is not returned', 204)
+        .errorResponse('Write access was denied for the item.', 403)
+        .errorResponse('Invalid JSON passed in request body.')
+        .errorResponse("Validation Error: JSON doesn't follow schema."),
+    )
+    @access.user(scope=TokenScope.DATA_WRITE)
+    @loadmodel(model='annotation', plugin='large_image', level=AccessType.WRITE)
+    def patchAnnotation(self, annotation, params):
+        setResponseTimeLimit(86400)
+        user = self.getCurrentUser()
+        patchlist = self.getBodyJson()
+        annotation = self._patchAnnotation(annotation, patchlist)
+        annotation = Annotation().updateAnnotation(annotation, updateUser=user)
+        cherrypy.response.status = 204
+        return ''
 
     @describeRoute(
         Description('Delete an annotation.')

@@ -177,6 +177,42 @@ def _updateJob(event):
                      datetime.timedelta(seconds=30)))
 
 
+def checkForMergeDicom(item):
+    item = ImageItem().load(item['_id'], force=True)
+    if item['largeImage']['sourceName'] not in {'dicom', 'openslide'}:
+        return
+    if len(list(Item().childFiles(item=item, limit=2))) != 1:
+        return
+    intMetadata = ImageItem().getInternalMetadata(item)
+    try:
+        seriesUID = (
+            intMetadata['openslide']['dicom.SeriesInstanceUID']
+            if 'openslide' in intMetadata else
+            intMetadata['dicom']['SeriesInstanceUID'])
+        studyUID = (
+            intMetadata['openslide']['dicom.StudyInstanceUID']
+            if 'openslide' in intMetadata else
+            intMetadata['dicom']['StudyInstanceUID'])
+    except Exception:
+        return
+    base = list(Item().find({
+        'folderId': item['folderId'],
+        'largeImage.dicomSeriesUID': seriesUID,
+        'largeImage.dicomStudyUID': studyUID}, limit=2))
+    if len(base) > 1:
+        return
+    if len(base) == 0:
+        item['largeImage']['dicomSeriesUID'] = seriesUID
+        item['largeImage']['dicomStudyUID'] = studyUID
+        ImageItem().save(item)
+        return
+    file = File().load(item['largeImage']['fileId'], force=True)
+    girder.logger.info(f'Merging dicom file {str(file["_id"])} to item {str(base[0]["_id"])}')
+    file['itemId'] = base[0]['_id']
+    File().save(file)
+    Item().remove(item)
+
+
 def checkForLargeImageFiles(event):  # noqa
     file = event.info
     if 'file.save' in event.name and 's3FinalizeRequest' in file:
@@ -199,6 +235,11 @@ def checkForLargeImageFiles(event):  # noqa
         return
     try:
         ImageItem().createImageItem(item, file, createJob=False)
+        if Setting().get(constants.PluginSettings.LARGE_IMAGE_MERGE_DICOM):
+            try:
+                checkForMergeDicom(item)
+            except Exception:
+                girder.logger.exception('Failed to check for DICOM')
         return
     except Exception:
         pass
@@ -656,6 +697,7 @@ def yamlConfigFileWrite(folder, name, user, yaml_config, user_context):
     constants.PluginSettings.LARGE_IMAGE_SHOW_THUMBNAILS,
     constants.PluginSettings.LARGE_IMAGE_SHOW_VIEWER,
     constants.PluginSettings.LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK,
+    constants.PluginSettings.LARGE_IMAGE_MERGE_DICOM,
 })
 def validateBoolean(doc):
     val = doc['value']
@@ -758,6 +800,7 @@ SettingDefault.defaults.update({
     constants.PluginSettings.LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE: 4096,
     constants.PluginSettings.LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK: True,
     constants.PluginSettings.LARGE_IMAGE_ICC_CORRECTION: True,
+    constants.PluginSettings.LARGE_IMAGE_MERGE_DICOM: False,
 })
 
 

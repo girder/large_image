@@ -905,7 +905,7 @@ class Annotation(AccessControlledModel):
             expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
         return result
 
-    def save(self, annotation, *args, **kwargs):
+    def save(self, annotation, *args, **kwargs):  # noqa
         """
         When saving an annotation, override the collection insert_one and
         replace_one methods so that we don't save the elements with the main
@@ -942,6 +942,9 @@ class Annotation(AccessControlledModel):
         _elementQuery = annotation.pop('_elementQuery', None)
         annotation.pop('_active', None)
         annotation.pop('_annotationId', None)
+        if annotation['annotation'] and not annotation['annotation'].get('name'):
+            now = datetime.datetime.now(datetime.timezone.utc)
+            annotation['annotation']['name'] = now.strftime('Annotation %Y-%m-%d %H:%M')
 
         def replaceElements(query, doc, *args, **kwargs):
             Annotationelement().updateElements(doc)

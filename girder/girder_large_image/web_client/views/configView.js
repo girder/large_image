@@ -62,6 +62,9 @@ var ConfigView = View.extend({
             }, {
                 key: 'large_image.icc_correction',
                 value: this.$('.g-large-image-icc-correction').prop('checked')
+            }, {
+                key: 'large_image.merge_dicom',
+                value: this.$('.g-large-image-merge-dicom-merge').prop('checked')
             }]);
         },
         'click .g-open-browser': '_openBrowser'

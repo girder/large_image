@@ -64,7 +64,7 @@ SourceAndFiles = {
     'openslide': {
         'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
         'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi)',  # noqa
-        'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff$',
+        'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff|\.czi$',
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
@@ -90,7 +90,8 @@ SourceAndFiles = {
     },
     'vips': {
         'read': r'',
-        'noread': r'(\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm)$',
+        'noread': r'(\.(nc|nd2|yml|yaml|json|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm)$',
+        'skip': r'\.czi$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)',  # noqa
     },
     'zarr': {'read': r'\.(zarr|zgroup|zattrs|db|zarr\.zip)$'},

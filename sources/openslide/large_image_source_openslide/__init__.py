@@ -48,6 +48,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     extensions = {
         None: SourcePriority.MEDIUM,
         'bif': SourcePriority.LOW,  # Ventana
+        'czi': SourcePriority.PREFERRED,
         'dcm': SourcePriority.LOW,  # DICOM
         'ini': SourcePriority.LOW,  # Part of mrxs
         'mrxs': SourcePriority.PREFERRED,  # MIRAX
@@ -62,6 +63,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
+        'image/czi': SourcePriority.PREFERRED,
         'image/mirax': SourcePriority.PREFERRED,  # MIRAX
         'image/tiff': SourcePriority.MEDIUM,
         'image/x-tiff': SourcePriority.MEDIUM,

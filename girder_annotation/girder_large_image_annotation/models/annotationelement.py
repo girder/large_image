@@ -37,7 +37,7 @@ from girder.models.upload import Upload
 # store part of them in an associated file.  This is slower, so don't do it for
 # small ones.
 MAX_ELEMENT_CHECK = 100
-MAX_ELEMENT_DOCUMENT = 10000
+MAX_ELEMENT_DOCUMENT = 100000
 MAX_ELEMENT_USER_DOCUMENT = 1000000
 
 logger = logging.getLogger(__name__)
@@ -317,27 +317,23 @@ class Annotationelement(Model):
             else:
                 if entry.get('datafile'):
                     datafile = entry['datafile']
-                    data = io.BytesIO()
                     chunksize = 1024 ** 2
-                    with File().open(File().load(datafile['fileId'], force=True)) as fptr:
-                        while True:
-                            chunk = fptr.read(chunksize)
-                            if not len(chunk):
-                                break
-                            data.write(chunk)
-                    data.seek(0)
-                    element[datafile['key']] = pickle.load(data)
-                    if 'userFileId' in datafile:
+                    for key, fileid in [
+                        (datafile['key'], 'fileId'),
+                        ('user', 'userFileId'),
+                        ('holes', 'holeFileId'),
+                    ]:
+                        if fileid not in datafile:
+                            continue
                         data = io.BytesIO()
-                        chunksize = 1024 ** 2
-                        with File().open(File().load(datafile['userFileId'], force=True)) as fptr:
+                        with File().open(File().load(datafile[fileid], force=True)) as fptr:
                             while True:
                                 chunk = fptr.read(chunksize)
                                 if not len(chunk):
                                     break
                                 data.write(chunk)
                         data.seek(0)
-                        element['user'] = pickle.load(data)
+                        element[key] = pickle.load(data)
                 if region.get('bbox') and 'bbox' in entry:
                     element['_bbox'] = entry['bbox']
                     if 'bbox' not in info:
@@ -377,7 +373,7 @@ class Annotationelement(Model):
         attachedQuery = query.copy()
         attachedQuery['datafile'] = {'$exists': True}
         for element in self.collection.find(attachedQuery):
-            for key in {'fileId', 'userFileId'}:
+            for key in {'fileId', 'userFileId', 'holeFileId'}:
                 if key in element['datafile']:
                     file = File().load(element['datafile'][key], force=True)
                     if file:
@@ -538,7 +534,7 @@ class Annotationelement(Model):
         # simplify to points
         return bbox
 
-    def _entryIsLarge(self, entry):
+    def _entryIsLarge(self, entry, checkUser=False):
         """
         Return True is an entry is alrge enough it might not fit in a mongo
         document.
@@ -549,7 +545,10 @@ class Annotationelement(Model):
         if len(entry['element'].get('points', entry['element'].get(
                 'values', []))) > MAX_ELEMENT_DOCUMENT:
             return True
-        if ('user' in entry['element'] and
+        if ('holes' in entry['element'] and
+                sum(len(h) for h in entry['element']['holes']) > MAX_ELEMENT_DOCUMENT):
+            return True
+        if (checkUser and 'user' in entry['element'] and
                 len(pickle.dumps(entry['element'], protocol=4)) > MAX_ELEMENT_USER_DOCUMENT):
             return True
         return False
@@ -563,8 +562,8 @@ class Annotationelement(Model):
         :param entries: the database entries document.  Modified.
         """
         item = Item().load(annotation['itemId'], force=True)
-        for idx, entry in enumerate(entries[:MAX_ELEMENT_CHECK]):
-            if not self._entryIsLarge(entry):
+        for idx, entry in enumerate(entries):
+            if not self._entryIsLarge(entry, idx < MAX_ELEMENT_CHECK):
                 continue
             element = entry['element'].copy()
             entries[idx]['element'] = element
@@ -576,18 +575,23 @@ class Annotationelement(Model):
                 io.BytesIO(data), size=len(data), name='_annotationElementData',
                 parentType='item', parent=item, user=None,
                 mimeType='application/json', attachParent=True)
-            userdata = None
+            entry['datafile'] = {
+                'key': key,
+                'fileId': elementFile['_id'],
+            }
+            if 'holes' in element:
+                holedata = pickle.dumps(element.pop('holes'), protocol=4)
+                holeFile = Upload().uploadFromFile(
+                    io.BytesIO(holedata), size=len(holedata), name='_annotationElementHoleData',
+                    parentType='item', parent=item, user=None,
+                    mimeType='application/json', attachParent=True)
+                entry['datafile']['holeFileId'] = holeFile['_id']
             if 'user' in element:
                 userdata = pickle.dumps(element.pop('user'), protocol=4)
                 userFile = Upload().uploadFromFile(
                     io.BytesIO(userdata), size=len(userdata), name='_annotationElementUserData',
                     parentType='item', parent=item, user=None,
                     mimeType='application/json', attachParent=True)
-            entry['datafile'] = {
-                'key': key,
-                'fileId': elementFile['_id'],
-            }
-            if userdata:
                 entry['datafile']['userFileId'] = userFile['_id']
             logger.debug('Storing element as file (%r)', entry)
 
@@ -596,30 +600,34 @@ class Annotationelement(Model):
         Update the database for a chunk of elements.  See the updateElements
         method for details.
         """
-        lastTime = time.time()
-        chunkStartTime = time.time()
-        entries = [{
-            'annotationId': annotation['_id'],
-            '_version': annotation['_version'],
-            'created': now,
-            'bbox': self._boundingBox(element),
-            'element': element,
-        } for element in elements[chunk:chunk + chunkSize]]
-        prepTime = time.time() - chunkStartTime
-        if (len(entries) <= MAX_ELEMENT_CHECK and any(
-                self._entryIsLarge(entry) for entry in entries[:MAX_ELEMENT_CHECK])):
-            self.saveElementAsFile(annotation, entries)
-        with insertLock:
-            res = self.collection.insert_many(entries, ordered=False)
-        for pos, entry in enumerate(entries):
-            if 'id' not in entry['element']:
-                entry['element']['id'] = str(res.inserted_ids[pos])
-        # If the insert is slow, log information about it.
-        if time.time() - lastTime > 10:
-            logger.info('insert %d elements in %4.2fs (prep time %4.2fs), chunk %d/%d' % (
-                len(entries), time.time() - chunkStartTime, prepTime,
-                chunk + len(entries), len(elements)))
+        try:
             lastTime = time.time()
+            chunkStartTime = time.time()
+            entries = [{
+                'annotationId': annotation['_id'],
+                '_version': annotation['_version'],
+                'created': now,
+                'bbox': self._boundingBox(element),
+                'element': element,
+            } for element in elements[chunk:chunk + chunkSize]]
+            prepTime = time.time() - chunkStartTime
+            if any(self._entryIsLarge(entry, idx < MAX_ELEMENT_CHECK)
+                   for idx, entry in enumerate(entries)):
+                self.saveElementAsFile(annotation, entries)
+            with insertLock:
+                res = self.collection.insert_many(entries, ordered=False)
+            for pos, entry in enumerate(entries):
+                if 'id' not in entry['element']:
+                    entry['element']['id'] = str(res.inserted_ids[pos])
+            # If the insert is slow, log information about it.
+            if time.time() - lastTime > 10:
+                logger.info('insert %d elements in %4.2fs (prep time %4.2fs), chunk %d/%d' % (
+                    len(entries), time.time() - chunkStartTime, prepTime,
+                    chunk + len(entries), len(elements)))
+                lastTime = time.time()
+        except Exception:
+            logger.exception('Failed to update element chunk')
+            raise
 
     def updateElements(self, annotation):
         """
