@@ -517,13 +517,16 @@ class AnnotationResource(Resource):
     @access.user(scope=TokenScope.DATA_WRITE)
     @loadmodel(model='annotation', plugin='large_image', level=AccessType.WRITE)
     def patchAnnotation(self, annotation, params):
-        setResponseTimeLimit(86400)
         user = self.getCurrentUser()
         patchlist = self.getBodyJson()
-        annotation = self._patchAnnotation(annotation, patchlist)
-        annotation = Annotation().updateAnnotation(annotation, updateUser=user)
-        cherrypy.response.status = 204
-        return ''
+
+        def process():
+            annot = self._patchAnnotation(annotation, patchlist)
+            annot = Annotation().updateAnnotation(annot, updateUser=user)
+            cherrypy.response.status = 204
+            return jsonResponse('')
+
+        return longRestResponse(process)
 
     @describeRoute(
         Description('Delete an annotation.')
