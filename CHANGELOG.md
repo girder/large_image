@@ -15,6 +15,7 @@
 - Always use api root where appropriate ([#1902](../../pull/1902))
 - Fix listing updated time in customized annotation lists ([#1903](../../pull/1903))
 - Guard isGeopatial when called on an image GDAL can open but not read ([#1906](../../pull/1906))
+- Improve handling of large annotation elements ([#1908](../../pull/1908))
 
 ## 1.32.4
 
