@@ -220,26 +220,36 @@ const AnnotationListWidget = View.extend({
     _downloadSelectedAnnotations(evt) {
         evt.preventDefault();
 
-        const selectedAnnotations = this.$('.g-annotation-select input:checked')
-            .closest('.g-annotation-row')
-            .map((_, el) => $(el).data('annotationId'))
-            .get();
+        const selectAll = this.$('#select-all').is(':checked');
+        if (selectAll) {
+            const url = `${getApiRoot()}/annotation/item/${this.model.id}/`;
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute('href', url);
+            downloadAnchor.setAttribute('download', `${this.model.get('name')}_annotations.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+        } else {
+            const selectedAnnotations = this.$('.g-annotation-select input:checked')
+                .closest('.g-annotation-row')
+                .map((_, el) => $(el).data('annotationId'))
+                .get();
 
-        selectedAnnotations.forEach((id) => {
-            const annotation = this.collection.get(id);
-            if (annotation) {
-                annotation.fetch().then(() => {
-                    const url = `${getApiRoot()}/annotation/${annotation.id}`;
-                    const downloadAnchor = document.createElement('a');
-                    downloadAnchor.setAttribute('href', url);
-                    downloadAnchor.setAttribute('download', `${annotation.get('annotation').name}.json`);
-                    document.body.appendChild(downloadAnchor);
-                    downloadAnchor.click();
-                    document.body.removeChild(downloadAnchor);
-                    return null;
-                });
-            }
-        });
+            selectedAnnotations.forEach((id) => {
+                const annotation = this.collection.get(id);
+                if (annotation) {
+                    annotation.fetch().then(() => {
+                        const url = `${getApiRoot()}/annotation/${annotation.id}`;
+                        const downloadAnchor = document.createElement('a');
+                        downloadAnchor.setAttribute('href', url);
+                        downloadAnchor.setAttribute('download', `${annotation.get('annotation').name}.json`);
+                        document.body.appendChild(downloadAnchor);
+                        downloadAnchor.click();
+                        document.body.removeChild(downloadAnchor);
+                        return null;
+                    });
+                }
+            });
+        }
     },
 
     _deleteAnnotation(evt) {
@@ -255,8 +265,7 @@ const AnnotationListWidget = View.extend({
             if (checkedAnnotations.length !== 0) {
                 confirm({
                     text: `<h3>Are you sure you want to delete the following annotations?</h3>
-                        <ul
-                          style="max-height: 200px; padding-left: 0; overflow-y: auto;"
+                        <ul"
     >${_.map(checkedAnnotationIds, (annotationId) => {
         if (annotationId !== undefined) {
             const model = this.collection.get(annotationId);
