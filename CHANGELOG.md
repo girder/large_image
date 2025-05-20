@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.6
+
+### Changes
+
+- Tweak a few source priorities ([#1913](../../pull/1913))
+
 ## 1.32.5
 
 ### Improvements
@@ -9,7 +15,7 @@
 
 ### Changes
 
-- Tweak a few source priorities ([#1907](../../pull/1907), [#19098](../../pull/19098))
+- Tweak a few source priorities ([#1907](../../pull/1907), [#1908](../../pull/1908))
 
 ### Bug Fixes
 
