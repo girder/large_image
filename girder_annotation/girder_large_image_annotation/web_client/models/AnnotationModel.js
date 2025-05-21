@@ -466,10 +466,9 @@ const AnnotationModel = AccessControlledModel.extend({
             this._region.top = Math.max(0, bounds.top - yoverlap);
             this._region.right = Math.min(sizeX || 1e6, bounds.right + xoverlap);
             this._region.bottom = Math.min(sizeY || 1e6, bounds.bottom + yoverlap);
+            this._region.maxDetails = zoom + 1 < maxZoom ? this.get('maxDetails') : undefined;
             this._lastZoom = zoom;
-            /* Don't ask for a minimum size; we show centroids if the data is
-             * incomplete. */
-            if (['left', 'top', 'right', 'bottom', 'minimumSize'].every((key) => this._region[key] === lastRegion[key])) {
+            if (['left', 'top', 'right', 'bottom', 'maxDetails'].every((key) => this._region[key] === lastRegion[key])) {
                 return;
             }
         }
