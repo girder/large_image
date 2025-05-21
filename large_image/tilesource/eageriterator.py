@@ -57,7 +57,6 @@ class EagerIterator:
         :param tile_size: A tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.
         :param region_size: A tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.
         :param dtype: A numpy data type for the output image batch. Defaults to np.uint8.
-        :param cache: A boolean to enable (True) or disable (False) large image cache. Defaults to True.
         :param chunk_mult: An integer shaping the number regions/tiles to be grouped in a single read. Defaults to 2.  
             Chunk size is this number squared. i.e. chunk_multi of 2 = chunk_size of 2^2.
         :param edge: A boolean controlling whether to include (False) or discard (True) tiles with incomplete regions at the image boundaries. Defaults to False.
@@ -66,7 +65,6 @@ class EagerIterator:
             or tuple of int with respective values in RGB channels (R, G, B).  Defaults to 'default'.
         :param nchw: A boolean controlling whether to return the output in NCHW format (True) or NHWC format (False). Defaults to False.  
             Will transpose transformed output as well.
-        :param icc: A boolean controlling whether to include ICC information to generate the output. Defaults to False.
         :param batch: An integer for number of regions/tiles to be retrieved in a single batch. Defaults to 64.
         :param prefetch: An integer for number of batches to be prefetched. Defaults to 16.
         :param workers: An integer for number of worker processes to use. Defaults to 16.

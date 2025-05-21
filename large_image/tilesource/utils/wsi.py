@@ -56,13 +56,15 @@ def return_relevant_tile_indexes_for_slide_dim(range_x: int, range_y: int, overl
 
     range_x = np.arange(0, range_x, offset)
     range_y = np.arange(0, range_y, offset)
-
+    
+    def cartesian2(x, y):
+        prod = np.empty([len(x), len(y), 2], dtype=float)
+        for i, s in enumerate(np.ix_(x, y)):
+            prod[...,i] = s
+        return np.fliplr(prod.reshape(-1, 2))
+    
     # tiles in form y (column), x (row)
-    for i in range_x:
-        for j in range_y:
-            slide_tiles.append((j, i))
-
-    return slide_tiles
+    return cartesian2(range_x, range_y)
 
 def get_patch_from_mask_for_tile(mask: np.ndarray, base_size_x: int, base_size_y: int, tile_width_before_scaling: int, tile_height_before_scaling: int, tile: list):
     tile_y, tile_x = tile
