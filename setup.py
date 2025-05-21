@@ -27,6 +27,7 @@ extraReqs = {
         'psutil>=4.2.0',
         'simplejpeg',
     ],
+    'pykdtree': ['pykdtree'],
 }
 sources = {
     'bioformats': [f'large-image-source-bioformats{limit_version}'],
@@ -66,6 +67,9 @@ extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for 
     f'large-image-source-pil[common]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
 })
+extraReqs['eager'] = list(set(itertools.chain.from_iterable(extraReqs[key] for key in {
+    'pykdtree'
+})))
 
 setup(
     name='large-image',

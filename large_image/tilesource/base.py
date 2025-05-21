@@ -31,6 +31,7 @@ from . import utilities
 from .jupyter import IPyLeafletMixin
 from .tiledict import LazyTileDict
 from .tileiterator import TileIterator
+from .eageriterator import EagerIterator
 from .utilities import (ImageBytes, JSONDict, _imageToNumpy,  # noqa: F401
                         _imageToPIL, dictToEtree, etreeToDict,
                         getPaletteColors, histogramThreshold, nearPowerOfTwo)
@@ -2371,6 +2372,16 @@ class TileSource(IPyLeafletMixin):
         if rounding is not None:
             level = max(0, min(mag['level'] or 0, level))
         return level
+
+
+    def eagerIterator(self, **kwargs) -> EagerIterator:
+        """
+        Return an eager iterator for the tile source.
+
+        :param kwargs: optional arguments.
+        :return: an eager iterator.
+        """
+        return EagerIterator(self, **kwargs)
 
     def tileIterator(
             self, format: str | tuple[str] = (TILE_FORMAT_NUMPY, ),
