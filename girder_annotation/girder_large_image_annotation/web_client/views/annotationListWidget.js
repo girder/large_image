@@ -214,6 +214,11 @@ const AnnotationListWidget = View.extend({
             if (!$el.find('input').is(':checked')) {
                 allChecks.prop('checked', false);
             }
+        } else {
+            const checked = $el.find('input').is(':checked');
+            if (!checked) {
+                this.$('#select-all').prop('checked', false);
+            }
         }
     },
 
