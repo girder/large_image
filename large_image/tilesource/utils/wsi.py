@@ -83,24 +83,6 @@ def get_patch_from_mask_for_tile(mask: np.ndarray, base_size_x: int, base_size_y
 
     return patch_mask
 
-def get_thumbnail_from_tile_source(source, source_meta, height=1024):
-    if source is not None and source_meta is not None:
-        img, img_mime = source.getThumbnail(height=height, format=constants.TILE_FORMAT_NUMPY)
-        img_rgb = rgba2rgb(img)
-        return padding(img_rgb, height, img_rgb.shape[1])
-    else:
-        return None
-
-def get_tile_source_and_meta(tile_source_path):
-    try:
-        source = large_image.open(tile_source_path)
-        source_meta = source.getMetadata()
-
-        return source, source_meta
-    except Exception as e:
-        print(f'Error opening tile source {tile_source_path}: {e}')
-        return None, None
-
 def get_base_mm_from_meta(source_meta):
     mm_x = None
     mm_y = None
