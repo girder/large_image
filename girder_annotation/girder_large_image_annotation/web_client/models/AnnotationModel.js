@@ -185,7 +185,7 @@ const AnnotationModel = AccessControlledModel.extend({
      */
     fetch: function (opts) {
         if (this.altUrl === null && this.resourceName === null) {
-            alert('Error: You must set an altUrl or a resourceName on your model.'); // eslint-disable-line no-alert
+            console.error('Error: You must set an altUrl or a resourceName on your model.');
             return;
         }
 
@@ -330,7 +330,11 @@ const AnnotationModel = AccessControlledModel.extend({
                 delete data.elements;
                 // we don't want to override an annotation with a partial response
                 if (this._pageElements === true) {
+                    /* we should only get to here if we really only wanted to
+                     * save the main annotation and not the elements, so quiet
+                     * our warning
                     console.warn('Cannot save elements of a paged annotation');
+                     */
                 }
             }
         }
