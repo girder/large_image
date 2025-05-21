@@ -283,11 +283,12 @@ const AnnotationModel = AccessControlledModel.extend({
      * attribute is required.
      */
     save(options) {
-        const data = _.extend({}, this.get('annotation'));
         let url;
         let method;
         const isNew = this.isNew();
-
+        if (isNew && this._changeLog) {
+            delete this._changeLog;
+        }
         if (isNew) {
             if (!this.get('itemId')) {
                 throw new Error('itemId is required to save new annotations');
@@ -302,21 +303,35 @@ const AnnotationModel = AccessControlledModel.extend({
                 this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
             }
         }
+        let data;
 
-        if (this._pageElements === false || isNew) {
-            this._pageElements = false;
-            data.elements = _.map(data.elements, (element) => {
-                element = _.extend({}, element);
-                if (element.label && !element.label.value) {
-                    delete element.label;
+        if (this._changeLog) {
+            method = 'PATCH';
+            const annot = this.get('annotation');
+            data = Object.values(this._changeLog);
+            Object.keys(annot).forEach((k) => {
+                if (k !== 'elements') {
+                    data.push({op: 'replace', path: k, value: annot[k]});
                 }
-                return element;
             });
+            delete this._changeLog;
         } else {
-            delete data.elements;
-            // we don't want to override an annotation with a partial response
-            if (this._pageElements === true) {
-                console.warn('Cannot save elements of a paged annotation');
+            data = _.extend({}, this.get('annotation'));
+            if (this._pageElements === false || isNew) {
+                this._pageElements = false;
+                data.elements = _.map(data.elements, (element) => {
+                    element = _.extend({}, element);
+                    if (element.label && !element.label.value) {
+                        delete element.label;
+                    }
+                    return element;
+                });
+            } else {
+                delete data.elements;
+                // we don't want to override an annotation with a partial response
+                if (this._pageElements === true) {
+                    console.warn('Cannot save elements of a paged annotation');
+                }
             }
         }
 

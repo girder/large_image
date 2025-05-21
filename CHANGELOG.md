@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.7
+
+### Improvements
+
+- When saving annotation elements in javascript, use PATCH endpoint if possible ([#1915](../../pull/1915))
+
 ## 1.32.6
 
 ### Changes
