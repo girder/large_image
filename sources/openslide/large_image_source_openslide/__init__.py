@@ -54,7 +54,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'mrxs': SourcePriority.PREFERRED,  # MIRAX
         'ndpi': SourcePriority.PREFERRED,  # Hamamatsu
         'scn': SourcePriority.LOW,  # Leica
-        'svs': SourcePriority.PREFERRED,
+        'svs': SourcePriority.HIGH,
         'svslide': SourcePriority.PREFERRED,
         'tif': SourcePriority.MEDIUM,
         'tiff': SourcePriority.MEDIUM,
