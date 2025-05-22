@@ -10,6 +10,54 @@ import {convertFeatures} from '../annotations/convertFeatures';
 
 import style from '../annotations/style.js';
 
+const PropsDefaults = {
+    default: {
+        fillColor: {r: 1, g: 120 / 255, b: 0},
+        fillOpacity: 0.8,
+        strokeColor: {r: 0, g: 0, b: 0},
+        strokeOpacity: 1,
+        strokeWidth: 1
+    },
+    rectangle: {
+        fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+        strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+        strokeWidth: 2
+    },
+    ellipse: {
+        fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+        strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+        strokeWidth: 2
+    },
+    circle: {
+        fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+        strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+        strokeWidth: 2
+    },
+    polyline: {
+        strokeColor: {r: 1, g: 120 / 255, b: 0},
+        strokeOpacity: 0.5,
+        strokeWidth: 4
+    },
+    polyline_closed: {
+        fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
+        strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
+        strokeWidth: 2
+    }
+};
+
+function propsDefault(propsdict) {
+    Object.assign(propsdict, style(propsdict));
+    const type = propsdict.type + (propsdict.closed ? '_closed' : '');
+    ['fillColor', 'strokeColor', 'strokeWidth', 'fillOpacity', 'strokeOpacity'].forEach((key) => {
+        if (propsdict[key] === undefined) {
+            propsdict[key] = (PropsDefaults[type] || PropsDefaults.default)[key];
+        }
+        if (propsdict[key] === undefined) {
+            propsdict[key] = PropsDefaults.default[key];
+        }
+    });
+}
+
 /**
  * Define a backbone model representing an annotation.
  * An annotation contains zero or more "elements" or
@@ -59,6 +107,116 @@ const AnnotationModel = AccessControlledModel.extend({
             annotation.elements = this._elements.toJSON();
             this.set('annotation', annotation);
         });
+        this.listenTo(this._elements, 'change add', this.handleElementChanged);
+        this.listenTo(this._elements, 'remove', this.handleElementRemoved);
+    },
+
+    handleElementChanged: function (element, collection, options) {
+        if (!this._centroids) {
+            return;
+        }
+        const props = {
+            type: element.get('type'),
+            fillColor: element.get('fillColor'),
+            lineColor: element.get('lineColor'),
+            lineWidth: element.get('lineWidth'),
+            closed: element.get('closed')
+        };
+        let propidx;
+        for (propidx = 0; propidx < this._centroids.props.length; propidx += 1) {
+            const p = this._centroids.props[propidx];
+            if (p.type === props.type && p.fillColor === props.fillColor && p.lineColor === props.lineColor && p.lineWidth === props.lineWidth && p.closed === props.closed) {
+                break;
+            }
+        }
+        if (propidx === this._centroids.props.length) {
+            propsDefault(props);
+            this._centroids.props.push(props);
+        }
+        const elid = element.id;
+        let idx;
+        for (idx = 0; idx < this._centroids.centroids.id.length; idx += 1) {
+            if (this._centroids.centroids.id[idx] === elid) {
+                break;
+            }
+        }
+        let x, y, r = 1;
+        if (element.get('center')) {
+            x = element.get('center')[0];
+            y = element.get('center')[0];
+            if (element.get('radius')) {
+                r = element.get('radius');
+            } else if (element.get('width')) {
+                r = Math.max(1, (element.get('width') ** 2 + element.get('height') ** 2) ** 0.5 / 2);
+            }
+        } else if (element.get('points')) {
+            const pts = element.get('points');
+            let minx = pts[0][0], maxx = pts[0][0];
+            let miny = pts[0][1], maxy = pts[0][1];
+            for (const [px, py] of pts) {
+                minx = Math.min(minx, px);
+                miny = Math.min(miny, py);
+                maxx = Math.max(maxx, px);
+                maxy = Math.max(maxy, py);
+            }
+            x = (maxx + minx) / 2;
+            y = (maxy + miny) / 2;
+            r = Math.max(1, ((maxx - minx) ** 2 + (maxy - miny) ** 2) ** 0.5);
+        }
+        if (idx === this._centroids.centroids.id.length) {
+            this._centroids.centroids.id.push(elid);
+
+            const newX = new Float32Array(idx + 1);
+            newX.set(this._centroids.centroids.x);
+            newX[idx] = x;
+            this._centroids.centroids.x = newX;
+
+            const newY = new Float32Array(idx + 1);
+            newY.set(this._centroids.centroids.y);
+            newY[idx] = y;
+            this._centroids.centroids.y = newY;
+
+            const newR = new Float32Array(idx + 1);
+            newR.set(this._centroids.centroids.r);
+            newR[idx] = r;
+            this._centroids.centroids.r = newR;
+
+            const newS = new Uint32Array(idx + 1);
+            newS.set(this._centroids.centroids.s);
+            newS[idx] = propidx;
+            this._centroids.centroids.s = newS;
+        } else {
+            this._centroids.centroids.x[idx] = x;
+            this._centroids.centroids.y[idx] = y;
+            this._centroids.centroids.r[idx] = r;
+            this._centroids.centroids.s[idx] = propidx;
+        }
+        this._centroids._redraw = true;
+        this._centroids.data = {length: this._centroids.centroids.id.length};
+    },
+
+    handleElementRemoved: function (element, collection, options) {
+        if (!this._centroids) {
+            return;
+        }
+        const elid = element.id;
+        for (let idx = 0; idx < this._centroids.centroids.id.length; idx += 1) {
+            if (this._centroids.centroids.id[idx] === elid) {
+                if (this._shownIds) {
+                    this._shownIds.add(elid);
+                }
+                const last = this._centroids.centroids.id.length - 1;
+                this._centroids.centroids.id[idx] = this._centroids.centroids.id[last];
+                this._centroids.centroids.x[idx] = this._centroids.centroids.x[last];
+                this._centroids.centroids.y[idx] = this._centroids.centroids.y[last];
+                this._centroids.centroids.r[idx] = this._centroids.centroids.r[last];
+                this._centroids.centroids.s[idx] = this._centroids.centroids.s[last];
+                this._centroids.centroids.id.splice(last, 1);
+                this._centroids.data = {length: this._centroids.centroids.id.length};
+                this._centroids._redraw = true;
+                break;
+            }
+        }
     },
 
     /**
@@ -93,55 +251,12 @@ const AnnotationModel = AccessControlledModel.extend({
             json.set(new Uint8Array(resp.slice(0, z0)), 0);
             json.set(new Uint8Array(resp.slice(z1 + 1)), z0);
             const result = JSON.parse(decodeURIComponent(escape(String.fromCharCode.apply(null, json))));
-            const defaults = {
-                default: {
-                    fillColor: {r: 1, g: 120 / 255, b: 0},
-                    fillOpacity: 0.8,
-                    strokeColor: {r: 0, g: 0, b: 0},
-                    strokeOpacity: 1,
-                    strokeWidth: 1
-                },
-                rectangle: {
-                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
-                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
-                    strokeWidth: 2
-                },
-                ellipse: {
-                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
-                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
-                    strokeWidth: 2
-                },
-                circle: {
-                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
-                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
-                    strokeWidth: 2
-                },
-                polyline: {
-                    strokeColor: {r: 1, g: 120 / 255, b: 0},
-                    strokeOpacity: 0.5,
-                    strokeWidth: 4
-                },
-                polyline_closed: {
-                    fillColor: {r: 176 / 255, g: 222 / 255, b: 92 / 255},
-                    strokeColor: {r: 153 / 255, g: 153 / 255, b: 153 / 255},
-                    strokeWidth: 2
-                }
-            };
             result.props = result._elementQuery.props.map((props) => {
                 const propsdict = {};
                 result._elementQuery.propskeys.forEach((key, i) => {
                     propsdict[key] = props[i];
                 });
-                Object.assign(propsdict, style(propsdict));
-                const type = propsdict.type + (propsdict.closed ? '_closed' : '');
-                ['fillColor', 'strokeColor', 'strokeWidth', 'fillOpacity', 'strokeOpacity'].forEach((key) => {
-                    if (propsdict[key] === undefined) {
-                        propsdict[key] = (defaults[type] || defaults.default)[key];
-                    }
-                    if (propsdict[key] === undefined) {
-                        propsdict[key] = defaults.default[key];
-                    }
-                });
+                propsDefault(propsdict);
                 return propsdict;
             });
             dv = new DataView(resp, z0 + 1, z1 - z0 - 1);
@@ -339,6 +454,7 @@ const AnnotationModel = AccessControlledModel.extend({
             }
         }
 
+        this._inSave = true;
         return restRequest({
             url,
             method,
@@ -346,12 +462,18 @@ const AnnotationModel = AccessControlledModel.extend({
             processData: false,
             data: JSON.stringify(data)
         }).done((annotation) => {
+            this._inSave = false;
             if (isNew) {
                 // the elements array does not come back with this request
                 annotation.elements = (this.get('annotation') || {}).elements || [];
                 this.set(annotation);
             }
             this.trigger('sync', this, annotation, options);
+            if (this._nextFetch && !this._inFetch) {
+                var nextFetch = this._nextFetch;
+                this._nextFetch = null;
+                nextFetch();
+            }
         });
     },
 
@@ -479,7 +601,7 @@ const AnnotationModel = AccessControlledModel.extend({
             var nextFetch = () => {
                 this.fetch();
             };
-            if (this._inFetch) {
+            if (this._inFetch || this._inSave) {
                 this._nextFetch = nextFetch;
             } else {
                 nextFetch();
