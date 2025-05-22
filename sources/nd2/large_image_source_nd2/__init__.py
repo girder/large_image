@@ -142,7 +142,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # We use dask to allow lazy reading of large images
         try:
             self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)
-        except (TypeError, ValueError, OSError) as exc:
+        except (TypeError, ValueError, OSError, NotImplementedError) as exc:
             self.logger.debug('Failed to read nd2 file: %s', exc)
             msg = 'File cannot be opened via the nd2 source.'
             raise TileSourceError(msg)
