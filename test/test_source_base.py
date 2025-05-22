@@ -23,7 +23,7 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi)|[0-9a-f].*\.dcm)$',
+        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi|nd2)|[0-9a-f].*\.dcm)$',
         'noread': r'JK-kidney_B',
         'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
