@@ -2,11 +2,13 @@
 
 ## 1.32.7
 
+
 ### Improvements
 
 - When saving annotation elements in javascript, use PATCH endpoint if possible ([#1915](../../pull/1915))
 - When zoomed in with a power of two of the max zoom and showing annotations, make sure all of the annotation in view are fully loaded ([#1917](../../pull/1917))
 - Guard against nd2 NotImplementedError and allow bioformats to handle nd2 ([#1918](../../pull/1918))
+- Support editing paged annotation elements ([#1919](../../pull/1919))
 
 ## 1.32.6
 
