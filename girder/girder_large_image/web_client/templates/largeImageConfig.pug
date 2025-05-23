@@ -23,6 +23,17 @@ form#g-large-image-form(role="form")
     input.input-sm.form-control.g-large-image-max-small-image-size(
       type="text", value=settings['large_image.max_small_image_size'], title="The maximum size in pixels.  0 to not use regular images.", placeholder="0 to not use regular images.")
   .form-group
+    label Auto-merge Dicom files into single items
+    p.g-large-image-description
+      | When uploading or importing multiple dicom files into the same folder, if they share the same SeriesInstanceUID and StudyInstanceUID, they can automatically be moved to be multiple files in the same item rather than as multiple items
+    .g-large-image-merge-dicom-container
+      label.radio-inline
+        input.g-large-image-merge-dicom-leave(type="radio", name="g-large-image-merge-dicom", checked=settings['large_image.merge_dicom'] !== true ? 'checked': undefined)
+        | Don't merge
+      label.radio-inline
+        input.g-large-image-merge-dicom-merge(type="radio", name="g-large-image-merge-dicom", checked=settings['large_image.merge_dicom'] !== true ? undefined : 'checked')
+        | Merge
+  .form-group
     label
       | Maximum number of thumbnail files to save per item
     p.g-large-image-description

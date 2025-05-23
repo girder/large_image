@@ -1,14 +1,31 @@
 # Change Log
 
+## 1.32.7
+
+
+### Improvements
+
+- When saving annotation elements in javascript, use PATCH endpoint if possible ([#1915](../../pull/1915))
+- When zoomed in with a power of two of the max zoom and showing annotations, make sure all of the annotation in view are fully loaded ([#1917](../../pull/1917))
+- Guard against nd2 NotImplementedError and allow bioformats to handle nd2 ([#1918](../../pull/1918))
+- Support editing paged annotation elements ([#1919](../../pull/1919))
+
+## 1.32.6
+
+### Changes
+
+- Tweak a few source priorities ([#1913](../../pull/1913))
+
 ## 1.32.5
 
 ### Improvements
 
 - Add a PATCH annotation endpoint ([#1904](../../pull/1904))
+- Add an option to merge dicom files in the same series and study and folder ([#1912](../../pull/1912))
 
 ### Changes
 
-- Tweak a few source priorities ([#1907](../../pull/1907))
+- Tweak a few source priorities ([#1907](../../pull/1907), [#1908](../../pull/1908))
 
 ### Bug Fixes
 

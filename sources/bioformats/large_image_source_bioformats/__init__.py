@@ -65,7 +65,7 @@ _openImages = []
 # Default to ignoring files with no extension and some specific extensions.
 config.ConfigValues.setdefault(
     'source_bioformats_ignored_names',
-    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|nd2|ome|nc|json|geojson|fits|isyntax|mrxs|zip|zarr(\.db|\.zip)))$')  # noqa
+    r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|ome|nc|json|geojson|fits|isyntax|mrxs|zip|zarr(\.db|\.zip)))$')  # noqa
 
 
 def _monitor_thread():
@@ -188,14 +188,14 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     name = 'bioformats'
     extensions = {
         None: SourcePriority.FALLBACK,
-        'czi': SourcePriority.PREFERRED,
+        'czi': SourcePriority.HIGH,
         'ets': SourcePriority.LOW,  # part of vsi
         'lif': SourcePriority.MEDIUM,
         'vsi': SourcePriority.PREFERRED,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
-        'image/czi': SourcePriority.PREFERRED,
+        'image/czi': SourcePriority.HIGH,
         'image/vsi': SourcePriority.PREFERRED,
     }
 
