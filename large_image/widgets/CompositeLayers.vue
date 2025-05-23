@@ -1,26 +1,28 @@
 <script>
-import {restRequest} from '@girder/core/rest';
-import {Chrome} from 'vue-color';
-
-import {OTHER_COLORS, getChannelColor} from '../utils/colors';
-import HistogramEditor from './HistogramEditor.vue';
-
-export default {
-    components: {
-        'color-picker': Chrome,
-        HistogramEditor
-    },
-    props: ['itemId', 'currentFrame', 'currentStyle', 'histogramParamStyle', 'layers', 'layerMap', 'active'],
-    emits: ['updateStyle'],
+module.exports = {
+    name: 'CompositeLayers',
+    props: [
+        'itemId',
+        'currentFrame',
+        'currentStyle',
+        'histogramParamStyle',
+        'frameHistograms',
+        'getFrameHistogram',
+        'dtype',
+        'layers',
+        'layerMap',
+        'active',
+        'colors',
+        'styleUpdate'
+    ],
     data() {
         return {
             enabledLayers: [],
-            colorPickerShown: undefined,
-            currentFrameHistogram: undefined,
             compositeLayerInfo: {},
             expandedRows: [],
             autoRangeForAll: undefined,
-            showKeyboardShortcuts: false
+            showKeyboardShortcuts: false,
+            queuedRequests: undefined
         };
     },
     computed: {
@@ -50,7 +52,22 @@ export default {
             }
         },
         histogramParams() {
-            this.fetchCurrentFrameHistogram();
+            this.queueHistogramRequest(this.histogramParams);
+        },
+        frameHistograms() {
+            if (this.queuedRequests) {
+                let requests = this.queuedRequests[this.currentFrame];
+                if (!requests) this.queuedRequests = undefined;
+                const receivedFrames = Object.keys(this.frameHistograms).map((v) => parseInt(v));
+                requests = requests.filter((r) => !receivedFrames.includes(r.frame));
+                if (!requests.length) this.queuedRequests = undefined;
+                else {
+                    this.getFrameHistogram(requests[0]);
+                    this.queuedRequests = {
+                        [this.currentFrame]: requests.slice(1)
+                    };
+                }
+            }
         }
     },
     mounted() {
@@ -81,6 +98,20 @@ export default {
         }
     },
     methods: {
+        queueHistogramRequest(params) {
+            if (this.queuedRequests === undefined) {
+                this.getFrameHistogram(params);
+                this.queuedRequests = {};
+            } else {
+                if (!this.queuedRequests[this.currentFrame]) {
+                    this.queuedRequests[this.currentFrame] = [];
+                }
+                this.queuedRequests[this.currentFrame] = [
+                    ...this.queuedRequests[this.currentFrame],
+                    Object.assign({}, params)
+                ];
+            }
+        },
         keyHandler(e) {
             let numericKey = parseFloat(e.key);
             if (e.ctrlKey && !isNaN(numericKey)) {
@@ -121,7 +152,7 @@ export default {
             // Assign colors
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
-                    const channelColor = getChannelColor(layerName, usedColors);
+                    const channelColor = this.getChannelColor(layerName, usedColors);
                     if (channelColor) {
                         this.compositeLayerInfo[layerName].palette = channelColor;
                     }
@@ -130,19 +161,18 @@ export default {
             this.layers.forEach((layerName) => {
                 if (!this.compositeLayerInfo[layerName].palette) {
                     let chosenColor;
-                    const unusedColors = OTHER_COLORS.filter(
+                    const unusedColors = this.colors.other.filter(
                         (color) => !usedColors.includes(color)
                     );
                     if (unusedColors.length > 0) {
                         chosenColor = unusedColors[0];
                     } else {
-                        chosenColor = OTHER_COLORS[Math.floor(Math.random() * OTHER_COLORS.length)];
+                        chosenColor = this.colors.other[Math.floor(Math.random() * this.colors.other.length)];
                     }
                     this.compositeLayerInfo[layerName].palette = chosenColor;
                     usedColors.push(chosenColor);
                 }
             });
-            this.fetchCurrentFrameHistogram();
         },
         initializeStateFromStyle() {
             this.enabledLayers = [];
@@ -188,16 +218,6 @@ export default {
                 this.autoRangeForAll = undefined;
             }
         },
-        fetchCurrentFrameHistogram() {
-            restRequest({
-                type: 'GET',
-                url: 'item/' + this.itemId + '/tiles/histogram',
-                data: this.histogramParams
-            }).then((response) => {
-                this.currentFrameHistogram = response;
-                return undefined;
-            });
-        },
         toggleEnableAll() {
             if (!this.layers.every((l) => this.enabledLayers.includes(l))) {
                 this.enabledLayers = this.layers;
@@ -205,14 +225,6 @@ export default {
                 this.enabledLayers = [];
             }
             this.updateActiveLayers();
-        },
-        toggleColorPicker(layer) {
-            this.colorPickerShown = layer;
-            if (this.colorPickerShown === undefined) {
-                document.removeEventListener('click', this.documentClick);
-            } else {
-                document.addEventListener('click', this.documentClick);
-            }
         },
         toggleExpanded(index) {
             if (this.expandedRows.includes(index)) {
@@ -254,32 +266,23 @@ export default {
         allAutoRange() {
             return Object.values(this.compositeLayerInfo).every(({autoRange}) => autoRange !== undefined);
         },
-        documentClick(e) {
-            const picker = document.getElementById('color_picker');
-            if (
-                picker &&
-                picker !== e.target &&
-                !picker.contains(e.target) &&
-                !e.target.classList.contains('current-color')
-            ) {
-                this.toggleColorPicker(undefined);
-            }
-        },
-        updateLayerColor(layer, swatch) {
-            this.compositeLayerInfo[layer].palette = swatch.hex;
+        updateLayerColor(layer, event) {
+            this.compositeLayerInfo[layer].palette = event.target.value;
             this.updateStyle();
         },
         updateLayerMin(layer, newVal) {
-            const newMinVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            const valid = Number.isFinite(newVal);
+            const newMinVal = valid ? parseFloat(newVal) : newVal;
             this.compositeLayerInfo[layer].min = newMinVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo); // for reactivity
-            this.updateStyle();
+            if (valid) this.updateStyle();
         },
         updateLayerMax(layer, newVal) {
-            const newMaxVal = Number.isFinite(newVal) ? parseFloat(newVal) : undefined;
+            const valid = Number.isFinite(newVal);
+            const newMaxVal = valid ? parseFloat(newVal) : newVal;
             this.compositeLayerInfo[layer].max = newMaxVal;
             this.compositeLayerInfo = Object.assign({}, this.compositeLayerInfo); // for reactivity
-            this.updateStyle();
+            if (valid) this.updateStyle();
         },
         updateActiveLayers() {
             this.layers.forEach((layer) => {
@@ -302,7 +305,16 @@ export default {
                 };
                 styleArray.push(styleEntry);
             });
-            this.$emit('updateStyle', {bands: styleArray});
+            this.styleUpdate({bands: styleArray});
+        },
+        getChannelColor(name, usedColors) {
+            // Search for case-insensitive regex match among known channel-colors
+            for (const [channelPattern, color] of Object.entries(this.colors.channel)) {
+                if (!usedColors.includes(color) && name.match(new RegExp(channelPattern, 'i'))) {
+                    usedColors.push(color);
+                    return color;
+                }
+            }
         }
     }
 };
@@ -311,9 +323,9 @@ export default {
 <template>
   <div>
     <i
-      class="icon-keyboard"
+      class="icon-keyboard fa fa-keyboard"
       @click="showKeyboardShortcuts = !showKeyboardShortcuts"
-    />
+    ></i>
     <div
       v-if="showKeyboardShortcuts"
       class="shortcuts"
@@ -340,7 +352,7 @@ export default {
         Toggle visibility of the eleventh layer in the table
       </div>
     </div>
-    <div :class="colorPickerShown ? 'table-container tall' : 'table-container'">
+    <div class="table-container">
       <table
         id="composite-layer-table"
         class="table table-condensed"
@@ -355,17 +367,22 @@ export default {
                 @input="toggleEnableAll"
               >
             </th>
-            <th />
-            <th />
+            <th><span class="small-text">Name</span></th>
+            <th><span class="small-text">Color</span></th>
             <th>
               <div class="auto-range-col">
                 <div class="auto-range-label">
-                  <span class="small-text">Auto Range</span>
+                  <span
+                    class="small-text"
+                    style="text-align: left"
+                  >
+                    Auto Range
+                  </span>
                   <label class="switch">
                     <span
                       :class="allAutoRange() ? 'onoff-slider checked' : 'onoff-slider'"
                       @click="() => updateAllAutoRanges(allAutoRange() ? undefined : 0.2)"
-                    />
+                    ></span>
                   </label>
                 </div>
                 <span
@@ -377,26 +394,18 @@ export default {
                     class="input-80"
                     :max="50"
                     :min="0"
+                    :step="0.1"
                     :value="autoRangeForAll"
                     @input="(e) => updateAllAutoRanges(e.target.value)"
                   >
                 </span>
               </div>
               <i
-                :class="expandedRows.length === layers.length ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
+                :class="expandedRows.length === layers.length ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
                 @click="toggleAllExpanded"
-              />
+              ></i>
             </th>
           </tr>
-          <!-- color picker should display relative to sticky table head -->
-          <color-picker
-            v-if="colorPickerShown"
-            id="color_picker"
-            class="picker-offset"
-            :disable-alpha="true"
-            :value="Object.values(compositeLayerInfo).find((({layerName}) => layerName === colorPickerShown)).palette"
-            @input="(swatch) => {updateLayerColor(colorPickerShown, swatch)}"
-          />
         </thead>
         <tbody>
           <tr
@@ -406,7 +415,7 @@ export default {
               framedelta
             } in Object.values(compositeLayerInfo)"
             :key="layerName"
-            :class="expandedRows.includes(index) ? 'tall-row' : ''"
+            :class="expandedRows.includes(index) ? 'tall-row table-row' : 'table-row'"
           >
             <td class="enable-col">
               <input
@@ -421,27 +430,43 @@ export default {
               {{ layerName }}
             </td>
             <td class="color-col">
-              <span
-                class="current-color"
-                :style="{ 'background-color': palette }"
-                @click="() => toggleColorPicker(layerName)"
+              <input
+                id="color_picker"
+                class="picker"
+                type="color"
+                :value="palette"
+                @input="(swatch) => {updateLayerColor(layerName, swatch)}"
               />
             </td>
             <td class="auto-range-col">
-              <div class="auto-range-toggle">
+              <div class="auto-range-label">
                 <label class="switch">
                   <span
                     :class="autoRange ? 'onoff-slider checked' : 'onoff-slider'"
                     @click="() => updateLayerAutoRange(layerName, autoRange ? undefined : 0.2)"
-                  />
+                  ></span>
                 </label>
               </div>
+              <span
+                v-if="autoRange"
+                class="percentage-input"
+              >
+                <input
+                  type="number"
+                  class="input-80"
+                  :max="50"
+                  :min="0"
+                  :step="0.1"
+                  :value="autoRange"
+                  @input="(e) => updateLayerAutoRange(layerName, e.target.value)"
+                >
+              </span>
               <i
-                :class="expandedRows.includes(index) ? 'expand-btn icon-up-open' : 'expand-btn icon-down-open'"
+                :class="expandedRows.includes(index) ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
                 @click="() => toggleExpanded(index)"
-              />
+              ></i>
             </td>
-            <div
+            <td
               v-if="expandedRows.includes(index)"
               class="advanced-section"
             >
@@ -449,18 +474,20 @@ export default {
                 :item-id="itemId"
                 :layer-index="index"
                 :current-frame="currentFrame"
-                :current-frame-histogram="currentFrameHistogram"
+                :frame-histograms="frameHistograms"
+                :get-frame-histogram="queueHistogramRequest"
                 :histogram-params="histogramParams"
                 :framedelta="framedelta"
                 :auto-range="autoRange"
                 :current-min="min"
                 :current-max="max"
+                :dtype="dtype"
                 :active="active"
-                @updateMin="(v, d) => updateLayerMin(layerName, v, d)"
-                @updateMax="(v, d) => updateLayerMax(layerName, v, d)"
-                @updateAutoRange="(v) => updateLayerAutoRange(layerName, v)"
+                :update-min="(v, d) => updateLayerMin(layerName, v, d)"
+                :update-max="(v, d) => updateLayerMax(layerName, v, d)"
+                :update-auto-range="(v) => updateLayerAutoRange(layerName, v)"
               />
-            </div>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -476,43 +503,49 @@ export default {
     background-color: #000;
     cursor: pointer;
 }
-.picker-offset {
-    position: absolute;
-    z-index: 100;
-    right: 15%
+.picker{
+    background-color: transparent;
+    border: none;
+    width: 100%
 }
 .table-header {
     position: sticky;
     top: 0px;
-    background-color: white;
+    background-color: transparent;
     z-index: 2;
-    border-bottom: 3px solid;
+    border-bottom: 3px solid !important;
+}
+.table-row {
+    vertical-align: top;
+    border-bottom: 1px solid !important;
+    position: relative;
+}
+.table-row > td {
+    border-top: none !important;
 }
 .small-text {
     font-size: 10px;
 }
 .tall-row {
-    height: 75px;
+    height: 80px !important;
 }
 .enable-col {
-    width: 10%;
+    width: 30px;
 }
 .name-col {
-    max-width: 40%;
+    width: 50%;
     word-break: break-all;
+    font-size: inherit;
 }
 .color-col {
     width: 25%;
 }
 .auto-range-col {
+    min-width: 250px;
     position: relative;
-}
-.auto-range-toggle {
-    min-width: 100px;
     display: flex;
-    column-gap: 10px;
-    align-content: space-around;
-    padding: 0;
+    column-gap: 5px;
+    align-items: center;
 }
 .auto-range-label {
     display: flex;
@@ -521,7 +554,7 @@ export default {
 .switch {
   position: relative;
   display: inline-block;
-  width: 45px;
+  width: 55px;
   height: 20px;
   margin-top: 5px;
 }
@@ -556,27 +589,19 @@ export default {
   border-radius: 50%;
 }
 .onoff-slider.checked:before {
-  -webkit-transform: translateX(22px);
-  -ms-transform: translateX(22px);
-  transform: translateX(22px);
+  -webkit-transform: translateX(32px);
+  -ms-transform: translateX(32px);
+  transform: translateX(32px);
 }
 .table-container {
     overflow-y: scroll;
-    overflow-x: auto;
+    overflow-x: hidden;
     position: relative;
     max-height: 300px;
 }
-.table-container.tall {
-    height: 300px;
-}
-.table-container td {
-    padding: 0 5px;
-}
-.table-container input {
-    max-width: 80px;
-}
 .table {
-    border-collapse: separate;
+    border-collapse: collapse;
+    width: 100%
 }
 .expand-btn {
     position: absolute;
@@ -586,12 +611,12 @@ export default {
 .advanced-section {
     position: absolute;
     left: 0px;
+    top: 30px;
     width: calc(100% - 10px);
-    margin: 30px 0px 0px;
     height: 40px;
 }
 .icon-keyboard {
-    font-size: 2rem;
+    font-size: 20px;
 }
 .shortcuts {
     padding-bottom: 10px;
@@ -609,13 +634,19 @@ export default {
 }
 .percentage-input {
     position: relative;
-    margin-top: 5px;
     width: 80px;
+}
+.jupyter-widgets .percentage-input {
+    margin-top: 5px;
 }
 .percentage-input::after {
     position: absolute;
     content: '%';
     left: 45px;
     top: 3px;
+}
+.jupyter-widgets .expand-btn {
+    font-size: 20px;
+    font-weight: 900 !important;
 }
 </style>

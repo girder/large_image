@@ -13,11 +13,19 @@ class TileSourceAssetstoreError(TileSourceError):
     pass
 
 
-class TileSourceXYZRangeError(TileSourceError):
+class TileSourceRangeError(TileSourceError):
+    pass
+
+
+class TileSourceXYZRangeError(TileSourceRangeError):
     pass
 
 
 class TileSourceInefficientError(TileSourceError):
+    pass
+
+
+class TileSourceMalformedError(TileSourceError):
     pass
 
 

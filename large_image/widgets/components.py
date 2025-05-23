@@ -1,0 +1,47 @@
+import json
+from pathlib import Path
+from typing import Callable, Union
+
+import ipyvue
+import traitlets
+
+parent = Path(__file__).parent
+with open(parent / 'colors.json') as f:
+    colors_data = json.load(f)
+with open(parent / 'DualInput.vue') as f:
+    dual_input = f.read()
+with open(parent / 'CompositeLayers.vue') as f:
+    composite_layers = f.read()
+with open(parent / 'HistogramEditor.vue') as f:
+    histogram_editor = f.read()
+
+
+class FrameSelector(ipyvue.VueTemplate):  # type: ignore
+    template_file = __file__, 'FrameSelector.vue'
+
+    itemId = traitlets.Int(allow_none=True).tag(sync=True)
+    imageMetadata = traitlets.Dict().tag(sync=True)
+    currentFrame = traitlets.Int(default_value=0).tag(sync=True)
+    colors = traitlets.Dict(colors_data).tag(sync=True)
+    frameHistograms = traitlets.Dict({}).tag(sync=True)
+
+    updateFrameCallback: Union[Callable, None] = None
+    getFrameHistogram: Union[Callable, None] = None
+
+    # register_component_from_file function does not work in Google Colab;
+    # register child components from strings instead
+    components = traitlets.Dict({
+        'dual-input': dual_input,
+        'composite-layers': composite_layers,
+        'histogram-editor': histogram_editor,
+    }).tag(sync=True)
+
+    def vue_frameUpdate(self, data=None):
+        frame = int(data.get('frame', 0))
+        style = data.get('style', {})
+        if self.updateFrameCallback is not None:
+            self.updateFrameCallback(frame, style)
+
+    def vue_getFrameHistogram(self, params=None):
+        if self.getFrameHistogram is not None:
+            self.getFrameHistogram(params)
