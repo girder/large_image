@@ -139,6 +139,8 @@ def process_annotations(event):  # noqa: C901
         data = orjson.loads(b''.join(data).decode())
     except Exception:
         logger.error('Could not parse annotation file')
+        if str(file['itemId']) == str(item['_id']):
+            File().remove(file)
         raise
     if time.time() - startTime > 10:
         logger.info('Decoded json in %5.3fs', time.time() - startTime)
@@ -161,6 +163,8 @@ def process_annotations(event):  # noqa: C901
             Annotation().createAnnotation(item, user, annotation)
         except Exception:
             logger.error('Could not create annotation object from data')
+            if str(file['itemId']) == str(item['_id']):
+                File().remove(file)
             raise
     if str(file['itemId']) == str(item['_id']):
         File().remove(file)
