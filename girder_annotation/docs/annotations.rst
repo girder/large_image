@@ -50,7 +50,7 @@ it is not allowed. If element IDs are specified, they must be unique.
     "type": "point",                  # Exact string for the specific shape.  Required
     "id": "0123456789abcdef01234567", # String, 24 lowercase hexadecimal digits.  Optional.
     "label": {                        # Object.  Optional
-      "value": "This is a label",     # String.  Optional
+      "value": "This is a label",     # String.  Required
       "visibility": "hidden",         # String.  One of "always", "hidden", "onhover".  Optional
       "fontSize": 3.4,                # Number.  Optional
       "color": "#0000FF"              # String.  See note about colors.  Optional
