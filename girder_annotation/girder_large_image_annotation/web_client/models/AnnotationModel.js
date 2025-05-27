@@ -424,6 +424,11 @@ const AnnotationModel = AccessControlledModel.extend({
             method = 'PATCH';
             const annot = this.get('annotation');
             data = Object.values(this._changeLog);
+            data.forEach((change) => {
+                if (change.value && change.value.label && !change.value.label.value) {
+                    delete change.value.label;
+                }
+            });
             Object.keys(annot).forEach((k) => {
                 if (k !== 'elements') {
                     data.push({op: 'replace', path: k, value: annot[k]});

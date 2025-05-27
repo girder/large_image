@@ -1,7 +1,13 @@
 # Change Log
 
-## 1.32.7
+## 1.32.8
 
+
+### Bug Fixes
+
+- Fix issuing annotation PATCH updates with empty labels ([#1921](../../pull/1921))
+
+## 1.32.7
 
 ### Improvements
 
