@@ -59,9 +59,9 @@ class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'tiff'
     extensions = {
-        None: SourcePriority.MEDIUM,
-        'tif': SourcePriority.HIGH,
-        'tiff': SourcePriority.HIGH,
+        None: SourcePriority.HIGH,
+        'tif': SourcePriority.PREFERRED,
+        'tiff': SourcePriority.PREFERRED,
         'ptif': SourcePriority.PREFERRED,
         'ptiff': SourcePriority.PREFERRED,
         'qptiff': SourcePriority.PREFERRED,
