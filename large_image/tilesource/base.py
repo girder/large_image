@@ -2154,7 +2154,7 @@ class TileSource(IPyLeafletMixin):
         dest_projection: str,
         dest_region: Dict[str, float],
         **kwargs,
-    ) -> np.ndarray:
+    ) -> Tuple[Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         This function requires pyproj and rasterio; it allows specifying georeferencing
         (even for non-geospatial images) and retrieving a region from geospatial coordinates.
@@ -2186,7 +2186,7 @@ class TileSource(IPyLeafletMixin):
             [
                 *crs_transform.transform(gcp[0], gcp[1]),
                 gcp[2], gcp[3],
-            ]for gcp in src_gcps
+            ] for gcp in src_gcps if len(gcp) == 4
         ]
 
         gcps = [rasterio.control.GroundControlPoint(
