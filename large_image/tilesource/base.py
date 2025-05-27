@@ -2147,6 +2147,65 @@ class TileSource(IPyLeafletMixin):
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         return utilities._encodeImage(cast(np.ndarray, image), format=format, **kwargs)
 
+    def getGeospatialRegion(
+        self,
+        src_projection: str,
+        src_gcps: List[Union[Tuple[float], List[float]]],
+        dest_projection: str,
+        dest_region: Dict[str, float],
+        **kwargs,
+    ) -> np.ndarray:
+        """
+        This function requires pyproj and rasterio; it allows specifying georeferencing
+        (even for non-geospatial images) and retrieving a region from geospatial coordinates.
+        In addition to the required georeferencing parameters described below, this takes
+        the same parameters as getRegion.
+
+        :param src_projection: A string describing the coordinate reference system used for
+            src_gcps. This string can be an EPSG code or other format accepted
+            by pyproj.CRS.from_string.
+        :param src_gcps: A list of ground control points describing projected coordinates for
+            certain pixel coordinates in the image. Each GCP can be a list or tuple with the
+            following format: (cx, cy, px, py) where (cx, cy) is a projected coordinate in the
+            coordinate reference system described by src_projection and (px, py) is a pixel
+            coordinate within the extents of the image.
+        :param dest_projection: A string describing the coordinate reference system used for
+            dest_region. This string can be an EPSG code or other format accepted
+            by pyproj.CRS.from_string.
+        :param dest_region: A dictionary describing the desired region to retrieve from the image.
+            Should specify values for "top", "bottom", "left", and "right" in the projected
+            coordinate system specified by dest_projection.
+        :param kwargs: Optional arguments passed to getRegion.
+        """
+        import pyproj
+        import rasterio
+
+        # convert gcps to dest_projection
+        crs_transform = pyproj.Transformer.from_crs(src_projection, dest_projection)
+        converted_gcps = [
+            [
+                *crs_transform.transform(gcp[0], gcp[1]),
+                gcp[2], gcp[3],
+            ]for gcp in src_gcps
+        ]
+
+        gcps = [rasterio.control.GroundControlPoint(
+            x=gcp[0],
+            y=gcp[1],
+            row=gcp[2],
+            col=gcp[3],
+        ) for gcp in converted_gcps]
+
+        # transform dest_region to pixel coords
+        pixel_to_world = rasterio.transform.from_gcps(gcps)
+        world_to_pixel = ~pixel_to_world
+        px1, py1 = world_to_pixel * (dest_region.get('top'), dest_region.get('left'))
+        px2, py2 = world_to_pixel * (dest_region.get('bottom'), dest_region.get('right'))
+        pixel_region = dict(left=px1, top=py1, right=px2, bottom=py2)
+
+        # send pixel_region into getRegion
+        return self.getRegion(region=pixel_region, **kwargs)
+
     def getRegionAtAnotherScale(
             self, sourceRegion: Dict[str, Any],
             sourceScale: Optional[Dict[str, float]] = None,
