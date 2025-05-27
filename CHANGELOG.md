@@ -10,6 +10,10 @@
 - Guard against nd2 NotImplementedError and allow bioformats to handle nd2 ([#1918](../../pull/1918))
 - Support editing paged annotation elements ([#1919](../../pull/1919))
 
+### Changes
+
+- Tweak a few source priorities ([#1920](../../pull/1920))
+
 ## 1.32.6
 
 ### Changes
