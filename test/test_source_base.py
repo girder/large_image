@@ -406,6 +406,29 @@ def testGetRegionAutoOffset():
     assert np.all(region2 == region1)
 
 
+def testGetGeospatialRegion():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image.open(imagePath)
+    assert not source.geospatial
+
+    source_projection = 'epsg:3857'
+    source_gcps = [
+        (-8573272.6388, 4705590.0601, 0, 0),
+        (-8572269.4028, 4706218.2769, source.sizeX, source.sizeY),
+    ]
+    target_projection = 'epsg:4326'
+    target_region = {
+        'left': -77.015104,
+        'top': 38.888642,
+        'right': -77.005877,
+        'bottom': 38.892235,
+    }
+    region, _ = source.getGeospatialRegion(
+        source_projection, source_gcps, target_projection, target_region, format='numpy',
+    )
+    assert region.shape == (554, 10052, 3)
+
+
 @pytest.mark.parametrize((
     'options', 'lensrc', 'lenquads', 'frame10', 'src0', 'srclast', 'quads10',
 ), [
