@@ -200,20 +200,19 @@ const AnnotationListWidget = View.extend({
 
         const $el = $(evt.currentTarget);
         const id = $el.parents('.g-annotation-row').data('annotationId');
-        const allChecks = this.$el.find('td.g-annotation-select input[type=checkbox]');
+        const $checkBoxes = this.$el.find('td.g-annotation-select input[type=checkbox]');
         const anySelected = this.$('.g-annotation-select input:checked').length > 0;
         const selectAll = this.$('#select-all');
+        const $checkedAnnotations = $checkBoxes.filter(':checked');
 
         this.$('thead .g-annotation-download-selected, thead .g-annotation-delete, thead .g-annotation-permissions')
             .prop('disabled', !anySelected)
             .toggleClass('disabled', !anySelected)
             .css('color', anySelected ? '' : 'grey');
         if (!id) {
-            allChecks.prop('checked', selectAll.is(':checked'));
-
+            $checkBoxes.prop('checked', selectAll.is(':checked'));
         } else {
-            selectAll.prop('checked', this.$el.find('td.g-annotation-select input:checked').length === allChecks.length );
-
+            selectAll.prop('checked', $checkedAnnotations.length === $checkBoxes.length);
         }
     },
 
