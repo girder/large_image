@@ -143,18 +143,18 @@ module.exports = {
                 this.histogram = this.frameHistograms[targetFrame][0];
             }
         },
-        expanded () {
+        expanded() {
             if (this.expanded) {
                 // wait until svg ref is defined;
                 // nextTick is not available so use setTimeout
                 window.setTimeout(() => {
-                    this.fetchHistogram()
-                    this.histogramUpdated()
-                }, 1)
+                    this.fetchHistogram();
+                    this.histogramUpdated();
+                }, 1);
             }
         },
         histogram() {
-            this.histogramUpdated()
+            this.histogramUpdated();
         },
         currentMin() {
             this.initializePositions();
@@ -454,101 +454,104 @@ module.exports = {
 </script>
 
 <template>
-<td>
-    <i
-        :class="expanded ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
-        @click="expand"
-    ></i>
-  <div v-if="expanded" class="range-editor">
-    <input
-      v-if="histogram"
-      type="number"
-      class="input-80 min-input"
-      :disabled="autoRange !== undefined"
-      :min="dtypeRange[0]"
-      :max="dtypeRange[1]"
-      :value="minVal"
-      @input="(e) => updateFromInput('min', e.target.value)"
+  <td>
+      <i
+          :class="expanded ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
+          @click="expand"
+      ></i>
+    <div
+      v-if="expanded"
+      class="range-editor"
     >
-    <canvas
-      ref="canvas"
-      class="canvas"
-    ></canvas>
-    <svg
-      ref="svg"
-      class="handles-svg"
-    >
-      <text
-        v-if="vRange[0] !== undefined"
-        x="5"
-        y="40"
-        class="small"
+      <input
+        v-if="histogram"
+        type="number"
+        class="input-80 min-input"
+        :disabled="autoRange !== undefined"
+        :min="dtypeRange[0]"
+        :max="dtypeRange[1]"
+        :value="minVal"
+        @input="(e) => updateFromInput('min', e.target.value)"
       >
-        {{ +vRange[0].toFixed(2) || 0 }}
-      </text>
-      <rect
-        ref="minExclusionBox"
-        x="5"
-        y="0"
-        width="0"
-        height="30"
-        opacity="0.2"
-      />
-      <rect
-        ref="maxExclusionBox"
-        x="5"
-        y="0"
-        width="0"
-        height="30"
-        opacity="0.2"
-      />
-      <line
-        ref="minHandle"
-        class="draggable"
-        name="min"
-        stroke="#000"
-        stroke-width="5"
-        x1="5"
-        x2="5"
-        y1="0"
-        y2="30"
+      <canvas
+        ref="canvas"
+        class="canvas"
+      ></canvas>
+      <svg
+        ref="svg"
+        class="handles-svg"
       >
-        <title>{{ minVal }}</title>
-      </line>
-      <text
-        v-if="vRange[1] !== undefined"
-        :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 8): 0"
-        y="40"
-        class="small"
+        <text
+          v-if="vRange[0] !== undefined"
+          x="5"
+          y="40"
+          class="small"
+        >
+          {{ +vRange[0].toFixed(2) || 0 }}
+        </text>
+        <rect
+          ref="minExclusionBox"
+          x="5"
+          y="0"
+          width="0"
+          height="30"
+          opacity="0.2"
+        />
+        <rect
+          ref="maxExclusionBox"
+          x="5"
+          y="0"
+          width="0"
+          height="30"
+          opacity="0.2"
+        />
+        <line
+          ref="minHandle"
+          class="draggable"
+          name="min"
+          stroke="#000"
+          stroke-width="5"
+          x1="5"
+          x2="5"
+          y1="0"
+          y2="30"
+        >
+          <title>{{ minVal }}</title>
+        </line>
+        <text
+          v-if="vRange[1] !== undefined"
+          :x="xRange[1] && vRange[1] ? xRange[1] - (`${vRange[1]}`.length * 8): 0"
+          y="40"
+          class="small"
+        >
+          {{ +vRange[1].toFixed(2) || 1 }}
+        </text>
+        <line
+          ref="maxHandle"
+          class="draggable"
+          name="max"
+          stroke="#000"
+          stroke-width="5"
+          x1="5"
+          x2="5"
+          y1="0"
+          y2="30"
+        >
+          <title>{{ maxVal }}</title>
+        </line>
+      </svg>
+      <input
+        v-if="histogram"
+        type="number"
+        class="input-80 max-input"
+        :disabled="autoRange !== undefined"
+        :min="dtypeRange[0]"
+        :max="dtypeRange[1]"
+        :value="maxVal"
+        @input="(e) => updateFromInput('max', e.target.value)"
       >
-        {{ +vRange[1].toFixed(2) || 1 }}
-      </text>
-      <line
-        ref="maxHandle"
-        class="draggable"
-        name="max"
-        stroke="#000"
-        stroke-width="5"
-        x1="5"
-        x2="5"
-        y1="0"
-        y2="30"
-      >
-        <title>{{ maxVal }}</title>
-      </line>
-    </svg>
-    <input
-      v-if="histogram"
-      type="number"
-      class="input-80 max-input"
-      :disabled="autoRange !== undefined"
-      :min="dtypeRange[0]"
-      :max="dtypeRange[1]"
-      :value="maxVal"
-      @input="(e) => updateFromInput('max', e.target.value)"
-    >
-  </div>
-</td>
+    </div>
+  </td>
 </template>
 
 <style scoped>
