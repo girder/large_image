@@ -5,6 +5,7 @@
 ### Improvements
 
 - Clearer error messages on bad annotations and don't keep the bad file ([#1922](../../pull/1922))
+- Annotation list checkboxes ([#1884](../../pull/1884))
 
 ## 1.32.8
 
