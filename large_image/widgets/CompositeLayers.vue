@@ -19,6 +19,7 @@ module.exports = {
         return {
             enabledLayers: [],
             compositeLayerInfo: {},
+            histogramRows: [],
             expandedRows: [],
             autoRangeForAll: undefined,
             showKeyboardShortcuts: false,
@@ -36,6 +37,12 @@ module.exports = {
                 style: this.histogramParamStyle,
                 roundRange: true
             };
+        },
+        showExpandAllButton() {
+            if (this.histogramRows.length) {
+                return document.getElementsByClassName('expand-btn').length > 0;
+            }
+            return false;
         }
     },
     watch: {
@@ -403,6 +410,7 @@ module.exports = {
                 </span>
               </div>
               <i
+                v-if="showExpandAllButton"
                 :class="expandedRows.length === layers.length ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
                 @click="toggleAllExpanded"
               ></i>
@@ -481,6 +489,7 @@ module.exports = {
                 :update-min="(v, d) => updateLayerMin(layerName, v, d)"
                 :update-max="(v, d) => updateLayerMax(layerName, v, d)"
                 :update-auto-range="(v) => updateLayerAutoRange(layerName, v)"
+                :mounted="() => histogramRows.push(index)"
                 :expanded="expandedRows.includes(index)"
                 :expand="() => toggleExpanded(index)"
               />

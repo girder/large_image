@@ -123,6 +123,7 @@ module.exports = {
         'updateAutoRange',
         'expanded',
         'expand',
+        'mounted'
     ],
     data() {
         return {
@@ -200,6 +201,9 @@ module.exports = {
                 return [this.histogram.min, this.histogram.max];
             }
         }
+    },
+    mounted() {
+        this.mounted();
     },
     methods: {
         fetchHistogram() {
