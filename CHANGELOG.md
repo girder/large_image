@@ -1,7 +1,12 @@
 # Change Log
 
-## 1.32.8
+## 1.32.9
 
+### Improvements
+
+- Clearer error messages on bad annotations and don't keep the bad file ([#1922](../../pull/1922))
+
+## 1.32.8
 
 ### Bug Fixes
 
