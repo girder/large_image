@@ -57,15 +57,17 @@ module.exports = {
         frameHistograms() {
             if (this.queuedRequests) {
                 let requests = this.queuedRequests[this.currentFrame];
-                if (!requests) this.queuedRequests = undefined;
                 const receivedFrames = Object.keys(this.frameHistograms).map((v) => parseInt(v));
-                requests = requests.filter((r) => !receivedFrames.includes(r.frame));
-                if (!requests.length) this.queuedRequests = undefined;
+                if (!requests) this.queuedRequests = undefined;
                 else {
-                    this.getFrameHistogram(requests[0]);
-                    this.queuedRequests = {
-                        [this.currentFrame]: requests.slice(1)
-                    };
+                    requests = requests.filter((r) => !receivedFrames.includes(r.frame));
+                    if (!requests.length) this.queuedRequests = undefined;
+                    else {
+                        this.getFrameHistogram(requests[0]);
+                        this.queuedRequests = {
+                            [this.currentFrame]: requests.slice(1)
+                        };
+                    }
                 }
             }
         }
@@ -461,15 +463,8 @@ module.exports = {
                   @input="(e) => updateLayerAutoRange(layerName, e.target.value)"
                 >
               </span>
-              <i
-                :class="expandedRows.includes(index) ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
-                @click="() => toggleExpanded(index)"
-              ></i>
             </td>
-            <td
-              v-if="expandedRows.includes(index)"
-              class="advanced-section"
-            >
+            <td>
               <histogram-editor
                 :item-id="itemId"
                 :layer-index="index"
@@ -486,6 +481,8 @@ module.exports = {
                 :update-min="(v, d) => updateLayerMin(layerName, v, d)"
                 :update-max="(v, d) => updateLayerMax(layerName, v, d)"
                 :update-auto-range="(v) => updateLayerAutoRange(layerName, v)"
+                :expanded="expandedRows.includes(index)"
+                :expand="() => toggleExpanded(index)"
               />
             </td>
           </tr>
@@ -607,13 +604,6 @@ module.exports = {
     position: absolute;
     right: 10px;
     top: 5px;
-}
-.advanced-section {
-    position: absolute;
-    left: 0px;
-    top: 30px;
-    width: calc(100% - 10px);
-    height: 40px;
 }
 .icon-keyboard {
     font-size: 20px;

@@ -120,7 +120,9 @@ module.exports = {
         'active',
         'updateMin',
         'updateMax',
-        'updateAutoRange'
+        'updateAutoRange',
+        'expanded',
+        'expand',
     ],
     data() {
         return {
@@ -140,24 +142,18 @@ module.exports = {
                 this.histogram = this.frameHistograms[targetFrame][0];
             }
         },
-        histogram() {
-            this.xRange = [5, this.$refs.svg.clientWidth];
-            if (this.histogram) {
-                this.vRange = [this.histogram.min, this.histogram.max];
-                this.drawHistogram(
-                    this.simplifyHistogram(this.histogram.hist)
-                );
-            } else {
-                this.vRange = [0, 1];
-                this.drawHistogram([0, 0, 0]);
+        expanded () {
+            if (this.expanded) {
+                // wait until svg ref is defined;
+                // nextTick is not available so use setTimeout
+                window.setTimeout(() => {
+                    this.fetchHistogram()
+                    this.histogramUpdated()
+                }, 1)
             }
-            makeDraggableSVG(
-                this.$refs.svg,
-                this.validateHandleDrag,
-                this.dragHandle,
-                this.xRange
-            );
-            this.initializePositions();
+        },
+        histogram() {
+            this.histogramUpdated()
         },
         currentMin() {
             this.initializePositions();
@@ -205,9 +201,6 @@ module.exports = {
             }
         }
     },
-    mounted() {
-        this.fetchHistogram();
-    },
     methods: {
         fetchHistogram() {
             if (!this.active) return undefined;
@@ -240,6 +233,26 @@ module.exports = {
                 );
             }
             return simpleHistogram;
+        },
+        histogramUpdated() {
+            if (!this.$refs.svg) return;
+            this.xRange = [5, this.$refs.svg.clientWidth];
+            if (this.histogram) {
+                this.vRange = [this.histogram.min, this.histogram.max];
+                this.drawHistogram(
+                    this.simplifyHistogram(this.histogram.hist)
+                );
+            } else {
+                this.vRange = [0, 1];
+                this.drawHistogram([0, 0, 0]);
+            }
+            makeDraggableSVG(
+                this.$refs.svg,
+                this.validateHandleDrag,
+                this.dragHandle,
+                this.xRange
+            );
+            this.initializePositions();
         },
         drawHistogram(hist) {
             // this makes the canvas lines not blurry
@@ -437,7 +450,12 @@ module.exports = {
 </script>
 
 <template>
-  <div class="range-editor">
+<td>
+    <i
+        :class="expanded ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
+        @click="expand"
+    ></i>
+  <div v-if="expanded" class="range-editor">
     <input
       v-if="histogram"
       type="number"
@@ -526,14 +544,18 @@ module.exports = {
       @input="(e) => updateFromInput('max', e.target.value)"
     >
   </div>
+</td>
 </template>
 
 <style scoped>
 .range-editor {
     position: absolute;
     display: flex;
+    left: 0px;
+    top: 30px;
+    width: calc(100% - 10px);
+    margin-bottom: 10px;
     height: 30px;
-    width: 100%;
 }
 .canvas {
     position: absolute;
