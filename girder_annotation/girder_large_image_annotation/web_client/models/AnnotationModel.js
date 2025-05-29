@@ -474,7 +474,7 @@ const AnnotationModel = AccessControlledModel.extend({
                 this.set(annotation);
             }
             this.trigger('sync', this, annotation, options);
-            if (this._nextFetch && !this._inFetch) {
+            if (this._nextFetch && !this._inFetch && (this._saveAgain === undefined || this._saveAgain === false)) {
                 var nextFetch = this._nextFetch;
                 this._nextFetch = null;
                 nextFetch();

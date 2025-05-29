@@ -9,6 +9,10 @@
 - The frame-viewer histogram widget will only be visible if it can be used ([#1924](../../pull/1924))
 - Add the dicom mime-type to the openslide source ([#1925](../../pull/1925))
 
+### Bug Fixes
+
+- Fix debouncing annotation saves ([#1927](../../pull/1927))
+
 ## 1.32.8
 
 ### Bug Fixes
