@@ -15,6 +15,8 @@ with open(parent / 'CompositeLayers.vue') as f:
 with open(parent / 'HistogramEditor.vue') as f:
     histogram_editor = f.read()
 
+ipyvue.register_component_from_string('histogram-editor', histogram_editor)
+
 
 class FrameSelector(ipyvue.VueTemplate):  # type: ignore
     template_file = __file__, 'FrameSelector.vue'
@@ -33,7 +35,6 @@ class FrameSelector(ipyvue.VueTemplate):  # type: ignore
     components = traitlets.Dict({
         'dual-input': dual_input,
         'composite-layers': composite_layers,
-        'histogram-editor': histogram_editor,
     }).tag(sync=True)
 
     def vue_frameUpdate(self, data=None):

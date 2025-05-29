@@ -861,7 +861,7 @@ class TileSource(IPyLeafletMixin):
             if function is None:
                 return image
         if isinstance(function, (list, tuple)):
-            for func in cast(Union[List, Tuple], function):
+            for func in function:
                 image = self._applyStyleFunction(image, sc, stage, func)
             return image
         if isinstance(function, str):
