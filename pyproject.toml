@@ -71,6 +71,9 @@ lint.select = [
     "YTT",  # flake8-2020
 ]
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint.per-file-ignores]
 # allow "useless expressions" as it shows output
 # allow non-top level imports
