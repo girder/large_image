@@ -6,6 +6,8 @@
 
 - Clearer error messages on bad annotations and don't keep the bad file ([#1922](../../pull/1922))
 - Annotation list checkboxes ([#1884](../../pull/1884))
+- The frame-viewer histogram widget will only be visible if it can be used ([#1924](../../pull/1924))
+- Add the dicom mime-type to the openslide source ([#1925](../../pull/1925))
 
 ## 1.32.8
 
