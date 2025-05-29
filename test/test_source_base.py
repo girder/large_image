@@ -23,7 +23,7 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi)|[0-9a-f].*\.dcm)$',
+        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi|nd2)|[0-9a-f].*\.dcm)$',
         'noread': r'JK-kidney_B',
         'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
@@ -33,6 +33,7 @@ SourceAndFiles = {
     'deepzoom': {},
     'dicom': {
         'read': r'\.dcm$',
+        'noread': r'tcia.*\.dcm$',
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
@@ -62,34 +63,36 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled)',  # noqa
-        'skip': r'nokeyframe\.ome\.tiff$',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi)',  # noqa
+        'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff|\.czi$',
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
         'read': r'(\.(jpg|jpeg|png|tif.*)|18[-0-9a-f]{34}\.dcm)$',
-        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview)',  # noqa
+        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview|indica|TCGA-55.*\.ome\.tiff)',  # noqa
     },
     'rasterio': {
         'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
-        'skip': r'nokeyframe\.ome\.tiff$',
+        'skip': r'(indica|nokeyframe\.ome\.tiff$)',
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'(\.(ptif|scn|svs|tif.*|qptiff)|[-0-9a-f]{36}\.dcm)$',
-        'noread': r'(DDX58_AXL|G10-3_pelvis_crop|landcover_sample|US_Geo\.|imagej)',
+        'noread': r'(DDX58_AXL|G10-3_pelvis_crop|landcover_sample|US_Geo\.|imagej|indica)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|ndpi|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm)$)' +  # noqa
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm)$)' +  # noqa
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
+        'skip': r'indica' if sys.version_info < (3, 9) else '^$',
     },
     'vips': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|zarr\.db|zarr\.zip)$',
-        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)'  # noqa
+        'noread': r'(\.(nc|nd2|yml|yaml|json|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm)$',
+        'skip': r'\.czi$',
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)',  # noqa
     },
     'zarr': {'read': r'\.(zarr|zgroup|zattrs|db|zarr\.zip)$'},
 }
@@ -196,6 +199,7 @@ def testSourcesTilesAndMethods(filename, source):
     tileMetadata = ts.getMetadata()
     assert ts.metadata['sizeX'] == tileMetadata['sizeX']
     assert ts.bandCount == tileMetadata['bandCount']
+    assert ts.channelNames == tileMetadata.get('channels')
     utilities.checkTilesZXY(ts, tileMetadata)
     # All of these should succeed
     assert ts.getInternalMetadata() is not None
@@ -367,6 +371,26 @@ def testTileOverlapWithRegionOffset():
         tile_overlap=dict(x=400, y=400))
     firstTile = next(tileIter)
     assert firstTile['tile_overlap']['right'] == 200
+
+
+def testLazyTileWithScale():
+    imagePath = datastore.fetch('sample_Easy1.png')
+    ts = large_image.open(imagePath)
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=3)
+    assert tile['width'] == 31
+    assert tile['height'] == 256
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=4)
+    assert tile['width'] == 256
+    assert tile['height'] == 211
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=7)
+    assert tile['width'] == 31
+    assert tile['height'] == 211
 
 
 def testGetRegionAutoOffset():

@@ -384,6 +384,12 @@ class AnnotationSchema:
                 'exclusiveMinimum': 0,
                 'description': 'radius used for heatmap interpretation',
             },
+            'scaleWithZoom': {
+                'type': 'boolean',
+                'description':
+                    'If true, and interpreted as a heatmap, scale the size '
+                    'of points with the zoom level of the map.',
+            },
             'colorRange': colorRangeSchema,
             'rangeValues': rangeValueSchema,
             'normalizeRange': {
@@ -836,7 +842,7 @@ class Annotation(AccessControlledModel):
         """
         annotation = super().load(id, *args, **kwargs)
         if annotation is None:
-            return
+            return None
 
         if getElements:
             # It is possible that we are trying to read the elements of an
@@ -897,7 +903,7 @@ class Annotation(AccessControlledModel):
             expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
         return result
 
-    def save(self, annotation, *args, **kwargs):
+    def save(self, annotation, *args, **kwargs):  # noqa
         """
         When saving an annotation, override the collection insert_one and
         replace_one methods so that we don't save the elements with the main
@@ -934,6 +940,9 @@ class Annotation(AccessControlledModel):
         _elementQuery = annotation.pop('_elementQuery', None)
         annotation.pop('_active', None)
         annotation.pop('_annotationId', None)
+        if annotation['annotation'] and not annotation['annotation'].get('name'):
+            now = datetime.datetime.now(datetime.timezone.utc)
+            annotation['annotation']['name'] = now.strftime('Annotation %Y-%m-%d %H:%M')
 
         def replaceElements(query, doc, *args, **kwargs):
             Annotationelement().updateElements(doc)
@@ -1102,7 +1111,7 @@ class Annotation(AccessControlledModel):
                     element['id'] = str(element['id'])
                 # Handle elements with large arrays by checking that a
                 # conversion to a numpy array works
-                keys = None
+                keys = {}
                 if len(element.get('points', element.get('values', []))) > VALIDATE_ARRAY_LENGTH:
                     key = 'points' if 'points' in element else 'values'
                     try:
@@ -1138,6 +1147,21 @@ class Annotation(AccessControlledModel):
                     lastTime = time.time()
             annot['elements'] = elements
         except jsonschema.ValidationError as exp:
+            try:
+                error_freq = {}
+                for err in exp.context:
+                    key = err.schema_path[0]
+                    error_freq.setdefault(key, [])
+                    error_freq[key].append(err)
+                min_error = min(error_freq.values(), key=lambda k: (len(k), k[0].schema_path))[0]
+                for key in dir(min_error):
+                    if not key.startswith('_'):
+                        try:
+                            setattr(exp, key, getattr(min_error, key))
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             raise ValidationException(exp)
         if time.time() - startTime > 10:
             logger.info('Validated in %5.3fs' % (time.time() - startTime))
@@ -1224,7 +1248,7 @@ class Annotation(AccessControlledModel):
                 version = oldVersions[1]['_version']
         annotation = Annotation().getVersion(id, version, user, force=force)
         if annotation is None:
-            return
+            return None
         # If this is the most recent (active) annotation, don't do anything.
         # Otherwise, revert it.
         if not annotation.get('_active', True):

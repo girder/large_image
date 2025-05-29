@@ -39,7 +39,11 @@ describe('AnnotationListWidget', function () {
                 };
 
                 this.once('g:beforeFirstRender', function () {
-                    window.geo.util.mockWebglRenderer();
+                    try {
+                        window.geo.util.mockWebglRenderer();
+                    } catch (err) {
+                        // if this is already mocked, do nothing.
+                    }
                 });
                 initialize.apply(this, _.rest(arguments));
             });
@@ -368,9 +372,10 @@ describe('AnnotationListWidget', function () {
             }, 'the upload to finish');
         });
         it('test header permission editor link', function () {
-            var $el = $('.g-annotation-list-header');
-            expect($el.find('.g-annotation-permissions').length).toBe(1);
-            $el.find('.g-annotation-permissions').click();
+            var $el = $('.g-annotation-list');
+            expect($el.find('th .g-annotation-permissions').length).toBe(1);
+            $el.find('th.g-annotation-select input').click();
+            $el.find('th .g-annotation-permissions').click();
 
             girderTest.waitForDialog();
             runs(function () {
@@ -380,9 +385,10 @@ describe('AnnotationListWidget', function () {
             girderTest.waitForLoad();
         });
         it('test header delete link', function () {
-            var $el = $('.g-annotation-list-header');
-            expect($el.find('.g-annotation-delete').length).toBe(1);
-            $el.find('.g-annotation-delete').click();
+            var $el = $('.g-annotation-list');
+            expect($el.find('th .g-annotation-delete').length).toBe(1);
+            $el.find('th.g-annotation-select input').click();
+            $el.find('th .g-annotation-delete').click();
 
             girderTest.waitForDialog();
             runs(function () {

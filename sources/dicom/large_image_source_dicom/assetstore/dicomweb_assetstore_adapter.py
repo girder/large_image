@@ -159,10 +159,9 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
                         # Skip over the whole chunk...
                         bytes_read += len(chunk)
                         continue
-                    else:
-                        # Discard all bytes before the offset
-                        chunk = chunk[bytes_needed:]
-                        bytes_read += bytes_needed
+                    # Discard all bytes before the offset
+                    chunk = chunk[bytes_needed:]
+                    bytes_read += bytes_needed
 
                 if endByte is not None and bytes_read + len(chunk) >= endByte:
                     # We have reached the end... remove all bytes after endByte
@@ -379,22 +378,22 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
             response = self._request_retrieve_instance(file, multipart=False)
         except requests.HTTPError:
             # If there is an HTTPError, the server might not accept single-part requests...
-            return
+            return None
 
         if not self._is_singlepart_response(response):
             # Does not support single-part requests...
-            return
+            return None
 
         content_length = response.headers.get('Content-Length')
         if not content_length:
             # The server did not return a Content-Length
-            return
+            return None
 
         try:
             # The DICOM file size is equal to the Content-Length
             return int(content_length)
         except ValueError:
-            return
+            return None
 
     def _importData(self, parent, parentType, params, progress, user):
         if parentType not in ('folder', 'user', 'collection'):
