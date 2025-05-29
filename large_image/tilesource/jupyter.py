@@ -207,7 +207,7 @@ class Map:
                         metadata = gc.get(f'item/{id}/tiles' + suffix)
                         if (cast(Dict, metadata).get('geospatial') and
                                 cast(Dict, metadata).get('projection')):
-                            url += suffix  # type: ignore[operator]
+                            url += suffix
                     self._id = id
                 else:
                     self._ts = self._get_temp_source(gc, cast(str, fileId or id))
