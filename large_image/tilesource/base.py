@@ -2180,6 +2180,11 @@ class TileSource(IPyLeafletMixin):
         import pyproj
         import rasterio
 
+
+        if any(len(gcp) != 4 for gcp in src_gcps):
+            msg = 'Ground control points must contain four values in the form (cx, cy, px, py).'
+            raise ValueError(msg)
+
         # convert gcps to dest_projection
         crs_transform = pyproj.Transformer.from_crs(src_projection, dest_projection)
         converted_gcps = [
