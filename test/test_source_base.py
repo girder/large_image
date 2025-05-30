@@ -413,21 +413,21 @@ def testGetGeospatialRegion():
 
     source_projection = 'epsg:3857'
     source_gcps = [
-        (-8573272.6388, 4705590.0601, 0, 0),
-        (-8573272.6388, 4706218.2769, 0, source.sizeY),
-        (-8572269.4028, 4706218.2769, source.sizeX, source.sizeY),
+        (-8579444.9288, 4699883.5582, 0, 0),
+        (-8579444.9288, 4709189.7664, 0, source.sizeY),
+        (-8568132.2486, 4709189.7664, source.sizeX, source.sizeY),
     ]
     target_projection = 'epsg:4326'
     target_region = {
-        'left': -77.015104,
-        'top': 38.888642,
-        'right': -77.005877,
-        'bottom': 38.892235,
+        'left': -77.010351,
+        'top': 38.889638,
+        'right': -77.009847,
+        'bottom': 38.889968,
     }
     region, _ = source.getGeospatialRegion(
         source_projection, source_gcps, target_projection, target_region, format='numpy',
     )
-    assert region.shape == (9492, 554, 3)
+    assert region.shape == (62, 290, 3)
 
 
 @pytest.mark.parametrize((

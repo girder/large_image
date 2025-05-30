@@ -2185,7 +2185,7 @@ class TileSource(IPyLeafletMixin):
             raise ValueError(msg)
 
         # convert gcps to dest_projection
-        crs_transform = pyproj.Transformer.from_crs(src_projection, dest_projection)
+        crs_transform = pyproj.Transformer.from_crs(src_projection, dest_projection, always_xy=True)
         converted_gcps = [
             [
                 *crs_transform.transform(gcp[0], gcp[1]),
@@ -2196,20 +2196,20 @@ class TileSource(IPyLeafletMixin):
         gcps = [rasterio.control.GroundControlPoint(
             x=gcp[0],
             y=gcp[1],
-            row=gcp[2],
-            col=gcp[3],
+            col=gcp[2],
+            row=gcp[3],
         ) for gcp in converted_gcps]
 
         # transform dest_region to pixel coords
         transformer = rasterio.transform.GCPTransformer(gcps)
-        px1, py1 = transformer.rowcol(dest_region.get('top', 0), dest_region.get('left', 0))
-        px2, py2 = transformer.rowcol(dest_region.get('bottom', 0), dest_region.get('left', 0))
-        px3, py3 = transformer.rowcol(dest_region.get('top', 0), dest_region.get('right', 0))
-        px4, py4 = transformer.rowcol(dest_region.get('bottom', 0), dest_region.get('right', 0))
-        left = min(px1, px2, px3, px4)
-        top = min(py1, py2, py3, py4)
-        right = max(px1, px2, px3, px4)
-        bottom = max(py1, py2, py3, py4)
+        py1, px1 = transformer.rowcol(dest_region.get('left', 0), dest_region.get('top', 0))
+        py2, px2 = transformer.rowcol(dest_region.get('left', 0), dest_region.get('bottom', 0))
+        py3, px3 = transformer.rowcol(dest_region.get('right', 0), dest_region.get('top', 0))
+        py4, px4 = transformer.rowcol(dest_region.get('right', 0), dest_region.get('bottom', 0))
+        left = max(0, min(px1, px2, px3, px4))
+        top = max(0, min(py1, py2, py3, py4))
+        right = min(self.sizeX, max(px1, px2, px3, px4))
+        bottom = min(self.sizeY, max(py1, py2, py3, py4))
         pixel_region = dict(left=left, top=top, right=right, bottom=bottom)
 
         # send pixel_region into getRegion
