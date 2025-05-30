@@ -414,6 +414,7 @@ def testGetGeospatialRegion():
     source_projection = 'epsg:3857'
     source_gcps = [
         (-8573272.6388, 4705590.0601, 0, 0),
+        (-8573272.6388, 4706218.2769, 0, source.sizeY),
         (-8572269.4028, 4706218.2769, source.sizeX, source.sizeY),
     ]
     target_projection = 'epsg:4326'
