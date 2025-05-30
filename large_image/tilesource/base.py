@@ -2173,7 +2173,7 @@ class TileSource(IPyLeafletMixin):
             dest_region. This string can be an EPSG code or other format accepted
             by pyproj.CRS.from_string.
         :param dest_region: A dictionary describing the desired region to retrieve from the image.
-            Should specify values for "top", "bottom", "left", and "right" in the projected
+            Must specify values for "top", "bottom", "left", and "right" in the projected
             coordinate system specified by dest_projection.
         :param kwargs: Optional arguments passed to getRegion.
         """
