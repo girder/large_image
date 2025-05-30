@@ -439,7 +439,7 @@ class TileIterator:
 
         # If tile is specified, return at most one tile
         if iterInfo.get('tile_position') is not None:
-            tilePos = iterInfo.get('tile_position')
+            tilePos: int = cast(int, iterInfo.get('tile_position'))
             if isinstance(tilePos, dict):
                 if tilePos.get('position') is not None:
                     tilePos = tilePos['position']
