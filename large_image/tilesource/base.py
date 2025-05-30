@@ -2202,11 +2202,16 @@ class TileSource(IPyLeafletMixin):
         ) for gcp in converted_gcps]
 
         # transform dest_region to pixel coords
-        pixel_to_world = rasterio.transform.from_gcps(gcps)
-        world_to_pixel = ~pixel_to_world
-        px1, py1 = world_to_pixel * (dest_region.get('top'), dest_region.get('left'))
-        px2, py2 = world_to_pixel * (dest_region.get('bottom'), dest_region.get('right'))
-        pixel_region = dict(left=px1, top=py1, right=px2, bottom=py2)
+        transformer = rasterio.transform.GCPTransformer(gcps)
+        px1, py1 = transformer.rowcol(dest_region.get('top', 0), dest_region.get('left', 0))
+        px2, py2 = transformer.rowcol(dest_region.get('bottom', 0), dest_region.get('left', 0))
+        px3, py3 = transformer.rowcol(dest_region.get('top', 0), dest_region.get('right', 0))
+        px4, py4 = transformer.rowcol(dest_region.get('bottom', 0), dest_region.get('right', 0))
+        left = min(px1, px2, px3, px4)
+        top = min(py1, py2, py3, py4)
+        right = max(px1, px2, px3, px4)
+        bottom = max(py1, py2, py3, py4)
+        pixel_region = dict(left=left, top=top, right=right, bottom=bottom)
 
         # send pixel_region into getRegion
         return self.getRegion(region=pixel_region, **kwargs)

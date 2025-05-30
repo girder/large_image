@@ -426,7 +426,7 @@ def testGetGeospatialRegion():
     region, _ = source.getGeospatialRegion(
         source_projection, source_gcps, target_projection, target_region, format='numpy',
     )
-    assert region.shape == (554, 10052, 3)
+    assert region.shape == (9492, 554, 3)
 
 
 @pytest.mark.parametrize((
