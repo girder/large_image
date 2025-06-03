@@ -61,20 +61,6 @@ class Annotationelement(Model):
             '_version',
             ([
                 ('annotationId', SortDir.ASCENDING),
-                ('bbox.lowx', SortDir.DESCENDING),
-                ('bbox.highx', SortDir.ASCENDING),
-                ('bbox.size', SortDir.DESCENDING),
-            ], {
-                'name': 'annotationBboxIdx',
-            }),
-            ([
-                ('annotationId', SortDir.ASCENDING),
-                ('bbox.size', SortDir.DESCENDING),
-            ], {
-                'name': 'annotationBboxSizeIdx',
-            }),
-            ([
-                ('annotationId', SortDir.ASCENDING),
                 ('_version', SortDir.DESCENDING),
                 ('element.group', SortDir.ASCENDING),
             ], {
@@ -92,11 +78,20 @@ class Annotationelement(Model):
                 ('_version', SortDir.ASCENDING),
             ], {}),
             'element.girderId',
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('bbox.size', SortDir.DESCENDING),
+            ], {}),
         ])
 
         self.exposeFields(AccessType.READ, (
             '_id', '_version', 'annotationId', 'created', 'element'))
         self.versionId = None
+
+    def _createIndex(self, index):
+        """This creates indices in the background."""
+        threading.Thread(target=super()._createIndex, args=(index,)).start()
 
     def getNextVersionValue(self):
         """
