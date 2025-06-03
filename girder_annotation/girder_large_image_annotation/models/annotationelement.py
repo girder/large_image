@@ -91,7 +91,7 @@ class Annotationelement(Model):
 
     def _createIndex(self, index):
         """This creates indices in the background."""
-        threading.Thread(target=super()._createIndex, args=(index,)).start()
+        threading.Thread(target=super()._createIndex, args=(index,), daemon=True).start()
 
     def getNextVersionValue(self):
         """
