@@ -10,6 +10,7 @@
 - Add the dicom mime-type to the openslide source ([#1925](../../pull/1925))
 - Add a getGeospatialRegion function to tile sources ([#1922](../../pull/1922))
 - Add another index for annotation elements ([#1928](../../pull/1928))
+- Make the json representation of some annotation elements more compact ([#1930](../../pull/1930))
 
 ### Bug Fixes
 

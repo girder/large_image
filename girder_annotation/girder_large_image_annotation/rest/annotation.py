@@ -248,6 +248,14 @@ class AnnotationResource(Resource):
                 # use a json encoder in the most compact form.
                 if isinstance(element, dict):
                     element['id'] = str(element['id'])
+                    if 'points' in element:
+                        element['points'] = [
+                            [int(x) if isinstance(x, float) and x.is_integer() else x for x in sub]
+                            for sub in element['points']]
+                    if 'holes' in element:
+                        element['holes'] = [[
+                            [int(x) if isinstance(x, float) and x.is_integer() else x for x in sub]
+                            for sub in hole] for hole in element['holes']]
                 else:
                     element = struct.pack(
                         '>QL', int(element[0][:16], 16), int(element[0][16:24], 16),
