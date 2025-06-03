@@ -11,6 +11,7 @@
 - Add a getGeospatialRegion function to tile sources ([#1922](../../pull/1922))
 - Add another index for annotation elements ([#1928](../../pull/1928))
 - Make the json representation of some annotation elements more compact ([#1930](../../pull/1930))
+- On the client internals, indicate which annotation updates are from fetches ([#1931](../../pull/1931))
 
 ### Bug Fixes
 

@@ -326,7 +326,9 @@ const AnnotationModel = AccessControlledModel.extend({
             const annotation = resp.annotation || {};
             const elements = annotation.elements || [];
 
+            this._fromFetch = true;
             this.set(resp);
+            this._fromFetch = null;
             if (this._pageElements === undefined && resp._elementQuery) {
                 this._pageElements = resp._elementQuery.count > resp._elementQuery.returned;
                 if (this._pageElements) {
@@ -359,7 +361,9 @@ const AnnotationModel = AccessControlledModel.extend({
                     this.trigger('g:fetched');
                 }
             }
+            this._fromFetch = true;
             this._elements.reset(elements, _.extend({sync: true}, opts));
+            this._fromFetch = null;
         }).fail((err) => {
             this.trigger('g:error', err);
         }).always(() => {
