@@ -28,7 +28,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._unclampBoundsForOverlay = true;
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
-        this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
         this.listenTo(events, 's:widgetDrawRegionEvent', this.drawRegion);
         this.listenTo(events, 's:widgetClearRegion', this.clearRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
@@ -282,7 +281,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             let immediateUpdate = false;
             if (present) {
                 _.each(this._annotations[annotation.id].features, (feature, idx) => {
-                    if (idx || !annotation._centroids || feature.data().length !== annotation._centroids.data.length) {
+                    if (idx || !annotation._centroids || !feature._centroidFeature) {
                         if (feature._ownLayer) {
                             feature.layer().map().deleteLayer(feature.layer());
                         } else {
@@ -333,6 +332,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             // draw centroids except for otherwise shown values
             if (annotation._centroids && !centroidFeature) {
                 const feature = this.featureLayer.createFeature('point');
+                feature._centroidFeature = true;
                 featureList.push(feature);
                 feature.data(annotation._centroids.data).position((d, i) => ({
                     x: annotation._centroids.centroids.x[i],
@@ -350,7 +350,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         return r;
                     },
                     stroke: (d, i) => {
-                        return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
+                        return !annotation._shownIds || (annotation._centroids.centroids.id[i] && !annotation._shownIds.has(annotation._centroids.centroids.id[i]));
                     },
                     strokeColor: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
@@ -365,7 +365,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         return annotation._centroids.props[s].strokeWidth;
                     },
                     fill: (d, i) => {
-                        return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
+                        return !annotation._shownIds || (annotation._centroids.centroids.id[i] && !annotation._shownIds.has(annotation._centroids.centroids.id[i]));
                     },
                     fillColor: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
@@ -403,6 +403,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         }
                     }
                 });
+                annotation._centroids._redraw = false;
+            } else if (annotation._centroids && centroidFeature && annotation._centroids._redraw) {
+                centroidFeature.data(annotation._centroids.data);
+                annotation._centroids._redraw = false;
+                immediateUpdate = true;
             }
             // draw overlays
             if (this.getUnclampBoundsForOverlay() && this._annotations[annotation.id].overlays.length > 0) {
@@ -481,41 +486,36 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         );
 
                         // store the original opacities for the elements in each feature
-                        const data = feature.data();
                         if (annotation._centroids) {
                             annotation._shownIds = new Set(feature.data().map((d) => d.id));
                         }
-                        if (data.length <= this._highlightFeatureSizeLimit && !annotation._centroids) {
-                            this._featureOpacity[annotation.id][feature.featureType] = feature.data()
-                                .map(({id, properties}) => {
-                                    return {
-                                        id,
-                                        fillOpacity: properties.fillOpacity,
-                                        strokeOpacity: properties.strokeOpacity
-                                    };
-                                });
-                        }
+                        this._featureOpacity[annotation.id][feature.featureType] = feature.data()
+                            .map(({id, properties}) => {
+                                return {
+                                    id,
+                                    fillOpacity: properties.fillOpacity,
+                                    strokeOpacity: properties.strokeOpacity
+                                };
+                            });
                     });
                     this._mutateFeaturePropertiesForHighlight(annotation.id, features);
-                    if (annotation._centroids && featureList[0]) {
-                        if (featureList[0].verticesPerFeature) {
+                    const centroidFeature = featureList.find((f) => f._centroidFeature);
+                    if (annotation._centroids && centroidFeature) {
+                        if (centroidFeature.verticesPerFeature) {
                             this.viewer.scheduleAnimationFrame(() => {
-                                const vpf = featureList[0].verticesPerFeature(),
-                                    count = featureList[0].data().length,
-                                    shown = new Float32Array(vpf * count);
-                                for (let i = 0, j = 0; i < count; i += 1) {
-                                    const val = annotation._shownIds.has(annotation._centroids.centroids.id[i]) ? 0 : 1;
-                                    for (let k = 0; k < vpf; k += 1, j += 1) {
-                                        shown[j] = val;
-                                    }
+                                const centroidFeature = featureList.find((f) => f._centroidFeature);
+                                const count = centroidFeature.data().length;
+                                const shown = new Float32Array(count);
+                                for (let i = 0; i < count; i += 1) {
+                                    shown[i] = annotation._shownIds.has(annotation._centroids.centroids.id[i]) ? 0 : 1;
                                 }
-                                featureList[0].updateStyleFromArray({
+                                centroidFeature.updateStyleFromArray({
                                     stroke: shown,
                                     fill: shown
                                 }, undefined, true);
                             });
                         } else {
-                            featureList[0].modified();
+                            centroidFeature.modified();
                         }
                     }
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
@@ -566,6 +566,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             this._hideElement = element;
             _.each(this._annotations, (layer, annotationId) => {
                 const features = layer.features;
+                console.log(features); // DWM::
                 this._mutateFeaturePropertiesForHighlight(annotationId, features);
             });
             this.viewer.scheduleAnimationFrame(this.viewer.draw);
@@ -573,7 +574,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         /**
-         * Use geojs's `updateStyleFromArray` to modify the opacities of alli
+         * Use geojs's `updateStyleFromArray` to modify the opacities of all
          * elements in a feature.  This method uses the private attributes
          * `_highlightAnntotation` and `_highlightElement` to determine which
          * element to modify.
@@ -582,8 +583,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             _.each(features, (feature) => {
                 const data = this._featureOpacity[annotationId][feature.featureType];
                 if (!data) {
-                    // skip highlighting code on features with a lot of entities because
-                    // this slows down interactivity considerably.
+                    // skip highlighting on features with a lot of entities
+                    // because this slows down interactivity considerably.
                     return;
                 }
                 var prop = {

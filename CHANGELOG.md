@@ -1,5 +1,45 @@
 # Change Log
 
+## 1.32.9
+
+### Improvements
+
+- Clearer error messages on bad annotations and don't keep the bad file ([#1922](../../pull/1922))
+- Annotation list checkboxes ([#1884](../../pull/1884))
+- The frame-viewer histogram widget will only be visible if it can be used ([#1924](../../pull/1924))
+- Add the dicom mime-type to the openslide source ([#1925](../../pull/1925))
+- Add a getGeospatialRegion function to tile sources ([#1922](../../pull/1922))
+- Add another index for annotation elements ([#1928](../../pull/1928))
+
+### Bug Fixes
+
+- Fix debouncing annotation saves ([#1927](../../pull/1927))
+
+## 1.32.8
+
+### Bug Fixes
+
+- Fix issuing annotation PATCH updates with empty labels ([#1921](../../pull/1921))
+
+## 1.32.7
+
+### Improvements
+
+- When saving annotation elements in javascript, use PATCH endpoint if possible ([#1915](../../pull/1915))
+- When zoomed in with a power of two of the max zoom and showing annotations, make sure all of the annotation in view are fully loaded ([#1917](../../pull/1917))
+- Guard against nd2 NotImplementedError and allow bioformats to handle nd2 ([#1918](../../pull/1918))
+- Support editing paged annotation elements ([#1919](../../pull/1919))
+
+### Changes
+
+- Tweak a few source priorities ([#1920](../../pull/1920))
+
+## 1.32.6
+
+### Changes
+
+- Tweak a few source priorities ([#1913](../../pull/1913))
+
 ## 1.32.5
 
 ### Improvements
@@ -9,7 +49,7 @@
 
 ### Changes
 
-- Tweak a few source priorities ([#1907](../../pull/1907), [#19098](../../pull/19098))
+- Tweak a few source priorities ([#1907](../../pull/1907), [#1908](../../pull/1908))
 
 ### Bug Fixes
 

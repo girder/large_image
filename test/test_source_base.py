@@ -23,7 +23,7 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi)|[0-9a-f].*\.dcm)$',
+        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi|nd2)|[0-9a-f].*\.dcm)$',
         'noread': r'JK-kidney_B',
         'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
@@ -404,6 +404,30 @@ def testGetRegionAutoOffset():
         tile_size=dict(width=240, height=240),
         format=large_image.constants.TILE_FORMAT_NUMPY)
     assert np.all(region2 == region1)
+
+
+def testGetGeospatialRegion():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image.open(imagePath)
+    assert not source.geospatial
+
+    source_projection = 'epsg:3857'
+    source_gcps = [
+        (-8579444.9288, 4699883.5582, 0, 0),
+        (-8579444.9288, 4709189.7664, 0, source.sizeY),
+        (-8568132.2486, 4709189.7664, source.sizeX, source.sizeY),
+    ]
+    target_projection = 'epsg:4326'
+    target_region = {
+        'left': -77.010351,
+        'top': 38.889638,
+        'right': -77.009847,
+        'bottom': 38.889968,
+    }
+    region, _ = source.getGeospatialRegion(
+        source_projection, source_gcps, target_projection, target_region, format='numpy',
+    )
+    assert region.shape == (62, 290, 3)
 
 
 @pytest.mark.parametrize((

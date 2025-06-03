@@ -49,12 +49,12 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         None: SourcePriority.MEDIUM,
         'bif': SourcePriority.LOW,  # Ventana
         'czi': SourcePriority.PREFERRED,
-        'dcm': SourcePriority.LOW,  # DICOM
+        'dcm': SourcePriority.MEDIUM,  # DICOM
         'ini': SourcePriority.LOW,  # Part of mrxs
         'mrxs': SourcePriority.PREFERRED,  # MIRAX
         'ndpi': SourcePriority.PREFERRED,  # Hamamatsu
         'scn': SourcePriority.LOW,  # Leica
-        'svs': SourcePriority.PREFERRED,
+        'svs': SourcePriority.HIGH,
         'svslide': SourcePriority.PREFERRED,
         'tif': SourcePriority.MEDIUM,
         'tiff': SourcePriority.MEDIUM,
@@ -64,6 +64,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     mimeTypes = {
         None: SourcePriority.FALLBACK,
         'image/czi': SourcePriority.PREFERRED,
+        'application/dicom': SourcePriority.MEDIUM,
         'image/mirax': SourcePriority.PREFERRED,  # MIRAX
         'image/tiff': SourcePriority.MEDIUM,
         'image/x-tiff': SourcePriority.MEDIUM,
