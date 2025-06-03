@@ -142,6 +142,40 @@ You can also specify a region with a single corner point and distances for width
             format=large_image.constants.TILE_FORMAT_NUMPY
         )
 
+Even if an image is not georeferenced, you can still get a region specified with geospatial coordinates by using the ``getGeospatialRegion`` function.
+Note that both ``pyproj`` and ``rasterio`` must be installed to use this function.
+This function requires that you specify ground control points for the source image since that georeferencing information does not exist within the image.
+In the following example, the ground control points are specified with EPSG:3857 coordinates and the target region is specified with EPSG:4326 coordinates.
+This function passes any additional arguments to ``getRegion``, so in the following example, ``frame`` and ``format`` are also passed as arguments.
+
+.. code-block:: python
+
+    import large_image
+    source = large_image.open('sample.tiff')
+
+    source_projection = 'epsg:3857'
+    source_gcps = [
+        # covers downtown DC
+        (-8578909.8696,4704125.8132, 0, 0),
+        (-8571075.0742,4710164.3385, source.sizeX, source.sizeY),
+    ]
+    target_projection = 'epsg:4326'
+    target_region = {
+        # covers US Capitol lot
+        'left': -77.015104,
+        'top': 38.887642,
+        'right': -77.005877,
+        'bottom': 38.892235,
+    }
+    getRegion_kwargs = dict(
+        frame=0,
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+    )
+    nparray, mime_type = source.getGeospatialRegion(
+        source_projection, source_gcps, target_projection, target_region, **getRegion_kwargs
+    )
+
+
 Tile Serving
 ------------
 
