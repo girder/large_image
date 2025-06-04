@@ -1149,6 +1149,21 @@ class Annotation(AccessControlledModel):
                     lastTime = time.time()
             annot['elements'] = elements
         except jsonschema.ValidationError as exp:
+            try:
+                error_freq = {}
+                for err in exp.context:
+                    key = err.schema_path[0]
+                    error_freq.setdefault(key, [])
+                    error_freq[key].append(err)
+                min_error = min(error_freq.values(), key=lambda k: (len(k), k[0].schema_path))[0]
+                for key in dir(min_error):
+                    if not key.startswith('_'):
+                        try:
+                            setattr(exp, key, getattr(min_error, key))
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             raise ValidationException(exp)
         if time.time() - startTime > 10:
             logger.info('Validated in %5.3fs' % (time.time() - startTime))

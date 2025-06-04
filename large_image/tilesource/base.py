@@ -861,7 +861,7 @@ class TileSource(IPyLeafletMixin):
             if function is None:
                 return image
         if isinstance(function, (list, tuple)):
-            for func in cast(Union[List, Tuple], function):
+            for func in function:
                 image = self._applyStyleFunction(image, sc, stage, func)
             return image
         if isinstance(function, str):
@@ -2146,6 +2146,74 @@ class TileSource(IPyLeafletMixin):
             return self._encodeTiledImage(
                 cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         return utilities._encodeImage(cast(np.ndarray, image), format=format, **kwargs)
+
+    def getGeospatialRegion(
+        self,
+        src_projection: str,
+        src_gcps: List[Union[Tuple[float], List[float]]],
+        dest_projection: str,
+        dest_region: Dict[str, float],
+        **kwargs,
+    ) -> Tuple[Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
+        """
+        This function requires pyproj and rasterio; it allows specifying georeferencing
+        (even for non-geospatial images) and retrieving a region from geospatial coordinates.
+        In addition to the required georeferencing parameters described below, this takes
+        the same parameters as getRegion.
+
+        :param src_projection: A string describing the coordinate reference system used for
+            src_gcps. This string can be an EPSG code or other format accepted
+            by pyproj.CRS.from_string.
+        :param src_gcps: A list of ground control points describing projected coordinates for
+            certain pixel coordinates in the image. Each GCP can be a list or tuple with the
+            following format: (cx, cy, px, py) where (cx, cy) is a projected coordinate in the
+            coordinate reference system described by src_projection and (px, py) is a pixel
+            coordinate within the extents of the image.
+        :param dest_projection: A string describing the coordinate reference system used for
+            dest_region. This string can be an EPSG code or other format accepted
+            by pyproj.CRS.from_string.
+        :param dest_region: A dictionary describing the desired region to retrieve from the image.
+            Must specify values for "top", "bottom", "left", and "right" in the projected
+            coordinate system specified by dest_projection.
+        :param kwargs: Optional arguments passed to getRegion.
+        """
+        import pyproj
+        import rasterio
+
+        if any(len(gcp) != 4 for gcp in src_gcps):
+            msg = 'Ground control points must contain four values in the form (cx, cy, px, py).'
+            raise ValueError(msg)
+
+        # convert gcps to dest_projection
+        crs_transform = pyproj.Transformer.from_crs(src_projection, dest_projection, always_xy=True)
+        converted_gcps = [
+            [
+                *crs_transform.transform(gcp[0], gcp[1]),
+                gcp[2], gcp[3],
+            ] for gcp in src_gcps if len(gcp) == 4
+        ]
+
+        gcps = [rasterio.control.GroundControlPoint(
+            x=gcp[0],
+            y=gcp[1],
+            col=gcp[2],
+            row=gcp[3],
+        ) for gcp in converted_gcps]
+
+        # transform dest_region to pixel coords
+        transformer = rasterio.transform.GCPTransformer(gcps)
+        py1, px1 = transformer.rowcol(dest_region.get('left', 0), dest_region.get('top', 0))
+        py2, px2 = transformer.rowcol(dest_region.get('left', 0), dest_region.get('bottom', 0))
+        py3, px3 = transformer.rowcol(dest_region.get('right', 0), dest_region.get('top', 0))
+        py4, px4 = transformer.rowcol(dest_region.get('right', 0), dest_region.get('bottom', 0))
+        left = max(0, min(px1, px2, px3, px4))
+        top = max(0, min(py1, py2, py3, py4))
+        right = min(self.sizeX, max(px1, px2, px3, px4))
+        bottom = min(self.sizeY, max(py1, py2, py3, py4))
+        pixel_region = dict(left=left, top=top, right=right, bottom=bottom)
+
+        # send pixel_region into getRegion
+        return self.getRegion(region=pixel_region, **kwargs)
 
     def getRegionAtAnotherScale(
             self, sourceRegion: Dict[str, Any],
