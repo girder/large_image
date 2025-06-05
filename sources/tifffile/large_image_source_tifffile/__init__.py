@@ -2,9 +2,11 @@ import json
 import logging
 import math
 import os
+import re
 import threading
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
+from pathlib import Path
 
 import numpy as np
 
@@ -83,6 +85,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'scn': SourcePriority.PREFERRED,
         'tif': SourcePriority.LOW,
         'tiff': SourcePriority.LOW,
+        'ome': SourcePriority.HIGHER,
     }
     mimeTypes = {
         None: SourcePriority.FALLBACK,
@@ -120,6 +123,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             msg = 'File cannot be opened via tifffile.'
             raise TileSourceError(msg)
+        self._checkForOmeBinaryonly()
         maxseries, maxsamples = self._biggestSeries()
         self.tileWidth = self.tileHeight = self._tileSize
         s = self._tf.series[maxseries]
@@ -127,6 +131,9 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if len(s.levels) == 1:
             self.tileWidth = self.tileHeight = self._singleTileSize
         page = s.pages[0]
+        if not hasattr(page, 'tags'):
+            msg = 'File will not be opened via tifffile.'
+            raise TileSourceError(msg)
         if ('TileWidth' in page.tags and
                 self._minTileSize <= page.tags['TileWidth'].value <= self._maxTileSize):
             self.tileWidth = page.tags['TileWidth'].value
@@ -137,6 +144,10 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._iccprofiles = [page.tags['InterColorProfile'].value]
         self.sizeX = s.shape[s.axes.index('X')]
         self.sizeY = s.shape[s.axes.index('Y')]
+        while (self.tileWidth // 2 >= self.sizeX and self.tileHeight // 2 >= self.sizeY and
+                min(self.tileWidth, self.tileHeight) // 2 >= self._minTileSize):
+            self.tileWidth //= 2
+            self.tileHeight //= 2
         self._mm_x = self._mm_y = None
         try:
             unit = {2: 25.4, 3: 10}[page.tags['ResolutionUnit'].value.real]
@@ -169,6 +180,35 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             msg = 'File cannot be opened via tifffile: axes and shape do not match access pattern.'
             raise TileSourceError(msg)
+
+    def _checkForOmeBinaryonly(self):
+        from xml.etree import ElementTree as etree
+
+        omexml = getattr(self._tf, 'ome_metadata', None)
+        if not omexml:
+            return
+        try:
+            root = etree.fromstring(omexml)
+        except Exception:
+            return
+        metadatafile = None
+        for element in root:
+            if element.tag.endswith('BinaryOnly'):
+                metadatafile = element.attrib.get('MetadataFile', '')
+        if not metadatafile:
+            return
+        path = Path(self._largeImagePath).parent / metadatafile
+        if not path.is_file():
+            return
+        try:
+            newxml = path.open('r').read()
+        except Exception:
+            return
+        try:
+            root = etree.fromstring(newxml)
+        except Exception:
+            return
+        self._tf._omexml = newxml
 
     def _biggestSeries(self):
         """
@@ -286,9 +326,101 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def _handle_imagej(self):
         try:
             ijm = self._tf.pages[0].tags['IJMetadata'].value
+            info = None
+            if 'Info' in ijm:
+                info = {l.split('=', 1)[0].strip(): l.split('=', 1)[1].strip()
+                        for l in ijm['Info'].replace('\r', '\n').split('\n') if '=' in l}
+                for k in list(info.keys()):
+                    mat = re.match(r'^(.+) #(\d+)$', k)
+                    if mat:
+                        key = mat.group(1)
+                        idx = int(mat.group(2))
+                        if key not in info or (
+                                isinstance(info[key], list) and len(info[key]) == idx - 1):
+                            info.setdefault(key, [])
+                            info[key].append(info[k])
+                            info.pop(k)
             if (ijm['Labels'] and len(ijm['Labels']) == self._framecount and
                     not getattr(self, '_channels', None)):
                 self._channels = ijm['Labels']
+            if ((not getattr(self, '_channels', None) or
+                    all(label.startswith('c:') for label in self._channels)) and
+                    info and isinstance(info.get('Biomarker'), list) and
+                    len(info['Biomarker']) == self._framecount):
+                self._channels = info['Biomarker']
+        except Exception:
+            pass
+
+    def _handle_indica(self):
+        import xml.etree.ElementTree
+
+        import large_image.tilesource.utilities
+
+        try:
+            root = xml.etree.ElementTree.fromstring(self._tf.pages[0].description)
+            self._xml = large_image.tilesource.utilities.etreeToDict(root)
+            self._channels = [c['name'] for c in
+                              self._xml['indica']['image']['channels']['channel']]
+            if len(self._basis) == 1 and 'I' in self._basis:
+                self._basis['C'] = self._basis.pop('I')
+            self._associatedImages.clear()
+        except Exception:
+            pass
+
+    def _handle_ome(self):
+        """
+        For OME Tiff, if we didn't parse the mangification elsewhere, try to
+        parse it here.
+        """
+        import xml.etree.ElementTree
+
+        import large_image.tilesource.utilities
+
+        _omeUnitsToMeters = {
+            'Ym': 1e24,
+            'Zm': 1e21,
+            'Em': 1e18,
+            'Pm': 1e15,
+            'Tm': 1e12,
+            'Gm': 1e9,
+            'Mm': 1e6,
+            'km': 1e3,
+            'hm': 1e2,
+            'dam': 1e1,
+            'm': 1,
+            'dm': 1e-1,
+            'cm': 1e-2,
+            'mm': 1e-3,
+            '\u00b5m': 1e-6,
+            'nm': 1e-9,
+            'pm': 1e-12,
+            'fm': 1e-15,
+            'am': 1e-18,
+            'zm': 1e-21,
+            'ym': 1e-24,
+            '\u00c5': 1e-10,
+        }
+
+        try:
+            root = xml.etree.ElementTree.fromstring(self._tf.pages[0].description)
+            self._xml = large_image.tilesource.utilities.etreeToDict(root)
+        except Exception:
+            return
+        try:
+            try:
+                base = self._xml['OME']['Image'][0]['Pixels']
+            except Exception:
+                base = self._xml['OME']['Image']['Pixels']
+            if self._mm_x is None and 'PhysicalSizeX' in base:
+                self._mm_x = (
+                    float(base['PhysicalSizeX']) * 1e3 *
+                    _omeUnitsToMeters[base.get('PhysicalSizeXUnit', '\u00b5m')])
+            if self._mm_y is None and 'PhysicalSizeY' in base:
+                self._mm_y = (
+                    float(base['PhysicalSizeY']) * 1e3 *
+                    _omeUnitsToMeters[base.get('PhysicalSizeYUnit', '\u00b5m')])
+            self._mm_x = self._mm_x or self._mm_y
+            self._mm_y = self._mm_y or self._mm_x
         except Exception:
             pass
 
@@ -357,60 +489,17 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             pass
 
-    def _handle_ome(self):
-        """
-        For OME Tiff, if we didn't parse the mangification elsewhere, try to
-        parse it here.
-        """
-        import xml.etree.ElementTree
-
-        import large_image.tilesource.utilities
-
-        _omeUnitsToMeters = {
-            'Ym': 1e24,
-            'Zm': 1e21,
-            'Em': 1e18,
-            'Pm': 1e15,
-            'Tm': 1e12,
-            'Gm': 1e9,
-            'Mm': 1e6,
-            'km': 1e3,
-            'hm': 1e2,
-            'dam': 1e1,
-            'm': 1,
-            'dm': 1e-1,
-            'cm': 1e-2,
-            'mm': 1e-3,
-            '\u00b5m': 1e-6,
-            'nm': 1e-9,
-            'pm': 1e-12,
-            'fm': 1e-15,
-            'am': 1e-18,
-            'zm': 1e-21,
-            'ym': 1e-24,
-            '\u00c5': 1e-10,
-        }
-
+    def _handle_internal_ndpi(self, intmeta):
         try:
-            root = xml.etree.ElementTree.fromstring(self._tf.pages[0].description)
-            self._xml = large_image.tilesource.utilities.etreeToDict(root)
-        except Exception:
-            return
-        try:
-            try:
-                base = self._xml['OME']['Image'][0]['Pixels']
-            except Exception:
-                base = self._xml['OME']['Image']['Pixels']
-            if self._mm_x is None and 'PhysicalSizeX' in base:
-                self._mm_x = (
-                    float(base['PhysicalSizeX']) * 1e3 *
-                    _omeUnitsToMeters[base.get('PhysicalSizeXUnit', '\u00b5m')])
-            if self._mm_y is None and 'PhysicalSizeY' in base:
-                self._mm_y = (
-                    float(base['PhysicalSizeY']) * 1e3 *
-                    _omeUnitsToMeters[base.get('PhysicalSizeYUnit', '\u00b5m')])
-            self._mm_x = self._mm_x or self._mm_y
-            self._mm_y = self._mm_y or self._mm_x
+            ndpi = intmeta.pop('65449')
+            intmeta['ndpi'] = {}
+            for line in ndpi.replace('\r', '\n').split('\n'):
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    if key and key not in intmeta['ndpi'] and value:
+                        intmeta['ndpi'][key] = value
         except Exception:
             pass
 
@@ -483,6 +572,10 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                                 json.dumps(result[key][subkey])
                             except Exception:
                                 del result[key][subkey]
+        for key in dir(self._tf):
+            if (key.startswith('is_') and hasattr(self, '_handle_internal_' + key[3:]) and
+                    getattr(self._tf, key)):
+                getattr(self, '_handle_internal_' + key[3:])(result)
         if hasattr(self, '_xml') and 'xml' not in result:
             result.pop('ImageDescription', None)
             result['xml'] = self._xml
@@ -623,6 +716,8 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     sel.append(slice(series.shape[aidx]))
                     baxis += 'S'
                 else:
+                    if axis not in self._basis and axis == 'I':
+                        axis = 'C'
                     sel.append((frame // self._basis[axis][0]) % self._basis[axis][2])
             tile = bza[tuple(sel)]
             # rotate
