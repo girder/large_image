@@ -369,7 +369,7 @@ class ImageItem(Item):
         :param pickleCache: if True, the results of the function are pickled to
             preserve them.  If False, the results can be saved as a file
             directly.
-        :params **kwargs: passed to the tile source and to the imageFunc.  May
+        :param **kwargs: passed to the tile source and to the imageFunc.  May
             contain contentDisposition to determine how results are returned.
         :returns:
         """
