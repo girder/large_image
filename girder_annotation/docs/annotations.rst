@@ -117,8 +117,8 @@ Point
     "center": [123.3, 144.6, -123]     # Coordinate.  Required
   }
 
-Polyline
-~~~~~~~~
+Polyline (Polygons and Lines)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When closed, this is a polygon. When open, this is a continuous line.
 
