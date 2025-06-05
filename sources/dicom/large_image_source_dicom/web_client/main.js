@@ -10,4 +10,5 @@ import * as dicomWeb from './index';
 
 const { registerPluginNamespace } = girder.pluginUtils;
 
+console.log('registering plugin namespace for dicomweb');
 registerPluginNamespace('dicomweb', dicomWeb);
