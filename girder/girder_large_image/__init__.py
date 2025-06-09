@@ -40,9 +40,9 @@ from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.group import Group
 from girder.models.item import Item
-from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.models.upload import Upload
+from girder.notification import Notification
 from girder.plugin import GirderPlugin, getPlugin, registerPluginStaticContent
 from girder.settings import SettingDefault
 from girder.utility import config, search, setting_utilities
@@ -164,7 +164,7 @@ def _updateJob(event):
     if msg and event.name != 'model.job.remove':
         Job().updateJob(job, progressMessage=msg)
     if notify:
-        Notification().createNotification(
+        Notification(
             type='large_image.finished_image_item',
             data={
                 'job_id': job['_id'],
@@ -172,9 +172,8 @@ def _updateJob(event):
                 'success': status == JobStatus.SUCCESS,
                 'status': status,
             },
-            user={'_id': job.get('userId')},
-            expires=(datetime.datetime.now(datetime.timezone.utc) +
-                     datetime.timedelta(seconds=30)))
+            user={'_id': job.get('userId')}
+        ).flush()
 
 
 def checkForMergeDicom(item):
