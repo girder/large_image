@@ -2,6 +2,10 @@
 
 ## 1.32.10
 
+### Improvements
+
+- Improve DocumentDB support ([#1937](../../pull/1937))
+
 ### Changes
 
 - Move the pillow-jpls module out of common install extras ([#1935](../../pull/1935))
