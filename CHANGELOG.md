@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.10
+
+### Changes
+
+- Move the pillow-jpls module out of common install extras ([#1935](../../pull/1935))
+
 ## 1.32.9
 
 ### Improvements
