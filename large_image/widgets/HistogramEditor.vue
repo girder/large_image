@@ -455,10 +455,10 @@ module.exports = {
 
 <template>
   <td>
-      <i
-          :class="expanded ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
-          @click="expand"
-      ></i>
+    <i
+      :class="expanded ? 'expand-btn icon-up-open fa fa-angle-up' : 'expand-btn icon-down-open fa fa-angle-down'"
+      @click="expand"
+    ></i>
     <div
       v-if="expanded"
       class="range-editor"
