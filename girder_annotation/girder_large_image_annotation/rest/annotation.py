@@ -853,8 +853,10 @@ class AnnotationResource(Resource):
             sources=sources, compute=compute, uuid=uuid)
         return data.data(keys, requiredKeys)
 
-    def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
-                             sortDir=False, count=False):
+    def getFolderAnnotations(
+            self, id, recurse, user, limit=False, offset=False, sort=False,
+            sortDir=False, count=False):
+        from girder_large_image.models.image_item import ImageItem
 
         accessPipeline = [
             {'$match': {
@@ -893,6 +895,21 @@ class AnnotationResource(Resource):
             {'$unwind': {'path': '$__children'}},
             {'$replaceRoot': {'newRoot': '$__children'}},
         ] if recurse else [{'$match': {'_id': ObjectId(id)}}]
+        if recurse and not ImageItem().checkForGraphLookup():
+            queue = [ObjectId(id)]
+            seen = {ObjectId(id)}
+            while queue:
+                current = queue.pop(0)
+                children = Folder().collection.find({'parentId': current}, {'_id': 1})
+                for child in children:
+                    cid = child['_id']
+                    if cid not in seen:
+                        seen.add(cid)
+                        queue.append(cid)
+                        if len(seen) > 10000:
+                            msg = 'This query is too complex for DocumentDB.'
+                            raise Exception(msg)
+            recursivePipeline = [{'$match': {'_id': {'$in': list(seen)}}}]
 
         # We are only finding anntoations that we can change the permissions
         # on.  If we wanted to expose annotations based on a permissions level,

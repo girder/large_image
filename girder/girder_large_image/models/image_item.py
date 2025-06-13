@@ -62,6 +62,24 @@ class ImageItem(Item):
             ], {}),
         ])
 
+    def checkForGraphLookup(self):
+        if not hasattr(self, '_supportsGraphLookup'):
+            try:
+                self.database['__nowhere__'].aggregate([
+                    {'$graphLookup': {
+                        'from': '__nowhere__',
+                        'startWith': '$noSuchParentId',
+                        'connectFromField': '_id',
+                        'connectToField': 'noSuchParentId',
+                        'as': 'descendants',
+                    }},
+                ])
+                self._supportsGraphLookup = True
+            except Exception:
+                logger.exception('Running on a database that does not support $graphLookup')
+                self._supportsGraphLookup = False
+        return self._supportsGraphLookup
+
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False, localJob=None, **kwargs):
         logger.info('createImageItem called on item %s (%s)', item['_id'], item['name'])
@@ -371,7 +389,7 @@ class ImageItem(Item):
         :param pickleCache: if True, the results of the function are pickled to
             preserve them.  If False, the results can be saved as a file
             directly.
-        :params **kwargs: passed to the tile source and to the imageFunc.  May
+        :param **kwargs: passed to the tile source and to the imageFunc.  May
             contain contentDisposition to determine how results are returned.
         :returns:
         """

@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.32.10
+
+### Improvements
+
+- Improve DocumentDB support ([#1937](../../pull/1937))
+
+### Changes
+
+- Move the pillow-jpls module out of common install extras ([#1935](../../pull/1935))
+
 ## 1.32.9
 
 ### Improvements
@@ -12,6 +22,7 @@
 - Add another index for annotation elements ([#1928](../../pull/1928))
 - Make the json representation of some annotation elements more compact ([#1930](../../pull/1930))
 - On the client internals, indicate which annotation updates are from fetches ([#1931](../../pull/1931))
+- Speed up old annotation maintenance query ([#1934](../../pull/1934))
 
 ### Bug Fixes
 
