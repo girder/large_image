@@ -843,7 +843,7 @@ def _is_lossy(path, tiffinfo=None):
 
 def _is_multiframe(path):
     """
-    Check if a path is a multiframe file.
+    Check if a path is a multiframe file according to vips.
 
     :param path: The path to the file
     :returns: True if multiframe.
@@ -853,16 +853,15 @@ def _is_multiframe(path):
         with _newFromFileLock:
             image = pyvips.Image.new_from_file(path)
     except Exception:
-        try:
-            open(path, 'rb').read(1)
-            raise
-        except Exception:
-            logger.warning('Is the file reachable and readable? (%r)', path)
-            raise OSError(path) from None
+        return None
     pages = 1
     if 'n-pages' in image.get_fields():
         pages = image.get_value('n-pages')
     return pages > 1
+
+
+def _is_new(path):
+    return os.path.basename(path).startswith(large_image.constants.NEW_IMAGE_PATH_FLAG)
 
 
 def _list_possible_sizes(width, height):
@@ -1038,12 +1037,15 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
             lidata = _data_from_large_image(str(inputPath), tempPath, **kwargs)
             logger.log(logging.DEBUG - 1, 'large_image information for %s: %r',
                        inputPath, lidata)
-            if lidata and (not is_vips(
-                    inputPath, (lidata['metadata']['sizeX'], lidata['metadata']['sizeY'])) or (
-                    len(lidata['metadata'].get('frames', [])) >= 2 and
-                    not _is_multiframe(inputPath)) or
-                    (np.dtype(lidata['tilesource'].dtype) != np.uint8 and
-                     np.dtype(lidata['tilesource'].dtype) != np.uint16)):
+            if lidata and (_is_new(inputPath) or _is_multiframe(inputPath)):
+                _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
+            elif lidata and (
+                (len(lidata['metadata'].get('frames', [])) >= 2 and
+                 not _is_multiframe(inputPath)) or
+                (np.dtype(lidata['tilesource'].dtype) != np.uint8 and
+                 np.dtype(lidata['tilesource'].dtype) != np.uint16) or
+                not is_vips(inputPath, (lidata['metadata']['sizeX'], lidata['metadata']['sizeY']))
+            ):
                 _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
             elif _is_multiframe(inputPath):
                 _generate_multiframe_tiff(inputPath, outputPath, tempPath, lidata, **kwargs)
@@ -1053,6 +1055,8 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
                 except Exception:
                     if lidata:
                         _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs)
+                    else:
+                        raise
     return outputPath
 
 
