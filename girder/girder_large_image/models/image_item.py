@@ -60,6 +60,24 @@ class ImageItem(Item):
             ], {}),
         ])
 
+    def checkForGraphLookup(self):
+        if not hasattr(self, '_supportsGraphLookup'):
+            try:
+                self.database['__nowhere__'].aggregate([
+                    {'$graphLookup': {
+                        'from': '__nowhere__',
+                        'startWith': '$noSuchParentId',
+                        'connectFromField': '_id',
+                        'connectToField': 'noSuchParentId',
+                        'as': 'descendants',
+                    }},
+                ])
+                self._supportsGraphLookup = True
+            except Exception:
+                logger.exception('Running on a database that does not support $graphLookup')
+                self._supportsGraphLookup = False
+        return self._supportsGraphLookup
+
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False, localJob=None, **kwargs):
         logger.info('createImageItem called on item %s (%s)', item['_id'], item['name'])
