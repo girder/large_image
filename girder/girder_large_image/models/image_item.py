@@ -16,6 +16,7 @@
 
 import io
 import json
+import logging
 import pickle
 import threading
 
@@ -23,7 +24,6 @@ import pymongo
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
-from girder import logger
 from girder.constants import SortDir
 from girder.exceptions import FilePathException, GirderException, ValidationException
 from girder.models.assetstore import Assetstore
@@ -36,6 +36,8 @@ from large_image.constants import TileOutputMimeTypes
 from large_image.exceptions import TileGeneralError, TileSourceError
 
 from .. import constants, girder_tilesource
+
+logger = logging.getLogger(__name__)
 
 
 class ImageItem(Item):
@@ -169,6 +171,7 @@ class ImageItem(Item):
 
     def _createLargeImageLocalJob(
             self, item, fileObj, user=None, toFolder=False, folderId=None, name=None, **kwargs):
+        # TODO convert this job to celery
         job = Job().createLocalJob(
             module='large_image_tasks.tasks',
             function='convert_image_job',
@@ -183,7 +186,6 @@ class ImageItem(Item):
             type='large_image_tiff',
             user=user,
             public=True,
-            asynchronous=True,
         )
         # For consistency with the non-local job
         job['meta'] = {
@@ -721,6 +723,7 @@ class ImageItem(Item):
             the tileFrames method.
         :param user: the user owning the job.
         """
+        # TODO convert this job to celery
         job = Job().createLocalJob(
             module='large_image_tasks.tasks',
             function='cache_tile_frames_job',
@@ -732,7 +735,6 @@ class ImageItem(Item):
             type='large_image_cache_tile_frames',
             user=user,
             public=True,
-            asynchronous=True,
         )
         Job().scheduleJob(job)
         return job
@@ -746,6 +748,7 @@ class ImageItem(Item):
             the histogram method.
         :param user: the user owning the job.
         """
+        # TODO convert this job to celery
         job = Job().createLocalJob(
             module='large_image_tasks.tasks',
             function='cache_histograms_job',
@@ -757,7 +760,6 @@ class ImageItem(Item):
             type='large_image_cache_histograms',
             user=user,
             public=True,
-            asynchronous=True,
         )
         Job().scheduleJob(job)
         return job
