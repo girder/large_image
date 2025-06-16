@@ -9,6 +9,7 @@
 ### Changes
 
 - Move the pillow-jpls module out of common install extras ([#1935](../../pull/1935))
+- Change the reading method for some file conversions ([#1939](../../pull/1939))
 
 ## 1.32.9
 
