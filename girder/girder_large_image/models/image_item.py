@@ -761,3 +761,43 @@ class ImageItem(Item):
         )
         Job().scheduleJob(job)
         return job
+
+    def mayHaveAdjacentFiles(self, item, imageFile=None):
+        """
+        Check if an item may have adajent files.
+
+        :param item: the item to check.
+        :param imageFile: the largeImage file; if not passed, it is looked up,
+            passing it just saves a database lookup.
+        :returns: None if this isn't a largeImage, False if we think it can't
+            have adjacent files, 'local' if we think the adjacent files are
+            local to the item, True if there could be adjacent files in other
+            items.
+        """
+        if 'largeImage' not in item:
+            return None
+        if item['largeImage'].get('expected'):
+            return None
+        imageFileId = item['largeImage']['fileId']
+        if imageFile is None:
+            imageFile = File().load(imageFileId, force=True)
+        if imageFile.get('linkUrl'):
+            return True
+        # The item has adjacent files if there are any files that are not the
+        # large image file or an original file it was derived from.  This is
+        # always the case if there are 3 or more files.
+        fileIds = [str(file['_id']) for file in Item().childFiles(item, limit=3)]
+        knownIds = [str(imageFileId)]
+        if 'originalId' in item['largeImage']:
+            knownIds.append(str(item['largeImage']['originalId']))
+        mayHave = (len(fileIds) >= 3 or
+                   fileIds[0] not in knownIds or fileIds[-1] not in knownIds)
+        if (any(ext in girder_tilesource.KnownExtensionsWithAdjacentFiles
+                for ext in imageFile['exts']) or
+                imageFile.get('mimeType') in girder_tilesource.KnownMimeTypesWithAdjacentFiles):
+            mayHave = True
+            if 'originalId' not in item['largeImage'] and File().find({
+                    'itemId': item['_id'],
+                    'mimeType': imageFile.get('mimeType')}).count() > 1:
+                mayHave = 'local'
+        return mayHave

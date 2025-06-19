@@ -63,24 +63,10 @@ class GirderTileSource(tilesource.FileTileSource):
             self._jsonstyle)
 
     def mayHaveAdjacentFiles(self, largeImageFile):
-        if largeImageFile.get('linkUrl'):
-            return True
         if not hasattr(self, '_mayHaveAdjacentFiles'):
-            largeImageFileId = self.item['largeImage']['fileId']
-            # The item has adjacent files if there are any files that are not
-            # the large image file or an original file it was derived from.
-            # This is always the case if there are 3 or more files.
-            fileIds = [str(file['_id']) for file in Item().childFiles(self.item, limit=3)]
-            knownIds = [str(largeImageFileId)]
-            if 'originalId' in self.item['largeImage']:
-                knownIds.append(str(self.item['largeImage']['originalId']))
-            self._mayHaveAdjacentFiles = (
-                len(fileIds) >= 3 or
-                fileIds[0] not in knownIds or
-                fileIds[-1] not in knownIds)
-            if (any(ext in KnownExtensionsWithAdjacentFiles for ext in largeImageFile['exts']) or
-                    largeImageFile.get('mimeType') in KnownMimeTypesWithAdjacentFiles):
-                self._mayHaveAdjacentFiles = True
+            from .models.image_item import ImageItem
+
+            self._mayHaveAdjacentFiles = ImageItem().mayHaveAdjacentFiles(self.item, largeImageFile)
         return self._mayHaveAdjacentFiles
 
     def _getLargeImagePath(self):
@@ -90,8 +76,8 @@ class GirderTileSource(tilesource.FileTileSource):
         largeImageFile = File().load(largeImageFileId, force=True)
         try:
             largeImagePath = None
-            if (self.mayHaveAdjacentFiles(largeImageFile) and
-                    hasattr(File(), 'getGirderMountFilePath')):
+            mayHaveAdjacent = self.mayHaveAdjacentFiles(largeImageFile)
+            if (mayHaveAdjacent and hasattr(File(), 'getGirderMountFilePath')):
                 try:
                     if (largeImageFile.get('imported') and
                             File().getLocalFilePath(largeImageFile) == largeImageFile['path']):
@@ -102,8 +88,9 @@ class GirderTileSource(tilesource.FileTileSource):
                     try:
                         largeImagePath = File().getGirderMountFilePath(
                             largeImageFile,
-                            **({'preferFlat': True} if 'preferFlat' in inspect.signature(
-                                File.getGirderMountFilePath).parameters else {}))
+                            **({'preferFlat': True} if mayHaveAdjacent != 'local' and
+                                'preferFlat' in inspect.signature(
+                                    File.getGirderMountFilePath).parameters else {}))
                     except FilePathException:
                         pass
             if not largeImagePath:
