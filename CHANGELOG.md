@@ -5,6 +5,7 @@
 ### Improvements
 
 - Improve DocumentDB support ([#1937](../../pull/1937))
+- Better handle images with adjacent files in the same girder item ([#1940](../../pull/1940))
 
 ### Changes
 
