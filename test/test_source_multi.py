@@ -342,3 +342,29 @@ def testTilesWithSampleScaling():
     assert tileMetadata['sizeX'] == 2000
     assert tileMetadata['sizeY'] == 1250
     utilities.checkTilesZXY(source, tileMetadata)
+
+
+def testAxesToFrameAndFrameToAxes():
+    asAxesSource1 = {'sources': [{
+        'sourceName': 'test', 'path': '__none__', 'params': {
+            'sizeX': 1000, 'sizeY': 1000, 'frames': 60},
+        'framesAsAxes': {'c': 1, 'z': 5}}]}
+    source = large_image_source_multi.open(json.dumps(asAxesSource1))
+    assert source.frameToAxes(7) == {'c': 2, 'z': 1}
+    with pytest.raises(large_image.exceptions.TileSourceRangeError):
+        source.frameToAxes(60)
+    assert source.axesToFrame(c=2, z=1) == 7
+    assert source.axesToFrame(C=2, Z=1) == 7
+    assert source.axesToFrame(frame=7) == 7
+    assert source.axesToFrame(z=1) == 5
+    with pytest.raises(large_image.exceptions.TileSourceRangeError):
+        source.axesToFrame(c=5, z=1)
+    with pytest.raises(large_image.exceptions.TileSourceRangeError):
+        source.axesToFrame(frame=-1)
+    with pytest.raises(large_image.exceptions.TileSourceRangeError):
+        source.axesToFrame(x=5)
+    asAxesSource2 = {'sources': [{
+        'sourceName': 'test', 'path': '__none__', 'params': {
+            'sizeX': 1000, 'sizeY': 1000, 'frames': 60}}]}
+    source = large_image_source_multi.open(json.dumps(asAxesSource2))
+    assert source.frameToAxes(0) == {'frame': 0}
