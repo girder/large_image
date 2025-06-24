@@ -270,6 +270,31 @@ SourceEntrySchema = {
                     # TODO: Add polygon option
                     # TODO: Add postTransform option
                 },
+                'warp': {
+                    'type': 'object',
+                    'properties': {
+                        'src': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                            "minItems": 3
+                        },
+                        'dst': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                            "minItems": 3
+                        },
+                    }
+                },
                 'scale': {
                     'description':
                         'Values less than 1 will downsample the source.  '
@@ -1039,7 +1064,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         return base
 
     def _getTransformedTile(self, ts, transform, corners, scale, frame,
-                            crop=None, firstMerge=False):
+                            warp=None, crop=None, firstMerge=False):
         """
         Determine where the target tile's corners are located on the source.
         Fetch that so that we have at least sqrt(2) more resolution, then use
@@ -1053,6 +1078,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             corner 0 must be the upper left, 2 must be the lower right.
         :param scale: scaling factor from full res to the target resolution.
         :param frame: frame number of the source image.
+        :param warp: an optional dictionary to specify a thin plate spline
+            transformation to apply to the source image. This dictionary must
+            contain keys 'src' and 'dst', each with a list of [x, y] points.
+            The length of the 'src' list of points must equal the length of the
+            'dst' list of points (both must have at least 3 points).
         :param crop: an optional dictionary to crop the source image in full
             resolution, untransformed coordinates.  This may contain left, top,
             right, and bottom values in pixels.
@@ -1065,22 +1095,34 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             import skimage.transform
         except ImportError:
-            msg = 'scikit-image is required for affine transforms.'
+            msg = 'scikit-image is required for affine and TPS transforms.'
             raise TileSourceError(msg)
         # From full res source to full res destination
         transform = transform.copy() if transform is not None else np.identity(3)
+        warp_src = np.array(warp.get('src') if warp is not None else []).astype('float64')
+        warp_dst = np.array(warp.get('dst') if warp is not None else []).astype('float64')
+        n_tps_points = warp_src.shape[0]
         # Scale dest corners to actual size; adjust transform for the same
         corners = np.array(corners)
         corners[:, :2] //= scale
         transform[:2, :] /= scale
+        warp_dst /= scale
         # Offset so our target is the actual destination array we use
         transform[0][2] -= corners[0][0]
         transform[1][2] -= corners[0][1]
         corners[:, :2] -= corners[0, :2]
+        warp_dst[:, 0] -= corners[0][0]
+        warp_dst[:, 1] -= corners[0][1]
         outw, outh = corners[2][0], corners[2][1]
         if not outh or not outw:
             return None, 0, 0
-        srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
+        if n_tps_points < 3:
+            srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
+        else:
+            transformer = skimage.transform.ThinPlateSplineTransform()
+            transformer.estimate(warp_dst, warp_src)
+            # TODO: experiment with more sampling than just corners
+            srccorners = transformer(corners[:, :2])
         minx = min(c[0] for c in srccorners)
         maxx = max(c[0] for c in srccorners)
         miny = min(c[1] for c in srccorners)
@@ -1119,8 +1161,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             [region['left'] // srcscale, region['bottom'] // srcscale, 1]], dtype=float)
         # adjust our transform if we took a low res version of the source
         transform[:2, :2] *= srcscale
+        warp_src /= srcscale
         # Find where the source corners land on the destination.
         preshiftcorners = (np.dot(transform, regioncorners.T).T).tolist()
+        warp_src -= regioncorners[0, :2]
         regioncorners[:, :2] -= regioncorners[0, :2]
         destcorners = (np.dot(transform, regioncorners.T).T).tolist()
         offsetx, offsety = None, None
@@ -1136,26 +1180,40 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         x, y = int(math.floor(x)), int(math.floor(y))
         # Recompute where the source corners will land
         destcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        destShape = [
-            max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
-            max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
-        ]
-        if max(0, -x) or max(0, -y):
-            transform[0][2] -= max(0, -x)
-            transform[1][2] -= max(0, -y)
-            destShape[0] -= max(0, -y)
-            destShape[1] -= max(0, -x)
-            x += max(0, -x)
-            y += max(0, -y)
-        destShape = [min(destShape[0], outh - y), min(destShape[1], outw - x)]
-        if destShape[0] <= 0 or destShape[1] <= 0:
-            return None, None, None
+        if n_tps_points < 3:
+            destShape = [
+                max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
+                max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
+            ]
+            if max(0, -x) or max(0, -y):
+                transform[0][2] -= max(0, -x)
+                transform[1][2] -= max(0, -y)
+                destShape[0] -= max(0, -y)
+                destShape[1] -= max(0, -x)
+                x += max(0, -x)
+                y += max(0, -y)
+            destShape = [min(destShape[0], outh - y), min(destShape[1], outw - x)]
+            if destShape[0] <= 0 or destShape[1] <= 0:
+                return None, None, None
+        else:
+            x = y = 0
+            destShape = [outh, outw]
         # Add an alpha band if needed.  This has to be done before the
         # transform if it isn't the first tile, since the unused transformed
         # areas need to have a zero alpha value
         if srcImage.shape[2] in {1, 3}:
             _, srcImage = _makeSameChannelDepth(np.zeros((1, 1, srcImage.shape[2] + 1)), srcImage)
         useNearest = srcImage.shape[2] in {2, 4} and not firstMerge
+
+        if n_tps_points > 3:
+            transformer = skimage.transform.ThinPlateSplineTransform()
+            transformer.estimate(warp_src, warp_dst)
+        elif n_tps_points == 3:
+            transformer = skimage.transform.AffineTransform()
+            transformer.estimate(warp_src, warp_dst)
+        else:
+            transformer = skimage.transform.AffineTransform(np.linalg.inv(transform))
+
         # skimage.transform.warp is faster and has less artifacts than
         # scipy.ndimage.affine_transform.  It is faster than using cupy's
         # version of scipy's affine_transform when the source and destination
@@ -1164,10 +1222,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             # Although using np.float32 could reduce memory use, it doesn't
             # provide any speed improvement
             srcImage.astype(float),
-            skimage.transform.AffineTransform(np.linalg.inv(transform)),
+            transformer,
             order=0 if useNearest else 3,
             output_shape=(destShape[0], destShape[1], srcImage.shape[2]),
         ).astype(srcImage.dtype)
+        print('dest shape', destShape, 'dest image shape', destImage.shape, 'src image shape', srcImage.shape, 'x', x, 'y', y)
         return destImage, x, y
 
     def _addSourceToTile(self, tile, sourceEntry, corners, scale):
@@ -1194,13 +1253,14 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return tile
         ts = self._openSource(source, sourceEntry['kwargs'])
         transform = bbox.get('transform')
+        warp = source.get('position', {}).get('warp')
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
         # no sheer and integer pixel alignment, use getRegion with an
         # appropriate size
         scaleX = transform[0][0] if transform is not None else 1
         scaleY = transform[1][1] if transform is not None else 1
-        if ((transform is None or (
+        if (warp is None and (transform is None or (
                 transform[0][0] > 0 and transform[0][1] == 0 and
                 transform[1][0] == 0 and transform[1][1] > 0 and
                 transform[0][2] % scaleX == 0 and transform[1][2] % scaleY == 0)) and
@@ -1241,7 +1301,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 resample=None, format=TILE_FORMAT_NUMPY)
         else:
             sourceTile, x, y = self._getTransformedTile(
-                ts, transform, corners, scale, sourceEntry.get('frame', 0),
+                ts, transform, corners, scale, sourceEntry.get('frame', 0), warp,
                 source.get('position', {}).get('crop'),
                 firstMerge=tile is None)
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
