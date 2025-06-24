@@ -4,7 +4,11 @@
 
 ### Improvements
 
-- Improve DocumentDB support ([#1940](../../pull/1940))
+- Improve DocumentDB support ([#1941](../../pull/1941))
+
+### Bug Fixes
+
+- Fix updating annotation updated dates in the girder web client ([#1942](../../pull/1942))
 
 ## 1.32.10
 
