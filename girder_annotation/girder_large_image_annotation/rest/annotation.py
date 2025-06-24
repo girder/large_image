@@ -895,7 +895,7 @@ class AnnotationResource(Resource):
             {'$unwind': {'path': '$__children'}},
             {'$replaceRoot': {'newRoot': '$__children'}},
         ] if recurse else [{'$match': {'_id': ObjectId(id)}}]
-        if recurse and not ImageItem().checkForGraphLookup():
+        if recurse and ImageItem().checkForDocumentDB():
             queue = [ObjectId(id)]
             seen = {ObjectId(id)}
             while queue:
@@ -916,22 +916,37 @@ class AnnotationResource(Resource):
         # we need to add a folder access pipeline immediately after the
         # recursivePipleine that for write and above would include the
         # ANNOTATION_ACCSESS_FLAG
-        pipeline = recursivePipeline + [
-            {'$lookup': {
-                'from': 'item',
-                # We have to use a pipeline to use a projection to reduce the
-                # data volume, so instead of specifying localField and
-                # foreignField, we set the localField to a variable, then match
-                # it in a pipeline and project to exclude everything but id.
-                # 'localField': '_id',
-                # 'foreignField': 'folderId',
-                'let': {'fid': '$_id'},
-                'pipeline': [
-                    {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
-                    {'$project': {'_id': 1}},
-                ],
-                'as': '__items',
-            }},
+        lookupSteps = [{'$lookup': {
+            'from': 'item',
+            # We have to use a pipeline to use a projection to reduce the
+            # data volume, so instead of specifying localField and
+            # foreignField, we set the localField to a variable, then match
+            # it in a pipeline and project to exclude everything but id.
+            # 'localField': '_id',
+            # 'foreignField': 'folderId',
+            'let': {'fid': '$_id'},
+            'pipeline': [
+                {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
+                {'$project': {'_id': 1}},
+            ],
+            'as': '__items',
+        }}]
+        if ImageItem().checkForDocumentDB():
+            lookupSteps = [{
+                '$lookup': {
+                    'from': 'item',
+                    'localField': '_id',
+                    'foreignField': 'folderId',
+                    'as': '__items',
+                },
+            }, {
+                '$addFields': {'__items': {'$map': {
+                    'input': '$__items',
+                    'as': 'item',
+                    'in': {'_id': '$$item._id'},
+                }}},
+            }]
+        pipeline = recursivePipeline + lookupSteps + [
             {'$lookup': {
                 'from': 'annotation',
                 'localField': '__items._id',

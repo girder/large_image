@@ -166,7 +166,7 @@ def _itemFindRecursive(  # noqa
         if recurse:
             from ..models.image_item import ImageItem
 
-            if not ImageItem().checkForGraphLookup():
+            if ImageItem().checkForDocumentDB():
                 children = _getDescendantFolderIds(
                     Folder().collection, ObjectId(folderId),
                     Folder().permissionClauses(user, AccessType.READ, '_folder.'))

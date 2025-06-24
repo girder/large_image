@@ -1,14 +1,22 @@
 # Change Log
 
+## 1.32.11
+
+### Improvements
+
+- Improve DocumentDB support ([#1940](../../pull/1940))
+
 ## 1.32.10
 
 ### Improvements
 
 - Improve DocumentDB support ([#1937](../../pull/1937))
+- Better handle images with adjacent files in the same girder item ([#1940](../../pull/1940))
 
 ### Changes
 
 - Move the pillow-jpls module out of common install extras ([#1935](../../pull/1935))
+- Change the reading method for some file conversions ([#1939](../../pull/1939))
 
 ## 1.32.9
 
