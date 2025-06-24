@@ -16,6 +16,7 @@
 
 import io
 import json
+import os
 import pickle
 import threading
 
@@ -60,23 +61,31 @@ class ImageItem(Item):
             ], {}),
         ])
 
-    def checkForGraphLookup(self):
-        if not hasattr(self, '_supportsGraphLookup'):
-            try:
-                self.database['__nowhere__'].aggregate([
-                    {'$graphLookup': {
-                        'from': '__nowhere__',
-                        'startWith': '$noSuchParentId',
-                        'connectFromField': '_id',
-                        'connectToField': 'noSuchParentId',
-                        'as': 'descendants',
-                    }},
-                ])
-                self._supportsGraphLookup = True
-            except Exception:
-                logger.exception('Running on a database that does not support $graphLookup')
-                self._supportsGraphLookup = False
-        return self._supportsGraphLookup
+    def checkForDocumentDB(self):
+        if not hasattr(self, '_likelyDocumentDB'):
+            if os.environ.get('LARGE_IMAGE_DOCUMENTDB'):
+                self._likelyDocumentDB = os.environ.get(
+                    'LARGE_IMAGE_DOCUMENTDB').lower() != 'false'
+                logger.info('Using flag to determine DocumentDB '
+                            f'compatibility: {self._likelyDocumentDB}')
+            else:
+                try:
+                    self.database['__nowhere__'].aggregate([
+                        {'$graphLookup': {
+                            'from': '__nowhere__',
+                            'startWith': '$noSuchParentId',
+                            'connectFromField': '_id',
+                            'connectToField': 'noSuchParentId',
+                            'as': 'descendants',
+                        }},
+                    ])
+                    self._likelyDocumentDB = False
+                except Exception:
+                    logger.warning(
+                        'Running on a database that does not support '
+                        '$graphLookup; this is probably DocumentDB')
+                    self._likelyDocumentDB = True
+        return self._likelyDocumentDB
 
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False, localJob=None, **kwargs):

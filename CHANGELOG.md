@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.11
+
+### Improvements
+
+- Improve DocumentDB support ([#1940](../../pull/1940))
+
 ## 1.32.10
 
 ### Improvements
