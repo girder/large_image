@@ -39,6 +39,7 @@ lint.ignore = [
     "PT011",  # pytest-raises-too-broad
     "PT012",  # pytest-raises-with-multiple-statements
     "PT017",  # pytest-assert-in-except
+    "PT030",
     "RET503",  # implict-return on function that can return non-none
     "RET504",  # unncessary-assign before return
 ]

@@ -1373,16 +1373,15 @@ class Annotation(AccessControlledModel):
             logger.info('Counting inactive annotations, %r' % report)
             logtime = time.time()
         report['recentVersions'] = self.collection.count_documents({'_active': False})
-        recentDateStep = {'$addFields': {'mostRecentDate': {'$max': [
-            '$created', {'$ifNull': ['$updated', '$created']}]}}}
         itemLookupStep = {'$lookup': {
             'from': 'item',
             'localField': 'itemId',
             'foreignField': '_id',
             'as': 'item',
         }}
-        oldDeletedPipeline = [recentDateStep, itemLookupStep, {
-            '$match': {'item': {'$size': 0}, 'mostRecentDate': {'$lt': age}},
+        oldDeletedPipeline = [itemLookupStep, {
+            '$match': {'item': {'$size': 0}, 'created': {'$lt': age}, '$or': [
+                {'updated': {'$exists': False}}, {'updated': {'$lt': age}}]},
         }, {
             '$project': {'item': 0},
         }]
@@ -1414,8 +1413,9 @@ class Annotation(AccessControlledModel):
             '$unwind': '$annotations',
         }, {
             '$replaceRoot': {'newRoot': '$annotations'},
-        }, recentDateStep, {
-            '$match': {'mostRecentDate': {'$lt': age}},
+        }, {
+            '$match': {'created': {'$lt': age}, '$or': [
+                {'updated': {'$exists': False}}, {'updated': {'$lt': age}}]},
         }]
         if time.time() - logtime > 10:
             logger.info('Finding old annotations, %r' % report)

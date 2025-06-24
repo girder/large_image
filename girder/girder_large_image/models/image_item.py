@@ -16,6 +16,7 @@
 
 import io
 import json
+import os
 import pickle
 import threading
 
@@ -59,6 +60,32 @@ class ImageItem(Item):
                 ('attachedToId', pymongo.ASCENDING),
             ], {}),
         ])
+
+    def checkForDocumentDB(self):
+        if not hasattr(self, '_likelyDocumentDB'):
+            if os.environ.get('LARGE_IMAGE_DOCUMENTDB'):
+                self._likelyDocumentDB = os.environ.get(
+                    'LARGE_IMAGE_DOCUMENTDB').lower() != 'false'
+                logger.info('Using flag to determine DocumentDB '
+                            f'compatibility: {self._likelyDocumentDB}')
+            else:
+                try:
+                    self.database['__nowhere__'].aggregate([
+                        {'$graphLookup': {
+                            'from': '__nowhere__',
+                            'startWith': '$noSuchParentId',
+                            'connectFromField': '_id',
+                            'connectToField': 'noSuchParentId',
+                            'as': 'descendants',
+                        }},
+                    ])
+                    self._likelyDocumentDB = False
+                except Exception:
+                    logger.warning(
+                        'Running on a database that does not support '
+                        '$graphLookup; this is probably DocumentDB')
+                    self._likelyDocumentDB = True
+        return self._likelyDocumentDB
 
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False, localJob=None, **kwargs):
@@ -369,7 +396,7 @@ class ImageItem(Item):
         :param pickleCache: if True, the results of the function are pickled to
             preserve them.  If False, the results can be saved as a file
             directly.
-        :params **kwargs: passed to the tile source and to the imageFunc.  May
+        :param **kwargs: passed to the tile source and to the imageFunc.  May
             contain contentDisposition to determine how results are returned.
         :returns:
         """
@@ -743,3 +770,43 @@ class ImageItem(Item):
         )
         Job().scheduleJob(job)
         return job
+
+    def mayHaveAdjacentFiles(self, item, imageFile=None):
+        """
+        Check if an item may have adajent files.
+
+        :param item: the item to check.
+        :param imageFile: the largeImage file; if not passed, it is looked up,
+            passing it just saves a database lookup.
+        :returns: None if this isn't a largeImage, False if we think it can't
+            have adjacent files, 'local' if we think the adjacent files are
+            local to the item, True if there could be adjacent files in other
+            items.
+        """
+        if 'largeImage' not in item:
+            return None
+        if item['largeImage'].get('expected'):
+            return None
+        imageFileId = item['largeImage']['fileId']
+        if imageFile is None:
+            imageFile = File().load(imageFileId, force=True)
+        if imageFile.get('linkUrl'):
+            return True
+        # The item has adjacent files if there are any files that are not the
+        # large image file or an original file it was derived from.  This is
+        # always the case if there are 3 or more files.
+        fileIds = [str(file['_id']) for file in Item().childFiles(item, limit=3)]
+        knownIds = [str(imageFileId)]
+        if 'originalId' in item['largeImage']:
+            knownIds.append(str(item['largeImage']['originalId']))
+        mayHave = (len(fileIds) >= 3 or
+                   fileIds[0] not in knownIds or fileIds[-1] not in knownIds)
+        if (any(ext in girder_tilesource.KnownExtensionsWithAdjacentFiles
+                for ext in imageFile['exts']) or
+                imageFile.get('mimeType') in girder_tilesource.KnownMimeTypesWithAdjacentFiles):
+            mayHave = True
+            if 'originalId' not in item['largeImage'] and File().find({
+                    'itemId': item['_id'],
+                    'mimeType': imageFile.get('mimeType')}).count() > 1:
+                mayHave = 'local'
+        return mayHave
