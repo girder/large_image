@@ -481,3 +481,20 @@ def testICCIntents():
         if image not in images:
             images.append(image)
     assert len(images) >= 2
+
+
+def testCompareWithTiffSource():
+    import large_image_source_tiff
+
+    imagePath = datastore.fetch(
+        'TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs')
+    openslide_source = large_image_source_openslide.open(imagePath)
+    tiff_source = large_image_source_tiff.open(imagePath)
+    openslide_tile = openslide_source.getTile(12, 1, 4, numpyAllowed='always')
+    tiff_tile = tiff_source.getTile(12, 1, 4, numpyAllowed='always')
+    maxdiff = np.max(np.abs(openslide_tile.astype(int)[:, :, :3] - tiff_tile.astype(int)[:, :, :3]))
+    # There are still some differences because the two sources use different
+    # jpeg decoders.  The tiff source would pass a tile undecoded through the
+    # system if we didn't ask for PIL, but the openslide reader always decodes
+    # it.
+    assert maxdiff <= 5
