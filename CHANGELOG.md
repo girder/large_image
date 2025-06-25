@@ -5,6 +5,7 @@
 ### Improvements
 
 - Improve DocumentDB support ([#1941](../../pull/1941))
+- Generate a specific annotation revert notification in Girder ([#1943](../../pull/1943))
 
 ### Bug Fixes
 
