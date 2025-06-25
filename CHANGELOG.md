@@ -10,6 +10,7 @@
 ### Bug Fixes
 
 - Fix updating annotation updated dates in the girder web client ([#1942](../../pull/1942))
+- Fix openslide reads at lower levels ([#1944](../../pull/1944))
 
 ## 1.32.10
 
