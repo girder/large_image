@@ -281,7 +281,7 @@ SourceEntrySchema = {
                                 'minItems': 2,
                                 'maxItems': 2,
                             },
-                            "minItems": 3
+                            'minItems': 3,
                         },
                         'dst': {
                             'type': 'array',
@@ -291,9 +291,9 @@ SourceEntrySchema = {
                                 'minItems': 2,
                                 'maxItems': 2,
                             },
-                            "minItems": 3
+                            'minItems': 3,
                         },
-                    }
+                    },
                 },
                 'scale': {
                     'description':
@@ -631,6 +631,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         m[1][0] = pos.get('s21', 0) * pos.get('scale', 1)
         m[1][1] = pos.get('s22', 1) * pos.get('scale', 1)
         m[1][2] = pos.get('y', 0)
+        # TODO:
+        # if we have TPS, apply the transform to the destination coordinates
+        # if it has <= 3 points, up the transform instead and mark that we
+        # functionally don't have TPS
         if not np.array_equal(m, np.identity(3)):
             bbox['transform'] = m
             try:
@@ -638,6 +642,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except np.linalg.LinAlgError:
                 msg = 'The position for a source is not invertable (%r)'
                 raise TileSourceError(msg, pos)
+        # For TPS, do something similar with perimeter spacing;  if we learn
+        # a better technique, apply that here, too.
         transcorners = np.dot(m, corners.T)
         bbox['left'] = min(transcorners[0])
         bbox['top'] = min(transcorners[1])
@@ -1063,7 +1069,27 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
 
-    def _getTransformedTile(self, ts, transform, corners, scale, frame,
+    def _perimeterPoints(self, x0, y0, x1, y1, sample):
+        return np.vstack([
+            np.column_stack([np.linspace(x0, x1, sample, endpoint=False), np.full(sample, y0)]),
+            np.column_stack([np.full(sample, x1), np.linspace(y0, y1, sample, endpoint=False)]),
+            np.column_stack([np.linspace(x1, x0, sample, endpoint=False), np.full(sample, y1)]),
+            np.column_stack([np.full(sample, x0), np.linspace(y1, y0, sample, endpoint=False)]),
+        ])
+
+    def _smallestSpacingRatio(self, srcpts, destpts):
+        """
+        Find the smallest ratio of the distance between two adjacent source
+        perimeter points (srccorners) and two destination perimeter points
+        """
+        srcdist = np.linalg.norm(srcpts - np.roll(srcpts, 1, axis=0), axis=1)
+        destdist = np.linalg.norm(destpts - np.roll(destpts, 1, axis=0), axis=1)
+        if np.all(destdist == 0):
+            return 1.0
+        mindist = np.min(srcdist[destdist != 0] / destdist[destdist != 0])
+        return max(1.0, mindist)
+
+    def _getTransformedTile(self, ts, transform, corners, scale, frame,  # noqa
                             warp=None, crop=None, firstMerge=False):
         """
         Determine where the target tile's corners are located on the source.
@@ -1117,17 +1143,22 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not outh or not outw:
             return None, 0, 0
         if n_tps_points < 3:
+            dstcorners = corners
             srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
         else:
             transformer = skimage.transform.ThinPlateSplineTransform()
             transformer.estimate(warp_dst, warp_src)
-            # TODO: experiment with more sampling than just corners
-            srccorners = transformer(corners[:, :2])
+            # TODO: what sampling should we use?  Can we do something smarter?
+            dstcorners = self._perimeterPoints(0, 0, outw, outh, 8)
+            srccorners = transformer(dstcorners)
         minx = min(c[0] for c in srccorners)
         maxx = max(c[0] for c in srccorners)
         miny = min(c[1] for c in srccorners)
         maxy = max(c[1] for c in srccorners)
         srcscale = max((maxx - minx) / outw, (maxy - miny) / outh)
+        if n_tps_points >= 3:
+            # Use the half spacing for better interpolation
+            srcscale = self._smallestSpacingRatio(srccorners, dstcorners) / 2
         # we only need every 1/srcscale pixel.
         srcscale = int(2 ** math.log2(max(1, srcscale)))
         # Pad to reduce edge effects at tile boundaries
@@ -1207,10 +1238,10 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         if n_tps_points > 3:
             transformer = skimage.transform.ThinPlateSplineTransform()
-            transformer.estimate(warp_src, warp_dst)
+            transformer.estimate(warp_dst, warp_src)
         elif n_tps_points == 3:
             transformer = skimage.transform.AffineTransform()
-            transformer.estimate(warp_src, warp_dst)
+            transformer.estimate(warp_dst, warp_src)
         else:
             transformer = skimage.transform.AffineTransform(np.linalg.inv(transform))
 
@@ -1226,7 +1257,6 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             order=0 if useNearest else 3,
             output_shape=(destShape[0], destShape[1], srcImage.shape[2]),
         ).astype(srcImage.dtype)
-        print('dest shape', destShape, 'dest image shape', destImage.shape, 'src image shape', srcImage.shape, 'x', x, 'y', y)
         return destImage, x, y
 
     def _addSourceToTile(self, tile, sourceEntry, corners, scale):
