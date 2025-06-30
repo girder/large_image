@@ -29,6 +29,7 @@ except PackageNotFoundError:
 
 jsonschema = None
 _validator = None
+skimage_transform = None
 
 
 def _lazyImport():
@@ -45,6 +46,20 @@ def _lazyImport():
             _validator = jsonschema.Draft6Validator(MultiSourceSchema)
         except ImportError:
             msg = 'jsonschema module not found.'
+            raise TileSourceError(msg)
+
+
+def _lazyImportSkimageTransform():
+    """
+    Import the skimage.transform module. This is only needed when a TPS warp is used.
+    """
+    global skimage_transform
+
+    if skimage_transform is None:
+        try:
+            import skimage.transform as skimage_transform
+        except ImportError:
+            msg = 'scikit-image transform module not found.'
             raise TileSourceError(msg)
 
 
@@ -615,6 +630,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         bbox = {'left': 0, 'top': 0, 'right': width, 'bottom': height}
         if not pos:
             return bbox
+        if 'warp' in pos:
+            _lazyImportSkimageTransform()
         x0, y0, x1, y1 = 0, 0, width, height
         if 'crop' in pos:
             x0 = min(max(pos['crop'].get('left', x0), 0), width)
@@ -630,8 +647,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         m[1][0] = pos.get('s21', 0) * pos.get('scale', 1)
         m[1][1] = pos.get('s22', 1) * pos.get('scale', 1)
         m[1][2] = pos.get('y', 0)
-        if 'warp' in source.get('position', {}):
-            warp = source.get('position', {}).get('warp')
+        if 'warp' in pos and skimage_transform is not None:
+            warp = pos.get('warp')
             warp_src = np.array(warp.get('src') or []).astype(float)
             warp_dst = np.array(warp.get('dst') or []).astype(float)
             if warp_src.shape != warp_dst.shape:
@@ -648,10 +665,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 m[0][2] += warp_dst[0][0] - warp_src[0][0]
                 m[1][2] += warp_dst[0][1] - warp_src[0][1]
             elif warp_src.shape[0] <= 3:
-                # TODO: generalize the import guard
-                import skimage.transform
-
-                transformer = skimage.transform.AffineTransform()
+                transformer = skimage_transform.AffineTransform()
                 transformer.estimate(warp_src, warp_dst)
                 m = np.dot(transformer.params, m)
             else:
@@ -667,11 +681,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceError(msg, pos)
         if 'warp' not in bbox:
             transcorners = np.dot(m, corners.T)
-        else:
-            # TODO: generalize the import guard
-            import skimage.transform
-
-            transformer = skimage.transform.ThinPlateSplineTransform()
+        elif skimage_transform is not None:
+            transformer = skimage_transform.ThinPlateSplineTransform()
             transformer.estimate(warp_src, warp_dst)
             # We might want to adjust the number of points based on some
             # criteria such as source image size or number of warp points
@@ -1153,15 +1164,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a numpy array tile or None, x, y coordinates within the
             target tile for the placement of the numpy tile array.
         """
-        try:
-            import skimage.transform
-        except ImportError:
-            msg = 'scikit-image is required for affine and TPS transforms.'
-            raise TileSourceError(msg)
         # From full res source to full res destination
         transform = transform.copy() if transform is not None else np.identity(3)
         warp_src = warp_dst = None
         if warp is not None:
+            _lazyImportSkimageTransform()
             warp_src = warp['src'].copy()
             warp_dst = warp['dst'].copy()
         # Scale dest corners to actual size; adjust transform for the same
@@ -1184,7 +1191,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             dstcorners = corners
             srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
         else:
-            transformer = skimage.transform.ThinPlateSplineTransform()
+            transformer = skimage_transform.ThinPlateSplineTransform()
             transformer.estimate(warp_dst, warp_src)
             # TODO: what sampling should we use?  Can we do something smarter?
             dstcorners = self._perimeterPoints(0, 0, outw, outh, 8)
@@ -1278,15 +1285,15 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         useNearest = srcImage.shape[2] in {2, 4} and not firstMerge
 
         if warp is None:
-            transformer = skimage.transform.AffineTransform(np.linalg.inv(transform))
+            transformer = skimage_transform.AffineTransform(np.linalg.inv(transform))
         else:
-            transformer = skimage.transform.ThinPlateSplineTransform()
+            transformer = skimage_transform.ThinPlateSplineTransform()
             transformer.estimate(warp_dst, warp_src)
         # skimage.transform.warp is faster and has less artifacts than
         # scipy.ndimage.affine_transform.  It is faster than using cupy's
         # version of scipy's affine_transform when the source and destination
         # images are converted from numpy to cupy and back in this method.
-        destImage = skimage.transform.warp(
+        destImage = skimage_transform.warp(
             # Although using np.float32 could reduce memory use, it doesn't
             # provide any speed improvement
             srcImage.astype(float),
