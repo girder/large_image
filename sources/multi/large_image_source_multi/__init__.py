@@ -6,6 +6,7 @@ import math
 import os
 import re
 import threading
+import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from pathlib import Path
@@ -633,8 +634,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             warp = source.get('position', {}).get('warp')
             warp_src = np.array(warp.get('src') or []).astype(float)
             warp_dst = np.array(warp.get('dst') or []).astype(float)
-            # TODO: either adjust the scheme or add a warning if src and dst
-            # aren't the same length.
+            if warp_src.shape != warp_dst.shape:
+                msg = (
+                    'Arrays for warp src and warp dst do not have the same shape; '
+                    'unexpected warping may occur.'
+                )
+                warnings.warn(msg, stacklevel=2)
             warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
             warp_dst = warp_dst[:warp_src.shape[0], :]
             if warp_src.shape[0] < 1:
