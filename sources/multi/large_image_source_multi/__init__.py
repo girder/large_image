@@ -281,7 +281,6 @@ SourceEntrySchema = {
                                 'minItems': 2,
                                 'maxItems': 2,
                             },
-                            'minItems': 3,
                         },
                         'dst': {
                             'type': 'array',
@@ -291,7 +290,6 @@ SourceEntrySchema = {
                                 'minItems': 2,
                                 'maxItems': 2,
                             },
-                            'minItems': 3,
                         },
                     },
                 },
@@ -631,10 +629,30 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         m[1][0] = pos.get('s21', 0) * pos.get('scale', 1)
         m[1][1] = pos.get('s22', 1) * pos.get('scale', 1)
         m[1][2] = pos.get('y', 0)
-        # TODO:
-        # if we have TPS, apply the transform to the destination coordinates
-        # if it has <= 3 points, up the transform instead and mark that we
-        # functionally don't have TPS
+        if 'warp' in source.get('position', {}):
+            warp = source.get('position', {}).get('warp')
+            warp_src = np.array(warp.get('src') or []).astype(float)
+            warp_dst = np.array(warp.get('dst') or []).astype(float)
+            # TODO: either adjust the scheme or add a warning if src and dst
+            # aren't the same length.
+            warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
+            warp_dst = warp_dst[:warp_src.shape[0], :]
+            if warp_src.shape[0] < 1:
+                pass
+            elif warp_src.shape[0] == 1:
+                m[0][2] += warp_dst[0][0] - warp_src[0][0]
+                m[1][2] += warp_dst[0][1] - warp_src[0][1]
+            elif warp_src.shape[0] <= 3:
+                # TODO: generalize the import guard
+                import skimage.transform
+
+                transformer = skimage.transform.AffineTransform()
+                transformer.estimate(warp_src, warp_dst)
+                m = np.dot(transformer.params, m)
+            else:
+                warp_dst = np.dot(m, np.hstack([warp_dst, np.ones((len(warp_dst), 1))]).T).T[:, :2]
+                bbox['warp'] = {'src': warp_src, 'dst': warp_dst}
+                m = np.identity(3)
         if not np.array_equal(m, np.identity(3)):
             bbox['transform'] = m
             try:
@@ -642,13 +660,25 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except np.linalg.LinAlgError:
                 msg = 'The position for a source is not invertable (%r)'
                 raise TileSourceError(msg, pos)
-        # For TPS, do something similar with perimeter spacing;  if we learn
-        # a better technique, apply that here, too.
-        transcorners = np.dot(m, corners.T)
+        if 'warp' not in bbox:
+            transcorners = np.dot(m, corners.T)
+        else:
+            # TODO: generalize the import guard
+            import skimage.transform
+
+            transformer = skimage.transform.ThinPlateSplineTransform()
+            transformer.estimate(warp_src, warp_dst)
+            # We might want to adjust the number of points based on some
+            # criteria such as source image size or number of warp points
+            corners = self._perimeterPoints(x0, y0, x1, y1, 8)
+            transcorners = transformer(corners).T
         bbox['left'] = min(transcorners[0])
         bbox['top'] = min(transcorners[1])
         bbox['right'] = max(transcorners[0])
         bbox['bottom'] = max(transcorners[1])
+        # TODO: Maybe inflate this a bit for warp because of edge effects?
+        # That is, it can warp outside of the specified box because we don't
+        # have infinite perimeter sampling
         return bbox
 
     def _axisKey(self, source, value, key):
@@ -1125,24 +1155,27 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
         # From full res source to full res destination
         transform = transform.copy() if transform is not None else np.identity(3)
-        warp_src = np.array(warp.get('src') if warp is not None else []).astype('float64')
-        warp_dst = np.array(warp.get('dst') if warp is not None else []).astype('float64')
-        n_tps_points = warp_src.shape[0]
+        warp_src = warp_dst = None
+        if warp is not None:
+            warp_src = warp['src'].copy()
+            warp_dst = warp['dst'].copy()
         # Scale dest corners to actual size; adjust transform for the same
         corners = np.array(corners)
         corners[:, :2] //= scale
-        transform[:2, :] /= scale
-        warp_dst /= scale
-        # Offset so our target is the actual destination array we use
-        transform[0][2] -= corners[0][0]
-        transform[1][2] -= corners[0][1]
+        if warp is None:
+            transform[:2, :] /= scale
+            # Offset so our target is the actual destination array we use
+            transform[0][2] -= corners[0][0]
+            transform[1][2] -= corners[0][1]
+        else:
+            warp_dst /= scale
+            warp_dst[:, 0] -= corners[0][0]
+            warp_dst[:, 1] -= corners[0][1]
         corners[:, :2] -= corners[0, :2]
-        warp_dst[:, 0] -= corners[0][0]
-        warp_dst[:, 1] -= corners[0][1]
         outw, outh = corners[2][0], corners[2][1]
         if not outh or not outw:
             return None, 0, 0
-        if n_tps_points < 3:
+        if warp is None:
             dstcorners = corners
             srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
         else:
@@ -1155,8 +1188,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         maxx = max(c[0] for c in srccorners)
         miny = min(c[1] for c in srccorners)
         maxy = max(c[1] for c in srccorners)
-        srcscale = max((maxx - minx) / outw, (maxy - miny) / outh)
-        if n_tps_points >= 3:
+        if warp is None:
+            srcscale = max((maxx - minx) / outw, (maxy - miny) / outh)
+        else:
             # Use the half spacing for better interpolation
             srcscale = self._smallestSpacingRatio(srccorners, dstcorners) / 2
         # we only need every 1/srcscale pixel.
@@ -1190,28 +1224,30 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             [region['right'] // srcscale, region['top'] // srcscale, 1],
             [region['right'] // srcscale, region['bottom'] // srcscale, 1],
             [region['left'] // srcscale, region['bottom'] // srcscale, 1]], dtype=float)
-        # adjust our transform if we took a low res version of the source
-        transform[:2, :2] *= srcscale
-        warp_src /= srcscale
-        # Find where the source corners land on the destination.
-        preshiftcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        warp_src -= regioncorners[0, :2]
-        regioncorners[:, :2] -= regioncorners[0, :2]
-        destcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        offsetx, offsety = None, None
-        for idx in range(4):
-            if offsetx is None or destcorners[idx][0] < offsetx:
-                x = preshiftcorners[idx][0]
-                offsetx = destcorners[idx][0] - (x - math.floor(x))
-            if offsety is None or destcorners[idx][1] < offsety:
-                y = preshiftcorners[idx][1]
-                offsety = destcorners[idx][1] - (y - math.floor(y))
-        transform[0][2] -= offsetx
-        transform[1][2] -= offsety
-        x, y = int(math.floor(x)), int(math.floor(y))
-        # Recompute where the source corners will land
-        destcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        if n_tps_points < 3:
+        if warp is None:
+            # adjust our transform if we took a low res version of the source
+            transform[:2, :2] *= srcscale
+        else:
+            warp_src /= srcscale
+            warp_src -= regioncorners[0, :2]
+        if warp is None:
+            # Find where the source corners land on the destination.
+            preshiftcorners = (np.dot(transform, regioncorners.T).T).tolist()
+            regioncorners[:, :2] -= regioncorners[0, :2]
+            destcorners = (np.dot(transform, regioncorners.T).T).tolist()
+            offsetx, offsety = None, None
+            for idx in range(4):
+                if offsetx is None or destcorners[idx][0] < offsetx:
+                    x = preshiftcorners[idx][0]
+                    offsetx = destcorners[idx][0] - (x - math.floor(x))
+                if offsety is None or destcorners[idx][1] < offsety:
+                    y = preshiftcorners[idx][1]
+                    offsety = destcorners[idx][1] - (y - math.floor(y))
+            transform[0][2] -= offsetx
+            transform[1][2] -= offsety
+            x, y = int(math.floor(x)), int(math.floor(y))
+            # Recompute where the source corners will land
+            destcorners = (np.dot(transform, regioncorners.T).T).tolist()
             destShape = [
                 max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
                 max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
@@ -1236,15 +1272,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             _, srcImage = _makeSameChannelDepth(np.zeros((1, 1, srcImage.shape[2] + 1)), srcImage)
         useNearest = srcImage.shape[2] in {2, 4} and not firstMerge
 
-        if n_tps_points > 3:
+        if warp is None:
+            transformer = skimage.transform.AffineTransform(np.linalg.inv(transform))
+        else:
             transformer = skimage.transform.ThinPlateSplineTransform()
             transformer.estimate(warp_dst, warp_src)
-        elif n_tps_points == 3:
-            transformer = skimage.transform.AffineTransform()
-            transformer.estimate(warp_dst, warp_src)
-        else:
-            transformer = skimage.transform.AffineTransform(np.linalg.inv(transform))
-
         # skimage.transform.warp is faster and has less artifacts than
         # scipy.ndimage.affine_transform.  It is faster than using cupy's
         # version of scipy's affine_transform when the source and destination
@@ -1283,7 +1315,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return tile
         ts = self._openSource(source, sourceEntry['kwargs'])
         transform = bbox.get('transform')
-        warp = source.get('position', {}).get('warp')
+        warp = bbox.get('warp')
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
         # no sheer and integer pixel alignment, use getRegion with an
