@@ -34,7 +34,8 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'gdal',
+        'gdal ; python_version >= "3.9"',
+        'gdal<3.11 ; python_version < "3.9"',
         'packaging',
         'pyproj>=3.5.0',
     ],

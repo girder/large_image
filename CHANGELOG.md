@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.32.12
+
+### Changes
+
+- Ensure a valid gdal version ([#1945](../../pull/1945))
+
 ## 1.32.11
 
 ### Improvements
