@@ -1131,9 +1131,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         srcdist = np.linalg.norm(srcpts - np.roll(srcpts, 1, axis=0), axis=1)
         destdist = np.linalg.norm(destpts - np.roll(destpts, 1, axis=0), axis=1)
         if np.all(destdist == 0):
-            return 1.0
+            return 1
         mindist = np.min(srcdist[destdist != 0] / destdist[destdist != 0])
-        return max(1.0, mindist)
+        return mindist or 1
 
     def _getTransformedTile(self, ts, transform, corners, scale, frame,  # noqa
                             warp=None, crop=None, firstMerge=False):
