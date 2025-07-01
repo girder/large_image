@@ -2,6 +2,10 @@
 
 ## 1.32.12
 
+### Improvements
+
+- Improve reading certain tiles via tiff source ([#1946](../../pull/1946))
+
 ### Changes
 
 - Ensure a valid gdal version ([#1945](../../pull/1945))
