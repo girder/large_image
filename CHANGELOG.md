@@ -9,6 +9,7 @@
 ### Changes
 
 - Ensure a valid gdal version ([#1945](../../pull/1945))
+- Update calls to PIL.Image.fromarray to avoid the deprecated mode parameter ([#1947](../../pull/1947))
 
 ## 1.32.11
 

@@ -643,7 +643,12 @@ class TiledTiffDirectory:
                 self._tiffInfo.get('photometric') == libtiff_ctypes.PHOTOMETRIC_YCBCR):
             if self._tiffInfo.get('bitspersample') == 16:
                 image = np.floor_divide(image, 256).astype(np.uint8)
-            image = PIL.Image.fromarray(image, 'YCbCr')
+            # This had been
+            #  image = PIL.Image.fromarray(image, 'YCbCr')
+            # but that shorthand has been deprecated, so we have to use
+            # frombuffer
+            image = PIL.Image.frombuffer(
+                'YCbCr', (image.shape[1], image.shape[0]), image.tobytes(), 'raw', 'YCbCr', 0, 1)
             image = np.array(image.convert('RGB'))
         return image
 

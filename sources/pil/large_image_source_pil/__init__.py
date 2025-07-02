@@ -33,10 +33,8 @@ from large_image.tilesource import FileTileSource
 
 # Optionally extend PIL with some additional formats
 try:
-    from pillow_heif import register_heif_opener
+    from pi_heif import register_heif_opener
     register_heif_opener()
-    from pillow_heif import register_avif_opener
-    register_avif_opener()
 except Exception:
     pass
 try:
@@ -244,9 +242,7 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 elif rgb.shape[2] > 3:
                     rgb = rgb[:, :, :3]
                 self._pilImage = PIL.Image.fromarray(
-                    rgb.astype(np.uint8) if rgb.dtype != np.uint16 else rgb,
-                    ('RGB' if rgb.dtype != np.uint16 else 'RGB;16') if rgb.shape[2] == 3 else
-                    ('L' if rgb.dtype != np.uint16 else 'L;16'))
+                    rgb.astype(np.uint8) if rgb.dtype != np.uint16 else rgb)
         except Exception:
             pass
 

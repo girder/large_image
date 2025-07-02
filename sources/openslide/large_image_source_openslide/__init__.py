@@ -397,7 +397,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if tile.mode == 'RGBA' and self._background:
                 tile = np.array(tile)
                 tile[tile[:, :, -1] == 0, :3] = self._background
-                tile = PIL.Image.fromarray(tile, 'RGBA')
+                tile = PIL.Image.fromarray(tile)
             # Always scale to the svs level 0 tile size.
             if svslevel['scale'] != 1:
                 tile = tile.resize((self.tileWidth, self.tileHeight),

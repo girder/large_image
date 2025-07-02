@@ -205,12 +205,10 @@ def _imageToPIL(
     :returns: a PIL image.
     """
     if isinstance(image, np.ndarray):
-        mode = 'L'
         if len(image.shape) == 3:
             # Fallback for hyperspectral data to just use the first three bands
             if image.shape[2] > 4:
                 image = image[:, :, :3]
-            mode = modesBySize[image.shape[2] - 1]
         if len(image.shape) == 3 and image.shape[2] == 1:
             image = np.resize(image, image.shape[:2])
         if cast(np.ndarray, image).dtype == np.uint32:
@@ -236,7 +234,7 @@ def _imageToPIL(
         elif cast(np.ndarray, image).dtype != np.uint8:
             image = np.clip(np.nan_to_num(np.where(
                 image is None, np.nan, image), nan=0), 0, 255).astype(np.uint8)
-        image = PIL.Image.fromarray(cast(np.ndarray, image), mode)
+        image = PIL.Image.fromarray(cast(np.ndarray, image))
     elif not isinstance(image, PIL.Image.Image):
         image = PIL.Image.open(io.BytesIO(image))
     if setMode is not None and image.mode != setMode:

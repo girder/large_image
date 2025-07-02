@@ -38,7 +38,7 @@ setup(
     extras_require={
         'all': [
             'rawpy',
-            'pillow-heif',
+            'pi-heif',
             'pillow-jxl-plugin < 1.3 ; python_version < "3.9"',
             'pillow-jxl-plugin ; python_version >= "3.9"',
             'pillow-jpls ; python_version < "3.13"',
