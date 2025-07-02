@@ -1185,8 +1185,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # From full res source to full res destination
         transform = transform.copy() if transform is not None else np.identity(3)
         warp_src = warp_dst = None
+        _lazyImportSkimageTransform()
         if warp is not None:
-            _lazyImportSkimageTransform()
             warp_src = warp['src'].copy()
             warp_dst = warp['dst'].copy()
         # Scale dest corners to actual size; adjust transform for the same
