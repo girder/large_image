@@ -290,8 +290,14 @@ SourceEntrySchema = {
                     'type': 'object',
                     'properties': {
                         'src': {
-                            'type': 'array',
+                            'type': ['array', 'object'],
                             'items': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                            'additionalProperties': {
                                 'type': 'array',
                                 'items': {'type': 'number'},
                                 'minItems': 2,
@@ -299,8 +305,14 @@ SourceEntrySchema = {
                             },
                         },
                         'dst': {
-                            'type': 'array',
+                            'type': ['array', 'object'],
                             'items': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                            'additionalProperties': {
                                 'type': 'array',
                                 'items': {'type': 'number'},
                                 'minItems': 2,
@@ -649,8 +661,14 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         m[1][2] = pos.get('y', 0)
         if 'warp' in pos and skimage_transform is not None:
             warp = pos.get('warp')
-            warp_src = np.array(warp.get('src') or []).astype(float)
-            warp_dst = np.array(warp.get('dst') or []).astype(float)
+            warp_src = warp.get('src')
+            warp_dst = warp.get('dst')
+            if isinstance(warp_src, dict):
+                warp_src = list(warp_src.values())
+            if isinstance(warp_dst, dict):
+                warp_dst = list(warp_dst.values())
+            warp_src = np.array(warp_src or []).astype(float)
+            warp_dst = np.array(warp_dst or []).astype(float)
             if warp_src.shape != warp_dst.shape:
                 msg = (
                     'Arrays for warp src and warp dst do not have the same shape; '
