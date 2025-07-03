@@ -287,9 +287,18 @@ SourceEntrySchema = {
                     # TODO: Add postTransform option
                 },
                 'warp': {
+                    'description':
+                        'An object describing a series of landmarks which have both '
+                        'a source location and a destination location. These sets of points '
+                        'define a warp (thin plate spline or affine transform) that will '
+                        'be applied to the source image.',
                     'type': 'object',
                     'properties': {
                         'src': {
+                            'description':
+                                'The set of source locations for landmarks defining a warp. '
+                                'This can be described by a list of [x, y] points or a mapping of '
+                                'unique marker IDs to [x, y] points.',
                             'type': ['array', 'object'],
                             'items': {
                                 'type': 'array',
@@ -305,6 +314,10 @@ SourceEntrySchema = {
                             },
                         },
                         'dst': {
+                            'description':
+                                'The set of destination locations for landmarks defining a warp. '
+                                'This can be described by a list of [x, y] points or a mapping of '
+                                'unique marker IDs to [x, y] points.',
                             'type': ['array', 'object'],
                             'items': {
                                 'type': 'array',
