@@ -368,3 +368,38 @@ def testAxesToFrameAndFrameToAxes():
             'sizeX': 1000, 'sizeY': 1000, 'frames': 60}}]}
     source = large_image_source_multi.open(json.dumps(asAxesSource2))
     assert source.frameToAxes(0) == {'frame': 0}
+
+
+def testThinPlateSpline():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        path=image_path,
+        position=dict(
+            x=0,
+            y=0,
+            warp=dict(
+                src=dict(
+                    a=[1, 1],
+                    b=[7, 1],
+                    c=[7, 7],
+                    d=[1, 7],
+                ),
+                dst=dict(
+                    a=[3, 2],
+                    b=[5, 2],
+                    c=[5, 6],
+                    d=[2, 3],
+                ),
+            ),
+        ),
+    )])
+    source = large_image_source_multi.open(json.dumps(spec))
+    tile = source.getTile(x=0, y=0, z=0, numpyAllowed=True)
+    assert tile.shape == (64, 64, 2)
+
+    # crop transparent rows/cols
+    cropped = tile[~np.all(tile[:, :, 1] == 0, axis=1)]
+    cropped = cropped[:, ~np.all(cropped[:, :, 1] == 0, axis=0)]
+
+    assert cropped.shape == (45, 30, 2)
