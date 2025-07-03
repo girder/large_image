@@ -405,6 +405,35 @@ def testThinPlateSpline():
     assert cropped.shape == (45, 30, 2)
 
 
+def testThinPlateSplineDropUnmatchedKeys():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        path=image_path,
+        position=dict(
+            x=0,
+            y=0,
+            warp=dict(
+                src=dict(
+                    a=[1, 1],
+                    b=[7, 1],
+                    c=[7, 7],
+                    d=[1, 7],
+                ),
+                dst=dict(
+                    a=[3, 2],
+                    c=[5, 6],
+                    d=[2, 3],
+                ),
+            ),
+        ),
+    )])
+    with pytest.warns(match=(
+        "The following keys did not have a value in both src and dst, so they were dropped: {'b'}."
+    )):
+        large_image_source_multi.open(json.dumps(spec))
+
+
 def testThinPlateSplineInvalid():
     test_dir = os.path.dirname(os.path.realpath(__file__))
     image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')

@@ -6,6 +6,7 @@ import math
 import os
 import re
 import threading
+import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from pathlib import Path
@@ -637,9 +638,18 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         warp_src = warp.get('src')
         warp_dst = warp.get('dst')
         if isinstance(warp_src, dict) and isinstance(warp_dst, dict):
-            keys = list(set(warp_src.keys()) & set(warp_dst.keys()))
+            src_key_set = set(warp_src.keys())
+            dst_key_set = set(warp_dst.keys())
+            keys = list(src_key_set & dst_key_set)
             warp_src = [warp_src[key] for key in keys]
             warp_dst = [warp_dst[key] for key in keys]
+            unused = (src_key_set | dst_key_set) - set(keys)
+            if len(unused):
+                msg = (
+                    'The following keys did not have a value in both src and dst, '
+                    f'so they were dropped: {unused}.'
+                )
+                warnings.warn(msg, stacklevel=2)
         elif isinstance(warp_src, list) and isinstance(warp_dst, list):
             pass
         else:
