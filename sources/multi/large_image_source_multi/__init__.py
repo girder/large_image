@@ -1186,13 +1186,19 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         Find the smallest ratio of the distance between two adjacent source
         perimeter points (srccorners) and two destination perimeter points
+
+        :param srcpts: an ndarray of points that correspond with the
+            destination points.
+        :param dstpts: an ndarray of corresponding points.
+        :returns: the minimum ratio of the distance between a source section
+            and a destination section.
         """
         srcdist = np.linalg.norm(srcpts - np.roll(srcpts, 1, axis=0), axis=1)
         destdist = np.linalg.norm(destpts - np.roll(destpts, 1, axis=0), axis=1)
         if np.all(destdist == 0):
             return 1
-        mindist = np.min(srcdist[destdist != 0] / destdist[destdist != 0])
-        return mindist or 1
+        minratio = np.min(srcdist[destdist != 0] / destdist[destdist != 0])
+        return minratio or 1
 
     def _getTransformedTile(self, ts, transform, corners, scale, frame,  # noqa
                             warp=None, crop=None, firstMerge=False):
@@ -1233,9 +1239,9 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # Scale dest corners to actual size; adjust transform for the same
         corners = np.array(corners)
         corners[:, :2] //= scale
+        # Offset so our target is the actual destination array we use
         if warp is None:
             transform[:2, :] /= scale
-            # Offset so our target is the actual destination array we use
             transform[0][2] -= corners[0][0]
             transform[1][2] -= corners[0][1]
         else:
@@ -1252,7 +1258,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         else:
             transformer = skimage_transform.ThinPlateSplineTransform()
             transformer.estimate(warp_dst, warp_src)
-            # TODO: what sampling should we use?  Can we do something smarter?
+            # Is there any way to be smarter about the sampling?
             dstcorners = self._perimeterPoints(0, 0, outw, outh, 8)
             srccorners = transformer(dstcorners)
         minx = min(c[0] for c in srccorners)
@@ -1262,7 +1268,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if warp is None:
             srcscale = max((maxx - minx) / outw, (maxy - miny) / outh)
         else:
-            # Use the half spacing for better interpolation
+            # Use the half spacing for better interpolation.  If the warped
+            # image were uniform, this could be a factor of sqrt(2), since the
+            # image could be rotated and we might need to interpolate from
+            # that; using a bigger factor can ensure we have enough pixels for
+            # warps that are no more than another factor of sqrt(2) in
+            # variation from the sampled perimeter.
             srcscale = self._smallestSpacingRatio(srccorners, dstcorners) / 2
         # we only need every 1/srcscale pixel.
         srcscale = int(2 ** math.log2(max(1, srcscale)))
