@@ -403,3 +403,38 @@ def testThinPlateSpline():
     cropped = cropped[:, ~np.all(cropped[:, :, 1] == 0, axis=0)]
 
     assert cropped.shape == (45, 30, 2)
+
+
+def testThinPlateSplineInvalid():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        path=image_path,
+        position=dict(x=0, y=0),
+    )])
+    spec['sources'][0]['position']['warp'] = dict(
+        src=dict(a=[1, 1]),
+        dst=[[3, 2]],
+    )
+    with pytest.raises(Exception, match=(
+        'warp src and warp dst must either be both dicts or both lists.'
+    )):
+        large_image_source_multi.open(json.dumps(spec))
+
+    spec['sources'][0]['position']['warp'] = dict(
+        src=[],
+        dst=[[3, 2]],
+    )
+    with pytest.raises(Exception, match=(
+        'warp src and warp dst must have the same number of points.'
+    )):
+        large_image_source_multi.open(json.dumps(spec))
+
+    spec['sources'][0]['position']['warp'] = dict(
+        src=[],
+        dst=[],
+    )
+    with pytest.raises(Exception, match=(
+        'warp src and warp dst must have at least one point.'
+    )):
+        large_image_source_multi.open(json.dumps(spec))

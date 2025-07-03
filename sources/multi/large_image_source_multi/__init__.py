@@ -6,7 +6,6 @@ import math
 import os
 import re
 import threading
-import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from pathlib import Path
@@ -637,18 +636,24 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         ret = None
         warp_src = warp.get('src')
         warp_dst = warp.get('dst')
-        if isinstance(warp_src, dict):
-            warp_src = list(warp_src.values())
-        if isinstance(warp_dst, dict):
-            warp_dst = list(warp_dst.values())
+        if isinstance(warp_src, dict) and isinstance(warp_dst, dict):
+            keys = list(set(warp_src.keys()) & set(warp_dst.keys()))
+            warp_src = [warp_src[key] for key in keys]
+            warp_dst = [warp_dst[key] for key in keys]
+        elif isinstance(warp_src, list) and isinstance(warp_dst, list):
+            pass
+        else:
+            msg = 'warp src and warp dst must either be both dicts or both lists.'
+            raise TileSourceError(msg)
+        if len(warp_src) != len(warp_dst):
+            msg = 'warp src and warp dst must have the same number of points.'
+            raise TileSourceError(msg)
+        if len(warp_src) < 1:
+            msg = 'warp src and warp dst must have at least one point.'
+            raise TileSourceError(msg)
+
         warp_src = np.array(warp_src or []).astype(float)
         warp_dst = np.array(warp_dst or []).astype(float)
-        if warp_src.shape != warp_dst.shape:
-            msg = (
-                'Arrays for warp src and warp dst do not have the same shape; '
-                'unexpected warping may occur.'
-            )
-            warnings.warn(msg, stacklevel=2)
         warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
         warp_dst = warp_dst[:warp_src.shape[0], :]
         if warp_src.shape[0] < 1:
