@@ -30,7 +30,6 @@ setup(
         'Topic :: Scientific/Engineering',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
@@ -70,5 +69,4 @@ setup(
     entry_points={
         'console_scripts': ['large_image_converter = large_image_converter.__main__:main'],
     },
-    python_requires='>=3.8',
 )

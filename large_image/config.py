@@ -84,8 +84,8 @@ ConfigValues = {
 }
 
 
-# Fix when we drop Python 3.8 to just be @functools.cache
-@functools.lru_cache(maxsize=None)
+# We use lru_cache over cache because it can be cleared
+@functools.lru_cache(maxsize=1000)
 def getConfig(key: Optional[str] = None,
               default: Optional[Union[str, bool, int, logging.Logger]] = None) -> Any:
     """

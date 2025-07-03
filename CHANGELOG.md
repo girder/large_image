@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.32.12
+## 1.33.0
 
 ### Improvements
 
@@ -9,6 +9,7 @@
 ### Changes
 
 - Ensure a valid gdal version ([#1945](../../pull/1945))
+- Drop support for Python 3.8 ([#1950](../../pull/1950))
 
 ## 1.32.11
 
