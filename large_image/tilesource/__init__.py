@@ -4,7 +4,7 @@ import sys
 import uuid
 from importlib.metadata import entry_points
 from pathlib import PosixPath
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Optional, Union, cast
 
 from .. import config
 from ..constants import NEW_IMAGE_PATH_FLAG, SourcePriority
@@ -16,12 +16,12 @@ from .base import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                    FileTileSource, TileOutputMimeTypes, TileSource,
                    dictToEtree, etreeToDict, nearPowerOfTwo)
 
-AvailableTileSources: Dict[str, Type[FileTileSource]] = {}
+AvailableTileSources: dict[str, type[FileTileSource]] = {}
 
 
 def isGeospatial(
         path: Union[str, PosixPath],
-        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None) -> bool:
+        availableSources: Optional[dict[str, type[FileTileSource]]] = None) -> bool:
     """
     Check if a path is likely to be a geospatial file.
 
@@ -48,7 +48,7 @@ def isGeospatial(
 
 
 def loadTileSources(entryPointName: str = 'large_image.source',
-                    sourceDict: Dict[str, Type[FileTileSource]] = AvailableTileSources) -> None:
+                    sourceDict: dict[str, type[FileTileSource]] = AvailableTileSources) -> None:
     """
     Load all tilesources from entrypoints and add them to the
     AvailableTileSources dictionary.
@@ -72,9 +72,9 @@ def loadTileSources(entryPointName: str = 'large_image.source',
 
 
 def getSortedSourceList(
-    availableSources: Dict[str, Type[FileTileSource]], pathOrUri: Union[str, PosixPath],
+    availableSources: dict[str, type[FileTileSource]], pathOrUri: Union[str, PosixPath],
     mimeType: Optional[str] = None, *args, **kwargs,
-) -> List[Tuple[bool, bool, SourcePriority, str]]:
+) -> list[tuple[bool, bool, SourcePriority, str]]:
     """
     Get an ordered list of sources where earlier sources are more likely to
     work for a specified path or uri.
@@ -128,7 +128,7 @@ def getSortedSourceList(
 
 
 def getSourceNameFromDict(
-        availableSources: Dict[str, Type[FileTileSource]], pathOrUri: Union[str, PosixPath],
+        availableSources: dict[str, type[FileTileSource]], pathOrUri: Union[str, PosixPath],
         mimeType: Optional[str] = None, *args, **kwargs) -> Optional[str]:
     """
     Get a tile source based on a ordered dictionary of known sources and a path
@@ -151,7 +151,7 @@ def getSourceNameFromDict(
 
 
 def getTileSourceFromDict(
-        availableSources: Dict[str, Type[FileTileSource]], pathOrUri: Union[str, PosixPath],
+        availableSources: dict[str, type[FileTileSource]], pathOrUri: Union[str, PosixPath],
         *args, **kwargs) -> FileTileSource:
     """
     Get a tile source based on a ordered dictionary of known sources and a path
@@ -214,8 +214,8 @@ def canRead(*args, **kwargs) -> bool:
 
 def canReadList(
         pathOrUri: Union[str, PosixPath], mimeType: Optional[str] = None,
-        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None,
-        *args, **kwargs) -> List[Tuple[str, bool]]:
+        availableSources: Optional[dict[str, type[FileTileSource]]] = None,
+        *args, **kwargs) -> list[tuple[str, bool]]:
     """
     Check if large_image can read a path or uri via each source.
 
@@ -251,8 +251,8 @@ def new(*args, **kwargs) -> TileSource:
 
 
 def listSources(
-    availableSources: Optional[Dict[str, Type[FileTileSource]]] = None,
-) -> Dict[str, Dict[str, Any]]:
+    availableSources: Optional[dict[str, type[FileTileSource]]] = None,
+) -> dict[str, dict[str, Any]]:
     """
     Get a dictionary with all sources, all known extensions, and all known
     mimetypes.
@@ -267,7 +267,7 @@ def listSources(
         if not len(AvailableTileSources):
             loadTileSources()
         availableSources = AvailableTileSources
-    results: Dict[str, Dict[str, Any]] = {'sources': {}, 'extensions': {}, 'mimeTypes': {}}
+    results: dict[str, dict[str, Any]] = {'sources': {}, 'extensions': {}, 'mimeTypes': {}}
     for key, source in availableSources.items():
         if hasattr(source, 'addKnownExtensions'):
             source.addKnownExtensions()
@@ -298,7 +298,7 @@ def listSources(
 
 
 def listExtensions(
-        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None) -> List[str]:
+        availableSources: Optional[dict[str, type[FileTileSource]]] = None) -> list[str]:
     """
     Get a list of all known extensions.
 
@@ -309,7 +309,7 @@ def listExtensions(
 
 
 def listMimeTypes(
-        availableSources: Optional[Dict[str, Type[FileTileSource]]] = None) -> List[str]:
+        availableSources: Optional[dict[str, type[FileTileSource]]] = None) -> list[str]:
     """
     Get a list of all known mime types.
 

@@ -21,7 +21,7 @@ import json
 import os
 import threading
 import weakref
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 import numpy as np
@@ -165,7 +165,7 @@ class Map:
 
     def __init__(
             self, *, ts: Optional[IPyLeafletMixin] = None,
-            metadata: Optional[Dict] = None, url: Optional[str] = None,
+            metadata: Optional[dict] = None, url: Optional[str] = None,
             gc: Optional[Any] = None, id: Optional[str] = None,
             resource: Optional[str] = None) -> None:
         """
@@ -185,7 +185,7 @@ class Map:
             on the girder client.
         """
         self._layer = self._map = self._metadata = self._frame_slider = None
-        self._frame_histograms: Optional[Dict[int, Any]] = None
+        self._frame_histograms: Optional[dict[int, Any]] = None
         self._ts = ts
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
@@ -205,8 +205,8 @@ class Map:
                     if metadata.get('geospatial'):
                         suffix = '?projection=EPSG:3857&encoding=PNG'
                         metadata = gc.get(f'item/{id}/tiles' + suffix)
-                        if (cast(Dict, metadata).get('geospatial') and
-                                cast(Dict, metadata).get('projection')):
+                        if (cast(dict, metadata).get('geospatial') and
+                                cast(dict, metadata).get('projection')):
                             url += suffix
                     self._id = id
                 else:
@@ -250,7 +250,7 @@ class Map:
         gc.downloadFile(file['_id'], self._tempfile)
         return large_image.open(self._tempfile.name)
 
-    def make_layer(self, metadata: Dict, url: str, **kwargs) -> Any:
+    def make_layer(self, metadata: dict, url: str, **kwargs) -> Any:
         """
         Create an ipyleaflet tile layer given large_image metadata and a tile
         url.
@@ -276,8 +276,8 @@ class Map:
         return layer
 
     def make_map(
-            self, metadata: Dict, layer: Optional[Any] = None,
-            center: Optional[Tuple[float, float]] = None) -> Any:
+            self, metadata: dict, layer: Optional[Any] = None,
+            center: Optional[tuple[float, float]] = None) -> Any:
         """
         Create an ipyleaflet map given large_image metadata, an optional
         ipyleaflet layer, and the center of the tile source.
@@ -322,7 +322,7 @@ class Map:
             else:
                 center = (metadata['sizeY'] / 2, metadata['sizeX'] / 2)
 
-        children: List[Any] = []
+        children: list[Any] = []
         frames = metadata.get('frames')
         if frames is not None and ipyvuePresent and aiohttpPresent:
             from large_image.widgets.components import FrameSelector
@@ -458,7 +458,7 @@ class Map:
     def id(self) -> Optional[str]:
         return getattr(self, '_id', None)
 
-    def to_map(self, coordinate: Union[List[float], Tuple[float, float]]) -> Tuple[float, float]:
+    def to_map(self, coordinate: Union[list[float], tuple[float, float]]) -> tuple[float, float]:
         """
         Convert a coordinate from the image or projected image space to the map
         space.
@@ -478,7 +478,7 @@ class Map:
             return tuple(transf.transform(x, y)[::-1])
         return self._metadata['sizeY'] - y, x
 
-    def from_map(self, coordinate: Union[List[float], Tuple[float, float]]) -> Tuple[float, float]:
+    def from_map(self, coordinate: Union[list[float], tuple[float, float]]) -> tuple[float, float]:
         """
         :param coordinate: a two-tuple that is in the map space coordinates.
         :returns: a two-tuple that is x, y in pixel space or x, y in image
@@ -579,7 +579,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             self._tile_source_ = weakref.ref(source)
 
         @property
-        def ports(self) -> Tuple[int, ...]:
+        def ports(self) -> tuple[int, ...]:
             return self._ports
 
         @property

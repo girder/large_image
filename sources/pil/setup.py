@@ -25,7 +25,6 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
@@ -39,22 +38,19 @@ setup(
         'all': [
             'rawpy',
             'pillow-heif',
-            'pillow-jxl-plugin < 1.3 ; python_version < "3.9"',
-            'pillow-jxl-plugin ; python_version >= "3.9"',
+            'pillow-jxl-plugin',
             'pillow-jpls ; python_version < "3.13"',
         ],
         'common': [
             'rawpy',
             'pillow-heif',
-            'pillow-jxl-plugin < 1.3 ; python_version < "3.9"',
-            'pillow-jxl-plugin ; python_version >= "3.9"',
+            'pillow-jxl-plugin',
         ],
         'girder': f'girder-large-image{limit_version}',
     },
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.8',
     entry_points={
         'large_image.source': [
             'pil = large_image_source_pil:PILFileTileSource',

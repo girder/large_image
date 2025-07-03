@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Dict
 
 import numpy as np
 from PIL import Image
@@ -25,7 +24,7 @@ class ResampleMethod(Enum):
 
 def pilResize(
     tile: np.ndarray,
-    new_shape: Dict,
+    new_shape: dict,
     resample_method: ResampleMethod,
 ) -> np.ndarray:
     # Only NEAREST works for 16 bit images
@@ -40,7 +39,7 @@ def pilResize(
 
 def numpyResize(
     tile: np.ndarray,
-    new_shape: Dict,
+    new_shape: dict,
     resample_method: ResampleMethod,
 ) -> np.ndarray:
     if resample_method == ResampleMethod.NP_NEAREST:
