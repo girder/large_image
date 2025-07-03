@@ -442,9 +442,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._largeImagePath = '.'
             try:
                 self._validator.validate(self._info)
-            except jsonschema.ValidationError:
-                msg = 'File cannot be validated via multi-source reader.'
-                raise TileSourceError(msg)
+            except jsonschema.ValidationError as exp:
+                from large_image.exceptions import _improveJsonschemaValidationError
+
+                _improveJsonschemaValidationError(exp)
+                msg = f'File cannot be validated via multi-source reader {str(exp)}.'
+                raise TileSourceError(msg) from None
         elif not os.path.isfile(self._largeImagePath):
             try:
                 possibleYaml = self._largeImagePath.split('multi://', 1)[-1]
@@ -473,9 +476,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 raise TileSourceError(msg)
             try:
                 self._validator.validate(self._info)
-            except jsonschema.ValidationError:
-                msg = 'File cannot be validated via multi-source reader.'
-                raise TileSourceError(msg)
+            except jsonschema.ValidationError as exp:
+                from large_image.exceptions import _improveJsonschemaValidationError
+
+                _improveJsonschemaValidationError(exp)
+                msg = f'File cannot be validated via multi-source reader {str(exp)}.'
+                raise TileSourceError(msg) from None
             self._basePath = Path(self._largeImagePath).parent
         self._basePath /= Path(self._info.get('basePath', '.'))
         for axis in self._info.get('axes', []):
