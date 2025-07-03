@@ -179,10 +179,6 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         _lazyImport()
         try:
             self._dicom = self._open_wsi_dicom(self._largeImagePath)
-            # To let Python 3.8 work -- if this is insufficient, we may have to
-            # drop 3.8 support.
-            if not hasattr(self._dicom, 'pyramids'):
-                self._dicom.pyramids = [self._dicom.levels]
         except Exception as exc:
             msg = f'File cannot be opened via dicom tile source ({exc}).'
             raise TileSourceError(msg)

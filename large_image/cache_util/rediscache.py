@@ -17,7 +17,8 @@
 import pickle
 import threading
 import time
-from typing import Any, Callable, Iterable, List, Optional, Sized, Tuple, TypeVar, Union, cast
+from collections.abc import Iterable, Sized
+from typing import Any, Callable, Optional, TypeVar, Union, cast
 
 from typing_extensions import Buffer
 
@@ -31,7 +32,7 @@ class RedisCache(BaseCache):
     """Use redis as the backing cache."""
 
     def __init__(
-            self, url: Union[str, List[str]] = '127.0.0.1:6379',
+            self, url: Union[str, list[str]] = '127.0.0.1:6379',
             username: Optional[str] = None, password: Optional[str] = None,
             getsizeof: Optional[Callable[[_VT], float]] = None,
             mustBeAvailable: bool = False) -> None:
@@ -153,7 +154,7 @@ class RedisCache(BaseCache):
             self._client.delete(*list(cast(Iterable[Any], keys)))
 
     @staticmethod
-    def getCache() -> Tuple[Optional['RedisCache'], threading.Lock]:
+    def getCache() -> tuple[Optional['RedisCache'], threading.Lock]:
         cacheLock = threading.Lock()
 
         # check if credentials and location exist, otherwise assume

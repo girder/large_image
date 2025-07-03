@@ -1255,6 +1255,12 @@ class Annotation(AccessControlledModel):
             if not force:
                 self.requireAccess(annotation, user=user, level=AccessType.WRITE)
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
+            Notification().createNotification(
+                type='large_image_annotation.revert',
+                data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
+                user=user,
+                expires=datetime.datetime.now(datetime.timezone.utc) +
+                datetime.timedelta(seconds=1))
         return annotation
 
     def findAnnotatedImages(self, imageNameFilter=None, creator=None,

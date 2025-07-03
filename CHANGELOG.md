@@ -1,10 +1,28 @@
 # Change Log
 
+## 1.33.0
+
+### Improvements
+
+- Improve reading certain tiles via tiff source ([#1946](../../pull/1946))
+
+### Changes
+
+- Do not check if items are used as annotation elements in DocumentDB ([#1949](../../pull/1949))
+- Ensure a valid gdal version ([#1945](../../pull/1945))
+- Drop support for Python 3.8 ([#1950](../../pull/1950))
+
 ## 1.32.11
 
 ### Improvements
 
-- Improve DocumentDB support ([#1940](../../pull/1940))
+- Improve DocumentDB support ([#1941](../../pull/1941))
+- Generate a specific annotation revert notification in Girder ([#1943](../../pull/1943))
+
+### Bug Fixes
+
+- Fix updating annotation updated dates in the girder web client ([#1942](../../pull/1942))
+- Fix openslide reads at lower levels ([#1944](../../pull/1944))
 
 ## 1.32.10
 

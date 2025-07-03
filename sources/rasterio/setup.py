@@ -25,7 +25,6 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
@@ -34,9 +33,7 @@ setup(
     ],
     install_requires=[
         f'large-image{limit_version}',
-        'rasterio>=1.3,<1.3.11 ; python_version < "3.9"',
-        # We need rasterio > 1.3 to get the statistics attribute (<=> gdalinfo)
-        'rasterio>=1.3 ; python_version >= "3.9"',
+        'rasterio>=1.3',
         'packaging',
     ],
     extras_require={
@@ -48,7 +45,6 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.8',
     entry_points={
         'large_image.source': [
             'rasterio = large_image_source_rasterio:RasterioFileTileSource',
