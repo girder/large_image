@@ -625,6 +625,47 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 source['path'] = source['path'].resolve(False)
         return sources
 
+    def _getWarp(self, warp, m):
+        """
+        Preprocess a warp specification and transformation matrix prior to applying the warp.
+
+        :param warp: A dictionary with a warp specification,
+            adhering to the schema for ``MultiSource.SourceEntry.position.warp``.
+        :param m: An ndarray representing a transformation matrix,
+            that may be modified according to the warp specification.
+        """
+        ret = None
+        warp_src = warp.get('src')
+        warp_dst = warp.get('dst')
+        if isinstance(warp_src, dict):
+            warp_src = list(warp_src.values())
+        if isinstance(warp_dst, dict):
+            warp_dst = list(warp_dst.values())
+        warp_src = np.array(warp_src or []).astype(float)
+        warp_dst = np.array(warp_dst or []).astype(float)
+        if warp_src.shape != warp_dst.shape:
+            msg = (
+                'Arrays for warp src and warp dst do not have the same shape; '
+                'unexpected warping may occur.'
+            )
+            warnings.warn(msg, stacklevel=2)
+        warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
+        warp_dst = warp_dst[:warp_src.shape[0], :]
+        if warp_src.shape[0] < 1:
+            pass
+        elif warp_src.shape[0] == 1:
+            m[0][2] += warp_dst[0][0] - warp_src[0][0]
+            m[1][2] += warp_dst[0][1] - warp_src[0][1]
+        elif warp_src.shape[0] <= 3:
+            transformer = skimage_transform.AffineTransform()
+            transformer.estimate(warp_src, warp_dst)
+            m = np.dot(transformer.params, m)
+        else:
+            warp_dst = np.dot(m, np.hstack([warp_dst, np.ones((len(warp_dst), 1))]).T).T[:, :2]
+            ret = {'src': warp_src, 'dst': warp_dst}
+            m = np.identity(3)
+        return ret, m
+
     def _sourceBoundingBox(self, source, width, height):
         """
         Given a source with a possible transform and an image width and height,
@@ -660,36 +701,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         m[1][1] = pos.get('s22', 1) * pos.get('scale', 1)
         m[1][2] = pos.get('y', 0)
         if 'warp' in pos and skimage_transform is not None:
-            warp = pos.get('warp')
-            warp_src = warp.get('src')
-            warp_dst = warp.get('dst')
-            if isinstance(warp_src, dict):
-                warp_src = list(warp_src.values())
-            if isinstance(warp_dst, dict):
-                warp_dst = list(warp_dst.values())
-            warp_src = np.array(warp_src or []).astype(float)
-            warp_dst = np.array(warp_dst or []).astype(float)
-            if warp_src.shape != warp_dst.shape:
-                msg = (
-                    'Arrays for warp src and warp dst do not have the same shape; '
-                    'unexpected warping may occur.'
-                )
-                warnings.warn(msg, stacklevel=2)
-            warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
-            warp_dst = warp_dst[:warp_src.shape[0], :]
-            if warp_src.shape[0] < 1:
-                pass
-            elif warp_src.shape[0] == 1:
-                m[0][2] += warp_dst[0][0] - warp_src[0][0]
-                m[1][2] += warp_dst[0][1] - warp_src[0][1]
-            elif warp_src.shape[0] <= 3:
-                transformer = skimage_transform.AffineTransform()
-                transformer.estimate(warp_src, warp_dst)
-                m = np.dot(transformer.params, m)
-            else:
-                warp_dst = np.dot(m, np.hstack([warp_dst, np.ones((len(warp_dst), 1))]).T).T[:, :2]
-                bbox['warp'] = {'src': warp_src, 'dst': warp_dst}
-                m = np.identity(3)
+            bbox['warp'], m = self._getWarp(pos.get('warp'), m)
         if not np.array_equal(m, np.identity(3)):
             bbox['transform'] = m
             try:
@@ -697,11 +709,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except np.linalg.LinAlgError:
                 msg = 'The position for a source is not invertable (%r)'
                 raise TileSourceError(msg, pos)
-        if 'warp' not in bbox:
+        warp = bbox.get('warp')
+        if warp is None:
             transcorners = np.dot(m, corners.T)
         elif skimage_transform is not None:
             transformer = skimage_transform.ThinPlateSplineTransform()
-            transformer.estimate(warp_src, warp_dst)
+            transformer.estimate(warp.get('src'), warp.get('dst'))
             # We might want to adjust the number of points based on some
             # criteria such as source image size or number of warp points
             corners = self._perimeterPoints(x0, y0, x1, y1, 8)
