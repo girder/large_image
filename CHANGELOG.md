@@ -2,9 +2,14 @@
 
 ## 1.33.0
 
+### Features
+
+- Multi-source Thin Plate Spline Warping ([#1947](../../pull/1947))
+
 ### Improvements
 
 - Improve reading certain tiles via tiff source ([#1946](../../pull/1946))
+- Clearer error messages on jsonschema issues in the multi source ([#1951](../../pull/1951))
 
 ### Changes
 
@@ -40,7 +45,7 @@
 
 ### Improvements
 
-- Clearer error messages on bad annotations and don't keep the bad file ([#1922](../../pull/1922))
+- Clearer error messages on bad annotations and don't keep the bad file ([#1923](../../pull/1923))
 - Annotation list checkboxes ([#1884](../../pull/1884))
 - The frame-viewer histogram widget will only be visible if it can be used ([#1924](../../pull/1924))
 - Add the dicom mime-type to the openslide source ([#1925](../../pull/1925))
