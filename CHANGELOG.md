@@ -17,6 +17,10 @@
 - Ensure a valid gdal version ([#1945](../../pull/1945))
 - Drop support for Python 3.8 ([#1950](../../pull/1950))
 
+### Bug Fixes
+
+- Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
+
 ## 1.32.11
 
 ### Improvements
