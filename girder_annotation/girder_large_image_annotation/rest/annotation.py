@@ -409,7 +409,7 @@ class AnnotationResource(Resource):
         if 'empty' in elementdict:
             elementdict.pop('empty')
             for el in elements:
-                elementdict[el['id']] = el
+                elementdict[str(el['id'])] = el
         if '/' in elpath:
             return self._patchEntry(elementdict, elpath, op, value, fullpath)
         elid = elpath.split('/', 1)[0].lower()
