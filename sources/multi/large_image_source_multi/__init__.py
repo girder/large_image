@@ -6,6 +6,7 @@ import math
 import os
 import re
 import threading
+import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 from pathlib import Path
@@ -28,6 +29,7 @@ except PackageNotFoundError:
 
 jsonschema = None
 _validator = None
+skimage_transform = None
 
 
 def _lazyImport():
@@ -44,6 +46,20 @@ def _lazyImport():
             _validator = jsonschema.Draft6Validator(MultiSourceSchema)
         except ImportError:
             msg = 'jsonschema module not found.'
+            raise TileSourceError(msg)
+
+
+def _lazyImportSkimageTransform():
+    """
+    Import the skimage.transform module. This is only needed when a TPS warp is used.
+    """
+    global skimage_transform
+
+    if skimage_transform is None:
+        try:
+            import skimage.transform as skimage_transform
+        except ImportError:
+            msg = 'scikit-image transform module not found.'
             raise TileSourceError(msg)
 
 
@@ -269,6 +285,54 @@ SourceEntrySchema = {
                     },
                     # TODO: Add polygon option
                     # TODO: Add postTransform option
+                },
+                'warp': {
+                    'description':
+                        'An object describing a series of landmarks which have both '
+                        'a source location and a destination location. These sets of points '
+                        'define a warp (thin plate spline or affine transform) that will '
+                        'be applied to the source image.',
+                    'type': 'object',
+                    'properties': {
+                        'src': {
+                            'description':
+                                'The set of source locations for landmarks defining a warp. '
+                                'This can be described by a list of [x, y] points or a mapping of '
+                                'unique marker IDs to [x, y] points.',
+                            'type': ['array', 'object'],
+                            'items': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                            'additionalProperties': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                        },
+                        'dst': {
+                            'description':
+                                'The set of destination locations for landmarks defining a warp. '
+                                'This can be described by a list of [x, y] points or a mapping of '
+                                'unique marker IDs to [x, y] points.',
+                            'type': ['array', 'object'],
+                            'items': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                            'additionalProperties': {
+                                'type': 'array',
+                                'items': {'type': 'number'},
+                                'minItems': 2,
+                                'maxItems': 2,
+                            },
+                        },
+                    },
                 },
                 'scale': {
                     'description':
@@ -580,6 +644,62 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 source['path'] = source['path'].resolve(False)
         return sources
 
+    def _getWarp(self, warp, m):
+        """
+        Preprocess a warp specification and transformation matrix prior to applying the warp.
+
+        :param warp: A dictionary with a warp specification,
+            adhering to the schema for ``MultiSource.SourceEntry.position.warp``.
+        :param m: An ndarray representing a transformation matrix,
+            that may be modified according to the warp specification.
+        """
+        ret = None
+        warp_src = warp.get('src')
+        warp_dst = warp.get('dst')
+        if isinstance(warp_src, dict) and isinstance(warp_dst, dict):
+            src_key_set = set(warp_src.keys())
+            dst_key_set = set(warp_dst.keys())
+            keys = list(src_key_set & dst_key_set)
+            warp_src = [warp_src[key] for key in keys]
+            warp_dst = [warp_dst[key] for key in keys]
+            unused = (src_key_set | dst_key_set) - set(keys)
+            if len(unused):
+                msg = (
+                    'The following keys did not have a value in both src and dst, '
+                    f'so they were dropped: {unused}.'
+                )
+                warnings.warn(msg, stacklevel=2)
+        elif isinstance(warp_src, list) and isinstance(warp_dst, list):
+            pass
+        else:
+            msg = 'warp src and warp dst must either be both dicts or both lists.'
+            raise TileSourceError(msg)
+        if len(warp_src) != len(warp_dst):
+            msg = 'warp src and warp dst must have the same number of points.'
+            raise TileSourceError(msg)
+        if len(warp_src) < 1:
+            msg = 'warp src and warp dst must have at least one point.'
+            raise TileSourceError(msg)
+
+        warp_src = np.array(warp_src or []).astype(float)
+        warp_dst = np.array(warp_dst or []).astype(float)
+        warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
+        warp_dst = warp_dst[:warp_src.shape[0], :]
+        if warp_src.shape[0] < 1:
+            pass
+        elif warp_src.shape[0] == 1:
+            m[0][2] += warp_dst[0][0] - warp_src[0][0]
+            m[1][2] += warp_dst[0][1] - warp_src[0][1]
+        elif warp_src.shape[0] <= 3:
+            transformer = skimage_transform.AffineTransform()
+            transformer.estimate(warp_src, warp_dst)
+            m = np.dot(transformer.params, m)
+        else:
+            warp_dst = np.dot(m, np.hstack([warp_dst, np.ones((len(warp_dst), 1))]).T).T[:, :2]
+            ret = {'src': warp_src, 'dst': warp_dst}
+            m = np.identity(3)
+        return ret, m
+
     def _sourceBoundingBox(self, source, width, height):
         """
         Given a source with a possible transform and an image width and height,
@@ -597,6 +717,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         bbox = {'left': 0, 'top': 0, 'right': width, 'bottom': height}
         if not pos:
             return bbox
+        if 'warp' in pos:
+            _lazyImportSkimageTransform()
         x0, y0, x1, y1 = 0, 0, width, height
         if 'crop' in pos:
             x0 = min(max(pos['crop'].get('left', x0), 0), width)
@@ -612,6 +734,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         m[1][0] = pos.get('s21', 0) * pos.get('scale', 1)
         m[1][1] = pos.get('s22', 1) * pos.get('scale', 1)
         m[1][2] = pos.get('y', 0)
+        if 'warp' in pos and skimage_transform is not None:
+            bbox['warp'], m = self._getWarp(pos.get('warp'), m)
         if not np.array_equal(m, np.identity(3)):
             bbox['transform'] = m
             try:
@@ -619,11 +743,23 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except np.linalg.LinAlgError:
                 msg = 'The position for a source is not invertable (%r)'
                 raise TileSourceError(msg, pos)
-        transcorners = np.dot(m, corners.T)
+        warp = bbox.get('warp')
+        if warp is None:
+            transcorners = np.dot(m, corners.T)
+        elif skimage_transform is not None:
+            transformer = skimage_transform.ThinPlateSplineTransform()
+            transformer.estimate(warp.get('src'), warp.get('dst'))
+            # We might want to adjust the number of points based on some
+            # criteria such as source image size or number of warp points
+            corners = self._perimeterPoints(x0, y0, x1, y1, 8)
+            transcorners = transformer(corners).T
         bbox['left'] = min(transcorners[0])
         bbox['top'] = min(transcorners[1])
         bbox['right'] = max(transcorners[0])
         bbox['bottom'] = max(transcorners[1])
+        # TODO: Maybe inflate this a bit for warp because of edge effects?
+        # That is, it can warp outside of the specified box because we don't
+        # have infinite perimeter sampling
         return bbox
 
     def _axisKey(self, source, value, key):
@@ -1044,8 +1180,34 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             base[y:y + tile.shape[0], x:x + tile.shape[1], :] = tile
         return base
 
-    def _getTransformedTile(self, ts, transform, corners, scale, frame,
-                            crop=None, firstMerge=False):
+    def _perimeterPoints(self, x0, y0, x1, y1, sample):
+        return np.vstack([
+            np.column_stack([np.linspace(x0, x1, sample, endpoint=False), np.full(sample, y0)]),
+            np.column_stack([np.full(sample, x1), np.linspace(y0, y1, sample, endpoint=False)]),
+            np.column_stack([np.linspace(x1, x0, sample, endpoint=False), np.full(sample, y1)]),
+            np.column_stack([np.full(sample, x0), np.linspace(y1, y0, sample, endpoint=False)]),
+        ])
+
+    def _smallestSpacingRatio(self, srcpts, destpts):
+        """
+        Find the smallest ratio of the distance between two adjacent source
+        perimeter points (srccorners) and two destination perimeter points
+
+        :param srcpts: an ndarray of points that correspond with the
+            destination points.
+        :param dstpts: an ndarray of corresponding points.
+        :returns: the minimum ratio of the distance between a source section
+            and a destination section.
+        """
+        srcdist = np.linalg.norm(srcpts - np.roll(srcpts, 1, axis=0), axis=1)
+        destdist = np.linalg.norm(destpts - np.roll(destpts, 1, axis=0), axis=1)
+        if np.all(destdist == 0):
+            return 1
+        minratio = np.min(srcdist[destdist != 0] / destdist[destdist != 0])
+        return minratio or 1
+
+    def _getTransformedTile(self, ts, transform, corners, scale, frame,  # noqa
+                            warp=None, crop=None, firstMerge=False):
         """
         Determine where the target tile's corners are located on the source.
         Fetch that so that we have at least sqrt(2) more resolution, then use
@@ -1059,6 +1221,11 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             corner 0 must be the upper left, 2 must be the lower right.
         :param scale: scaling factor from full res to the target resolution.
         :param frame: frame number of the source image.
+        :param warp: an optional dictionary to specify a thin plate spline
+            transformation to apply to the source image. This dictionary must
+            contain keys 'src' and 'dst', each with a list of [x, y] points.
+            The length of the 'src' list of points must equal the length of the
+            'dst' list of points (both must have at least 3 points).
         :param crop: an optional dictionary to crop the source image in full
             resolution, untransformed coordinates.  This may contain left, top,
             right, and bottom values in pixels.
@@ -1068,30 +1235,52 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         :returns: a numpy array tile or None, x, y coordinates within the
             target tile for the placement of the numpy tile array.
         """
-        try:
-            import skimage.transform
-        except ImportError:
-            msg = 'scikit-image is required for affine transforms.'
-            raise TileSourceError(msg)
         # From full res source to full res destination
         transform = transform.copy() if transform is not None else np.identity(3)
+        warp_src = warp_dst = None
+        _lazyImportSkimageTransform()
+        if warp is not None:
+            warp_src = warp['src'].copy()
+            warp_dst = warp['dst'].copy()
         # Scale dest corners to actual size; adjust transform for the same
         corners = np.array(corners)
         corners[:, :2] //= scale
-        transform[:2, :] /= scale
         # Offset so our target is the actual destination array we use
-        transform[0][2] -= corners[0][0]
-        transform[1][2] -= corners[0][1]
+        if warp is None:
+            transform[:2, :] /= scale
+            transform[0][2] -= corners[0][0]
+            transform[1][2] -= corners[0][1]
+        else:
+            warp_dst /= scale
+            warp_dst[:, 0] -= corners[0][0]
+            warp_dst[:, 1] -= corners[0][1]
         corners[:, :2] -= corners[0, :2]
         outw, outh = corners[2][0], corners[2][1]
         if not outh or not outw:
             return None, 0, 0
-        srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
+        if warp is None:
+            dstcorners = corners
+            srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
+        else:
+            transformer = skimage_transform.ThinPlateSplineTransform()
+            transformer.estimate(warp_dst, warp_src)
+            # Is there any way to be smarter about the sampling?
+            dstcorners = self._perimeterPoints(0, 0, outw, outh, 8)
+            srccorners = transformer(dstcorners)
         minx = min(c[0] for c in srccorners)
         maxx = max(c[0] for c in srccorners)
         miny = min(c[1] for c in srccorners)
         maxy = max(c[1] for c in srccorners)
-        srcscale = max((maxx - minx) / outw, (maxy - miny) / outh)
+        if warp is None:
+            srcscale = max((maxx - minx) / outw, (maxy - miny) / outh)
+        else:
+            # Use the half spacing for better interpolation.  If the warped
+            # image were uniform, this could be a factor of sqrt(2), since the
+            # image could be rotated and we might need to interpolate from
+            # that; using a bigger factor can ensure we have enough pixels for
+            # warps that are no more than another factor of sqrt(2) in
+            # variation from the sampled perimeter.
+            srcscale = self._smallestSpacingRatio(srccorners, dstcorners) / 2
         # we only need every 1/srcscale pixel.
         srcscale = int(2 ** math.log2(max(1, srcscale)))
         # Pad to reduce edge effects at tile boundaries
@@ -1123,54 +1312,68 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             [region['right'] // srcscale, region['top'] // srcscale, 1],
             [region['right'] // srcscale, region['bottom'] // srcscale, 1],
             [region['left'] // srcscale, region['bottom'] // srcscale, 1]], dtype=float)
-        # adjust our transform if we took a low res version of the source
-        transform[:2, :2] *= srcscale
-        # Find where the source corners land on the destination.
-        preshiftcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        regioncorners[:, :2] -= regioncorners[0, :2]
-        destcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        offsetx, offsety = None, None
-        for idx in range(4):
-            if offsetx is None or destcorners[idx][0] < offsetx:
-                x = preshiftcorners[idx][0]
-                offsetx = destcorners[idx][0] - (x - math.floor(x))
-            if offsety is None or destcorners[idx][1] < offsety:
-                y = preshiftcorners[idx][1]
-                offsety = destcorners[idx][1] - (y - math.floor(y))
-        transform[0][2] -= offsetx
-        transform[1][2] -= offsety
-        x, y = int(math.floor(x)), int(math.floor(y))
-        # Recompute where the source corners will land
-        destcorners = (np.dot(transform, regioncorners.T).T).tolist()
-        destShape = [
-            max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
-            max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
-        ]
-        if max(0, -x) or max(0, -y):
-            transform[0][2] -= max(0, -x)
-            transform[1][2] -= max(0, -y)
-            destShape[0] -= max(0, -y)
-            destShape[1] -= max(0, -x)
-            x += max(0, -x)
-            y += max(0, -y)
-        destShape = [min(destShape[0], outh - y), min(destShape[1], outw - x)]
-        if destShape[0] <= 0 or destShape[1] <= 0:
-            return None, None, None
+        if warp is None:
+            # adjust our transform if we took a low res version of the source
+            transform[:2, :2] *= srcscale
+        else:
+            warp_src /= srcscale
+            warp_src -= regioncorners[0, :2]
+        if warp is None:
+            # Find where the source corners land on the destination.
+            preshiftcorners = (np.dot(transform, regioncorners.T).T).tolist()
+            regioncorners[:, :2] -= regioncorners[0, :2]
+            destcorners = (np.dot(transform, regioncorners.T).T).tolist()
+            offsetx, offsety = None, None
+            for idx in range(4):
+                if offsetx is None or destcorners[idx][0] < offsetx:
+                    x = preshiftcorners[idx][0]
+                    offsetx = destcorners[idx][0] - (x - math.floor(x))
+                if offsety is None or destcorners[idx][1] < offsety:
+                    y = preshiftcorners[idx][1]
+                    offsety = destcorners[idx][1] - (y - math.floor(y))
+            transform[0][2] -= offsetx
+            transform[1][2] -= offsety
+            x, y = int(math.floor(x)), int(math.floor(y))
+            # Recompute where the source corners will land
+            destcorners = (np.dot(transform, regioncorners.T).T).tolist()
+            destShape = [
+                max(max(math.ceil(c[1]) for c in destcorners), srcImage.shape[0]),
+                max(max(math.ceil(c[0]) for c in destcorners), srcImage.shape[1]),
+            ]
+            if max(0, -x) or max(0, -y):
+                transform[0][2] -= max(0, -x)
+                transform[1][2] -= max(0, -y)
+                destShape[0] -= max(0, -y)
+                destShape[1] -= max(0, -x)
+                x += max(0, -x)
+                y += max(0, -y)
+            destShape = [min(destShape[0], outh - y), min(destShape[1], outw - x)]
+            if destShape[0] <= 0 or destShape[1] <= 0:
+                return None, None, None
+        else:
+            x = y = 0
+            destShape = [outh, outw]
         # Add an alpha band if needed.  This has to be done before the
         # transform if it isn't the first tile, since the unused transformed
         # areas need to have a zero alpha value
         if srcImage.shape[2] in {1, 3}:
             _, srcImage = _makeSameChannelDepth(np.zeros((1, 1, srcImage.shape[2] + 1)), srcImage)
         useNearest = srcImage.shape[2] in {2, 4} and not firstMerge
+
+        if warp is None:
+            transformer = skimage_transform.AffineTransform(np.linalg.inv(transform))
+        else:
+            transformer = skimage_transform.ThinPlateSplineTransform()
+            transformer.estimate(warp_dst, warp_src)
         # skimage.transform.warp is faster and has less artifacts than
         # scipy.ndimage.affine_transform.  It is faster than using cupy's
         # version of scipy's affine_transform when the source and destination
         # images are converted from numpy to cupy and back in this method.
-        destImage = skimage.transform.warp(
+        destImage = skimage_transform.warp(
             # Although using np.float32 could reduce memory use, it doesn't
             # provide any speed improvement
             srcImage.astype(float),
-            skimage.transform.AffineTransform(np.linalg.inv(transform)),
+            transformer,
             order=0 if useNearest else 3,
             output_shape=(destShape[0], destShape[1], srcImage.shape[2]),
         ).astype(srcImage.dtype)
@@ -1200,13 +1403,14 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             return tile
         ts = self._openSource(source, sourceEntry['kwargs'])
         transform = bbox.get('transform')
+        warp = bbox.get('warp')
         x = y = 0
         # If there is no transform or the diagonals are positive and there is
         # no sheer and integer pixel alignment, use getRegion with an
         # appropriate size
         scaleX = transform[0][0] if transform is not None else 1
         scaleY = transform[1][1] if transform is not None else 1
-        if ((transform is None or (
+        if (warp is None and (transform is None or (
                 transform[0][0] > 0 and transform[0][1] == 0 and
                 transform[1][0] == 0 and transform[1][1] > 0 and
                 transform[0][2] % scaleX == 0 and transform[1][2] % scaleY == 0)) and
@@ -1247,7 +1451,7 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 resample=None, format=TILE_FORMAT_NUMPY)
         else:
             sourceTile, x, y = self._getTransformedTile(
-                ts, transform, corners, scale, sourceEntry.get('frame', 0),
+                ts, transform, corners, scale, sourceEntry.get('frame', 0), warp,
                 source.get('position', {}).get('crop'),
                 firstMerge=tile is None)
         if sourceTile is not None and all(dim > 0 for dim in sourceTile.shape):
