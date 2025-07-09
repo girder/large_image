@@ -53,6 +53,7 @@ class AnnotationResource(Resource):
         self.route('GET', (':id',), self.getAnnotation)
         self.route('GET', (':id', ':format'), self.getAnnotationWithFormat)
         self.route('PUT', (':id',), self.updateAnnotation)
+        self.route('PATCH', (':id',), self.patchAnnotation)
         self.route('DELETE', (':id',), self.deleteAnnotation)
         self.route('GET', (':id', 'access'), self.getAnnotationAccess)
         self.route('PUT', (':id', 'access'), self.updateAnnotationAccess)
@@ -247,6 +248,14 @@ class AnnotationResource(Resource):
                 # use a json encoder in the most compact form.
                 if isinstance(element, dict):
                     element['id'] = str(element['id'])
+                    if 'points' in element:
+                        element['points'] = [
+                            [int(x) if isinstance(x, float) and x.is_integer() else x for x in sub]
+                            for sub in element['points']]
+                    if 'holes' in element:
+                        element['holes'] = [[
+                            [int(x) if isinstance(x, float) and x.is_integer() else x for x in sub]
+                            for sub in hole] for hole in element['holes']]
                 else:
                     element = struct.pack(
                         '>QL', int(element[0][:16], 16), int(element[0][16:24], 16),
@@ -255,7 +264,7 @@ class AnnotationResource(Resource):
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))
                 # Collect multiple elements before emitting them.  This
-                # balances using less memoryand streaming right away with
+                # balances using less memory and streaming right away with
                 # efficiency in dumping the json.  Experimentally, 100 is
                 # significantly faster than 10 and not much slower than 1000.
                 collect.append(element)
@@ -393,6 +402,130 @@ class AnnotationResource(Resource):
         if not returnElements and 'elements' in annotation['annotation']:
             del annotation['annotation']['elements']
         return annotation
+
+    def _patchElement(self, elements, fullpath, op, value, elementdict):
+        logger.debug('Patch element %s %s', op, fullpath)
+        elpath = fullpath.split(':', 1)[1]
+        if 'empty' in elementdict:
+            elementdict.pop('empty')
+            for el in elements:
+                elementdict[str(el['id'])] = el
+        if '/' in elpath:
+            return self._patchEntry(elementdict, elpath, op, value, fullpath)
+        elid = elpath.split('/', 1)[0].lower()
+        if op == 'add' and elid in elementdict:
+            msg = f'Cannot add element {elid} as it already exists'
+            raise ValidationException(msg)
+        if op == 'remove':
+            elementdict.pop(elid, None)
+        else:
+            value['id'] = elid
+            elementdict[elid] = value
+
+    def _patchEntry(self, record, path, op, value, fullpath=None):
+        logger.debug('Patch entry %s %s', op, path)
+        if fullpath is None:
+            fullpath = path
+        basepath, key = path.split('/', 1)
+        if isinstance(record, list):
+            record = record[int(basepath)]
+        else:
+            record = record[basepath]
+        if '/' in key:
+            return self._patchEntry(record, key, op, value, fullpath)
+        if isinstance(record, list):
+            idx = int(key)
+            if op == 'remove':
+                record[idx:idx + 1] = []
+            elif idx == len(record):
+                record.append(value)
+            elif idx < len(record) and op == 'replace':
+                record[idx] = value
+            else:
+                msg = f'Cannot {op} {fullpath}'
+                raise ValidationException(msg)
+        else:
+            if op != 'remove':
+                if op == 'add' and record[basepath][key]:
+                    msg = f'Cannot add {fullpath} as it already exists'
+                    raise ValidationException(msg)
+                record[key] = value
+            else:
+                record.pop(key, None)
+
+    def _patchAnnotation(self, annotation, patchlist):
+        """
+        Apply a patch list to an annotation.
+
+        :param annotation: an annotation doc.
+        :param patchlist: a patch list.
+        """
+        logger.debug('Patch annotation %r', annotation['_id'])
+        elementdict = {'empty': True}
+        for patch in patchlist:
+            if 'op' not in patch or 'path' not in patch:
+                msg = 'patch missing op or path'
+                raise ValidationException(msg)
+            op = patch['op']
+            path = patch['path'].strip('/')
+            value = patch.get('value')
+            if op not in {'add', 'replace', 'remove'} or value is None and op != 'remove':
+                msg = 'patch has invalid op'
+                raise ValidationException(msg)
+            try:
+                if path.startswith('elements/id:'):
+                    self._patchElement(
+                        annotation['annotation']['elements'], path, op, value, elementdict)
+                elif '/' not in path and path != 'elements':
+                    if op != 'remove':
+                        if op == 'add' and annotation['annotation'][path]:
+                            msg = f'Cannot add {path} as it already exists'
+                            raise ValidationException(msg)
+                        annotation['annotation'][path] = value
+                    else:
+                        annotation['annotation'].pop(path, None)
+                elif not path.startswith('elements/'):
+                    self._patchEntry(annotation['annotation'], path, op, value)
+                else:
+                    msg = f'patch path {path} is not handled'
+                    raise ValidationException(msg)
+            except (KeyError, ValueError, TypeError):
+                msg = f'patch path {path} does not exist'
+                raise ValidationException(msg)
+        if 'empty' not in elementdict:
+            annotation['annotation']['elements'] = list(elementdict.values())
+        return annotation
+
+    @describeRoute(
+        Description('Patch an annotation or its elements.')
+        .param('id', 'The ID of the annotation.', paramType='path')
+        .param('body', 'A JSON object containing the annotation patch.  This '
+               'is a list.  Each entry is an operation that contains "op", '
+               '"path", and possibly "value".  "op" can be any of "replace", '
+               '"add", or "remove".  "path" is either a root property (e.g., '
+               '"name"), or "elements/id:{element id}".  Any path to a '
+               'dictionary or list can be extended via .../(key or index) '
+               'components.  Add and replace operations must include the '
+               'value.',
+               paramType='body', required=True)
+        # This isn't an error, but girder's swagger wrapper only exposes this
+        # method to add to possible responses
+        .errorResponse('No Content; the annotation was successfully updated '
+                       'but is not returned', 204)
+        .errorResponse('Write access was denied for the item.', 403)
+        .errorResponse('Invalid JSON passed in request body.')
+        .errorResponse("Validation Error: JSON doesn't follow schema."),
+    )
+    @access.user(scope=TokenScope.DATA_WRITE)
+    @loadmodel(model='annotation', plugin='large_image', level=AccessType.WRITE)
+    def patchAnnotation(self, annotation, params):
+        setResponseTimeLimit(86400)
+        user = self.getCurrentUser()
+        patchlist = self.getBodyJson()
+        annotation = self._patchAnnotation(annotation, patchlist)
+        annotation = Annotation().updateAnnotation(annotation, updateUser=user)
+        cherrypy.response.status = 204
+        return ''
 
     @describeRoute(
         Description('Delete an annotation.')
@@ -695,8 +828,10 @@ class AnnotationResource(Resource):
             sources=sources, compute=compute, uuid=uuid)
         return data.data(keys, requiredKeys)
 
-    def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
-                             sortDir=False, count=False):
+    def getFolderAnnotations(
+            self, id, recurse, user, limit=False, offset=False, sort=False,
+            sortDir=False, count=False):
+        from girder_large_image.models.image_item import ImageItem
 
         accessPipeline = [
             {'$match': {
@@ -735,28 +870,58 @@ class AnnotationResource(Resource):
             {'$unwind': {'path': '$__children'}},
             {'$replaceRoot': {'newRoot': '$__children'}},
         ] if recurse else [{'$match': {'_id': ObjectId(id)}}]
+        if recurse and ImageItem().checkForDocumentDB():
+            queue = [ObjectId(id)]
+            seen = {ObjectId(id)}
+            while queue:
+                current = queue.pop(0)
+                children = Folder().collection.find({'parentId': current}, {'_id': 1})
+                for child in children:
+                    cid = child['_id']
+                    if cid not in seen:
+                        seen.add(cid)
+                        queue.append(cid)
+                        if len(seen) > 10000:
+                            msg = 'This query is too complex for DocumentDB.'
+                            raise Exception(msg)
+            recursivePipeline = [{'$match': {'_id': {'$in': list(seen)}}}]
 
         # We are only finding anntoations that we can change the permissions
         # on.  If we wanted to expose annotations based on a permissions level,
         # we need to add a folder access pipeline immediately after the
         # recursivePipleine that for write and above would include the
         # ANNOTATION_ACCSESS_FLAG
-        pipeline = recursivePipeline + [
-            {'$lookup': {
-                'from': 'item',
-                # We have to use a pipeline to use a projection to reduce the
-                # data volume, so instead of specifying localField and
-                # foreignField, we set the localField to a variable, then match
-                # it in a pipeline and project to exclude everything but id.
-                # 'localField': '_id',
-                # 'foreignField': 'folderId',
-                'let': {'fid': '$_id'},
-                'pipeline': [
-                    {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
-                    {'$project': {'_id': 1}},
-                ],
-                'as': '__items',
-            }},
+        lookupSteps = [{'$lookup': {
+            'from': 'item',
+            # We have to use a pipeline to use a projection to reduce the
+            # data volume, so instead of specifying localField and
+            # foreignField, we set the localField to a variable, then match
+            # it in a pipeline and project to exclude everything but id.
+            # 'localField': '_id',
+            # 'foreignField': 'folderId',
+            'let': {'fid': '$_id'},
+            'pipeline': [
+                {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
+                {'$project': {'_id': 1}},
+            ],
+            'as': '__items',
+        }}]
+        if ImageItem().checkForDocumentDB():
+            lookupSteps = [{
+                '$lookup': {
+                    'from': 'item',
+                    'localField': '_id',
+                    'foreignField': 'folderId',
+                    'as': '__items',
+                },
+            }, {
+                '$addFields': {'__items': {'$map': {
+                    'input': '$__items',
+                    'as': 'item',
+                    'in': {'_id': '$$item._id'},
+                }}},
+            }]
+        pipeline = recursivePipeline + lookupSteps + [
             {'$lookup': {
                 'from': 'annotation',
                 'localField': '__items._id',
@@ -915,11 +1080,16 @@ class AnnotationResource(Resource):
 
     @access.public(scope=TokenScope.DATA_READ)
     @autoDescribeRoute(
-        Description('Get annotation counts for a list of items.')
+        Description(
+            'Get annotation counts for a list of items.  If using actual a '
+            'database other than DocumentDB, this also indicates if items are '
+            'referenced as annotations.')
         .param('items', 'A comma-separated list of item ids.')
         .errorResponse(),
     )
     def getItemListAnnotationCounts(self, items):
+        from girder_large_image.models.image_item import ImageItem
+
         user = self.getCurrentUser()
         results = {}
         for itemId in items.split(','):
@@ -928,10 +1098,11 @@ class AnnotationResource(Resource):
                 {'_active': {'$ne': False}, 'itemId': item['_id']},
                 user=self.getCurrentUser(), level=AccessType.READ, limit=-1)
             results[itemId] = annotations.count()
-            if Annotationelement().findOne({'element.girderId': itemId}):
-                if 'referenced' not in results:
-                    results['referenced'] = {}
-                results['referenced'][itemId] = True
+            if not ImageItem().checkForDocumentDB():
+                if Annotationelement().findOne({'element.girderId': itemId}):
+                    if 'referenced' not in results:
+                        results['referenced'] = {}
+                    results['referenced'][itemId] = True
         return results
 
     @access.user(scope=TokenScope.DATA_WRITE)
