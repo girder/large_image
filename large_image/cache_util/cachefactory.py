@@ -17,7 +17,7 @@
 import math
 import threading
 from importlib.metadata import entry_points
-from typing import Dict, Optional, Tuple, Type, cast
+from typing import Optional, cast
 
 import cachetools
 
@@ -28,12 +28,12 @@ from .rediscache import RedisCache
 
 # DO NOT MANUALLY ADD ANYTHING TO `_availableCaches`
 #  use entrypoints and let loadCaches fill in `_availableCaches`
-_availableCaches: Dict[str, Type[cachetools.Cache]] = {}
+_availableCaches: dict[str, type[cachetools.Cache]] = {}
 
 
 def loadCaches(
         entryPointName: str = 'large_image.cache',
-        sourceDict: Dict[str, Type[cachetools.Cache]] = _availableCaches) -> None:
+        sourceDict: dict[str, type[cachetools.Cache]] = _availableCaches) -> None:
     """
     Load all caches from entrypoints and add them to the
     availableCaches dictionary.
@@ -95,7 +95,7 @@ def pickAvailableCache(
     return numItems
 
 
-def getFirstAvailableCache() -> Tuple[Optional[cachetools.Cache], Optional[threading.Lock]]:
+def getFirstAvailableCache() -> tuple[Optional[cachetools.Cache], Optional[threading.Lock]]:
     cacheBackend = config.getConfig('cache_backend', None)
     if cacheBackend is not None:
         msg = 'cache_backend already set'
@@ -105,7 +105,7 @@ def getFirstAvailableCache() -> Tuple[Optional[cachetools.Cache], Optional[threa
     for cacheBackend in _availableCaches:
         try:
             cache, cacheLock = cast(
-                Tuple[cachetools.Cache, Optional[threading.Lock]],
+                tuple[cachetools.Cache, Optional[threading.Lock]],
                 _availableCaches[cacheBackend].getCache())  # type: ignore
             break
         except TileCacheError:
@@ -145,7 +145,7 @@ class CacheFactory:
     def getCache(
             self, numItems: Optional[int] = None,
             cacheName: Optional[str] = None,
-            inProcess: bool = False) -> Tuple[cachetools.Cache, Optional[threading.Lock]]:
+            inProcess: bool = False) -> tuple[cachetools.Cache, Optional[threading.Lock]]:
         loadCaches()
 
         # Default to `python` cache for inProcess

@@ -796,7 +796,10 @@ class TiledTiffDirectory:
                 } and (
                     self._tiffInfo.get('compression') != libtiff_ctypes.COMPRESSION_JPEG or
                     self._tiffInfo.get('photometric') != libtiff_ctypes.PHOTOMETRIC_YCBCR))):
-            return self._getUncompressedTile(tileNum)
+            try:
+                return self._getUncompressedTile(tileNum)
+            except Exception:
+                pass
 
         imageBuffer = io.BytesIO()
 

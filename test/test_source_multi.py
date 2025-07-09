@@ -368,3 +368,122 @@ def testAxesToFrameAndFrameToAxes():
             'sizeX': 1000, 'sizeY': 1000, 'frames': 60}}]}
     source = large_image_source_multi.open(json.dumps(asAxesSource2))
     assert source.frameToAxes(0) == {'frame': 0}
+
+
+def testThinPlateSpline():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        path=image_path,
+        position=dict(
+            x=0,
+            y=0,
+            warp=dict(
+                src=dict(
+                    a=[1, 1],
+                    b=[7, 1],
+                    c=[7, 7],
+                    d=[1, 7],
+                ),
+                dst=dict(
+                    a=[3, 2],
+                    b=[5, 2],
+                    c=[5, 6],
+                    d=[2, 3],
+                ),
+            ),
+        ),
+    )])
+    source = large_image_source_multi.open(json.dumps(spec))
+    tile = source.getTile(x=0, y=0, z=0, numpyAllowed=True)
+    assert tile.shape == (64, 64, 2)
+
+    # crop transparent rows/cols
+    cropped = tile[~np.all(tile[:, :, 1] == 0, axis=1)]
+    cropped = cropped[:, ~np.all(cropped[:, :, 1] == 0, axis=0)]
+
+    assert cropped.shape == (45, 30, 2)
+
+
+def testThinPlateSplineSingleMarker():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        # apply translation through warping
+        path=image_path,
+        position=dict(
+            x=0,
+            y=0,
+            warp=dict(src=[[0, 0]], dst=[[10, 10]]),
+        ),
+    )], tileWidth=74, tileHeight=74)
+    source = large_image_source_multi.open(json.dumps(spec))
+    tile = source.getTile(x=0, y=0, z=0, numpyAllowed=True)
+
+    assert tile.shape == (74, 74, 1)
+    assert np.all(tile[0:10, :, :] == 0)
+    assert np.all(tile[:, 0:10, :] == 0)
+
+
+def testThinPlateSplineDropUnmatchedKeys():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        path=image_path,
+        position=dict(
+            x=0,
+            y=0,
+            warp=dict(
+                src=dict(
+                    a=[1, 1],
+                    b=[7, 1],
+                    c=[7, 7],
+                    d=[1, 7],
+                ),
+                dst=dict(
+                    a=[3, 2],
+                    c=[5, 6],
+                    d=[2, 3],
+                ),
+            ),
+        ),
+    )])
+    with pytest.warns(match=(
+        "The following keys did not have a value in both src and dst, so they were dropped: {'b'}."
+    )):
+        large_image_source_multi.open(json.dumps(spec))
+
+
+def testThinPlateSplineInvalid():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        path=image_path,
+        position=dict(x=0, y=0),
+    )])
+    spec['sources'][0]['position']['warp'] = dict(
+        src=dict(a=[1, 1]),
+        dst=[[3, 2]],
+    )
+    with pytest.raises(Exception, match=(
+        'warp src and warp dst must either be both dicts or both lists.'
+    )):
+        large_image_source_multi.open(json.dumps(spec))
+
+    spec['sources'][0]['position']['warp'] = dict(
+        src=[],
+        dst=[[3, 2]],
+    )
+    with pytest.raises(Exception, match=(
+        'warp src and warp dst must have the same number of points.'
+    )):
+        large_image_source_multi.open(json.dumps(spec))
+
+    spec['sources'][0]['position']['warp'] = dict(
+        src=[],
+        dst=[],
+    )
+    with pytest.raises(Exception, match=(
+        'warp src and warp dst must have at least one point.'
+    )):
+        large_image_source_multi.open(json.dumps(spec))

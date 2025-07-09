@@ -409,7 +409,7 @@ class AnnotationResource(Resource):
         if 'empty' in elementdict:
             elementdict.pop('empty')
             for el in elements:
-                elementdict[el['id']] = el
+                elementdict[str(el['id'])] = el
         if '/' in elpath:
             return self._patchEntry(elementdict, elpath, op, value, fullpath)
         elid = elpath.split('/', 1)[0].lower()
@@ -1080,23 +1080,68 @@ class AnnotationResource(Resource):
 
     @access.public(scope=TokenScope.DATA_READ)
     @autoDescribeRoute(
-        Description('Get annotation counts for a list of items.')
+        Description(
+            'Get annotation counts for a list of items.  If using actual a '
+            'database other than DocumentDB, this also indicates if items are '
+            'referenced as annotations.')
         .param('items', 'A comma-separated list of item ids.')
         .errorResponse(),
     )
     def getItemListAnnotationCounts(self, items):
+        from girder_large_image.models.image_item import ImageItem
+
         user = self.getCurrentUser()
         results = {}
-        for itemId in items.split(','):
-            item = Item().load(itemId, level=AccessType.READ, user=user)
-            annotations = Annotation().findWithPermissions(
-                {'_active': {'$ne': False}, 'itemId': item['_id']},
-                user=self.getCurrentUser(), level=AccessType.READ, limit=-1)
-            results[itemId] = annotations.count()
-            if Annotationelement().findOne({'element.girderId': itemId}):
+        oids = [ObjectId(itemId.strip()) for itemId in items.split(',')]
+        pipeline = [{
+            '$match': {'$and': [
+                {'_id': {'$in': oids}},
+                Item().permissionClauses(user, level=AccessType.READ),
+            ]},
+        }, {
+            '$lookup': {
+                'from': 'annotation',
+                'let': {'itemId': '$_id'},
+                'pipeline': [{'$match': {'$expr': {'$and': [
+                    {'$eq': ['$itemId', '$$itemId']},
+                    {'$ne': ['$_active', False]},
+                    Annotation().permissionClauses(user, level=AccessType.READ),
+                ]}}}],
+                'as': 'annotations',
+            },
+        }, {
+            '$lookup': {
+                'from': 'annotationelement',
+                'let': {'itemId': '$_id'},
+                'pipeline': [{
+                    '$match': {'$expr': {
+                        '$eq': ['$element.girderId', '$$itemId'],
+                    }},
+                }, {
+                    '$limit': 1,
+                }],
+                'as': 'used',
+            },
+        }, {
+            '$project': {
+                '_id': 1,
+                'annotationCount': {'$size': '$annotations'},
+                'used': {'$gt': [{'$size': '$used'}, 0]},
+            },
+        }]
+        if ImageItem().checkForDocumentDB():
+            pipeline[-2:] = [{
+                '$project': {
+                    '_id': 1,
+                    'annotationCount': {'$size': '$annotations'},
+                },
+            }]
+        for record in Item().collection.aggregate(pipeline):
+            results[str(record['_id'])] = record['annotationCount']
+            if record.get('used'):
                 if 'referenced' not in results:
                     results['referenced'] = {}
-                results['referenced'][itemId] = True
+                results['referenced'][str(record['_id'])] = True
         return results
 
     @access.user(scope=TokenScope.DATA_WRITE)

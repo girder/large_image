@@ -2,7 +2,7 @@ import functools
 import pickle
 import threading
 import uuid
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import cachetools
 from typing_extensions import ParamSpec
@@ -122,8 +122,8 @@ def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
 
 
 class LruCacheMetaclass(type):
-    namedCaches: Dict[str, Any] = {}
-    classCaches: Dict[type, Any] = {}
+    namedCaches: dict[str, Any] = {}
+    classCaches: dict[type, Any] = {}
 
     def __new__(mcs, name, bases, namespace, **kwargs):
         # Get metaclass parameters by finding and removing them from the class
@@ -260,7 +260,7 @@ class LruCacheMetaclass(type):
         return instance
 
 
-def getTileCache() -> Tuple[cachetools.Cache, Optional[threading.Lock]]:
+def getTileCache() -> tuple[cachetools.Cache, Optional[threading.Lock]]:
     """
     Get the preferred tile cache and lock.
 
