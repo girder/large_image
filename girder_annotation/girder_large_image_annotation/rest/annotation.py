@@ -1092,56 +1092,17 @@ class AnnotationResource(Resource):
 
         user = self.getCurrentUser()
         results = {}
-        oids = [ObjectId(itemId.strip()) for itemId in items.split(',')]
-        pipeline = [{
-            '$match': {'$and': [
-                {'_id': {'$in': oids}},
-                Item().permissionClauses(user, level=AccessType.READ),
-            ]},
-        }, {
-            '$lookup': {
-                'from': 'annotation',
-                'let': {'itemId': '$_id'},
-                'pipeline': [{'$match': {'$expr': {'$and': [
-                    {'$eq': ['$itemId', '$$itemId']},
-                    {'$ne': ['$_active', False]},
-                    Annotation().permissionClauses(user, level=AccessType.READ),
-                ]}}}],
-                'as': 'annotations',
-            },
-        }, {
-            '$lookup': {
-                'from': 'annotationelement',
-                'let': {'itemId': '$_id'},
-                'pipeline': [{
-                    '$match': {'$expr': {
-                        '$eq': ['$element.girderId', '$$itemId'],
-                    }},
-                }, {
-                    '$limit': 1,
-                }],
-                'as': 'used',
-            },
-        }, {
-            '$project': {
-                '_id': 1,
-                'annotationCount': {'$size': '$annotations'},
-                'used': {'$gt': [{'$size': '$used'}, 0]},
-            },
-        }]
-        if ImageItem().checkForDocumentDB():
-            pipeline[-2:] = [{
-                '$project': {
-                    '_id': 1,
-                    'annotationCount': {'$size': '$annotations'},
-                },
-            }]
-        for record in Item().collection.aggregate(pipeline):
-            results[str(record['_id'])] = record['annotationCount']
-            if record.get('used'):
-                if 'referenced' not in results:
-                    results['referenced'] = {}
-                results['referenced'][str(record['_id'])] = True
+        for itemId in items.split(','):
+            item = Item().load(itemId, level=AccessType.READ, user=user)
+            annotations = Annotation().findWithPermissions(
+                {'_active': {'$ne': False}, 'itemId': item['_id']},
+                user=self.getCurrentUser(), level=AccessType.READ, limit=-1)
+            results[itemId] = annotations.count()
+            if not ImageItem().checkForDocumentDB():
+                if Annotationelement().findOne({'element.girderId': itemId}):
+                    if 'referenced' not in results:
+                        results['referenced'] = {}
+                    results['referenced'][itemId] = True
         return results
 
     @access.user(scope=TokenScope.DATA_WRITE)
