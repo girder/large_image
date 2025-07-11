@@ -7,7 +7,7 @@ import functools
 import numpy as np
 
 class SharedNumpyArray:
-    def __init__(self, shape, dtype):
+    def __init__(self, shape: tuple, dtype: np.dtype):
         """Init"""
         self.shape = shape
         self.dtype = np.dtype(dtype)
@@ -18,11 +18,11 @@ class SharedNumpyArray:
         self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
         self.created = True
 
-    def insert(self, arr, i):
+    def insert(self, arr: np.ndarray, i: int):
         """Insert a batch dimension slice."""
         self.buf[i] = arr
 
-    def copy(self, arr):
+    def copy(self, arr: np.ndarray):
         self.shape = arr.shape
         self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
         self.buf[:] = arr[:]
@@ -36,10 +36,10 @@ class SharedNumpyArray:
     # If we want easier interoperability, we could, instead, forward a
     # whitelist of attributes to our underlying np.ndarray object; these could
     # be enumerated and done via __getattribute__
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         return self.buf[idx]
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: np.dtype = None):
         return self.buf.copy().astype(dtype) if dtype is not None else self.buf.copy()
 
     def __getstate__(self):
@@ -50,7 +50,7 @@ class SharedNumpyArray:
         state["shm_name"] = self.shm.name
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: dict):
         state = state.copy()
         shm_name = state.pop("shm_name")
         self.__dict__.update(state)

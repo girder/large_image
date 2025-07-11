@@ -1,16 +1,15 @@
 import math, os, random
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple, Union
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
-from .utils.shared_numpy import SharedNumpyArray
+from .eager_utils.eager_shared_numpy import SharedNumpyArray
 
 import numpy as np
 from PIL import Image
 
 from .. import tilesource
-from .utils.read import gen_read_args_for_tiles, gen_read_args_for_regions
-from .utils.wsi import calculate_slide_dimensions, return_relevant_tile_indexes_for_slide_dim, return_tile_slides_meeting_area_threshold
-from .utils.image import pad_tile, pad_chunk_if_necessary, rgba2rgb
+
+from .eager_utils.eager_image_modifications import pad_tile, pad_chunk_if_necessary, rgba2rgb
 
 class EagerIterator:
     def __init__(
@@ -18,7 +17,7 @@ class EagerIterator:
             source: 'tilesource.TileSource',
             output_mode: str = 'tiles',
             scale_mode: str ='mag',
-            overlap: float = 0,
+            overlap: Union[float, int] = 0,
             mask: np.ndarray | str | os.PathLike = None,
             target_scale: Optional[Tuple[float, float]] | Optional[float] = None,
             tile_size: Optional[Tuple[int, int]] = None,
@@ -87,6 +86,10 @@ class EagerIterator:
             scaling configuration provided.  Center_y, center_x are the center pixel coordinates in the original base image.  Top, bottom, left, and right are the pixel 
             coordinates of the base image.
         """
+        # Import eager_utils here to avoid attempting to load pykdtree when not needed
+        from .eager_utils.eager_read_args import gen_read_args_for_tiles, gen_read_args_for_regions
+        from .eager_utils.eager_wsi_operations import calculate_slide_dimensions, return_relevant_tile_indexes_for_slide_dim, return_tile_slides_meeting_area_threshold
+    
         # Tile source becomes the source for the iterator allowing its options to be used
         self.source = source
 
@@ -123,7 +126,7 @@ class EagerIterator:
             # Use default tile source to determine slide dimensions
             self.slide_dimensions = calculate_slide_dimensions(self.source, scale_mode, target_scale, tile_size)
             if tiles is None:
-                tiles = return_relevant_tile_indexes_for_slide_dim(self.slide_dimensions['tile_target_range_x'], self.slide_dimensions['tile_target_range_y'], overlap)
+                tiles = return_relevant_tile_indexes_for_slide_dim(self.slide_dimensions, overlap)
             if mask is not None:
                 # If mask is a path, check if the path exists, attempt to open the image with PIL and convert to numpy array
                 if isinstance(mask, str) and os.path.exists(mask):
@@ -173,7 +176,7 @@ class EagerIterator:
 
         self._initialize(batch, prefetch)
 
-    def _setup_out_dims(self, slide_dimensions, transformer):
+    def _setup_out_dims(self, slide_dimensions: dict, transformer: callable):
         self.out_dims = [self.batch, slide_dimensions['tile_size'][1], slide_dimensions['tile_size'][0], 3]
         if transformer is not None:
             self._setup_out_dims_for_transformer(self.out_dims, transformer)
@@ -181,7 +184,7 @@ class EagerIterator:
             self.out_dims = [self.out_dims[0], self.out_dims[3], self.out_dims[1], self.out_dims[2]]
 
 
-    def _setup_out_dims_for_transformer(self, out_shape, transformer):
+    def _setup_out_dims_for_transformer(self, out_shape: Union[list, tuple], transformer: callable):
         test_data = np.zeros(out_shape, dtype=self.dtype)
         test_out = transformer(image=test_data)
         self.dtype = test_out['image'].dtype
@@ -189,7 +192,7 @@ class EagerIterator:
         self.transformer = transformer
 
 
-    def _initialize(self, batch, prefetch):
+    def _initialize(self, batch: int, prefetch: int):
         self.prefetch = prefetch
         self.batch = batch
         self.queue = deque([])  # hold futures defining read operations
@@ -208,7 +211,7 @@ class EagerIterator:
 
         # wait on the futures linked to the next batch
         try:
-            futures, tiles, read_kwargs = self.queue.pop()
+            futures, tiles, batch_read_kwargs = self.queue.pop()
             wait(futures, timeout=None, return_when=ALL_COMPLETED)
             self._fill()
         except:
@@ -217,12 +220,37 @@ class EagerIterator:
 
         # last batch may only have partial size
         if self.pos == len(self.read_kwargs) and not len(self.queue):
-            tiles.shape = [len(read_kwargs), tiles.shape[1], tiles.shape[2], tiles.shape[3]]
+            tiles.shape = [len(batch_read_kwargs), tiles.shape[1], tiles.shape[2], tiles.shape[3]]
 
-        return tiles, np.array(read_kwargs)
+        return tiles, self._read_kwargs_to_dict(batch_read_kwargs)
+    
+    def _read_kwargs_to_dict(self, read_kwargs: list):
+        read_kwargs = np.array(read_kwargs)
+
+        return {
+            'format': 'numpy',
+            'gx': read_kwargs[:, 6], # left
+            'gy': read_kwargs[:, 4], # top
+            'level_x': read_kwargs[:, 3],
+            'level_y': read_kwargs[:, 2],
+            'tile_position': {
+                'level_x': read_kwargs[:, 3],
+                'level_y': read_kwargs[:, 2],
+                'base_x': read_kwargs[:, 1],
+                'base_y': read_kwargs[:, 0],
+            },
+            'width': self.slide_dimensions['tile_size'][0], # right - left
+            'height': self.slide_dimensions['tile_size'][1], # bottom - top
+            'level': self.slide_dimensions['level'],
+            'magnification': self.slide_dimensions['target_magnification'],
+            'mm_x': self.slide_dimensions['target_mm_x'],
+            'mm_y': self.slide_dimensions['target_mm_y'],
+            'gwidth': self.slide_dimensions['tile_width_before_scaling'],
+            'gheight': self.slide_dimensions['tile_height_before_scaling'],
+        }
 
     @staticmethod
-    def read(source, dtype, nchw, read_kwargs, sharrs, offset, output_mode, batch, slide_dimensions, transformer, pad_mode, pad_fill_mode):
+    def read(source: 'tilesource.TileSource', dtype: np.dtype, nchw: bool, read_kwargs: list, sharrs: list, offset: int, output_mode: str, batch: int, slide_dimensions: dict, transformer: callable, pad_mode: str, pad_fill_mode: str):
         try:
             # Format arrays of (x_coord, y_coord, y_bottom in org image, y_top in org image, x_left in org image, x_right in org image)
             # read followed by crops
@@ -355,7 +383,7 @@ class EagerIterator:
             print("Failed to read {} with exception e {}".format(e, read_kwargs))
             raise(Exception("Failed to read {} with exception {}".format(read_kwargs, e)))
 
-    def _submitfn(self, read_kwargs, sharrs, offset):
+    def _submitfn(self, read_kwargs: list, sharrs: list, offset: int):
         return self.pool.submit(
             self.read,
             self.source,

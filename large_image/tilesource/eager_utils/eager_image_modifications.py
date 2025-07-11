@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-def padding(array, xx, yy):
+def padding(array: np.ndarray, xx: int, yy: int):
     """
     :param array: numpy array
     :param xx: desired height
@@ -21,7 +21,7 @@ def padding(array, xx, yy):
 
     return np.pad(array, pad_width=((a, aa), (b, bb), (0, 0)), mode='constant')
 
-def rgba2rgb(img_rgba, background=(255, 255, 255)):
+def rgba2rgb(img_rgba: np.ndarray, background: tuple = (255, 255, 255)):
     row, col, ch = img_rgba.shape
 
     if ch == 3:
@@ -42,13 +42,13 @@ def rgba2rgb(img_rgba, background=(255, 255, 255)):
 
     return np.asarray(rgb, dtype=np.uint8)
 
-def pad_color(image, top, bottom, left, right, color):
+def pad_color(image: np.ndarray, top: int, bottom: int, left: int, right: int, color: tuple):
     r = np.pad(image[:,:,0], ((top, bottom), (left, right)), mode='constant', constant_values=color[0])
     g = np.pad(image[:,:,1], ((top, bottom), (left, right)), mode='constant', constant_values=color[1])
     b = np.pad(image[:,:,2], ((top, bottom), (left, right)), mode='constant', constant_values=color[2])
     return np.stack((r, g, b), axis=-1)
 
-def pad_tile(tile, w, h, pad_mode, pad_fill_mode):
+def pad_tile(tile: np.ndarray, w: int, h: int, pad_mode: str, pad_fill_mode: str):
     p_t = 0
     p_b = 0
     p_l = 0
@@ -69,7 +69,7 @@ def pad_tile(tile, w, h, pad_mode, pad_fill_mode):
 
     return out
 
-def return_constant_color(image, pad_fill_mode):
+def return_constant_color(image: np.ndarray, pad_fill_mode: str):
     # Determine the color that will be used for paadding
     if image.shape[0] == 0 or image.shape[1] == 0:
         return (0, 0, 0)
@@ -88,7 +88,7 @@ def return_constant_color(image, pad_fill_mode):
 
     return constant_color
 
-def return_needed_padding_wsi_edge(image, w, h, t_dist, b_dist, l_dist, r_dist):
+def return_needed_padding_wsi_edge(image: np.ndarray, w: int, h: int, t_dist: int, b_dist: int, l_dist: int, r_dist: int):
     x_pad = w - image.shape[1]
     y_pad = h - image.shape[0]
 
@@ -108,7 +108,7 @@ def return_needed_padding_wsi_edge(image, w, h, t_dist, b_dist, l_dist, r_dist):
 
     return top, bottom, left, right
 
-def return_needed_padding_equal(image, w, h):
+def return_needed_padding_equal(image: np.ndarray, w: int, h: int):
     x_pad = w - image.shape[1]
     y_pad = h - image.shape[0]
 
@@ -135,7 +135,7 @@ def return_needed_padding_equal(image, w, h):
     return top, bottom, left, right
 
 
-def pad_chunk_if_necessary(base_size_x,  base_size_y, chunk, xlt, xrt, ytt, ybt, w, h, pad_mode='wsi_edge', pad_fill_mode='default'):
+def pad_chunk_if_necessary(base_size_x: int,  base_size_y: int, chunk: np.ndarray, xlt: list, xrt: list, ytt: list, ybt: list, w: int, h: int, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):
     if chunk.shape[0] != h or chunk.shape[1] != w:
         out = chunk.copy()
 
@@ -160,7 +160,7 @@ def pad_chunk_if_necessary(base_size_x,  base_size_y, chunk, xlt, xrt, ytt, ybt,
     else:
         return chunk
 
-def pad_region_chunk(chunk, xlo, yto, wo, ho):
+def pad_region_chunk(chunk: np.ndarray, xlo: list, yto: list, wo: list, ho: list):
     w = max(xlo) + max(wo)
     h = max(xlo) + max(ho)
 

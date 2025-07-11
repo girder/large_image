@@ -1,8 +1,9 @@
+from typing import Union, Optional
 import math
 import large_image
 from large_image import constants
 import numpy as np
-from ..utils.image import rgba2rgb, padding
+from .eager_image_modifications import rgba2rgb, padding
 
 def get_smallest_bounding_box(roi):
     '''
@@ -15,7 +16,7 @@ def get_smallest_bounding_box(roi):
     roi_x2, roi_y2 = points.max(axis=0)
     return (roi_x1, roi_y1), (roi_x2, roi_y2)
 
-def return_tile_slides_meeting_area_threshold(mask, slide_dim, tiles, area_threshold=0.25, threshold_mask=100):
+def return_tile_slides_meeting_area_threshold(mask: np.ndarray, slide_dim: dict, tiles: list, area_threshold: float = 0.25, threshold_mask: int = 100):
     '''
     A function that uses a mask generated from a whole slide image thumbnail to determine which tiles have enough content
     for being included in a set of evaluated tiles given a list of all possible tiles at a specific desired scaling.
@@ -38,7 +39,7 @@ def return_tile_slides_meeting_area_threshold(mask, slide_dim, tiles, area_thres
 
     return return_tiles
 
-def return_relevant_tile_indexes_for_slide_dim(range_x: int, range_y: int, overlap: float=0):
+def return_relevant_tile_indexes_for_slide_dim(slide_dimensions: dict, overlap: Union[float, int]=0):
     '''
     A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
     and returns a list of possible tiles given a desired output scaling.
@@ -47,10 +48,15 @@ def return_relevant_tile_indexes_for_slide_dim(range_x: int, range_y: int, overl
     :param overlap: The amount of overlap between tiles.  A float from 0 to 1.0
     :return: a list of tiles in the form of [(y, x)]
     '''
+    range_x = slide_dimensions['tile_target_range_x']
+    range_y = slide_dimensions['tile_target_range_y']
+
     slide_tiles = []
 
-    if overlap < 0. or overlap >= 1.0:
+    if isinstance(overlap, float) and (overlap < 0. or overlap >= 1.0):
         raise ValueError("Valid overlap range: 0 <= overlap < 1.0")
+    elif isinstance(overlap, int) and (overlap < 0 or overlap >= 1):
+        raise ValueError("Valid overlap range: 0 <= overlap < 1")
 
     offset = 1 - overlap
 
@@ -75,11 +81,11 @@ def get_patch_from_mask_for_tile(mask: np.ndarray, base_size_x: int, base_size_y
     conv_x_base_to_mask = mask_size_x / base_size_x
     conv_y_base_to_mask = mask_size_y / base_size_y
 
-    bound_x1 = math.floor(conv_x_base_to_mask * tile_x * tile_width_before_scaling)
-    bound_x2 = math.ceil(conv_x_base_to_mask * (tile_x + 1) * tile_width_before_scaling)
+    bound_x1 = round(conv_x_base_to_mask * tile_x * tile_width_before_scaling)
+    bound_x2 = round(conv_x_base_to_mask * (tile_x + 1) * tile_width_before_scaling)
 
-    bound_y1 = math.floor(conv_y_base_to_mask * tile_y * tile_height_before_scaling)
-    bound_y2 = math.ceil(conv_y_base_to_mask * (tile_y + 1) * tile_height_before_scaling)
+    bound_y1 = round(conv_y_base_to_mask * tile_y * tile_height_before_scaling)
+    bound_y2 = round(conv_y_base_to_mask * (tile_y + 1) * tile_height_before_scaling)
 
     patch_mask = mask[bound_y1:bound_y2,bound_x1:bound_x2]
 
@@ -124,7 +130,7 @@ def generate_assumptions_for_x_y_given_mag(x, y, z):
 
     return x, y, z
 
-def get_scaling_values_from_meta(source_meta, mode, target_scale):
+def get_scaling_values_from_meta(source_meta: dict, mode: str, target_scale: Optional[Union[tuple, int, float]] = None):
     '''
     A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
     :param source_meta: A large image source metadata.
@@ -209,7 +215,7 @@ def get_scaling_values_from_meta(source_meta, mode, target_scale):
 
     return out
 
-def calculate_slide_dimensions(source, mode='mag', target_scale=None, tile_size=None):
+def calculate_slide_dimensions(source: 'large_image.TileSource', mode: str = 'mag', target_scale: tuple = None, tile_size: tuple = None):
     '''
     A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
     :param source: A large image tile source.
@@ -265,6 +271,8 @@ def calculate_slide_dimensions(source, mode='mag', target_scale=None, tile_size=
             targetUnits='mm'
         )
 
+        slide_dimensions['level'] = source.getLevelForMagnification(slide_dimensions['target_magnification'])
+
     elif mode == 'mm':
         convert_scale_px = source.convertRegionScale(
             sourceRegion=dict(left=0, top=0, width=slide_dimensions['base_size_x'], height=slide_dimensions['base_size_y'], units='base_pixels'),
@@ -277,6 +285,8 @@ def calculate_slide_dimensions(source, mode='mag', target_scale=None, tile_size=
             targetScale=dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y']),
             targetUnits='mm'
         )
+
+        slide_dimensions['level'] = source.getLevelForMagnification(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'])
 
     else:
         raise ValueError("Mode is not valid for creating slide dimensions")

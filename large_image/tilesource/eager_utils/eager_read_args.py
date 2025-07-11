@@ -1,8 +1,7 @@
 import numpy as np
-import math
 from pykdtree.kdtree import KDTree
 
-def gen_read_args_complete_grid(sorted_tiles, chunk_mult):
+def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
     # todo: add documentation
     # Calculate group indices using grid structure
     group_rows = sorted_tiles[:, 0] // chunk_mult
@@ -23,66 +22,38 @@ def gen_read_args_complete_grid(sorted_tiles, chunk_mult):
 
     return chunks
 
-def dense_chunks(sorted_in, used, points, chunks, chunk_size):
-    tile_dict = {}
-    tiles_count = []
-
-    for i in range(sorted_in.shape[0]):
-        if not used[i]:
-            same_tiles = np.argwhere((points[:,0] == points[i,0]) & (points[:,1] == points[:,1])).flatten()
-            tile_dict[f'{sorted_in[i, 0]}_{sorted_in[i, 1]}'] = sorted_in[same_tiles]
-            tiles_count.append(same_tiles.shape[0])
-            used[same_tiles] = True
-
-    tiles_count = np.array(tiles_count)
-    m = np.mean(tiles_count)
-    me = np.median(tiles_count)
-    s = np.std(tiles_count)
-    ma = np.max(tiles_count)
-
-    for k in tile_dict.keys():
-        if tile_dict[k].shape[0] > chunk_size:
-            chunk_clusters = np.array_split(tile_dict[k], chunk_size)
-            for cluster in chunk_clusters:
-                c = cluster.tolist()
-                if len(c) > 0:
-                    chunks.append(c)
-        else:
-            c = tile_dict[k].tolist()
-            if len(c) > 0:
-                chunks.append(c)
-
-    return chunks
-
-def sparse_chunks(sorted_in, used, points, tree, chunks, chunk_size, ok_chunk_size, k_mod):
+def sparse_chunks(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray, tree: KDTree, chunks: list, chunk_size: int, k_mod: int = 1):
     # Use while loop to handle cases where many desired regions are close/overlapping
     usage_count = 0
     while(usage_count < sorted_in.shape[0]):
-        chunks = chunks_from_kd_tree(sorted_in, used, points, tree, chunks, chunk_size, ok_chunk_size, k_mod)
+        chunks = chunks_from_kd_tree(sorted_in, used, points, tree, chunks, chunk_size, k_mod)
         usage_count = np.sum(used)
 
-        if ok_chunk_size > 1:
-            ok_chunk_size -= 1
+        if chunk_size > 1:
+            chunk_size -= 1
 
         k_mod += 1
 
     return chunks
 
-def gen_read_args_incomplete_grid(sorted_in, chunk_size):
+def gen_read_args_incomplete_grid(sorted_in: np.ndarray, chunk_size: int):
     # todo: add documentation
     # todo: version for grouped by tiles
     # Spatial indexing for proximity-based grouping
+
     points = sorted_in[:, :2].astype(float)
     used = np.zeros(sorted_in.shape[0], dtype=bool)
     chunks = []
 
+    ok_chunk_size = int(chunk_size)
+
     tree = KDTree(points)
     k_mod = 1
-    chunks = sparse_chunks(sorted_in, used, points, tree, chunks, chunk_size, k_mod)
+    chunks = sparse_chunks(sorted_in, used, points, tree, chunks, ok_chunk_size, k_mod)
 
     return chunks
 
-def chunks_from_kd_tree(sorted_in, used, points, tree, chunks, chunk_size, k_mod=1):
+def chunks_from_kd_tree(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray, tree: KDTree, chunks: list, chunk_size: int, k_mod: int = 1):
     # todo: add documentation
     # version for grouped by tiles
     chunk = []
@@ -115,7 +86,7 @@ def chunks_from_kd_tree(sorted_in, used, points, tree, chunks, chunk_size, k_mod
 
     return chunks
 
-def check_edge_condition(base_size_x, base_size_y, sorted_in, edge=False):
+def check_edge_condition(base_size_x: int, base_size_y: int, sorted_in: np.ndarray, edge: bool = False):
     '''
     :param base_size_x: The base image's size in the x dimension
     :param base_size_y: The base image's size in the y dimension
@@ -133,7 +104,7 @@ def check_edge_condition(base_size_x, base_size_y, sorted_in, edge=False):
 
     return sorted_out, diff_from_edge
 
-def gen_read_args_for_regions(slide_dimensions, regions: np.ndarray, edge=False, chunk_mult=2):
+def gen_read_args_for_regions(slide_dimensions: dict, regions: np.ndarray, edge: bool = False, chunk_mult: int = 2):
     # todo: update documentation
     # todo: version for grouping regions by tile
     '''
@@ -180,7 +151,7 @@ def gen_read_args_for_regions(slide_dimensions, regions: np.ndarray, edge=False,
     return chunks
 
 
-def gen_read_args_for_tiles(n_possible_tiles, slide_dimensions, tiles, edge=False, chunk_mult=2):
+def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles: list, edge: bool = False, chunk_mult: int = 2):
     '''
     # todo: update documentation
     :param n_possible_tiles: The number of possible tiles in a complete grid made using the slide dimensions

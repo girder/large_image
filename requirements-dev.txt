@@ -36,6 +36,7 @@ redis
 simplejpeg
 ipyvue
 aiohttp
+pykdtree
 
 # External dependencies
 pip>=9
