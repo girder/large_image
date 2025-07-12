@@ -12,7 +12,7 @@ def test_eager_iterator():
     source = large_image.open(test_wsi)
     metadata = source.getMetadata()
     test_image = np.zeros((metadata['sizeY'], metadata['sizeX'], 3), dtype=np.uint8)
-    iterator = source.eagerIterator(scale_mode='mag', target_scale=20, tile_size=(224, 224), overlap=0.5, chunk_mult=4, mask=test_mask)
+    iterator = source.eagerIterator(scale_mode='mag', target_scale=20, tile_size=(224, 224), overlap=int(224/2), chunk_mult=4, mask=test_mask)
 
     for batch in iterator:
         batch_images = batch[0].view()

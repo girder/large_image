@@ -45,18 +45,23 @@ def return_relevant_tile_indexes_for_slide_dim(slide_dimensions: dict, overlap: 
     and returns a list of possible tiles given a desired output scaling.
     :param range_x: The range of the x dimension of the image
     :param range_y: The range of the y dimension of the image
-    :param overlap: The amount of overlap between tiles.  A float from 0 to 1.0
+    :param overlap: The amount of overlap between tiles.  A float from 0 to 1.0 or an integer corresponding to the number of 
+    pixels of overlap for the target tile size.  A minimum overlap is 0 pixels.
     :return: a list of tiles in the form of [(y, x)]
     '''
     range_x = slide_dimensions['tile_target_range_x']
     range_y = slide_dimensions['tile_target_range_y']
 
-    slide_tiles = []
+    w_h = [slide_dimensions['tile_size'][0], slide_dimensions['tile_size'][1]]
+    i_min = np.argmin(w_h)
 
     if isinstance(overlap, float) and (overlap < 0. or overlap >= 1.0):
         raise ValueError("Valid overlap range: 0 <= overlap < 1.0")
-    elif isinstance(overlap, int) and (overlap < 0 or overlap >= 1):
-        raise ValueError("Valid overlap range: 0 <= overlap < 1")
+    elif isinstance(overlap, int) and (overlap < 0 or overlap >= w_h[i_min]):
+        raise ValueError("Valid overlap range: 0 <= overlap < {}".format(w_h[i_min]))
+    
+    if isinstance(overlap, int):
+        overlap = overlap / w_h[i_min]
 
     offset = 1 - overlap
 
