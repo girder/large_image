@@ -18,8 +18,8 @@ class EagerIterator:
             output_mode: str = 'tiles',
             scale_mode: str ='mag',
             overlap: Union[float, int] = 0,
-            mask: np.ndarray | str | os.PathLike = None,
-            target_scale: Optional[Tuple[float, float]] | Optional[float] = None,
+            mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
+            target_scale: Optional[Union[Tuple[float, float], float]] = None,
             tile_size: Optional[Tuple[int, int]] = None,
             region_size: Optional[Tuple[int, int]] = None,
             dtype: np.dtype = np.uint8,
@@ -31,19 +31,20 @@ class EagerIterator:
             batch: int = 64,
             prefetch: int = 16,
             workers: int = 16,
-            tiles: list | np.ndarray = None,
-            regions: list | np.ndarray = None,
-            transformer: callable = None,
+            tiles: Optional[Union[list, np.ndarray]] = None,
+            regions: Optional[Union[list, np.ndarray]] = None,
+            transform: Optional[callable] = None,
             randomize_chunks: bool = False,
             seed: int = 42,
             area_threshold: float = 0.25,
-            threshold_mask: int = 100,
+            threshold_mask: Union[int, float] = 100,
             ):
         """
-        Initialize the eager iterator class.  The eager iterator class is an iterator intended for use in AI/ML applications.
+        Initialize the EagerIterator class.  The EagerIterator class is an iterator intended for use in AI/ML applications.
         The eager iterator uses large_image source object which creates this iterator to read tiles or regions. The iterator
         provides numpy arrays of the requested tiles or regions.  The goal of this iterator is to simplify operations such
-        as tiling and region extraction at specific resolutions/scales.
+        as tiling and region extraction at specific resolutions/scales.  The format of output batches will always be numpy.     
+        
 
         :param source: the tile source to use. this object should be provided a large_image tile source and will be provided
             by the large image library if you use the tile source's eagerIterator method.
@@ -51,12 +52,16 @@ class EagerIterator:
         :param scale_mode: A string corresponding to the scale mode of the iterator. Can be either 'mag' or 'mm'.
         :param overlap: A float defining the overlap in percentage between tiles. Defaults to 0.  If float, must be in range of 0 and 1.  Cannot be 1.  
             If integer, must be in range of 0 and the smallest dimension of the tile size.
-        :param mask: A numpy array or path to a 1 channel image that will be used to filter the tiles.
-        :param target_scale: An integer or tuple of floats defining the target scale produced for the iterator. If scale_mode is 'mag' can be an integer or float.
+        :param mask: An optional numpy array or path to a 1 channel image that will be used to filter the tiles (only useful in tile mode).  This mask image is interpreted 
+            based on two additional optional parameters: area_threshold and threshold_mask.  area_threshold is used to determine if a patch acquired from the mask
+            contains enough signal to be used for a tile to be included in the output.  threshold_mask is used to determine if a pixel value within the mask corresponds to 
+            signal.  If the mask is a uint8 array with values 0 to 1, then area_threshold will effectively be 1 instead of the default 100.  If the mask is a boolean array,
+            then any True value will be considered signal.
+        :param target_scale: An optional integer or tuple of floats defining the target scale produced for the iterator. If scale_mode is 'mag' can be an integer or float.
             If scale mode is 'mm' can be a tuple of (x, y) floating point numbers in mm.  Defaults ot None for base image scale.
-        :param tile_size: A tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.
-        :param region_size: A tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.
-        :param dtype: A numpy data type for the output image batch. Defaults to np.uint8.
+        :param tile_size: An optional tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.
+        :param region_size: An optional tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.
+        :param dtype: An optional numpy data type for the output image batch. Defaults to np.uint8.
         :param chunk_mult: An integer shaping the number regions/tiles to be grouped in a single read. Defaults to 2.  
             Chunk size is this number squared. i.e. chunk_multi of 2 = chunk_size of 2^2.
         :param edge: A boolean controlling whether to include (False) or discard (True) tiles with incomplete regions at the image boundaries. Defaults to False.
@@ -69,23 +74,43 @@ class EagerIterator:
         :param prefetch: An integer for number of batches to be prefetched. Defaults to 16.
         :param workers: An integer for number of worker processes to use. Defaults to 16.
         :param tiles: A list of tiles in the form [[y/column, x/row], ...] to be used in output_mode 'tiles'.  Defaults to None.
-        :param regions: A numpy array in the shape of [n, 4]  where top = [:,0], left = [:,1], height = [:,2 width = [:,3]. Only used in output_mode 'regions'.  
+        :param regions: A numpy array in the shape of [n, 4]  where top = [:,0], left = [:,1], height = [:,2], width = [:,3]. Only used in output_mode 'regions'.  
             Defaults to None.
-        :param transformer: A callable albumentations composed transform to be applied to the tiles. Defaults to None.
+        :param transform: An optional callable.  If provided an albumentations compose object it will apply the transform as the image keywordargument.
+            Otherwise, will apply the transform by calling the transform with the tile as a positional argument. Defaults to None.
         :param randomize_chunks: A boolean controlling whether to randomize order of the chunks to make the output batches more random. Defaults to False.
-        :param seed: A seed for the random number generator. Defaults to 42.
+        :param seed: A seed for the random number generator that will be used for randomizing the chunks. Defaults to 42.
         :param area_threshold: A float defining the area threshold for the mask to be used to filter the tiles.  It is a value between 0 and 1 defining the portion 
             of the tile that must be signal defined in the mask to be included in the output.  Defaults to 0.25.
         :param threshold_mask: An integer defining the pixel value threshold for for a pixel to contribute to signal as defined in the mask.  Defaults to 100.
 
-        :yields: An iterator that returns a tuple of (SharedNumpyArray, read_kwargs) where SharedNumpyArray is a numpy array of a batch of tiles or regions based
-            on the output_mode configured.  The numpy arrays corresponding the images can be accessed for use by using .view() (for example, batch[0].view())  
-            read_kwargs is a list of the read arguments used to produce the SharedNumpyArray.  The read_kwargs is a numpy array with the following sequence of values
-            for output_mode = 'tiles': [original_tile_y, original_tile_x, output_tile_y, output_tile_x, top, bottom, left, right].  The read_kwargs is a numpy array with the
-            following values for output_mode = 'regions': [original_tile_y, original_tile_x, center_y, center_x, top, bottom, left, right].  The original_tile_y, 
-            original_tile_x are derived from the tile grid of the original base image.  The output_tile_y, output_tile_x are derived from a grid created using the 
-            scaling configuration provided.  Center_y, center_x are the center pixel coordinates in the original base image.  Top, bottom, left, and right are the pixel 
-            coordinates of the base image.
+        :returns: An iterator that returns a tuple of (SharedNumpyArray, dict) where SharedNumpyArray is a numpy array of a batch of tiles or regions based
+            on the output_mode configured.  The numpy SharedNumpyArray corresponding the images can be accessed for use by using .view() (for example, batch[0].view())  
+            read_kwargs is a list of the read arguments used to produce the SharedNumpyArray.  Keys that are not-consistent between tiles (such as gx, gy, level_x, level_y, etc.) will return a numpy array of values
+              with values specific for tiles or regions returned in a batch.  The read_kwargs is a dictionary with the following keys:
+            'format': 'numpy',
+            'gx': left,
+            'gy': top,
+            'level_x': level_x,
+            'level_y': level_y,
+            'tile_position': {'level_x': level_x, 'level_y': level_y, 'base_x': base_x, 'base_y': base_y},
+            'width': width,
+            'height': height,
+            'level': level,
+            'magnification': magnification,
+            'mm_x': mm_x,
+            'mm_y': mm_y,
+            'gwidth': gwidth,
+            'gheight': gheight
+        
+        Given its specific use case, the eager iterator does not support all of the options available in the tileIterator.  
+        The eager iterator does not support the following options:
+            - region
+            - scale
+            - tile_overlap
+            - format
+
+        This iterator is experimental andmay not work with all tile sources.  Please consider the different expected inputs when attempting to use the eager iterator.
         """
         # Import eager_utils here to avoid attempting to load pykdtree when not needed
         from .eager_utils.eager_read_args import gen_read_args_for_tiles, gen_read_args_for_regions
@@ -110,7 +135,7 @@ class EagerIterator:
         self.nchw = nchw
         self.edge = edge
         self.pool = ProcessPoolExecutor(max_workers=workers)
-        self.transformer = transformer
+        self.transform = transform
         self.batch = batch
         self.output_mode = output_mode
         self.scale_mode = scale_mode
@@ -160,7 +185,7 @@ class EagerIterator:
             raise ValueError("output mode must be either tiles or regions, If regions, regions must be provided")
 
         # Transformer unfortunately cannot be used from pytorch v2 due to the way it is implemented
-        self._setup_out_dims(self.slide_dimensions, transformer)
+        self._setup_out_dims(self.slide_dimensions, transform)
 
         n_possible_tiles = self.slide_dimensions['tile_target_range_x'] * self.slide_dimensions['tile_target_range_y']
 
@@ -177,20 +202,23 @@ class EagerIterator:
 
         self._initialize(batch, prefetch)
 
-    def _setup_out_dims(self, slide_dimensions: dict, transformer: callable):
+    def _setup_out_dims(self, slide_dimensions: dict, transform: callable):
         self.out_dims = [self.batch, slide_dimensions['tile_size'][1], slide_dimensions['tile_size'][0], 3]
-        if transformer is not None:
-            self._setup_out_dims_for_transformer(self.out_dims, transformer)
+        if transform is not None:
+            self._setup_out_dims_for_transform(self.out_dims, transform)
         if self.nchw:
             self.out_dims = [self.out_dims[0], self.out_dims[3], self.out_dims[1], self.out_dims[2]]
 
 
-    def _setup_out_dims_for_transformer(self, out_shape: Union[list, tuple], transformer: callable):
+    def _setup_out_dims_for_transform(self, out_shape: Union[list, tuple], transform: callable):
         test_data = np.zeros(out_shape, dtype=self.dtype)
-        test_out = transformer(image=test_data)
+        if 'albumentations.core.composition.Compose' in str(type(transform)):
+            test_out = transform(image=test_data)
+        else:
+            test_out = transform(test_data)
         self.dtype = test_out['image'].dtype
         self.out_dims = test_out['image'].shape
-        self.transformer = transformer
+        self.transform = transform
 
 
     def _initialize(self, batch: int, prefetch: int):
@@ -203,6 +231,12 @@ class EagerIterator:
 
     def __iter__(self):
         return self
+    
+    def get_output_image_count(self):
+        count = 0
+        for read_kwargs in self.read_kwargs:
+            count += len(read_kwargs)
+        return count
 
     def __next__(self):
         if self.pos >= len(self.read_kwargs) and not len(self.queue):
@@ -226,6 +260,30 @@ class EagerIterator:
         return tiles, self._read_kwargs_to_dict(batch_read_kwargs)
     
     def _read_kwargs_to_dict(self, read_kwargs: list):
+        """
+        Convert the read_kwargs list to a dictionary for simplified access to the relevant read arguments in a way that is more consistent with the original tileIterator.
+        The dictionary is returned with the following keys:
+            'format': 'numpy',
+            'gx': left,
+            'gy': top,
+            'level_x': level_x,
+            'level_y': level_y,
+            'tile_position': {'level_x': level_x, 'level_y': level_y, 'base_x': base_x, 'base_y': base_y},
+            'width': width,
+            'height': height,
+            'level': level,
+            'magnification': magnification,
+            'mm_x': mm_x,
+            'mm_y': mm_y,
+            'gwidth': gwidth,
+            'gheight': gheight,
+
+        Certain keys such as gx, gy, level_x, level_y, tile_position['level_x'], tile_position['level_y'], tile_position['base_x'], tile_position['base_y'] 
+            are arrays of the same length as the number of tiles in the batch.
+
+        :param read_kwargs: A list of read arguments used to produce the SharedNumpyArray.
+        :return: A dictionary with the read arguments.
+        """
         read_kwargs = np.array(read_kwargs)
 
         return {
@@ -251,7 +309,18 @@ class EagerIterator:
         }
 
     @staticmethod
-    def read(source: 'tilesource.TileSource', dtype: np.dtype, nchw: bool, read_kwargs: list, sharrs: list, offset: int, output_mode: str, batch: int, slide_dimensions: dict, transformer: callable, pad_mode: str, pad_fill_mode: str):
+    def read(source: 'tilesource.TileSource', dtype: np.dtype, nchw: bool, read_kwargs: list, sharrs: list, offset: int, output_mode: str, batch: int, slide_dimensions: dict, transform: callable, pad_mode: str, pad_fill_mode: str):
+        """ 
+        A static method used for reading regions from a tile source and filling the SharedNumpyArray with the results.
+        
+        :param source: A tile source object.
+        :param dtype: The data type of the output array.
+        :param nchw: A boolean controlling whether to return the output in NCHW format (True) or NHWC format (False).
+            Will transpose transformed output as well.
+        :param read_kwargs: A list of read arguments used to produce the SharedNumpyArray.
+        :param sharrs: A list of SharedNumpyArray objects to be filled.
+        :param offset: The offset of the current batch.
+        """
         try:
             # Format arrays of (x_coord, y_coord, y_bottom in org image, y_top in org image, x_left in org image, x_right in org image)
             # read followed by crops
@@ -359,17 +428,17 @@ class EagerIterator:
                     for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
                 ]
 
-            if transformer:
-                tiles = [
-                    transformer(image=tile)['image']
-                    for tile in tiles
-                ]
-
-                # tiles = []
-                #
-                # for i, (xl, w, yt, h) in enumerate(zip(xlo, wo, yto, ho)):
-                #     tile = chunk[yt : h, xl : w, :]
-                #     tiles.append(tile)
+            if transform:
+                if 'albumentations.core.composition.Compose' in str(type(transform)):
+                    tiles = [
+                        transform(image=tile)['image']
+                        for tile in tiles
+                    ]
+                else:
+                    tiles = [
+                        transform(tile)
+                        for tile in tiles
+                    ]
 
             for i, tile in enumerate(tiles):
                 sharr_index, slice_index = divmod(offset + i, batch)
@@ -396,7 +465,7 @@ class EagerIterator:
             self.output_mode,
             self.batch,
             self.slide_dimensions,
-            self.transformer,
+            self.transform,
             self.pad_mode,
             self.pad_fill_mode
         )

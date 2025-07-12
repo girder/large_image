@@ -2376,10 +2376,77 @@ class TileSource(IPyLeafletMixin):
 
     def eagerIterator(self, **kwargs) -> EagerIterator:
         """
-        Return an eager iterator for the tile source.
+        Convience method to initialize the EagerIterator class from an tile source.  The EagerIterator class is an iterator intended for use in AI/ML applications.
+        The eager iterator uses large_image source object which creates this iterator to read tiles or regions. The iterator
+        provides numpy arrays of the requested tiles or regions.  The goal of this iterator is to simplify operations such
+        as tiling and region extraction at specific resolutions/scales.  The format of output batches will always be numpy.     
+        
 
-        :param kwargs: optional arguments.
-        :return: an eager iterator.
+        :param source: the tile source to use. this object should be provided a large_image tile source and will be provided
+            by the large image library if you use the tile source's eagerIterator method.
+        :param output_mode: A string corresponding to the output mode of the iterator. Can be either 'tiles' or 'regions'.
+        :param scale_mode: A string corresponding to the scale mode of the iterator. Can be either 'mag' or 'mm'.
+        :param overlap: A float defining the overlap in percentage between tiles. Defaults to 0.  If float, must be in range of 0 and 1.  Cannot be 1.  
+            If integer, must be in range of 0 and the smallest dimension of the tile size.
+        :param mask: An optional numpy array or path to a 1 channel image that will be used to filter the tiles (only useful in tile mode).  This mask image is interpreted 
+            based on two additional optional parameters: area_threshold and threshold_mask.  area_threshold is used to determine if a patch acquired from the mask
+            contains enough signal to be used for a tile to be included in the output.  threshold_mask is used to determine if a pixel value within the mask corresponds to 
+            signal.  If the mask is a uint8 array with values 0 to 1, then area_threshold will effectively be 1 instead of the default 100.  If the mask is a boolean array,
+            then any True value will be considered signal.
+        :param target_scale: An optional integer or tuple of floats defining the target scale produced for the iterator. If scale_mode is 'mag' can be an integer or float.
+            If scale mode is 'mm' can be a tuple of (x, y) floating point numbers in mm.  Defaults ot None for base image scale.
+        :param tile_size: An optional tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.
+        :param region_size: An optional tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.
+        :param dtype: An optional numpy data type for the output image batch. Defaults to np.uint8.
+        :param chunk_mult: An integer shaping the number regions/tiles to be grouped in a single read. Defaults to 2.  
+            Chunk size is this number squared. i.e. chunk_multi of 2 = chunk_size of 2^2.
+        :param edge: A boolean controlling whether to include (False) or discard (True) tiles with incomplete regions at the image boundaries. Defaults to False.
+        :param pad_mode: A string defining the padding mode to be used.  Can be either 'equal' or 'wsi_edge'.  Defaults to 'wsi_edge'.
+        :param pad_fill_mode: A string defining the padding fill mode to be used.  Can be either 'default', 'max', integer for value in all RGB channels, 
+            or tuple of int with respective values in RGB channels (R, G, B).  Defaults to 'default'.
+        :param nchw: A boolean controlling whether to return the output in NCHW format (True) or NHWC format (False). Defaults to False.  
+            Will transpose transformed output as well.
+        :param batch: An integer for number of regions/tiles to be retrieved in a single batch. Defaults to 64.
+        :param prefetch: An integer for number of batches to be prefetched. Defaults to 16.
+        :param workers: An integer for number of worker processes to use. Defaults to 16.
+        :param tiles: A list of tiles in the form [[y/column, x/row], ...] to be used in output_mode 'tiles'.  Defaults to None.
+        :param regions: A numpy array in the shape of [n, 4]  where top = [:,0], left = [:,1], height = [:,2], width = [:,3]. Only used in output_mode 'regions'.  
+            Defaults to None.
+        :param transform: An optional callable.  If provided an albumentations compose object it will apply the transform as the image keywordargument.
+            Otherwise, will apply the transform by calling the transform with the tile as a positional argument. Defaults to None.
+        :param randomize_chunks: A boolean controlling whether to randomize order of the chunks to make the output batches more random. Defaults to False.
+        :param seed: A seed for the random number generator that will be used for randomizing the chunks. Defaults to 42.
+        :param area_threshold: A float defining the area threshold for the mask to be used to filter the tiles.  It is a value between 0 and 1 defining the portion 
+            of the tile that must be signal defined in the mask to be included in the output.  Defaults to 0.25.
+        :param threshold_mask: An integer defining the pixel value threshold for for a pixel to contribute to signal as defined in the mask.  Defaults to 100.
+
+        :returns: An iterator that returns a tuple of (SharedNumpyArray, dict) where SharedNumpyArray is a numpy array of a batch of tiles or regions based
+            on the output_mode configured.  The numpy SharedNumpyArray corresponding the images can be accessed for use by using .view() (for example, batch[0].view())  
+            read_kwargs is a list of the read arguments used to produce the SharedNumpyArray.  Keys that are not-consistent between tiles (such as gx, gy, level_x, level_y, etc.) will return a numpy array of values
+              with values specific for tiles or regions returned in a batch.  The read_kwargs is a dictionary with the following keys:
+            'format': 'numpy',
+            'gx': left,
+            'gy': top,
+            'level_x': level_x,
+            'level_y': level_y,
+            'tile_position': {'level_x': level_x, 'level_y': level_y, 'base_x': base_x, 'base_y': base_y},
+            'width': width,
+            'height': height,
+            'level': level,
+            'magnification': magnification,
+            'mm_x': mm_x,
+            'mm_y': mm_y,
+            'gwidth': gwidth,
+            'gheight': gheight
+        
+        Given its specific use case, the eager iterator does not support all of the options available in the tileIterator.  
+        The eager iterator does not support the following options:
+            - region
+            - scale
+            - tile_overlap
+            - format
+
+        This iterator is experimental andmay not work with all tile sources.  Please consider the different expected inputs when attempting to use the eager iterator.
         """
         return EagerIterator(self, **kwargs)
 
