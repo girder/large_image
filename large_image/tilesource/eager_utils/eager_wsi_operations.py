@@ -1,9 +1,7 @@
 from typing import Union, Optional
 import math
 import large_image
-from large_image import constants
 import numpy as np
-from .eager_image_modifications import rgba2rgb, padding
 
 def get_smallest_bounding_box(roi):
     '''

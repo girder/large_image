@@ -1,5 +1,4 @@
 import os
-import platform
 import multiprocessing.shared_memory
 import operator
 import functools
