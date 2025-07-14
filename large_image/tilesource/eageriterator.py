@@ -268,7 +268,7 @@ class EagerIterator:
             'gy': top,
             'level_x': level_x,
             'level_y': level_y,
-            'tile_position': {'level_x': level_x, 'level_y': level_y, 'base_x': base_x, 'base_y': base_y},
+            'tile_position': {'level_x': level_x, 'level_y': level_y, 'region_x': region_x, 'region_y': region_y},
             'width': width,
             'height': height,
             'level': level,
@@ -290,13 +290,13 @@ class EagerIterator:
             'format': 'numpy',
             'gx': read_kwargs[:, 6], # left
             'gy': read_kwargs[:, 4], # top
-            'level_x': read_kwargs[:, 3],
-            'level_y': read_kwargs[:, 2],
+            'level_x': read_kwargs[:, 1],
+            'level_y': read_kwargs[:, 0],
             'tile_position': {
-                'level_x': read_kwargs[:, 3],
-                'level_y': read_kwargs[:, 2],
-                'base_x': read_kwargs[:, 1],
-                'base_y': read_kwargs[:, 0],
+                'level_x': read_kwargs[:, 1],
+                'level_y': read_kwargs[:, 0],
+                'region_x': read_kwargs[:, 3],
+                'region_y': read_kwargs[:, 2],
             },
             'width': self.slide_dimensions['tile_size'][0], # right - left
             'height': self.slide_dimensions['tile_size'][1], # bottom - top
