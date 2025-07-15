@@ -2,7 +2,8 @@ import math, os, random
 from typing import Optional, Tuple, Union
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
-from .eager_utils.eager_shared_numpy import SharedNumpyArray
+from .eager_utils.eager_shared_numpy import SharedArray
+from .eager_utils.eager_pytorch_threading_context import _PyTorchThreadingContext
 
 import numpy as np
 from PIL import Image
@@ -76,7 +77,9 @@ class EagerIterator:
         :param tiles: A list of tiles in the form [[y/column, x/row], ...] to be used in output_mode 'tiles'.  Defaults to None.
         :param regions: A numpy array in the shape of [n, 4]  where top = [:,0], left = [:,1], height = [:,2], width = [:,3]. Only used in output_mode 'regions'.  
             Defaults to None.
-        :param transform: An optional callable.  If provided an albumentations compose object it will apply the transform as the image keywordargument.
+        :param transform: An optional callable.  If provided an albumentations compose object it will apply the transform as the image keywordargument.  If provided a 
+            torchvision.transforms.v2._container it will apply the transform as a callable.  For albumentations or torchvision v2 transforms, this must be a compose object rather 
+            than a callable.  Torchvision v2 transforms requires a limiting number of threads to 1 during the read operation.
             Otherwise, will apply the transform by calling the transform with the tile as a positional argument. Defaults to None.
         :param randomize_chunks: A boolean controlling whether to randomize order of the chunks to make the output batches more random. Defaults to False.
         :param seed: A seed for the random number generator that will be used for randomizing the chunks. Defaults to 42.
@@ -211,15 +214,30 @@ class EagerIterator:
 
 
     def _setup_out_dims_for_transform(self, out_shape: Union[list, tuple], transform: callable):
-        test_data = np.zeros(out_shape, dtype=self.dtype)
+        test_data = np.zeros(out_shape[1:], dtype=self.dtype)
         if 'albumentations.core.composition.Compose' in str(type(transform)):
             test_out = transform(image=test_data)
+            self.dtype = test_out['image'].dtype
+            self.out_dims = tuple([self.out_dims[0]] + list(test_out['image'].shape))
+            self.transform = transform
+            self.is_torch = False
+        elif 'torchvision.transforms.v2._container.Compose' in str(type(transform)):
+            test_out = transform(test_data)
+            self.dtype = test_out.dtype
+            self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
+            self.transform = transform
+            self.is_torch = True
         else:
             test_out = transform(test_data)
-        self.dtype = test_out['image'].dtype
-        self.out_dims = test_out['image'].shape
-        self.transform = transform
+            if not isinstance(test_out, np.ndarray):
+                raise ValueError(
+                    """Transform must return a numpy array if not a albumentations.core.composition.Compose 
+                    or torchvision.transforms.v2._container.Compose object""")
+            self.dtype = test_out.dtype
+            self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
+            self.transform = transform
 
+        pass
 
     def _initialize(self, batch: int, prefetch: int):
         self.prefetch = prefetch
@@ -309,7 +327,7 @@ class EagerIterator:
         }
 
     @staticmethod
-    def read(source: 'tilesource.TileSource', dtype: np.dtype, nchw: bool, read_kwargs: list, sharrs: list, offset: int, output_mode: str, batch: int, slide_dimensions: dict, transform: callable, pad_mode: str, pad_fill_mode: str):
+    def read(source: 'tilesource.TileSource', dtype: np.dtype, nchw: bool, read_kwargs: list, sharrs: list, offset: int, output_mode: str, batch: int, slide_dimensions: dict, transform: Optional[callable] = None, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):
         """ 
         A static method used for reading regions from a tile source and filling the SharedNumpyArray with the results.
         
@@ -419,24 +437,30 @@ class EagerIterator:
 
             if output_mode == 'tiles':
                 tiles = [
-                    chunk[yt : h, xl : w, :].astype(dtype)
+                    chunk[yt : h, xl : w, :].astype(chunk.dtype)
                     for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
                 ]
             elif output_mode == 'regions':
                 tiles = [
-                    pad_tile(chunk[yt:h, xl:w, :].astype(dtype), slide_dimensions['tile_size'][0], slide_dimensions['tile_size'][1], pad_mode, pad_fill_mode)
+                    pad_tile(chunk[yt:h, xl:w, :].astype(chunk.dtype), slide_dimensions['tile_size'][0], slide_dimensions['tile_size'][1], pad_mode, pad_fill_mode)
                     for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
                 ]
 
+            # Don't change to target dtype until after transform
             if transform:
                 if 'albumentations.core.composition.Compose' in str(type(transform)):
                     tiles = [
-                        transform(image=tile)['image']
+                        transform(image=tile)['image'].astype(dtype)
+                        for tile in tiles
+                    ]
+                elif 'torchvision.transforms.v2._container.Compose' in str(type(transform)):                    
+                    tiles = [
+                        transform(tile).to(dtype)
                         for tile in tiles
                     ]
                 else:
                     tiles = [
-                        transform(tile)
+                        transform(tile).astype(dtype)
                         for tile in tiles
                     ]
 
@@ -444,7 +468,7 @@ class EagerIterator:
                 sharr_index, slice_index = divmod(offset + i, batch)
 
                 # Expect transformer to control shape of output
-                if nchw:
+                if nchw and isinstance(tile, np.ndarray):
                     sharrs[sharr_index].insert(np.transpose(tile, [2, 0, 1]), slice_index)
                 else:
                     sharrs[sharr_index].insert(tile, slice_index)
@@ -471,7 +495,7 @@ class EagerIterator:
         )
 
     def _fill(self):
-        try:
+        def _fill_while():
             while len(self.queue) < self.prefetch and self.pos < len(self.read_kwargs):
                 """if the last read from the prior batch spanned batch boundaries then
                 the leftmost element in self.queue contains the futures, shared array,
@@ -481,7 +505,7 @@ class EagerIterator:
                 else:
                     """last read aligned with batch boundary, create new shared array,
                     and read_kwargs, futures containers"""
-                    tiles = SharedNumpyArray(self.out_dims, self.dtype)
+                    tiles = SharedArray(self.out_dims, self.dtype, self.is_torch)
                     futures = []
                     batch_kwargs = []
 
@@ -502,7 +526,7 @@ class EagerIterator:
                     tiles = [
                         *tiles,
                         *[
-                            SharedNumpyArray(self.out_dims, self.dtype)
+                            SharedArray(self.out_dims, self.dtype, self.is_torch)
                             for _ in range(batches - 1)
                         ],
                     ]
@@ -529,6 +553,12 @@ class EagerIterator:
                 # enqueue batches
                 for f, t, b in zip(futures, tiles, batch_kwargs):
                     self.queue.appendleft((f, t, b))
+        try:
+            if self.is_torch:
+                with _PyTorchThreadingContext():
+                    _fill_while()
+            else:
+                _fill_while()
 
         except Exception as error:
             print("Exception in _fill: {}".format(error))
