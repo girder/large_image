@@ -63,7 +63,7 @@ extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for 
     'deepzoom', 'dicom', 'multi', 'nd2', 'openslide', 'test', 'tifffile',
     'zarr',
 })) | {
-    f'large-image-source-pil[all]{limit_version}',
+    f'large-image-source-pil[common]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
 })
 

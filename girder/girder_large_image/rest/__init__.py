@@ -123,6 +123,28 @@ def _groupingPipeline(initialPipeline, cbase, grouping, sort=None):
     }}})
 
 
+def _getDescendantFolderIds(foldercoll, folder_id, match_clauses=None):
+    queue = [folder_id]
+    seen = {folder_id}
+
+    while queue:
+        current = queue.pop(0)
+        children = foldercoll.find({'parentId': current}, {'_id': 1})
+        for child in children:
+            child_id = child['_id']
+            if child_id not in seen:
+                seen.add(child_id)
+                queue.append(child_id)
+                if len(seen) > 10000:
+                    msg = 'This query is too complex for DocumentDB.'
+                    raise Exception(msg)
+    ids = list(seen)
+    if match_clauses:
+        cursor = foldercoll.find({'_id': {'$in': ids}, **match_clauses}, {'_id': 1})
+        ids = [doc['_id'] for doc in cursor]
+    return ids
+
+
 def _itemFindRecursive(  # noqa
         self, origItemFind, folderId, text, name, limit, offset, sort, filters,
         recurse=True, group=None):
@@ -142,20 +164,28 @@ def _itemFindRecursive(  # noqa
     if folderId:
         user = self.getCurrentUser()
         if recurse:
-            pipeline = [
-                {'$match': {'_id': ObjectId(folderId)}},
-                {'$graphLookup': {
-                    'from': 'folder',
-                    'connectFromField': '_id',
-                    'connectToField': 'parentId',
-                    'depthField': '_depth',
-                    'as': '_folder',
-                    'startWith': '$_id',
-                }},
-                {'$match': Folder().permissionClauses(user, AccessType.READ, '_folder.')},
-                {'$group': {'_id': '$_folder._id'}},
-            ]
-            children = [ObjectId(folderId)] + next(Folder().collection.aggregate(pipeline))['_id']
+            from ..models.image_item import ImageItem
+
+            if ImageItem().checkForDocumentDB():
+                children = _getDescendantFolderIds(
+                    Folder().collection, ObjectId(folderId),
+                    Folder().permissionClauses(user, AccessType.READ, '_folder.'))
+            else:
+                pipeline = [
+                    {'$match': {'_id': ObjectId(folderId)}},
+                    {'$graphLookup': {
+                        'from': 'folder',
+                        'connectFromField': '_id',
+                        'connectToField': 'parentId',
+                        'depthField': '_depth',
+                        'as': '_folder',
+                        'startWith': '$_id',
+                    }},
+                    {'$match': Folder().permissionClauses(user, AccessType.READ, '_folder.')},
+                    {'$group': {'_id': '$_folder._id'}},
+                ]
+                children = [ObjectId(folderId)] + next(
+                    Folder().collection.aggregate(pipeline))['_id']
         else:
             children = [ObjectId(folderId)]
         if len(children) > 1 or group:

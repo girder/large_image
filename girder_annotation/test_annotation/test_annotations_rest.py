@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 import struct
 
 import pytest
@@ -498,6 +499,12 @@ class TestLargeImageAnnotationRest:
         # Get the ACL's as a user
         resp = server.request('/annotation/%s/access' % annot['_id'], user=user)
         assert utilities.respStatus(resp) == 200
+
+    @pytest.mark.singular
+    def testAnnotationAccessControlEndpointsDocumentDB(self, server, user, admin):
+        os.environ['LARGE_IMAGE_DOCUMENTDB'] = 'true'
+        self.testAnnotationAccessControlEndpoints(server, user, admin)
+        os.environ.pop('LARGE_IMAGE_DOCUMENTDB')
 
     @pytest.mark.singular
     def testAnnotationHistoryEndpoints(self, server, user, admin):

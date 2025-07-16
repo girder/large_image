@@ -66,14 +66,14 @@ repos:
           - '--options'
           - './girder/girder_large_image/web_client/package.json'
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.1
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         args:
           - --py38-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.8
+    rev: v0.12.0
     hooks:
       - id: ruff
         args:

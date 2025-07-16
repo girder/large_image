@@ -853,8 +853,10 @@ class AnnotationResource(Resource):
             sources=sources, compute=compute, uuid=uuid)
         return data.data(keys, requiredKeys)
 
-    def getFolderAnnotations(self, id, recurse, user, limit=False, offset=False, sort=False,
-                             sortDir=False, count=False):
+    def getFolderAnnotations(
+            self, id, recurse, user, limit=False, offset=False, sort=False,
+            sortDir=False, count=False):
+        from girder_large_image.models.image_item import ImageItem
 
         accessPipeline = [
             {'$match': {
@@ -893,28 +895,58 @@ class AnnotationResource(Resource):
             {'$unwind': {'path': '$__children'}},
             {'$replaceRoot': {'newRoot': '$__children'}},
         ] if recurse else [{'$match': {'_id': ObjectId(id)}}]
+        if recurse and ImageItem().checkForDocumentDB():
+            queue = [ObjectId(id)]
+            seen = {ObjectId(id)}
+            while queue:
+                current = queue.pop(0)
+                children = Folder().collection.find({'parentId': current}, {'_id': 1})
+                for child in children:
+                    cid = child['_id']
+                    if cid not in seen:
+                        seen.add(cid)
+                        queue.append(cid)
+                        if len(seen) > 10000:
+                            msg = 'This query is too complex for DocumentDB.'
+                            raise Exception(msg)
+            recursivePipeline = [{'$match': {'_id': {'$in': list(seen)}}}]
 
         # We are only finding anntoations that we can change the permissions
         # on.  If we wanted to expose annotations based on a permissions level,
         # we need to add a folder access pipeline immediately after the
         # recursivePipleine that for write and above would include the
         # ANNOTATION_ACCSESS_FLAG
-        pipeline = recursivePipeline + [
-            {'$lookup': {
-                'from': 'item',
-                # We have to use a pipeline to use a projection to reduce the
-                # data volume, so instead of specifying localField and
-                # foreignField, we set the localField to a variable, then match
-                # it in a pipeline and project to exclude everything but id.
-                # 'localField': '_id',
-                # 'foreignField': 'folderId',
-                'let': {'fid': '$_id'},
-                'pipeline': [
-                    {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
-                    {'$project': {'_id': 1}},
-                ],
-                'as': '__items',
-            }},
+        lookupSteps = [{'$lookup': {
+            'from': 'item',
+            # We have to use a pipeline to use a projection to reduce the
+            # data volume, so instead of specifying localField and
+            # foreignField, we set the localField to a variable, then match
+            # it in a pipeline and project to exclude everything but id.
+            # 'localField': '_id',
+            # 'foreignField': 'folderId',
+            'let': {'fid': '$_id'},
+            'pipeline': [
+                {'$match': {'$expr': {'$eq': ['$$fid', '$folderId']}}},
+                {'$project': {'_id': 1}},
+            ],
+            'as': '__items',
+        }}]
+        if ImageItem().checkForDocumentDB():
+            lookupSteps = [{
+                '$lookup': {
+                    'from': 'item',
+                    'localField': '_id',
+                    'foreignField': 'folderId',
+                    'as': '__items',
+                },
+            }, {
+                '$addFields': {'__items': {'$map': {
+                    'input': '$__items',
+                    'as': 'item',
+                    'in': {'_id': '$$item._id'},
+                }}},
+            }]
+        pipeline = recursivePipeline + lookupSteps + [
             {'$lookup': {
                 'from': 'annotation',
                 'localField': '__items._id',
