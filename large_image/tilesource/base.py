@@ -1184,9 +1184,11 @@ class TileSource(IPyLeafletMixin):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = np.zeros(
-                (max(self.tileHeight, tile.shape[0]), max(self.tileWidth, tile.shape[1]), tile.shape[2]),
+                (self.tileHeight, self.tileWidth, tile.shape[2]),
                 dtype=tile.dtype)
-            extend[:tile.shape[0], :tile.shape[1]] = tile
+            extend[:min(self.tileHeight, tile.shape[0]),
+                   :min(self.tileWidth, tile.shape[1])] = tile[:min(self.tileHeight, tile.shape[0]),
+                                                               :min(self.tileWidth, tile.shape[1])]
             tile = extend
         return tile, mode
 
