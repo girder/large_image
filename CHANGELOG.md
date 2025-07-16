@@ -20,6 +20,7 @@
 ### Bug Fixes
 
 - Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
+- Harden reading ometiff that have certain planar configurations ([#1955](../../pull/1955))
 
 ## 1.32.11
 
