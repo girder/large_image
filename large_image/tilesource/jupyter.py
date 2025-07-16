@@ -21,6 +21,7 @@ import json
 import os
 import threading
 import weakref
+import yaml
 from typing import Any, Optional, Union, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
@@ -370,15 +371,33 @@ class Map:
 
     def add_warp_editor(self):
         from ipyleaflet import DivIcon, Marker
-        from ipywidgets import VBox, Label
+        from ipywidgets import Accordion, HTML, Label, VBox
 
         help_text = Label('To begin editing a warp, click on the image to place reference points.')
-        children = [help_text]
+        yaml_schema = HTML('yaml')
+        json_schema = HTML('json')
+        schemas = Accordion(children=[yaml_schema, json_schema], titles=('YAML', 'JSON'))
+        schemas.layout.display = 'none'
+        children = [help_text, schemas]
         marker_style = (
             'border-radius: 50%; position: relative;'
             'height: 16px; width: 16px; top: -8px; left: -8px;'
             'text-align: center; font-size: 11px;'
         )
+
+        def update_schemas():
+            help_text.value = 'Reference the schemas below to use this warp with the MultiFileTileSource (either as YAML or JSON).'
+            schema = dict(sources=[
+                dict(
+                    #  TODO: is there a better way to get the path value?
+                    path=str(self._ts._initValues[0][0]),
+                    z=0, position=dict(x=0, y=0, warp=self.warp_points)
+                )
+            ])
+            json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
+            yaml_schema.value = f'<pre>{yaml.dump(schema)}</pre>'
+            schemas.layout.display = 'block'
+
 
         def handle_drag(event):
             old = [round(v) for v in event.get('old')]
@@ -394,6 +413,7 @@ class Map:
                 marker = Marker(location=old, draggable=True, icon=icon, title=f'src {index}')
                 marker.observe(handle_drag, 'location')
                 self._map.add(marker)
+            update_schemas()
 
         def handle_interaction(**kwargs):
             if kwargs.get('type') == 'click':
@@ -406,7 +426,8 @@ class Map:
                 self._map.add(marker)
                 self.warp_points['src'].append(None)
                 self.warp_points['dst'].append(coords)
-                help_text.value = 'After placing reference points, you can drag them to start defining the warp.'
+                help_text.value = 'After placing reference points, you can drag them to define the warp.'
+                schemas.layout.display = 'none'
 
         self._map.on_interaction(handle_interaction)
         return VBox(children)
