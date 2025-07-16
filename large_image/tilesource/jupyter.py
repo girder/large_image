@@ -91,7 +91,10 @@ class IPyLeafletMixin:
 
     def __init__(self, *args, **kwargs) -> None:
         self._jupyter_server_manager = None
-        self._map = Map(ts=self)
+        self._map = Map(
+            ts=self,
+            editWarp=kwargs.get('editWarp', False),
+        )
         if ipyleafletPresent:
             self.to_map = self._map.to_map
             self.from_map = self._map.from_map
@@ -167,7 +170,9 @@ class Map:
             self, *, ts: Optional[IPyLeafletMixin] = None,
             metadata: Optional[dict] = None, url: Optional[str] = None,
             gc: Optional[Any] = None, id: Optional[str] = None,
-            resource: Optional[str] = None) -> None:
+            resource: Optional[str] = None,
+            editWarp: bool = False,
+    ) -> None:
         """
         Specify the large image to be used with the IPyLeaflet Map.  One of (a)
         a tile source, (b) metadata dictionary and tile url, (c) girder client
@@ -187,6 +192,9 @@ class Map:
         self._layer = self._map = self._metadata = self._frame_slider = None
         self._frame_histograms: Optional[dict[int, Any]] = None
         self._ts = ts
+        self._edit_warp = editWarp
+        if self._edit_warp:
+            self.warp_points = dict(src=[], dst=[])
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
             if id is None:
@@ -282,7 +290,7 @@ class Map:
         Create an ipyleaflet map given large_image metadata, an optional
         ipyleaflet layer, and the center of the tile source.
         """
-        from ipyleaflet import Map, basemaps, projections
+        from ipyleaflet import FullScreenControl, Map, basemaps, projections
         from ipywidgets import VBox
 
         try:
@@ -351,11 +359,60 @@ class Map:
         self._map = m
         children.append(m)
 
-        self.add_region_indicator()
+        if self._edit_warp:
+            children.append(self.add_warp_editor())
+        else:
+            # Only add region indicator if not using warp editor so that
+            # the map doesn't have conflicting on_interaction callbacks
+            self.add_region_indicator()
+        self._map.add(FullScreenControl())
+        return VBox(children)
+
+    def add_warp_editor(self):
+        from ipyleaflet import DivIcon, Marker
+        from ipywidgets import VBox, Label
+
+        help_text = Label('To begin editing a warp, click on the image to place reference points.')
+        children = [help_text]
+        marker_style = (
+            'border-radius: 50%; position: relative;'
+            'height: 16px; width: 16px; top: -8px; left: -8px;'
+            'text-align: center; font-size: 11px;'
+        )
+
+        def handle_drag(event):
+            old = [round(v) for v in event.get('old')]
+            new = [round(v) for v in event.get('new')]
+            marker_title = event.get('owner').title
+            group_name = marker_title[:3]
+            index = int(marker_title[3:])
+            self.warp_points[group_name][index] = new
+            if group_name == 'dst' and self.warp_points['src'][index] is None:
+                self.warp_points['src'][index] = old
+                html = f'<div style="background-color: #ff6a5e; {marker_style}">{index}</div>'
+                icon = DivIcon(html=html, icon_size=[0, 0])
+                marker = Marker(location=old, draggable=True, icon=icon, title=f'src {index}')
+                marker.observe(handle_drag, 'location')
+                self._map.add(marker)
+
+        def handle_interaction(**kwargs):
+            if kwargs.get('type') == 'click':
+                coords = kwargs.get('coordinates')
+                index = len(self.warp_points['src'])
+                html = f'<div style="background-color: #19a7ff; {marker_style}">{index}</div>'
+                icon = DivIcon(html=html, icon_size=[0, 0])
+                marker = Marker(location=coords, draggable=True, icon=icon, title=f'dst {index}')
+                marker.observe(handle_drag, 'location')
+                self._map.add(marker)
+                self.warp_points['src'].append(None)
+                self.warp_points['dst'].append(coords)
+                help_text.value = 'After placing reference points, you can drag them to start defining the warp.'
+
+        self._map.on_interaction(handle_interaction)
         return VBox(children)
 
     def add_region_indicator(self):
-        from ipyleaflet import FullScreenControl, GeomanDrawControl, Popup
+        from ipyleaflet import GeomanDrawControl, Popup
         from ipywidgets import HTML
 
         metadata = self._metadata
@@ -440,7 +497,6 @@ class Map:
         draw_control.on_draw(handle_draw)
         self._map.on_interaction(handle_interaction)
         self._map.add(draw_control)
-        self._map.add(FullScreenControl())
 
     @property
     def layer(self) -> Any:
