@@ -1,3 +1,6 @@
+// import tailwind
+import './stylesheets/importTailwind.css';
+
 // import modules for side effects
 import './routes';
 import './eventStream';

@@ -136,7 +136,7 @@
 <script>
 import draggable from 'vuedraggable';
 
-module.exports = {
+export default {
     components: {
         draggable
     },

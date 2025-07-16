@@ -66,7 +66,7 @@
 </template>
 
 <script>
-module.exports = {
+export default {
     props: {
         value: String,
         views: Object,

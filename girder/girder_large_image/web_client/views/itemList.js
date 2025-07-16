@@ -837,20 +837,22 @@ wrap(ItemListWidget, 'render', function (render) {
             }
             if (base.length) {
                 base.parent().addClass('li-item-list-filter-parent');
-                base[func](
-                    '<span class="li-item-list-filter">Filter:&nbsp;<input class="li-item-list-filter-input" title="' +
-                        'All specified terms must be included.  ' +
-                        'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
-                        'Prefix with - to exclude that value.  ' +
-                        'By default, all columns are searched.  ' +
-                        'Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.  ' +
-                        'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' +
-                        'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
-                        'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
-                        '"></input>' +
-                        '<span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>' +
-                        '</span>'
-                );
+                base[func](`
+                    <div class="g-table-view-select"></div>
+
+                    <span class="li-item-list-filter">Filter:&nbsp;<input class="li-item-list-filter-input" title="
+                        All specified terms must be included.
+                        Surround with single quotes to include spaces, double quotes for exact value match.
+                        Prefix with - to exclude that value.
+                        By default, all columns are searched.
+                        Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.
+                        Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).
+                        If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.
+                        Non-exact matches without a column specifier will also match columns that start with the specified value.
+                        "></input>
+                        <span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>
+                        </span>
+                `);
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(
                         this._generalFilter
