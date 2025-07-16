@@ -1,7 +1,7 @@
 <template>
   <div
     ref="dropdown"
-    class="group relative flex h-8"
+    class="group relative flex h-8 mt-2 mr-3"
   >
     <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 z-100 bottom-full whitespace-nowrap rounded-md mb-[2px] text-sm htk-hidden group-hover:block">
       Select view
