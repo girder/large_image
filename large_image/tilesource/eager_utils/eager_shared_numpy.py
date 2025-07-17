@@ -15,7 +15,7 @@ class SharedArray:
         
         if is_torch:
             import torch.multiprocessing
-            self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype().element_size()
+            self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
             self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)            
             self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
         else:
