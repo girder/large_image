@@ -507,9 +507,6 @@ class EagerIterator:
                 else:
                     """last read aligned with batch boundary, create new shared array,
                     and read_kwargs, futures containers"""
-                    print("Dtype: {}".format(self.dtype))
-                    print("Is torch: {}".format(self.is_torch))
-                    print("Out dims: {}".format(self.out_dims))
                     tiles = SharedArray(self.out_dims, self.dtype, self.is_torch)
                     futures = []
                     batch_kwargs = []
@@ -531,7 +528,7 @@ class EagerIterator:
                     tiles = [
                         *tiles,
                         *[
-                            SharedArray(self.out_dims, self.dtype, True)
+                            SharedArray(self.out_dims, self.dtype, self.is_torch)
                             for _ in range(batches - 1)
                         ],
                     ]
