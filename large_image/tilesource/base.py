@@ -1187,7 +1187,8 @@ class TileSource(IPyLeafletMixin):
                 (self.tileHeight, self.tileWidth, tile.shape[2]),
                 dtype=tile.dtype)
             extend[:min(self.tileHeight, tile.shape[0]),
-                   :min(self.tileWidth, tile.shape[1])] = tile
+                   :min(self.tileWidth, tile.shape[1])] = tile[:min(self.tileHeight, tile.shape[0]),
+                                                               :min(self.tileWidth, tile.shape[1])]
             tile = extend
         return tile, mode
 
