@@ -49,19 +49,19 @@ class EagerIterator:
 
         :param source: the tile source to use. this object should be provided a large_image tile source and will be provided
             by the large image library if you use the tile source's eagerIterator method.
-        :param output_mode: A string corresponding to the output mode of the iterator. Can be either 'tiles' or 'regions'.
-        :param scale_mode: A string corresponding to the scale mode of the iterator. Can be either 'mag' or 'mm'.
-        :param overlap: A float defining the overlap in percentage between tiles. Defaults to 0.  If float, must be in range of 0 and 1.  Cannot be 1.  
-            If integer, must be in range of 0 and the smallest dimension of the tile size.
+        :param output_mode: A string corresponding to the output mode of the iterator. Can be either 'tiles' or 'regions'.  Defaults to 'tiles'.
+        :param scale_mode: A string corresponding to the scale mode of the iterator. Can be either 'mag' or 'mm'.  Defaults to 'mag'.
+        :param overlap: A float or integer defining the overlap in percentage between tiles.  If float, must be in range of 0 and 1.  Cannot be 1.  
+            If integer, must be in range of 0 and the smallest dimension of the tile size.  Defaults to 0.
         :param mask: An optional numpy array or path to a 1 channel image that will be used to filter the tiles (only useful in tile mode).  This mask image is interpreted 
             based on two additional optional parameters: area_threshold and threshold_mask.  area_threshold is used to determine if a patch acquired from the mask
             contains enough signal to be used for a tile to be included in the output.  threshold_mask is used to determine if a pixel value within the mask corresponds to 
             signal.  If the mask is a uint8 array with values 0 to 1, then area_threshold will effectively be 1 instead of the default 100.  If the mask is a boolean array,
-            then any True value will be considered signal.
+            then any True value will be considered signal.  Defaults to None.
         :param target_scale: An optional integer or tuple of floats defining the target scale produced for the iterator. If scale_mode is 'mag' can be an integer or float.
-            If scale mode is 'mm' can be a tuple of (x, y) floating point numbers in mm.  Defaults ot None for base image scale.
-        :param tile_size: An optional tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.
-        :param region_size: An optional tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.
+            If scale mode is 'mm' can be a tuple of (x, y) floating point numbers in mm.  Defaults ot None for base image scale.  Defaults to None.
+        :param tile_size: An optional tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.  Defaults to None.
+        :param region_size: An optional tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.  Defaults to None.
         :param dtype: An optional numpy data type for the output image batch. Defaults to np.uint8.
         :param chunk_mult: An integer shaping the number regions/tiles to be grouped in a single read. Defaults to 2.  
             Chunk size is this number squared. i.e. chunk_multi of 2 = chunk_size of 2^2.
@@ -96,7 +96,7 @@ class EagerIterator:
             'gy': top,
             'level_x': level_x,
             'level_y': level_y,
-            'tile_position': {'level_x': level_x, 'level_y': level_y, 'base_x': base_x, 'base_y': base_y},
+            'tile_position': {'level_x': level_x, 'level_y': level_y, 'region_x': region_x, 'region_y': region_y},
             'width': width,
             'height': height,
             'level': level,
