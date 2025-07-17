@@ -149,6 +149,7 @@ class EagerIterator:
         self.seed = seed
         self.overlap = overlap
         self.target_scale = target_scale
+        self.is_torch = False
 
         # Use the mask to determine the tiles if in tile mode
         if output_mode == 'tiles':
@@ -236,6 +237,7 @@ class EagerIterator:
             self.dtype = test_out.dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
             self.transform = transform
+            self.is_torch = False
 
         pass
 
