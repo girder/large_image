@@ -2,7 +2,7 @@ import math, os, random
 from typing import Optional, Tuple, Union
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
-from .eager_utils.eager_shared_numpy import SharedArray
+from .eager_utils.eager_shared_array import SharedArray
 from .eager_utils.eager_pytorch_threading_context import _PyTorchThreadingContext
 
 import numpy as np
