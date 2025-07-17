@@ -15,12 +15,12 @@
 
 - Do not check if items are used as annotation elements in DocumentDB ([#1949](../../pull/1949), [#1953](../../pull/1953))
 - Ensure a valid gdal version ([#1945](../../pull/1945))
-- Drop support for Python 3.8 ([#1950](../../pull/1950))
+- Drop support for Python 3.8 ([#1950](../../pull/1950), [#1957](../../pull/1957))
 
 ### Bug Fixes
 
 - Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
-- Harden reading ometiff that have certain planar configurations ([#1955](../../pull/1955))
+- Harden reading ometiff that have certain planar configurations ([#1956](../../pull/1956))
 
 ## 1.32.11
 

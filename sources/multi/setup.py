@@ -31,6 +31,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         'jsonschema',
         f'large-image{limit_version}',

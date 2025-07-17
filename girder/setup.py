@@ -31,6 +31,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         'girder>=3.1.18',
         'girder-jobs>=3.0.3',
