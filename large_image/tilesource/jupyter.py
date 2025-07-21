@@ -161,6 +161,10 @@ class IPyLeafletMixin:
             """
             return self._map.map
 
+    @property
+    def warp_points(self):
+        return self._map.warp_points
+
 
 class Map:
     """
@@ -190,7 +194,7 @@ class Map:
         :param resource: a girder resource path of an item or file that exists
             on the girder client.
         """
-        self._layer = self._map = self._metadata = self._frame_slider = None
+        self._layer = self._map = self._metadata = self.frame_selector = None
         self._frame_histograms: Optional[dict[int, Any]] = None
         self._ts = ts
         self._edit_warp = editWarp
@@ -371,14 +375,16 @@ class Map:
 
     def add_warp_editor(self):
         from ipyleaflet import DivIcon, Marker
-        from ipywidgets import Accordion, HTML, Label, VBox
+        from ipywidgets import Accordion, Checkbox, HTML, Label, VBox
 
         help_text = Label('To begin editing a warp, click on the image to place reference points.')
+        transform_checkbox = Checkbox(description='Show Transformed', value=True)
+        transform_checkbox.layout.display = 'none'
         yaml_schema = HTML('yaml')
         json_schema = HTML('json')
         schemas = Accordion(children=[yaml_schema, json_schema], titles=('YAML', 'JSON'))
         schemas.layout.display = 'none'
-        children = [help_text, schemas]
+        children = [transform_checkbox, help_text, schemas]
         marker_style = (
             'border-radius: 50%; position: relative;'
             'height: 16px; width: 16px; top: -8px; left: -8px;'
@@ -401,7 +407,8 @@ class Map:
             json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
             yaml_schema.value = f'<pre>{yaml.dump(schema)}</pre>'
             schemas.layout.display = 'block'
-
+            transform_checkbox.layout.display = 'block'
+            self.update_warp(transform_checkbox.value)
 
         def handle_drag(event):
             old = [round(v) for v in event.get('old')]
@@ -432,6 +439,10 @@ class Map:
                 self.warp_points['dst'].append(coords)
                 help_text.value = 'After placing reference points, you can drag them to define the warp.'
 
+        def toggle_transform(event):
+            self.update_warp(event.get('new'))
+
+        transform_checkbox.observe(toggle_transform, names=['value'])
         self._map.on_interaction(handle_interaction)
         return VBox(children)
 
@@ -575,7 +586,21 @@ class Map:
             return transf.transform(x, y)
         return x, self._metadata['sizeY'] - y
 
+    def update_warp(self, show_warp):
+        current_frame = self.frame_selector.currentFrame if self.frame_selector is not None else 0
+        if show_warp and len(self.warp_points.get('src')):
+            matched_points = {
+                k: [point for index, point in enumerate(v) if self.warp_points.get('src')[index] and self.warp_points.get('dst')[index]]
+                for k, v in self.warp_points.items()
+            }
+            self.update_layer_query(frame=current_frame, style=dict(warp=matched_points))
+        else:
+            self.update_layer_query(frame=current_frame, style=dict())
+
     def update_frame(self, frame, style, **kwargs):
+        self.update_layer_query(frame=frame, style=style)
+
+    def update_layer_query(self, frame, style, **kwargs):
         if self._layer:
             parsed_url = urlparse(self._layer.url)
             query = parsed_url.query
@@ -640,6 +665,21 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+multi_source = None
+def _lazyImportMultiSource():
+    """
+    Import the large_image_source_multi module. This is only needed when editWarp is used.
+    """
+    global multi_source
+
+    if multi_source is None:
+        try:
+            import large_image_source_multi as multi_source
+        except ImportError:
+            msg = 'large_image_source_multi module not found.'
+            raise TileSourceError(msg)
+
+
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
     import tornado.httpserver
     import tornado.netutil
@@ -665,6 +705,20 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
         @property
         def port(self) -> int:
             return self.ports[0]
+
+        def get_warp_source(self, warp):
+            if multi_source is None:
+                _lazyImportMultiSource()
+            #  TODO: is there a better way to get the path value?
+            path = str(self.tile_source._initValues[0][0])
+            return multi_source.open(dict(sources=[
+                dict(
+                    path=path,
+                    position=dict(
+                        x=0, y=0, warp=warp
+                    )
+                )
+            ]))
 
     manager = RequestManager(tile_source)
     # NOTE: set `ports` manually after launching server
@@ -705,12 +759,20 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             z = int(self.get_argument('z'))
             frame = int(self.get_argument('frame', default='0'))
             style = self.get_argument('style', default=None)
-            if style:
-                manager.tile_source.style = json.loads(style)  # type: ignore[attr-defined]
+            warp = None
             encoding = self.get_argument('encoding', 'PNG')
+            if style:
+                style = json.loads(style)
+                warp = style.get('warp')
+                if warp is None:
+                    manager.tile_source.style = style  # type: ignore[attr-defined]
             try:
-                tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
-                    x, y, z, encoding=encoding, frame=frame)
+                if warp is not None:
+                    tile_binary = manager.get_warp_source(warp).getTile(  # type: ignore[attr-defined]
+                        x, y, z, encoding=encoding, frame=frame)
+                else:
+                    tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
+                        x, y, z, encoding=encoding, frame=frame)
             except TileSourceXYZRangeError as e:
                 self.clear()
                 self.set_status(404)
