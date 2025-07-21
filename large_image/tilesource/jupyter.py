@@ -387,11 +387,15 @@ class Map:
 
         def update_schemas():
             help_text.value = 'Reference the schemas below to use this warp with the MultiFileTileSource (either as YAML or JSON).'
+            matched_points = {
+                k: [point for index, point in enumerate(v) if self.warp_points.get('src')[index] and self.warp_points.get('dst')[index]]
+                for k, v in self.warp_points.items()
+            }
             schema = dict(sources=[
                 dict(
                     #  TODO: is there a better way to get the path value?
                     path=str(self._ts._initValues[0][0]),
-                    z=0, position=dict(x=0, y=0, warp=self.warp_points)
+                    z=0, position=dict(x=0, y=0, warp=matched_points)
                 )
             ])
             json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
@@ -427,7 +431,6 @@ class Map:
                 self.warp_points['src'].append(None)
                 self.warp_points['dst'].append(coords)
                 help_text.value = 'After placing reference points, you can drag them to define the warp.'
-                schemas.layout.display = 'none'
 
         self._map.on_interaction(handle_interaction)
         return VBox(children)
