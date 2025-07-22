@@ -95,6 +95,7 @@ class IPyLeafletMixin:
         self._map = Map(
             ts=self,
             editWarp=kwargs.get('editWarp', False),
+            reference=kwargs.get('reference'),
         )
         if ipyleafletPresent:
             self.to_map = self._map.to_map
@@ -176,7 +177,7 @@ class Map:
             metadata: Optional[dict] = None, url: Optional[str] = None,
             gc: Optional[Any] = None, id: Optional[str] = None,
             resource: Optional[str] = None,
-            editWarp: bool = False,
+            editWarp: bool = False, reference: Optional[IPyLeafletMixin] = None,
     ) -> None:
         """
         Specify the large image to be used with the IPyLeaflet Map.  One of (a)
@@ -198,6 +199,8 @@ class Map:
         self._frame_histograms: Optional[dict[int, Any]] = None
         self._ts = ts
         self._edit_warp = editWarp
+        self._reference = reference
+        self._reference_layer = None
         if self._edit_warp:
             self.warp_points = dict(src=[], dst=[])
         if (not url or not metadata) and gc and (id or resource):
@@ -296,7 +299,7 @@ class Map:
         ipyleaflet layer, and the center of the tile source.
         """
         from ipyleaflet import FullScreenControl, Map, basemaps, projections
-        from ipywidgets import VBox
+        from ipywidgets import FloatSlider, VBox
 
         try:
             default_zoom = metadata['levels'] - metadata['sourceLevels']
@@ -361,6 +364,26 @@ class Map:
             m.fit_bounds(bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]])
         if self._geospatial:
             m.add_layer(layer)
+
+        if self._reference is not None:
+            default_opacity = 0.5
+            self._reference_layer = self._reference.as_leaflet_layer()
+            self._reference_layer.opacity = default_opacity
+            m.add_layer(self._reference_layer)
+
+            def update_reference_opacity(event):
+                self._reference_layer.opacity = event.get('new', default_opacity)
+
+            reference_slider = FloatSlider(
+                description='Reference Opacity',
+                value=default_opacity, step=0.1,
+                min=0, max=1,
+                readout_format='.1f',
+                style={'description_width': 'initial'}
+            )
+            reference_slider.observe(update_reference_opacity, names=['value'])
+            children.append(reference_slider)
+
         self._map = m
         children.append(m)
 
