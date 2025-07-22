@@ -125,6 +125,12 @@ RUN . ~/.bashrc && \
     nvm install 14 && \
     nvm alias default 14 && \
     nvm use default && \
+    cd /root/.nvm/versions/node/v14.21.3/lib && \
+    npm install 'form-data@^2.5.5' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
+    npm install 'form-data@^2.5.5' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/request && \
+    npm install 'form-data@^2.5.5' && \
     rm -rf /root/.nvm/.cache && \
     ln -s $(dirname `which npm`) /usr/local/node
 
