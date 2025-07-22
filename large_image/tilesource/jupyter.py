@@ -21,11 +21,11 @@ import json
 import os
 import threading
 import weakref
-import yaml
 from typing import Any, Optional, Union, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 import numpy as np
+import yaml
 
 import large_image
 from large_image.exceptions import TileSourceError, TileSourceXYZRangeError
@@ -379,7 +379,7 @@ class Map:
                 value=default_opacity, step=0.1,
                 min=0, max=1,
                 readout_format='.1f',
-                style={'description_width': 'initial'}
+                style={'description_width': 'initial'},
             )
             reference_slider.observe(update_reference_opacity, names=['value'])
             children.append(reference_slider)
@@ -398,7 +398,7 @@ class Map:
 
     def add_warp_editor(self):
         from ipyleaflet import DivIcon, Marker
-        from ipywidgets import Accordion, Checkbox, HTML, Label, VBox
+        from ipywidgets import HTML, Accordion, Checkbox, Label, VBox
 
         help_text = Label('To begin editing a warp, click on the image to place reference points.')
         transform_checkbox = Checkbox(description='Show Transformed', value=True)
@@ -415,17 +415,21 @@ class Map:
         )
 
         def update_schemas():
-            help_text.value = 'Reference the schemas below to use this warp with the MultiFileTileSource (either as YAML or JSON).'
+            help_text.value = (
+                'Reference the schemas below to use this warp with '
+                'the MultiFileTileSource (either as YAML or JSON).'
+            )
             matched_points = {
-                k: [point for index, point in enumerate(v) if self.warp_points.get('src')[index] and self.warp_points.get('dst')[index]]
+                k: [point for index, point in enumerate(v) if self.warp_points.get(
+                    'src')[index] and self.warp_points.get('dst')[index]]
                 for k, v in self.warp_points.items()
             }
             schema = dict(sources=[
                 dict(
                     #  TODO: is there a better way to get the path value?
                     path=str(self._ts._initValues[0][0]),
-                    z=0, position=dict(x=0, y=0, warp=matched_points)
-                )
+                    z=0, position=dict(x=0, y=0, warp=matched_points),
+                ),
             ])
             json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
             yaml_schema.value = f'<pre>{yaml.dump(schema)}</pre>'
@@ -463,7 +467,9 @@ class Map:
                 self._map.add(marker)
                 self.warp_points['src'].append(None)
                 self.warp_points['dst'].append(convert_coordinate(coords))
-                help_text.value = 'After placing reference points, you can drag them to define the warp.'
+                help_text.value = (
+                    'After placing reference points, you can drag them to define the warp.'
+                )
 
         def toggle_transform(event):
             self.update_warp(event.get('new'))
@@ -616,7 +622,8 @@ class Map:
         current_frame = self.frame_selector.currentFrame if self.frame_selector is not None else 0
         if show_warp and len(self.warp_points.get('src')):
             matched_points = {
-                k: [point for index, point in enumerate(v) if self.warp_points.get('src')[index] and self.warp_points.get('dst')[index]]
+                k: [point for index, point in enumerate(v) if self.warp_points.get(
+                    'src')[index] and self.warp_points.get('dst')[index]]
                 for k, v in self.warp_points.items()
             }
             self.update_layer_query(frame=current_frame, style=dict(warp=matched_points))
@@ -692,6 +699,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 multi_source = None
+
+
 def _lazyImportMultiSource():
     """
     Import the large_image_source_multi module. This is only needed when editWarp is used.
@@ -706,45 +715,46 @@ def _lazyImportMultiSource():
             raise TileSourceError(msg)
 
 
+class RequestManager:
+    def __init__(self, tile_source: IPyLeafletMixin) -> None:
+        self._tile_source_ = weakref.ref(tile_source)
+        self._ports = ()
+
+    @property
+    def tile_source(self) -> IPyLeafletMixin:
+        return cast(IPyLeafletMixin, self._tile_source_())
+
+    @tile_source.setter
+    def tile_source(self, source: IPyLeafletMixin) -> None:
+        self._tile_source_ = weakref.ref(source)
+
+    @property
+    def ports(self) -> tuple[int, ...]:
+        return self._ports
+
+    @property
+    def port(self) -> int:
+        return self.ports[0]
+
+    def get_warp_source(self, warp):
+        if multi_source is None:
+            _lazyImportMultiSource()
+        #  TODO: is there a better way to get the path value?
+        path = str(self.tile_source._initValues[0][0])
+        return multi_source.open(dict(sources=[
+            dict(
+                path=path,
+                position=dict(
+                    x=0, y=0, warp=warp,
+                ),
+            ),
+        ]))
+
+
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
     import tornado.httpserver
     import tornado.netutil
     import tornado.web
-
-    class RequestManager:
-        def __init__(self, tile_source: IPyLeafletMixin) -> None:
-            self._tile_source_ = weakref.ref(tile_source)
-            self._ports = ()
-
-        @property
-        def tile_source(self) -> IPyLeafletMixin:
-            return cast(IPyLeafletMixin, self._tile_source_())
-
-        @tile_source.setter
-        def tile_source(self, source: IPyLeafletMixin) -> None:
-            self._tile_source_ = weakref.ref(source)
-
-        @property
-        def ports(self) -> tuple[int, ...]:
-            return self._ports
-
-        @property
-        def port(self) -> int:
-            return self.ports[0]
-
-        def get_warp_source(self, warp):
-            if multi_source is None:
-                _lazyImportMultiSource()
-            #  TODO: is there a better way to get the path value?
-            path = str(self.tile_source._initValues[0][0])
-            return multi_source.open(dict(sources=[
-                dict(
-                    path=path,
-                    position=dict(
-                        x=0, y=0, warp=warp
-                    )
-                )
-            ]))
 
     manager = RequestManager(tile_source)
     # NOTE: set `ports` manually after launching server
@@ -793,12 +803,11 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
                 if warp is None:
                     manager.tile_source.style = style  # type: ignore[attr-defined]
             try:
+                source = manager.tile_source
                 if warp is not None:
-                    tile_binary = manager.get_warp_source(warp).getTile(  # type: ignore[attr-defined]
-                        x, y, z, encoding=encoding, frame=frame)
-                else:
-                    tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
-                        x, y, z, encoding=encoding, frame=frame)
+                    source = manager.get_warp_source(warp)
+                tile_binary = source.getTile(  # type: ignore[attr-defined]
+                    x, y, z, encoding=encoding, frame=frame)
             except TileSourceXYZRangeError as e:
                 self.clear()
                 self.set_status(404)
