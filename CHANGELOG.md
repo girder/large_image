@@ -21,6 +21,7 @@
 
 - Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
 - Harden reading ometiff that have certain planar configurations ([#1956](../../pull/1956))
+- If a tile is larger than expected, guard its size ([#1955](../../pull/1955))
 
 ## 1.32.11
 
