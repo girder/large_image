@@ -759,14 +759,18 @@ class RequestManager:
     def get_warp_source(self, warp):
         _lazyImportMultiSource()
         if multi_source is not None and self.tile_source is not None:
-            return multi_source.open(dict(sources=[
-                dict(
-                    path=self.tile_source.image_path,
-                    position=dict(
-                        x=0, y=0, warp=warp,
+            return multi_source.open(dict(
+                sources=[
+                    dict(
+                        path=self.tile_source.image_path,
+                        position=dict(
+                            x=0, y=0, warp=warp,
+                        ),
                     ),
-                ),
-            ]))
+                ],
+                width=self.tile_source.sizeX,
+                height=self.tile_source.sizeY,
+            ))
 
 
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
