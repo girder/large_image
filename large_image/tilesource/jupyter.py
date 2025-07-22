@@ -440,8 +440,11 @@ class Map:
             transform_checkbox.layout.display = 'block'
             self.update_warp(transform_checkbox.value)
 
-        def convert_coordinate(coord):
-            return [coord[1], coord[0]]
+        def convert_coordinate(map_coord):
+            y, x = map_coord
+            if self._ts is not None:
+                y = self._ts.sizeY - y
+            return [x, y]
 
         def handle_drag(event):
             old = [round(v) for v in event.get('old')]
