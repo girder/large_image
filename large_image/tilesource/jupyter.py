@@ -167,11 +167,6 @@ class IPyLeafletMixin:
     def warp_points(self):
         return self._map.warp_points
 
-    @property
-    def image_path(self):
-        #  TODO: is there a better way to get the path value?
-        return str(self._initValues[0][0])  # type: ignore[attr-defined]
-
 
 class Map:
     """
@@ -403,10 +398,20 @@ class Map:
         self._map.add(FullScreenControl())
         return VBox(children)
 
+    def warp_editor_validate_source(self):
+        if self._ts is None:
+            msg = 'Warp editor mode not allowed; source is not defined.'
+            raise TileSourceError(msg)
+
+        if not os.path.exists(str(self._ts.largeImagePath)):  # type: ignore[attr-defined]
+            msg = 'Warp editor mode not allowed; source file does not exist.'
+            raise TileSourceError(msg)
+
     def add_warp_editor(self):
         from ipyleaflet import DivIcon, Marker
         from ipywidgets import HTML, Accordion, Checkbox, Label, VBox
 
+        self.warp_editor_validate_source()
         help_text = Label('To begin editing a warp, click on the image to place reference points.')
         transform_checkbox = Checkbox(description='Show Transformed', value=True)
         transform_checkbox.layout.display = 'none'
@@ -430,7 +435,7 @@ class Map:
             )
             schema = dict(sources=[
                 dict(
-                    path=self._ts.image_path,
+                    path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
                     z=0, position=dict(x=0, y=0, warp=self.get_matched_warp_points()),
                 ),
             ])
@@ -443,7 +448,7 @@ class Map:
         def convert_coordinate(map_coord):
             y, x = map_coord
             if self._ts is not None:
-                y = self._ts.sizeY - y
+                y = self._ts.sizeY - y   # type: ignore[attr-defined]
             return [x, y]
 
         def handle_drag(event):
@@ -762,7 +767,7 @@ class RequestManager:
             return multi_source.open(dict(
                 sources=[
                     dict(
-                        path=self.tile_source.image_path,
+                        path=str(self.tile_source.largeImagePath),
                         position=dict(
                             x=0, y=0, warp=warp,
                         ),
