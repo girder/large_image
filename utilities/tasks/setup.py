@@ -36,6 +36,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         # Packages required by both producer and consumer side installations
         'girder-worker-utils>=0.8.5',
