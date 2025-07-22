@@ -410,15 +410,18 @@ class Map:
             transform_checkbox.layout.display = 'block'
             self.update_warp(transform_checkbox.value)
 
+        def convert_coordinate(coord):
+            return [coord[1], coord[0]]
+
         def handle_drag(event):
             old = [round(v) for v in event.get('old')]
             new = [round(v) for v in event.get('new')]
             marker_title = event.get('owner').title
             group_name = marker_title[:3]
             index = int(marker_title[3:])
-            self.warp_points[group_name][index] = new
+            self.warp_points[group_name][index] = convert_coordinate(new)
             if group_name == 'dst' and self.warp_points['src'][index] is None:
-                self.warp_points['src'][index] = old
+                self.warp_points['src'][index] = convert_coordinate(old)
                 html = f'<div style="background-color: #ff6a5e; {marker_style}">{index}</div>'
                 icon = DivIcon(html=html, icon_size=[0, 0])
                 marker = Marker(location=old, draggable=True, icon=icon, title=f'src {index}')
@@ -436,7 +439,7 @@ class Map:
                 marker.observe(handle_drag, 'location')
                 self._map.add(marker)
                 self.warp_points['src'].append(None)
-                self.warp_points['dst'].append(coords)
+                self.warp_points['dst'].append(convert_coordinate(coords))
                 help_text.value = 'After placing reference points, you can drag them to define the warp.'
 
         def toggle_transform(event):
