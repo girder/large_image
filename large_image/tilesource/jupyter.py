@@ -30,6 +30,7 @@ import yaml
 import large_image
 from large_image.exceptions import TileSourceError, TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
+from large_image.widgets.components import FrameSelector
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
 ipyvuePresent = importlib.util.find_spec('ipyvue') is not None
@@ -166,6 +167,11 @@ class IPyLeafletMixin:
     def warp_points(self):
         return self._map.warp_points
 
+    @property
+    def image_path(self):
+        #  TODO: is there a better way to get the path value?
+        return str(self._initValues[0][0])  # type: ignore[attr-defined]
+
 
 class Map:
     """
@@ -195,14 +201,15 @@ class Map:
         :param resource: a girder resource path of an item or file that exists
             on the girder client.
         """
-        self._layer = self._map = self._metadata = self.frame_selector = None
+        self._layer = self._map = self._metadata = None
+        self.frame_selector: Optional[FrameSelector] = None
         self._frame_histograms: Optional[dict[int, Any]] = None
         self._ts = ts
         self._edit_warp = editWarp
         self._reference = reference
         self._reference_layer = None
         if self._edit_warp:
-            self.warp_points = dict(src=[], dst=[])
+            self.warp_points: dict[str, list[Optional[list[int]]]] = dict(src=[], dst=[])
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
             if id is None:
@@ -341,8 +348,6 @@ class Map:
         children: list[Any] = []
         frames = metadata.get('frames')
         if frames is not None and ipyvuePresent and aiohttpPresent:
-            from large_image.widgets.components import FrameSelector
-
             self.frame_selector = FrameSelector()
             self.frame_selector.imageMetadata = metadata
             self.frame_selector.updateFrameCallback = self.update_frame
@@ -368,11 +373,13 @@ class Map:
         if self._reference is not None:
             default_opacity = 0.5
             self._reference_layer = self._reference.as_leaflet_layer()
-            self._reference_layer.opacity = default_opacity
-            m.add_layer(self._reference_layer)
+            if self._reference_layer is not None:
+                self._reference_layer.opacity = default_opacity
+                m.add_layer(self._reference_layer)
 
             def update_reference_opacity(event):
-                self._reference_layer.opacity = event.get('new', default_opacity)
+                if self._reference_layer is not None:
+                    self._reference_layer.opacity = event.get('new', default_opacity)
 
             reference_slider = FloatSlider(
                 description='Reference Opacity',
@@ -415,20 +422,16 @@ class Map:
         )
 
         def update_schemas():
+            if self._ts is None:
+                return
             help_text.value = (
                 'Reference the schemas below to use this warp with '
                 'the MultiFileTileSource (either as YAML or JSON).'
             )
-            matched_points = {
-                k: [point for index, point in enumerate(v) if self.warp_points.get(
-                    'src')[index] and self.warp_points.get('dst')[index]]
-                for k, v in self.warp_points.items()
-            }
             schema = dict(sources=[
                 dict(
-                    #  TODO: is there a better way to get the path value?
-                    path=str(self._ts._initValues[0][0]),
-                    z=0, position=dict(x=0, y=0, warp=matched_points),
+                    path=self._ts.image_path,
+                    z=0, position=dict(x=0, y=0, warp=self.get_matched_warp_points()),
                 ),
             ])
             json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
@@ -453,7 +456,8 @@ class Map:
                 icon = DivIcon(html=html, icon_size=[0, 0])
                 marker = Marker(location=old, draggable=True, icon=icon, title=f'src {index}')
                 marker.observe(handle_drag, 'location')
-                self._map.add(marker)
+                if self._map is not None:
+                    self._map.add(marker)
             update_schemas()
 
         def handle_interaction(**kwargs):
@@ -464,7 +468,8 @@ class Map:
                 icon = DivIcon(html=html, icon_size=[0, 0])
                 marker = Marker(location=coords, draggable=True, icon=icon, title=f'dst {index}')
                 marker.observe(handle_drag, 'location')
-                self._map.add(marker)
+                if self._map is not None:
+                    self._map.add(marker)
                 self.warp_points['src'].append(None)
                 self.warp_points['dst'].append(convert_coordinate(coords))
                 help_text.value = (
@@ -475,7 +480,8 @@ class Map:
             self.update_warp(event.get('new'))
 
         transform_checkbox.observe(toggle_transform, names=['value'])
-        self._map.on_interaction(handle_interaction)
+        if self._map is not None:
+            self._map.on_interaction(handle_interaction)
         return VBox(children)
 
     def add_region_indicator(self):
@@ -618,14 +624,24 @@ class Map:
             return transf.transform(x, y)
         return x, self._metadata['sizeY'] - y
 
+    def get_matched_warp_points(self):
+        src = self.warp_points.get('src')
+        dst = self.warp_points.get('dst')
+        if src is None or dst is None:
+            return {}
+        return {
+            k: [
+                point for index, point in enumerate(v)
+                if len(src) > index and src[index] and
+                len(dst) > index and dst[index]
+            ]
+            for k, v in self.warp_points.items()
+        }
+
     def update_warp(self, show_warp):
         current_frame = self.frame_selector.currentFrame if self.frame_selector is not None else 0
-        if show_warp and len(self.warp_points.get('src')):
-            matched_points = {
-                k: [point for index, point in enumerate(v) if self.warp_points.get(
-                    'src')[index] and self.warp_points.get('dst')[index]]
-                for k, v in self.warp_points.items()
-            }
+        matched_points = self.get_matched_warp_points()
+        if show_warp and len(matched_points):
             self.update_layer_query(frame=current_frame, style=dict(warp=matched_points))
         else:
             self.update_layer_query(frame=current_frame, style=dict())
@@ -677,9 +693,10 @@ class Map:
                     async with session.get(url) as response:
                         self._frame_histograms[frame] = await response.json()  # type: ignore
                         # rewrite whole object for watcher
-                        self.frame_selector.frameHistograms = (
-                            self._frame_histograms.copy()  # type: ignore
-                        )
+                        if self.frame_selector is not None and self._frame_histograms is not None:
+                            self.frame_selector.frameHistograms = (
+                                self._frame_histograms.copy()  # type: ignore
+                            )
 
             asyncio.ensure_future(fetch(histogram_url))
 
@@ -737,18 +754,16 @@ class RequestManager:
         return self.ports[0]
 
     def get_warp_source(self, warp):
-        if multi_source is None:
-            _lazyImportMultiSource()
-        #  TODO: is there a better way to get the path value?
-        path = str(self.tile_source._initValues[0][0])
-        return multi_source.open(dict(sources=[
-            dict(
-                path=path,
-                position=dict(
-                    x=0, y=0, warp=warp,
+        _lazyImportMultiSource()
+        if multi_source is not None and self.tile_source is not None:
+            return multi_source.open(dict(sources=[
+                dict(
+                    path=self.tile_source.image_path,
+                    position=dict(
+                        x=0, y=0, warp=warp,
+                    ),
                 ),
-            ),
-        ]))
+            ]))
 
 
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
