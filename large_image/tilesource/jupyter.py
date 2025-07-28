@@ -779,7 +779,7 @@ class RequestManager:
                 ],
                 width=self.tile_source.sizeX,
                 height=self.tile_source.sizeY,
-            ))
+            ), noCache=False)
 
 
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
