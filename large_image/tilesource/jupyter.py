@@ -451,35 +451,39 @@ class Map:
                 y = self._ts.sizeY - y   # type: ignore[attr-defined]
             return [x, y]
 
+        def create_reference_point_pair(coord):
+            converted = convert_coordinate(coord)
+            index = len(self.warp_points['src'])
+            self.warp_points['src'].append(converted)
+            self.warp_points['dst'].append(converted)
+
+            for group_name, color in [
+                ('src', '#ff6a5e'), ('dst', '#19a7ff'),
+            ]:
+                html = f'<div style="background-color: {color}; {marker_style}">{index}</div>'
+                icon = DivIcon(html=html, icon_size=[0, 0])
+                marker = Marker(
+                    location=coord,
+                    draggable=True,
+                    icon=icon,
+                    title=f'{group_name} {index}',
+                )
+                marker.observe(handle_drag, 'location')
+                if self._map is not None:
+                    self._map.add(marker)
+
         def handle_drag(event):
-            old = [round(v) for v in event.get('old')]
             new = [round(v) for v in event.get('new')]
             marker_title = event.get('owner').title
             group_name = marker_title[:3]
             index = int(marker_title[3:])
             self.warp_points[group_name][index] = convert_coordinate(new)
-            if group_name == 'dst' and self.warp_points['src'][index] is None:
-                self.warp_points['src'][index] = convert_coordinate(old)
-                html = f'<div style="background-color: #ff6a5e; {marker_style}">{index}</div>'
-                icon = DivIcon(html=html, icon_size=[0, 0])
-                marker = Marker(location=old, draggable=True, icon=icon, title=f'src {index}')
-                marker.observe(handle_drag, 'location')
-                if self._map is not None:
-                    self._map.add(marker)
             update_schemas()
 
         def handle_interaction(**kwargs):
             if kwargs.get('type') == 'click':
-                coords = kwargs.get('coordinates')
-                index = len(self.warp_points['src'])
-                html = f'<div style="background-color: #19a7ff; {marker_style}">{index}</div>'
-                icon = DivIcon(html=html, icon_size=[0, 0])
-                marker = Marker(location=coords, draggable=True, icon=icon, title=f'dst {index}')
-                marker.observe(handle_drag, 'location')
-                if self._map is not None:
-                    self._map.add(marker)
-                self.warp_points['src'].append(None)
-                self.warp_points['dst'].append(convert_coordinate(coords))
+                create_reference_point_pair(kwargs.get('coordinates'))
+                update_schemas()
                 help_text.value = (
                     'After placing reference points, you can drag them to define the warp.'
                 )
