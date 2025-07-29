@@ -1,6 +1,6 @@
 import math
 import pathlib
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 from urllib.parse import urlencode, urlparse
 
 import numpy as np
@@ -18,11 +18,11 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
     100 * 1024 ** 2)
 
 # Used to cache pixel size for projections
-ProjUnitsAcrossLevel0: Dict[str, float] = {}
+ProjUnitsAcrossLevel0: dict[str, float] = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
 
 
-def make_vsi(url: Union[str, pathlib.Path, Dict[Any, Any]], **options) -> str:
+def make_vsi(url: Union[str, pathlib.Path, dict[Any, Any]], **options) -> str:
     if str(url).startswith('s3://'):
         s3_path = str(url).replace('s3://', '')
         vsi = f'/vsis3/{s3_path}'
@@ -71,7 +71,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
     }
 
     projection: Union[str, bytes]
-    projectionOrigin: Tuple[float, float]
+    projectionOrigin: tuple[float, float]
     sourceLevels: int
     sourceSizeX: int
     sourceSizeY: int
@@ -85,18 +85,18 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         """
         raise NotImplementedError
 
-    def _convertProjectionUnits(self, *args, **kwargs) -> Tuple[
+    def _convertProjectionUnits(self, *args, **kwargs) -> tuple[
         float, float, float, float, float, float, str,
     ]:
         raise NotImplementedError
 
-    def pixelToProjection(self, *args, **kwargs) -> Tuple[float, float]:
+    def pixelToProjection(self, *args, **kwargs) -> tuple[float, float]:
         raise NotImplementedError
 
-    def toNativePixelCoordinates(self, *args, **kwargs) -> Tuple[float, float]:
+    def toNativePixelCoordinates(self, *args, **kwargs) -> tuple[float, float]:
         raise NotImplementedError
 
-    def getBounds(self, *args, **kwargs) -> Dict[str, Any]:
+    def getBounds(self, *args, **kwargs) -> dict[str, Any]:
         raise NotImplementedError
 
     @staticmethod
@@ -137,7 +137,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
         if hasattr(self, '_getTileLock'):
             self._setDefaultStyle()
 
-    def _styleBands(self) -> List[Dict[str, Any]]:
+    def _styleBands(self) -> list[dict[str, Any]]:
         interpColorTable = {
             'red': ['#000000', '#ff0000'],
             'green': ['#000000', '#00ff00'],
@@ -231,7 +231,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             self._style = JSONDict({'bands': style})
 
     @staticmethod
-    def getHexColors(palette: Union[str, List[Union[str, float, Tuple[float, ...]]]]) -> List[str]:
+    def getHexColors(palette: Union[str, list[Union[str, float, tuple[float, ...]]]]) -> list[str]:
         """
         Returns list of hex colors for a given color palette
 
@@ -254,10 +254,10 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             import pyproj
 
             geod = pyproj.Geod(ellps='WGS84')
-            computer = cast(Callable[[Any, Any, Any, Any], Tuple[Any, Any, float]], geod.inv)
+            computer = cast(Callable[[Any, Any, Any, Any], tuple[Any, Any, float]], geod.inv)
         except Exception:
             # Estimate based on great-circle distance
-            def computer(lon1, lat1, lon2, lat2) -> Tuple[Any, Any, float]:
+            def computer(lon1, lat1, lon2, lat2) -> tuple[Any, Any, float]:
                 from math import acos, cos, radians, sin
                 lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
                 return None, None, 6.378e+6 * (
@@ -273,7 +273,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
                             bounds['ul']['x'], bounds['ul']['y'])
         return (s1 + s2 + s3 + s4) / (self.sourceSizeX * 2 + self.sourceSizeY * 2)
 
-    def getNativeMagnification(self) -> Dict[str, Optional[float]]:
+    def getNativeMagnification(self) -> dict[str, Optional[float]]:
         """
         Get the magnification at the base level.
 
@@ -288,7 +288,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             'mm_y': scale * 1000 if scale else None,
         }
 
-    def getTileCorners(self, z: int, x: float, y: float) -> Tuple[float, float, float, float]:
+    def getTileCorners(self, z: int, x: float, y: float) -> tuple[float, float, float, float]:
         """
         Returns bounds of a tile for a given x,y,z index.
 
@@ -355,8 +355,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             top: Optional[float] = None, right: Optional[float] = None,
             bottom: Optional[float] = None, width: Optional[float] = None,
             height: Optional[float] = None, units: Optional[str] = None,
-            desiredMagnification: Optional[Dict[str, Optional[float]]] = None,
-            cropToImage: bool = True, **kwargs) -> Tuple[float, float, float, float]:
+            desiredMagnification: Optional[dict[str, Optional[float]]] = None,
+            cropToImage: bool = True, **kwargs) -> tuple[float, float, float, float]:
         """
         Given a set of arguments that can include left, right, top, bottom,
         width, height, and units, generate actual pixel values for left, top,
@@ -459,7 +459,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
     @methodcache()
     def getThumbnail(
             self, width: Optional[Union[str, int]] = None,
-            height: Optional[Union[str, int]] = None, **kwargs) -> Tuple[
+            height: Optional[Union[str, int]] = None, **kwargs) -> tuple[
                 Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is

@@ -25,13 +25,13 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         f'large-image{limit_version}',
         'python-bioformats>=1.5.2',
@@ -42,7 +42,6 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.8',
     entry_points={
         'large_image.source': [
             'bioformats = large_image_source_bioformats:BioformatsFileTileSource',
