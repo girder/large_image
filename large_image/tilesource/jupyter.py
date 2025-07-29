@@ -528,7 +528,7 @@ class Map:
                     icon=icon,
                     title=f'{group_name} {index}',
                 )
-                marker.on_dblclick(lambda **e: remove_reference_point_pair(marker))
+                marker.on_dblclick(lambda m=marker, **e: remove_reference_point_pair(m))
                 marker.observe(handle_drag, 'location')
                 markers[group_name].append(marker)
                 if self._map is not None:
