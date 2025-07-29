@@ -1,7 +1,9 @@
-from typing import Union, Optional
+from typing import Union, Optional, Tuple, List
 import math
 import large_image
 import numpy as np
+
+from ..base import TileSource
 
 def get_smallest_bounding_box(roi):
     '''
@@ -14,7 +16,7 @@ def get_smallest_bounding_box(roi):
     roi_x2, roi_y2 = points.max(axis=0)
     return (roi_x1, roi_y1), (roi_x2, roi_y2)
 
-def return_tile_slides_meeting_area_threshold(mask: np.ndarray, slide_dim: dict, tiles: list, area_threshold: float = 0.25, threshold_mask: int = 100):
+def return_tile_slides_meeting_area_threshold(mask: np.ndarray, slide_dim: dict, tiles: Union[List, np.ndarray], area_threshold: float = 0.25, threshold_mask: Union[int, float] = 100):
     '''
     A function that uses a mask generated from a whole slide image thumbnail to determine which tiles have enough content
     for being included in a set of evaluated tiles given a list of all possible tiles at a specific desired scaling.
@@ -133,7 +135,7 @@ def generate_assumptions_for_x_y_given_mag(x, y, z):
 
     return x, y, z
 
-def get_scaling_values_from_meta(source_meta: dict, mode: str, target_scale: Optional[Union[tuple, int, float]] = None):
+def get_scaling_values_from_meta(source_meta: dict, scale_mode: str, target_scale: Optional[Union[tuple, int, float]] = None):
     '''
     A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
     :param source_meta: A large image source metadata.
@@ -141,19 +143,19 @@ def get_scaling_values_from_meta(source_meta: dict, mode: str, target_scale: Opt
     :param target_scale: The desired target scale as an int for magnification in 'mag' mode or a tuple of (x, y) in 'mm' mode.
     :return: A dictionary defining scaling.
     '''
-    if mode is not None:
-        mode = mode.lower()
-        mode_split = mode.split('.')
-        mode = mode_split[0]
+    if scale_mode is not None:
+        scale_mode = scale_mode.lower()
+        scale_mode_split = scale_mode.split('.')
+        scale_mode = scale_mode_split[0]
         mode_modifier = None
 
-    if len(mode_split) > 1:
-        mode_modifier = mode_split[1]
+    if len(scale_mode_split) > 1:
+        mode_modifier = scale_mode_split[1]
 
     # Define none for both target (i, j, k) and base (x, y, z) values
     i, j, k, x, y, z = None, None, None, None, None, None
 
-    if mode == 'mag':
+    if scale_mode == 'mag':
         if target_scale is None:
             k = source_meta['magnification']
             z = source_meta['magnification']
@@ -177,7 +179,7 @@ def get_scaling_values_from_meta(source_meta: dict, mode: str, target_scale: Opt
         if k is None:
             raise Exception("Not a valid scale for the selected mode")
 
-    if mode == 'mm':
+    if scale_mode == 'mm':
         if target_scale is None:
             z = source_meta['magnification']
             k = source_meta['magnification']
@@ -218,7 +220,7 @@ def get_scaling_values_from_meta(source_meta: dict, mode: str, target_scale: Opt
 
     return out
 
-def calculate_slide_dimensions(source: 'large_image.TileSource', mode: str = 'mag', target_scale: tuple = None, tile_size: tuple = None):
+def calculate_slide_dimensions(source: TileSource, scale_mode: str = 'mag', target_scale: Optional[Union[Tuple[float, float], float, Tuple[int, int], int]] = None, tile_size: Optional[tuple] = None):
     '''
     A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
     :param source: A large image tile source.
@@ -233,10 +235,10 @@ def calculate_slide_dimensions(source: 'large_image.TileSource', mode: str = 'ma
 
     source_meta = source.getMetadata()
 
-    slide_dimensions['mode'] = mode
+    slide_dimensions['scale_mode'] = scale_mode
     slide_dimensions['base_magnification'] = source_meta['magnification']
 
-    scaling_values = get_scaling_values_from_meta(source_meta, mode, target_scale)
+    scaling_values = get_scaling_values_from_meta(source_meta, scale_mode, target_scale)
     slide_dimensions['target_magnification'] = scaling_values['target_mag']
     slide_dimensions['base_size_x'] = source_meta['sizeX']
     slide_dimensions['base_size_y'] = source_meta['sizeY']
@@ -261,7 +263,7 @@ def calculate_slide_dimensions(source: 'large_image.TileSource', mode: str = 'ma
     else:
         raise Exception("Unable to generate scale dimensions for the selected mode. Failure in the y dimension")
 
-    if mode == 'mag':
+    if scale_mode == 'mag':
         convert_scale_px = source.convertRegionScale(
             sourceRegion=dict(left=0, top=0, width=slide_dimensions['base_size_x'], height=slide_dimensions['base_size_y'], units='base_pixels'),
             targetScale=dict(magnification=slide_dimensions['target_magnification']),
@@ -276,7 +278,7 @@ def calculate_slide_dimensions(source: 'large_image.TileSource', mode: str = 'ma
 
         slide_dimensions['level'] = source.getLevelForMagnification(slide_dimensions['target_magnification'])
 
-    elif mode == 'mm':
+    elif scale_mode == 'mm':
         convert_scale_px = source.convertRegionScale(
             sourceRegion=dict(left=0, top=0, width=slide_dimensions['base_size_x'], height=slide_dimensions['base_size_y'], units='base_pixels'),
             targetScale=dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y']),

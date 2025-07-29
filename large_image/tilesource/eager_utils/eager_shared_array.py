@@ -1,20 +1,22 @@
 import os
-from typing import Union
+from typing import Union, List
 import multiprocessing.shared_memory
 import operator
 import functools
 
 import numpy as np
 
+# Ignore torch import errors given they aren't required for this module
+
 class SharedArray:
-    def __init__(self, shape: tuple, dtype: Union[np.dtype, 'torch.dtype'], is_torch: bool = False):
+    def __init__(self, shape: Union[tuple, list], dtype: Union[np.dtype, 'torch.dtype'], is_torch: bool = False): # type: ignore
         """Init"""
         self.shape = shape        
         self.is_torch = is_torch
         self.dtype = dtype        
         
         if is_torch:
-            import torch.multiprocessing
+            import torch.multiprocessing # type: ignore
             self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
             self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)            
             self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
@@ -28,14 +30,14 @@ class SharedArray:
         
         self.created = True
 
-    def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int):
+    def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int): # type: ignore
         """Insert a batch dimension slice."""
         self.buf[i] = arr
 
-    def copy(self, arr: Union[np.ndarray, 'torch.Tensor']):
+    def copy(self, arr: Union[np.ndarray, 'torch.Tensor']): # type: ignore
         self.shape = arr.shape
         if self.is_torch:
-            import torch
+            import torch # type: ignore
             self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
         else:
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
@@ -46,7 +48,7 @@ class SharedArray:
 
     def view(self):
         if self.is_torch:
-            import torch
+            import torch # type: ignore
             return torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
         else:
             return np.ndarray(self.shape, self.dtype, buffer=self.shm.buf)
@@ -57,7 +59,7 @@ class SharedArray:
     def __getitem__(self, idx: int):
         return self.buf[idx]
 
-    def __array__(self, dtype: Union[np.dtype, 'torch.dtype'] = None):
+    def __array__(self, dtype: Union[np.dtype, 'torch.dtype'] = None): # type: ignore
         return self.buf.copy().astype(dtype) if dtype is not None else self.buf.copy()
 
     def __getstate__(self):
@@ -74,7 +76,7 @@ class SharedArray:
         self.__dict__.update(state)
         self.shm = multiprocessing.shared_memory.SharedMemory(shm_name)
         if self.is_torch:
-            import torch
+            import torch # type: ignore
             self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
         else:
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)

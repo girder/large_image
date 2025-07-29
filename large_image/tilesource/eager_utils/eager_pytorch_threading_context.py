@@ -1,3 +1,5 @@
+# Ignore torch import errors given they aren't required for this module
+
 class _PyTorchThreadingContext:
     """Context manager to temporarily set PyTorch threading to 1 thread per process."""
     
@@ -8,7 +10,7 @@ class _PyTorchThreadingContext:
         
     def __enter__(self):
         try:
-            import torch
+            import torch # type: ignore
             self.torch_available = True
             # Save current settings
             self.original_num_threads = torch.get_num_threads()
@@ -23,7 +25,7 @@ class _PyTorchThreadingContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.torch_available:
             try:
-                import torch
+                import torch # type: ignore
                 # Restore original settings
                 if self.original_num_threads is not None:
                     torch.set_num_threads(self.original_num_threads)

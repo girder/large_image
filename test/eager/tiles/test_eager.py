@@ -5,8 +5,8 @@ from matplotlib import pyplot as plt
 
 # test_wsi = '/wsi_archive/APOLLO_NP/2024/E24-12/scanned images/E24-12_ABETA_1.svs'
 # test_wsi = '/scr/tmp/SSCMH14_12MO_LF_01_HE.ndpi'
-test_wsi = '/scr/arosado/tmp/SSCMH14_12MO_LF_01_HE.ndpi'
-test_mask = '/scr/arosado/tmp/SSCMH14_12MO_LF_01_HE.ndpi_mask.png'
+test_wsi = '/localNVME/arosado/tmp/SSCMH14_12MO_LF_01_HE.ndpi'
+test_mask = '/localNVME/arosado/tmp/SSCMH14_12MO_LF_01_HE.ndpi_mask.png'
 
 def test_eager_iterator():
     source = large_image.open(test_wsi)

@@ -1,5 +1,5 @@
 import math, os, random
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, Callable
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
 from .eager_utils.eager_shared_array import SharedArray
@@ -20,10 +20,10 @@ class EagerIterator:
             scale_mode: str ='mag',
             overlap: Union[float, int] = 0,
             mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
-            target_scale: Optional[Union[Tuple[float, float], float]] = None,
+            target_scale: Optional[Union[Tuple[float, float], float, Tuple[int, int], int]] = None,
             tile_size: Optional[Tuple[int, int]] = None,
             region_size: Optional[Tuple[int, int]] = None,
-            dtype: np.dtype = np.uint8,
+            dtype: np.typing.DTypeLike = np.uint8,
             chunk_mult: int = 2,
             edge: bool = False,
             pad_mode: str = 'wsi_edge',
@@ -34,7 +34,7 @@ class EagerIterator:
             workers: int = 16,
             tiles: Optional[Union[list, np.ndarray]] = None,
             regions: Optional[Union[list, np.ndarray]] = None,
-            transform: Optional[callable] = None,
+            transform: Optional[Callable] = None,
             randomize_chunks: bool = False,
             seed: int = 42,
             area_threshold: float = 0.25,
@@ -194,8 +194,10 @@ class EagerIterator:
         n_possible_tiles = self.slide_dimensions['tile_target_range_x'] * self.slide_dimensions['tile_target_range_y']
 
         if output_mode == 'regions':
+            assert isinstance(regions, list) or isinstance(regions, np.ndarray), "Regions must be a list or numpy array"
             self.read_kwargs = gen_read_args_for_regions(self.slide_dimensions, regions, edge=edge, chunk_mult=chunk_mult)
         elif output_mode == 'tiles':
+            assert isinstance(tiles, list) or isinstance(tiles, np.ndarray), "Tiles must be a list or numpy array"
             self.read_kwargs = gen_read_args_for_tiles(n_possible_tiles, self.slide_dimensions, tiles, edge=edge, chunk_mult=chunk_mult)
         else:
             raise ValueError("Supplied output mode must be either tiles or regions")
@@ -206,7 +208,7 @@ class EagerIterator:
 
         self._initialize(batch, prefetch)
 
-    def _setup_out_dims(self, slide_dimensions: dict, transform: callable):
+    def _setup_out_dims(self, slide_dimensions: dict, transform: Optional[Callable] = None):
         self.out_dims = [self.batch, slide_dimensions['tile_size'][1], slide_dimensions['tile_size'][0], 3]
         if transform is not None:
             self._setup_out_dims_for_transform(self.out_dims, transform)
@@ -214,7 +216,7 @@ class EagerIterator:
             self.out_dims = [self.out_dims[0], self.out_dims[3], self.out_dims[1], self.out_dims[2]]
 
 
-    def _setup_out_dims_for_transform(self, out_shape: Union[list, tuple], transform: callable):
+    def _setup_out_dims_for_transform(self, out_shape: Union[list, tuple], transform: Callable):
         test_data = np.zeros(out_shape[1:], dtype=self.dtype)
         if 'albumentations.core.composition.Compose' in str(type(transform)):
             test_out = transform(image=test_data)
@@ -304,19 +306,19 @@ class EagerIterator:
         :param read_kwargs: A list of read arguments used to produce the SharedNumpyArray.
         :return: A dictionary with the read arguments.
         """
-        read_kwargs = np.array(read_kwargs)
+        np_read_kwargs = np.array(read_kwargs)
 
         return {
             'format': 'numpy',
-            'gx': read_kwargs[:, 6], # left
-            'gy': read_kwargs[:, 4], # top
-            'level_x': read_kwargs[:, 1],
-            'level_y': read_kwargs[:, 0],
+            'gx': np_read_kwargs[:, 6], # left
+            'gy': np_read_kwargs[:, 4], # top
+            'level_x': np_read_kwargs[:, 1],
+            'level_y': np_read_kwargs[:, 0],
             'tile_position': {
-                'level_x': read_kwargs[:, 1],
-                'level_y': read_kwargs[:, 0],
-                'region_x': read_kwargs[:, 3],
-                'region_y': read_kwargs[:, 2],
+                'level_x': np_read_kwargs[:, 1],
+                'level_y': np_read_kwargs[:, 0],
+                'region_x': np_read_kwargs[:, 3],
+                'region_y': np_read_kwargs[:, 2],
             },
             'width': self.slide_dimensions['tile_size'][0], # right - left
             'height': self.slide_dimensions['tile_size'][1], # bottom - top
@@ -329,7 +331,7 @@ class EagerIterator:
         }
 
     @staticmethod
-    def read(source: 'tilesource.TileSource', dtype: np.dtype, nchw: bool, read_kwargs: list, sharrs: list, offset: int, output_mode: str, batch: int, slide_dimensions: dict, transform: Optional[callable] = None, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):
+    def read(source: 'tilesource.TileSource', dtype: np.dtype, nchw: bool, read_kwargs: list, sharrs: list, offset: int, output_mode: str, batch: int, slide_dimensions: dict, transform: Optional[Callable] = None, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):
         """ 
         A static method used for reading regions from a tile source and filling the SharedNumpyArray with the results.
         
@@ -392,7 +394,7 @@ class EagerIterator:
 
             no_scale = False
             #
-            if slide_dimensions['mode'] == 'mm':
+            if slide_dimensions['scale_mode'] == 'mm':
                 if slide_dimensions['base_mm_x'] == slide_dimensions['target_mm_x'] and slide_dimensions['base_mm_y'] == slide_dimensions['target_mm_y']:
                     # no scaling needed
                     no_scale = True
@@ -406,7 +408,7 @@ class EagerIterator:
                         targetScale=dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'], units='mm'),
                         format="numpy",
                     )
-            elif slide_dimensions['mode'] == 'mag':
+            elif slide_dimensions['scale_mode'] == 'mag':
                 if slide_dimensions['base_magnification'] == slide_dimensions['target_magnification']:
                     # no scaling needed
                     no_scale = True
@@ -424,12 +426,13 @@ class EagerIterator:
                 raise ValueError("Invalid mode provided")
 
             if no_scale:
-                chunk, _ = source.getRegion(**kwargs)
+                chunk, _ = source.getRegion(**kwargs)  # type: ignore
             else:
                 chunk, _ = source.getRegionAtAnotherScale(
-                    **kwargs
+                    **kwargs  # type: ignore
                 )
 
+            assert isinstance(chunk, np.ndarray), "Returned chunk must be a numpy array"
             chunk = rgba2rgb(chunk)
 
             if output_mode == 'tiles':
@@ -483,7 +486,7 @@ class EagerIterator:
         return self.pool.submit(
             self.read,
             self.source,
-            self.dtype,
+            self.dtype, # type: ignore
             self.nchw,
             read_kwargs,
             sharrs,

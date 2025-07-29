@@ -1,5 +1,6 @@
 import numpy as np
 from pykdtree.kdtree import KDTree
+from typing import Union, List
 
 def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
     # todo: add documentation
@@ -22,7 +23,7 @@ def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
 
     return chunks
 
-def sparse_chunks(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray, tree: KDTree, chunks: list, chunk_size: int, k_mod: int = 1):
+def sparse_chunks(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray, tree: KDTree, chunks: List, chunk_size: int, k_mod: int = 1):
     # Use while loop to handle cases where many desired regions are close/overlapping
     usage_count = 0
     while(usage_count < sorted_in.shape[0]):
@@ -104,7 +105,7 @@ def check_edge_condition(base_size_x: int, base_size_y: int, sorted_in: np.ndarr
 
     return sorted_out, diff_from_edge
 
-def gen_read_args_for_regions(slide_dimensions: dict, regions: np.ndarray, edge: bool = False, chunk_mult: int = 2):
+def gen_read_args_for_regions(slide_dimensions: dict, regions: Union[list, np.ndarray], edge: bool = False, chunk_mult: int = 2):
     # todo: update documentation
     # todo: version for grouping regions by tile
     '''
@@ -116,6 +117,12 @@ def gen_read_args_for_regions(slide_dimensions: dict, regions: np.ndarray, edge:
     '''
 
     chunk_size = chunk_mult ** 2
+
+    if isinstance(regions, list):
+        regions = np.array(regions)
+
+    if len(regions.shape) == 1:
+        regions = np.expand_dims(regions, axis=0)
 
     # Calculate y_bottom, x_region, center_y and center_x
     yb = regions[:, 0] + regions[:, 2]
@@ -151,7 +158,7 @@ def gen_read_args_for_regions(slide_dimensions: dict, regions: np.ndarray, edge:
     return chunks
 
 
-def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles: list, edge: bool = False, chunk_mult: int = 2):
+def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles: Union[list, np.ndarray], edge: bool = False, chunk_mult: int = 2):
     '''
     # todo: update documentation
     :param n_possible_tiles: The number of possible tiles in a complete grid made using the slide dimensions
@@ -168,6 +175,10 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
     # Sort tiles by row and column to maintain order
     sorted_tiles = sorted(tiles, key=lambda x: (x[0], x[1]))
     sorted_tiles = np.array(sorted_tiles, dtype=np.float32)
+
+    # Make sure sorted tiles the right shape
+    if len(sorted_tiles.shape) == 1:
+        sorted_tiles = np.expand_dims(sorted_tiles, axis=0)
 
     # Calculate coordinates in the original image
     sx = sorted_tiles[:, 1] * slide_dimensions['tile_width_before_scaling']
