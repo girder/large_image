@@ -20,8 +20,8 @@ import importlib.util
 import json
 import os
 import re
-import time
 import threading
+import time
 import weakref
 from typing import Any, Optional, Union, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
@@ -207,6 +207,7 @@ class Map:
         self._reference_layer = None
         if self._edit_warp:
             self.warp_points: dict[str, list[Optional[list[int]]]] = dict(src=[], dst=[])
+            self._warp_widgets: dict = dict()
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
             if id is None:
@@ -409,44 +410,30 @@ class Map:
             msg = 'Warp editor mode not allowed; source file does not exist.'
             raise TileSourceError(msg)
 
-    def add_warp_editor(self):
-        from ipyleaflet import DivIcon, Marker
+    def get_warp_schema(self):
+        return dict(sources=[
+            dict(
+                path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
+                z=0, position=dict(x=0, y=0, warp=self.warp_points),
+            ),
+        ])
+
+    def convert_warp_coordinate(self, map_coord):
+        y, x = map_coord
+        if self._ts is not None:
+            y = self._ts.sizeY - y   # type: ignore[attr-defined]
+        return [int(x), int(y)]
+
+    def toggle_warp_transform(self, event):
+        self.update_warp(event.get('new'))
+
+    def copy_warp_schema(self, button):
         from IPython.display import Javascript
-        from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
 
-        self.warp_editor_validate_source()
-        help_text = Label('To begin editing a warp, click on the image to place reference points.')
-        transform_checkbox = Checkbox(description='Show Transformed', value=True)
-        transform_checkbox.layout.display = 'none'
-        yaml_schema = HTML('yaml')
-        json_schema = HTML('json')
-        copy_yaml_button = Button(description='Copy YAML', icon='fa-copy')
-        copy_json_button = Button(description='Copy JSON', icon='fa-copy')
-        yaml_box = VBox(children=[copy_yaml_button, yaml_schema])
-        json_box = VBox(children=[copy_json_button, json_schema])
-        schemas = Accordion(children=[yaml_box, json_box], titles=('YAML', 'JSON'))
-        schemas.layout.display = 'none'
-        schema_copy_output = Output()
-        schema_copy_output.layout.display = 'none'
-        children = [transform_checkbox, help_text, schemas, schema_copy_output]
-        markers = {'src': [], 'dst': []}
-        marker_style = (
-            'border-radius: 50%; position: relative;'
-            'height: 16px; width: 16px; top: -8px; left: -8px;'
-            'text-align: center; font-size: 11px;'
-        )
-
-        def get_schema():
-            return dict(sources=[
-                dict(
-                    path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
-                    z=0, position=dict(x=0, y=0, warp=self.warp_points),
-                ),
-            ])
-
-        def copy_schema(button):
+        schema_copy_output = self._warp_widgets.get('copy_output')
+        if schema_copy_output is not None:
             content = ''
-            schema = get_schema()
+            schema = self.get_warp_schema()
             desc = button.description
             if 'YAML' in desc:
                 content = yaml.dump(schema)
@@ -461,28 +448,71 @@ class Map:
             button.description = desc
             button.icon = 'fa-copy'
 
-        def update_schemas():
-            if self._ts is None:
-                return
-            help_text.value = (
-                'Reference the schemas below to use this warp with '
-                'the MultiFileTileSource (either as YAML or JSON).'
-            )
-            schema = get_schema()
-            json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
-            yaml_schema.value = f'<pre>{yaml.dump(schema)}</pre>'
-            schemas.layout.display = 'block'
-            transform_checkbox.layout.display = 'block'
-            self.update_warp(transform_checkbox.value)
+    def update_warp_schemas(self):
+        yaml_schema = self._warp_widgets.get('yaml')
+        json_schema = self._warp_widgets.get('json')
+        schema_accordion = self._warp_widgets.get('accordion')
+        transform_checkbox = self._warp_widgets.get('transform')
+        help_text = self._warp_widgets.get('help_text')
+        if (
+            self._ts is None or
+            yaml_schema is None or
+            json_schema is None or
+            schema_accordion is None or
+            transform_checkbox is None or
+            help_text is None
+        ):
+            return
+        schema = self.get_warp_schema()
+        yaml.Dumper.ignore_aliases = lambda self, data: True
+        yaml_schema.value = f'<pre>{yaml.dump(schema)}</pre>'
+        json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
+        schema_accordion.layout.display = 'block'
+        transform_checkbox.layout.display = 'block'
+        help_text.value = (
+            'Reference the schemas below to use this warp with '
+            'the MultiFileTileSource (either as YAML or JSON).'
+        )
+        self.update_warp(transform_checkbox.value)
 
-        def convert_coordinate(map_coord):
-            y, x = map_coord
-            if self._ts is not None:
-                y = self._ts.sizeY - y   # type: ignore[attr-defined]
-            return [int(x), int(y)]
+    def add_warp_editor(self):
+        from ipyleaflet import DivIcon, Marker
+        from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
+
+        self.warp_editor_validate_source()
+        markers = {'src': [], 'dst': []}
+        marker_style = (
+            'border-radius: 50%; position: relative;'
+            'height: 16px; width: 16px; top: -8px; left: -8px;'
+            'text-align: center; font-size: 11px;'
+        )
+        help_text = Label('To begin editing a warp, click on the image to place reference points.')
+        transform_checkbox = Checkbox(description='Show Transformed', value=True)
+        transform_checkbox.layout.display = 'none'
+        transform_checkbox.observe(self.toggle_warp_transform, names=['value'])
+        yaml_schema = HTML('yaml')
+        json_schema = HTML('json')
+        copy_yaml_button = Button(description='Copy YAML', icon='fa-copy')
+        copy_json_button = Button(description='Copy JSON', icon='fa-copy')
+        copy_yaml_button.on_click(self.copy_warp_schema)
+        copy_json_button.on_click(self.copy_warp_schema)
+        yaml_box = VBox(children=[copy_yaml_button, yaml_schema])
+        json_box = VBox(children=[copy_json_button, json_schema])
+        schema_accordion = Accordion(children=[yaml_box, json_box], titles=('YAML', 'JSON'))
+        schema_accordion.layout.display = 'none'
+        schema_copy_output = Output()
+        schema_copy_output.layout.display = 'none'
+        self._warp_widgets = dict(
+            help_text=help_text,
+            transform=transform_checkbox,
+            yaml=yaml_schema,
+            json=json_schema,
+            accordion=schema_accordion,
+            copy_output=schema_copy_output,
+        )
 
         def create_reference_point_pair(coord):
-            converted = convert_coordinate(coord)
+            converted = self.convert_warp_coordinate(coord)
             index = len(self.warp_points['src'])
             self.warp_points['src'].append(converted)
             self.warp_points['dst'].append(converted)
@@ -516,34 +546,28 @@ class Map:
                     m.title = f'{group_name} {i}'
                     html = re.sub(r'>\d+<', f'>{i}<', m.icon.html)
                     m.icon = DivIcon(html=html, icon_size=[0, 0])
-            update_schemas()
+            self.update_warp_schemas()
 
         def handle_drag(event):
             new = [round(v) for v in event.get('new')]
             marker_title = event.get('owner').title
             group_name = marker_title[:3]
             index = int(marker_title[3:])
-            self.warp_points[group_name][index] = convert_coordinate(new)
-            update_schemas()
+            self.warp_points[group_name][index] = self.convert_warp_coordinate(new)
+            self.update_warp_schemas()
 
         def handle_interaction(**kwargs):
             if kwargs.get('type') == 'click':
                 create_reference_point_pair(kwargs.get('coordinates'))
-                update_schemas()
+                self.update_warp_schemas()
                 help_text.value = (
                     'After placing reference points, you can drag them to define the warp. '
                     'You may also double-click any point to remove the point pair.'
                 )
 
-        def toggle_transform(event):
-            self.update_warp(event.get('new'))
-
-        transform_checkbox.observe(toggle_transform, names=['value'])
-        copy_yaml_button.on_click(copy_schema)
-        copy_json_button.on_click(copy_schema)
         if self._map is not None:
             self._map.on_interaction(handle_interaction)
-        return VBox(children)
+        return VBox([transform_checkbox, help_text, schema_accordion, schema_copy_output])
 
     def add_region_indicator(self):
         from ipyleaflet import GeomanDrawControl, Popup
