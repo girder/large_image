@@ -19,6 +19,8 @@ import asyncio
 import importlib.util
 import json
 import os
+import re
+import time
 import threading
 import weakref
 from typing import Any, Optional, Union, cast
@@ -409,7 +411,8 @@ class Map:
 
     def add_warp_editor(self):
         from ipyleaflet import DivIcon, Marker
-        from ipywidgets import HTML, Accordion, Checkbox, Label, VBox
+        from IPython.display import Javascript
+        from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
 
         self.warp_editor_validate_source()
         help_text = Label('To begin editing a warp, click on the image to place reference points.')
@@ -417,14 +420,45 @@ class Map:
         transform_checkbox.layout.display = 'none'
         yaml_schema = HTML('yaml')
         json_schema = HTML('json')
-        schemas = Accordion(children=[yaml_schema, json_schema], titles=('YAML', 'JSON'))
+        copy_yaml_button = Button(description='Copy YAML', icon='fa-copy')
+        copy_json_button = Button(description='Copy JSON', icon='fa-copy')
+        yaml_box = VBox(children=[copy_yaml_button, yaml_schema])
+        json_box = VBox(children=[copy_json_button, json_schema])
+        schemas = Accordion(children=[yaml_box, json_box], titles=('YAML', 'JSON'))
         schemas.layout.display = 'none'
-        children = [transform_checkbox, help_text, schemas]
+        schema_copy_output = Output()
+        schema_copy_output.layout.display = 'none'
+        children = [transform_checkbox, help_text, schemas, schema_copy_output]
         marker_style = (
             'border-radius: 50%; position: relative;'
             'height: 16px; width: 16px; top: -8px; left: -8px;'
             'text-align: center; font-size: 11px;'
         )
+
+        def get_schema():
+            return dict(sources=[
+                dict(
+                    path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
+                    z=0, position=dict(x=0, y=0, warp=self.get_matched_warp_points()),
+                ),
+            ])
+
+        def copy_schema(button):
+            content = ''
+            schema = get_schema()
+            desc = button.description
+            if 'YAML' in desc:
+                content = yaml.dump(schema)
+            elif 'JSON' in desc:
+                content = json.dumps(schema)
+            copy_js = Javascript(f"navigator.clipboard.writeText('{re.escape(content)}')")
+            schema_copy_output.clear_output()
+            schema_copy_output.append_display_data(copy_js)
+            button.description = 'Copied!'
+            button.icon = 'fa-check'
+            time.sleep(2)
+            button.description = desc
+            button.icon = 'fa-copy'
 
         def update_schemas():
             if self._ts is None:
@@ -433,12 +467,7 @@ class Map:
                 'Reference the schemas below to use this warp with '
                 'the MultiFileTileSource (either as YAML or JSON).'
             )
-            schema = dict(sources=[
-                dict(
-                    path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
-                    z=0, position=dict(x=0, y=0, warp=self.get_matched_warp_points()),
-                ),
-            ])
+            schema = get_schema()
             json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
             yaml_schema.value = f'<pre>{yaml.dump(schema)}</pre>'
             schemas.layout.display = 'block'
@@ -492,6 +521,8 @@ class Map:
             self.update_warp(event.get('new'))
 
         transform_checkbox.observe(toggle_transform, names=['value'])
+        copy_yaml_button.on_click(copy_schema)
+        copy_json_button.on_click(copy_schema)
         if self._map is not None:
             self._map.on_interaction(handle_interaction)
         return VBox(children)
