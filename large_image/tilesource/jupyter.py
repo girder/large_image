@@ -411,6 +411,8 @@ class Map:
             raise TileSourceError(msg)
 
     def get_warp_schema(self):
+        if self._ts is None:
+            return
         return dict(sources=[
             dict(
                 path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
@@ -464,9 +466,10 @@ class Map:
         ):
             return
         schema = self.get_warp_schema()
-        yaml.Dumper.ignore_aliases = lambda self, data: True
-        yaml_schema.value = f'<pre>{yaml.dump(schema)}</pre>'
-        json_schema.value = f'<pre>{json.dumps(schema, indent=4)}</pre>'
+        json_content = json.dumps(schema, indent=4)
+        yaml_content = yaml.dump(json.loads(json_content))  # convert from json to avoid aliases
+        yaml_schema.value = f'<pre>{yaml_content}</pre>'
+        json_schema.value = f'<pre>{json_content}</pre>'
         schema_accordion.layout.display = 'block'
         transform_checkbox.layout.display = 'block'
         help_text.value = (
@@ -480,7 +483,7 @@ class Map:
         from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
 
         self.warp_editor_validate_source()
-        markers = {'src': [], 'dst': []}
+        markers: dict = {'src': [], 'dst': []}
         marker_style = (
             'border-radius: 50%; position: relative;'
             'height: 16px; width: 16px; top: -8px; left: -8px;'
