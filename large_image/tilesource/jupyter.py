@@ -429,6 +429,7 @@ class Map:
         schema_copy_output = Output()
         schema_copy_output.layout.display = 'none'
         children = [transform_checkbox, help_text, schemas, schema_copy_output]
+        markers = {'src': [], 'dst': []}
         marker_style = (
             'border-radius: 50%; position: relative;'
             'height: 16px; width: 16px; top: -8px; left: -8px;'
@@ -439,7 +440,7 @@ class Map:
             return dict(sources=[
                 dict(
                     path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
-                    z=0, position=dict(x=0, y=0, warp=self.get_matched_warp_points()),
+                    z=0, position=dict(x=0, y=0, warp=self.warp_points),
                 ),
             ])
 
@@ -478,7 +479,7 @@ class Map:
             y, x = map_coord
             if self._ts is not None:
                 y = self._ts.sizeY - y   # type: ignore[attr-defined]
-            return [x, y]
+            return [int(x), int(y)]
 
         def create_reference_point_pair(coord):
             converted = convert_coordinate(coord)
@@ -497,9 +498,25 @@ class Map:
                     icon=icon,
                     title=f'{group_name} {index}',
                 )
+                marker.on_dblclick(lambda **e: remove_reference_point_pair(marker))
                 marker.observe(handle_drag, 'location')
+                markers[group_name].append(marker)
                 if self._map is not None:
                     self._map.add(marker)
+
+        def remove_reference_point_pair(marker):
+            index = int(marker.title[3:])
+            for group_name in ['src', 'dst']:
+                del self.warp_points[group_name][index]
+                if self._map is not None:
+                    self._map.remove(markers[group_name][index])
+                del markers[group_name][index]
+                # reset indices of remaining markers
+                for i, m in enumerate(markers[group_name]):
+                    m.title = f'{group_name} {i}'
+                    html = re.sub(r'>\d+<', f'>{i}<', m.icon.html)
+                    m.icon = DivIcon(html=html, icon_size=[0, 0])
+            update_schemas()
 
         def handle_drag(event):
             new = [round(v) for v in event.get('new')]
@@ -514,7 +531,8 @@ class Map:
                 create_reference_point_pair(kwargs.get('coordinates'))
                 update_schemas()
                 help_text.value = (
-                    'After placing reference points, you can drag them to define the warp.'
+                    'After placing reference points, you can drag them to define the warp. '
+                    'You may also double-click any point to remove the point pair.'
                 )
 
         def toggle_transform(event):
@@ -667,25 +685,10 @@ class Map:
             return transf.transform(x, y)
         return x, self._metadata['sizeY'] - y
 
-    def get_matched_warp_points(self):
-        src = self.warp_points.get('src')
-        dst = self.warp_points.get('dst')
-        if src is None or dst is None:
-            return {}
-        return {
-            k: [
-                point for index, point in enumerate(v)
-                if len(src) > index and src[index] and
-                len(dst) > index and dst[index]
-            ]
-            for k, v in self.warp_points.items()
-        }
-
     def update_warp(self, show_warp):
         current_frame = self.frame_selector.currentFrame if self.frame_selector is not None else 0
-        matched_points = self.get_matched_warp_points()
-        if show_warp and len(matched_points):
-            self.update_layer_query(frame=current_frame, style=dict(warp=matched_points))
+        if show_warp and len(self.warp_points['src']):
+            self.update_layer_query(frame=current_frame, style=dict(warp=self.warp_points))
         else:
             self.update_layer_query(frame=current_frame, style=dict())
 
