@@ -418,7 +418,7 @@ const AnnotationModel = AccessControlledModel.extend({
             url = `annotation/${this.id}`;
             method = 'PUT';
             if (getCurrentUser()) {
-                this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+                this.attributes.updated = (new Date()).toISOString(); // eslint-disable-line backbone/no-model-attributes
                 this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
             }
         }

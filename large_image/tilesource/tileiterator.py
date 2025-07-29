@@ -1,5 +1,6 @@
 import math
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Tuple, Union, cast
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 from ..constants import TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, TileOutputMimeTypes
 from . import utilities
@@ -17,7 +18,7 @@ class TileIterator:
 
     def __init__(
             self, source: 'tilesource.TileSource',
-            format: Union[str, Tuple[str]] = (TILE_FORMAT_NUMPY, ),
+            format: Union[str, tuple[str]] = (TILE_FORMAT_NUMPY, ),
             resample: Optional[bool] = True, **kwargs) -> None:
         self.source = source
         self._kwargs = kwargs
@@ -60,7 +61,7 @@ class TileIterator:
         repr += '>'
         return repr
 
-    def _repr_json_(self) -> Dict:
+    def _repr_json_(self) -> dict:
         if self.info:
             return self.info
         return {}
@@ -74,7 +75,7 @@ class TileIterator:
             return 1 if cast(int, self.info['tile_position']) < iterlen else 0
         return iterlen
 
-    def _tileIteratorInfo(self, **kwargs) -> Optional[Dict[str, Any]]:  # noqa
+    def _tileIteratorInfo(self, **kwargs) -> Optional[dict[str, Any]]:  # noqa
         """
         Get information necessary to construct a tile iterator.
           If one of width or height is specified, the other is determined by
@@ -360,7 +361,7 @@ class TileIterator:
         }
         return info
 
-    def _tileIterator(self, iterInfo: Dict[str, Any]) -> Iterator[LazyTileDict]:
+    def _tileIterator(self, iterInfo: dict[str, Any]) -> Iterator[LazyTileDict]:
         """
         Given tile iterator information, iterate through the tiles.
         Each tile is returned as part of a dictionary that includes

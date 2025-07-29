@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 import numpy as np
 import PIL
@@ -25,7 +25,7 @@ class LazyTileDict(dict):
     as PIL images.
     """
 
-    def __init__(self, tileInfo: Dict[str, Any], *args, **kwargs) -> None:
+    def __init__(self, tileInfo: dict[str, Any], *args, **kwargs) -> None:
         """
         Create a LazyTileDict dictionary where there is enough information to
         load the tile image.  ang and kwargs are as for the dict() class.
@@ -43,12 +43,12 @@ class LazyTileDict(dict):
         self.source = tileInfo['source']
         self.resample = tileInfo.get('resample', False)
         self.requestedScale = tileInfo.get('requestedScale')
-        self.metadata = cast(Dict[str, Any], tileInfo.get('metadata'))
+        self.metadata = cast(dict[str, Any], tileInfo.get('metadata'))
         self.retile = tileInfo.get('retile') and self.metadata
 
         self.deferredKeys = ('tile', 'format')
         self.alwaysAllowPIL = True
-        self.imageKwargs: Dict[str, Any] = {}
+        self.imageKwargs: dict[str, Any] = {}
         self.loaded = False
         super().__init__(*args, **kwargs)
         # We set this initially so that they are listed in known keys using the
@@ -59,8 +59,8 @@ class LazyTileDict(dict):
         self.height = self['height']
 
     def setFormat(
-            self, format: Tuple[str, ...], resample: bool = False,
-            imageKwargs: Optional[Dict[str, Any]] = None) -> None:
+            self, format: tuple[str, ...], resample: bool = False,
+            imageKwargs: Optional[dict[str, Any]] = None) -> None:
         """
         Set a more restrictive output format for a tile, possibly also resizing
         it via resampling.  If this is not called, the tile may either be
@@ -159,7 +159,7 @@ class LazyTileDict(dict):
                     :th, :tw, :retile.shape[2]]
         return cast(np.ndarray, retile)
 
-    def _resample(self, tileData: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray]) -> Tuple[
+    def _resample(self, tileData: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray]) -> tuple[
         Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray], Optional[PIL.Image.Image],
     ]:
         """

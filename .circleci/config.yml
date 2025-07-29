@@ -192,19 +192,6 @@ jobs:
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push girder/tox-and-node:latest
-  py38:
-    machine:
-      image: ubuntu-2204:current
-    resource_class: large
-    steps:
-      - checkout
-      - allservices:
-          version: "3.8"
-      - tox:
-          toxenv: test-py38
-      - coverage
-      - store_artifacts:
-          path: build/test/artifacts
   py39:
     machine:
       image: ubuntu-2204:current
@@ -429,13 +416,6 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
-      - py38:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore:
-                - gh-pages
       - py39:
           filters:
             tags:
@@ -502,7 +482,6 @@ workflows:
       - release:
           requires:
             - check_release
-            - py38
             - py39
             - py310
             - py311
@@ -519,7 +498,6 @@ workflows:
                 - girder-5
       - docs-deploy:
           requires:
-            - py38
             - py39
             - py310
             - py311
@@ -545,7 +523,6 @@ workflows:
               only:
                 - master
     jobs:
-      - py38
       - py39
       - py310
       - py311

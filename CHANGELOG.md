@@ -1,10 +1,57 @@
 # Change Log
 
+## 1.33.0
+
+### Features
+
+- Multi-source Thin Plate Spline Warping ([#1947](../../pull/1947))
+
+### Improvements
+
+- Improve reading certain tiles via tiff source ([#1946](../../pull/1946))
+- Clearer error messages on jsonschema issues in the multi source ([#1951](../../pull/1951))
+
+### Changes
+
+- Do not check if items are used as annotation elements in DocumentDB ([#1949](../../pull/1949), [#1953](../../pull/1953))
+- Ensure a valid gdal version ([#1945](../../pull/1945))
+- Drop support for Python 3.8 ([#1950](../../pull/1950), [#1957](../../pull/1957))
+
+### Bug Fixes
+
+- Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
+- Harden reading ometiff that have certain planar configurations ([#1956](../../pull/1956))
+- If a tile is larger than expected, guard its size ([#1955](../../pull/1955))
+
+## 1.32.11
+
+### Improvements
+
+- Improve DocumentDB support ([#1941](../../pull/1941))
+- Generate a specific annotation revert notification in Girder ([#1943](../../pull/1943))
+
+### Bug Fixes
+
+- Fix updating annotation updated dates in the girder web client ([#1942](../../pull/1942))
+- Fix openslide reads at lower levels ([#1944](../../pull/1944))
+
+## 1.32.10
+
+### Improvements
+
+- Improve DocumentDB support ([#1937](../../pull/1937))
+- Better handle images with adjacent files in the same girder item ([#1940](../../pull/1940))
+
+### Changes
+
+- Move the pillow-jpls module out of common install extras ([#1935](../../pull/1935))
+- Change the reading method for some file conversions ([#1939](../../pull/1939))
+
 ## 1.32.9
 
 ### Improvements
 
-- Clearer error messages on bad annotations and don't keep the bad file ([#1922](../../pull/1922))
+- Clearer error messages on bad annotations and don't keep the bad file ([#1923](../../pull/1923))
 - Annotation list checkboxes ([#1884](../../pull/1884))
 - The frame-viewer histogram widget will only be visible if it can be used ([#1924](../../pull/1924))
 - Add the dicom mime-type to the openslide source ([#1925](../../pull/1925))
@@ -12,6 +59,7 @@
 - Add another index for annotation elements ([#1928](../../pull/1928))
 - Make the json representation of some annotation elements more compact ([#1930](../../pull/1930))
 - On the client internals, indicate which annotation updates are from fetches ([#1931](../../pull/1931))
+- Speed up old annotation maintenance query ([#1934](../../pull/1934))
 
 ### Bug Fixes
 

@@ -1149,21 +1149,9 @@ class Annotation(AccessControlledModel):
                     lastTime = time.time()
             annot['elements'] = elements
         except jsonschema.ValidationError as exp:
-            try:
-                error_freq = {}
-                for err in exp.context:
-                    key = err.schema_path[0]
-                    error_freq.setdefault(key, [])
-                    error_freq[key].append(err)
-                min_error = min(error_freq.values(), key=lambda k: (len(k), k[0].schema_path))[0]
-                for key in dir(min_error):
-                    if not key.startswith('_'):
-                        try:
-                            setattr(exp, key, getattr(min_error, key))
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+            from large_image.exceptions import _improveJsonschemaValidationError
+
+            _improveJsonschemaValidationError(exp)
             raise ValidationException(exp)
         if time.time() - startTime > 10:
             logger.info('Validated in %5.3fs' % (time.time() - startTime))
@@ -1260,6 +1248,12 @@ class Annotation(AccessControlledModel):
             if justCheck:
                 return annotation
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
+            Notification().createNotification(
+                type='large_image_annotation.revert',
+                data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
+                user=user,
+                expires=datetime.datetime.now(datetime.timezone.utc) +
+                datetime.timedelta(seconds=1))
         return annotation
 
     def findAnnotatedImages(self, imageNameFilter=None, creator=None,
@@ -1380,16 +1374,15 @@ class Annotation(AccessControlledModel):
             logger.info('Counting inactive annotations, %r' % report)
             logtime = time.time()
         report['recentVersions'] = self.collection.count_documents({'_active': False})
-        recentDateStep = {'$addFields': {'mostRecentDate': {'$max': [
-            '$created', {'$ifNull': ['$updated', '$created']}]}}}
         itemLookupStep = {'$lookup': {
             'from': 'item',
             'localField': 'itemId',
             'foreignField': '_id',
             'as': 'item',
         }}
-        oldDeletedPipeline = [recentDateStep, itemLookupStep, {
-            '$match': {'item': {'$size': 0}, 'mostRecentDate': {'$lt': age}},
+        oldDeletedPipeline = [itemLookupStep, {
+            '$match': {'item': {'$size': 0}, 'created': {'$lt': age}, '$or': [
+                {'updated': {'$exists': False}}, {'updated': {'$lt': age}}]},
         }, {
             '$project': {'item': 0},
         }]
@@ -1421,8 +1414,9 @@ class Annotation(AccessControlledModel):
             '$unwind': '$annotations',
         }, {
             '$replaceRoot': {'newRoot': '$annotations'},
-        }, recentDateStep, {
-            '$match': {'mostRecentDate': {'$lt': age}},
+        }, {
+            '$match': {'created': {'$lt': age}, '$or': [
+                {'updated': {'$exists': False}}, {'updated': {'$lt': age}}]},
         }]
         if time.time() - logtime > 10:
             logger.info('Finding old annotations, %r' % report)

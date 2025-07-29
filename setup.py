@@ -63,7 +63,7 @@ extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for 
     'deepzoom', 'dicom', 'multi', 'nd2', 'openslide', 'test', 'tifffile',
     'zarr',
 })) | {
-    f'large-image-source-pil[all]{limit_version}',
+    f'large-image-source-pil[common]{limit_version}',
     f'large-image-source-rasterio[all]{limit_version}',
 })
 
@@ -78,13 +78,13 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         'cachetools',
         'palettable',
@@ -97,6 +97,5 @@ setup(
     keywords='large_image',
     packages=['large_image'],
     url='https://github.com/girder/large_image',
-    python_requires='>=3.8',
     zip_safe=False,
 )
