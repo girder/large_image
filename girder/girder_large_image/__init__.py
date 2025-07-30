@@ -14,7 +14,6 @@
 #  limitations under the License.
 #############################################################################
 
-import datetime
 import json
 import logging
 import os
@@ -172,7 +171,7 @@ def _updateJob(event):
                 'success': status == JobStatus.SUCCESS,
                 'status': status,
             },
-            user={'_id': job.get('userId')}
+            user={'_id': job.get('userId')},
         ).flush()
 
 
