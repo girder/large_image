@@ -147,9 +147,9 @@ class ImageItem(Item):
     def _createLargeImageJob(
             self, item, fileObj, user, token, toFolder=False, folderId=None, name=None, **kwargs):
         import large_image_tasks.tasks
-        from girder_worker_utils.transforms.common import TemporaryDirectory
-        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
-        from girder_worker_utils.transforms.girder_io import (GirderUploadToFolder,
+        from girder_worker.utils.transforms.common import TemporaryDirectory
+        from girder_worker.utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
+        from girder_worker.utils.transforms.girder_io import (GirderUploadToFolder,
                                                               GirderUploadToItem)
 
         try:
