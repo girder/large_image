@@ -38,6 +38,22 @@ ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
 ipyvuePresent = importlib.util.find_spec('ipyvue') is not None
 aiohttpPresent = importlib.util.find_spec('aiohttp') is not None
 
+skimage_transform = None
+
+
+def _lazyImportSkimageTransform():
+    """
+    Import the skimage.transform module. This is only needed when `editWarp=True` is used.
+    """
+    global skimage_transform
+
+    if skimage_transform is None:
+        try:
+            import skimage.transform as skimage_transform
+        except ImportError:
+            msg = 'scikit-image transform module not found.'
+            raise TileSourceError(msg)
+
 
 class IPyLeafletMixin:
     """Mixin class to support interactive visualization in JupyterLab.
@@ -208,6 +224,7 @@ class Map:
         if self._edit_warp:
             self.warp_points: dict[str, list[Optional[list[int]]]] = dict(src=[], dst=[])
             self._warp_widgets: dict = dict()
+            self._warp_markers: dict = {'src': [], 'dst': []}
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
             if id is None:
@@ -410,6 +427,41 @@ class Map:
             msg = 'Warp editor mode not allowed; source file does not exist.'
             raise TileSourceError(msg)
 
+    def convert_coordinate_map_to_warp(self, map_coord):
+        y, x = map_coord
+        if self._ts is not None:
+            y = self._ts.sizeY - y   # type: ignore[attr-defined]
+        return [int(x), int(y)]
+
+    def convert_coordinate_warp_to_map(self, warp_coord):
+        x, y = warp_coord
+        if self._ts is not None:
+            y = self._ts.sizeY - y   # type: ignore[attr-defined]
+        return [int(y), int(x)]
+
+    def toggle_warp_transform(self, event):
+        self.update_warp(event.get('new'))
+
+    def inverse_warp(self, coord):
+        warp_src = self.warp_points['src']
+        warp_dst = self.warp_points['dst']
+        if len(warp_src) == 0:
+            return coord
+        if len(warp_src) == 1:
+            inverse_coord = [
+                v + warp_src[0][i] - warp_dst[0][i]
+                for i, v in enumerate(coord)
+            ]
+            return inverse_coord
+        _lazyImportSkimageTransform()
+        if len(warp_src) <= 3:
+            transformer = skimage_transform.AffineTransform()
+        else:
+            transformer = skimage_transform.ThinPlateSplineTransform()
+        transformer.estimate(np.array(warp_dst), np.array(warp_src))
+        inverse_coord = transformer([coord])[0]
+        return [int(v) for v in inverse_coord]
+
     def get_warp_schema(self):
         if self._ts is None:
             return None
@@ -419,15 +471,6 @@ class Map:
                 z=0, position=dict(x=0, y=0, warp=self.warp_points),
             ),
         ])
-
-    def convert_warp_coordinate(self, map_coord):
-        y, x = map_coord
-        if self._ts is not None:
-            y = self._ts.sizeY - y   # type: ignore[attr-defined]
-        return [int(x), int(y)]
-
-    def toggle_warp_transform(self, event):
-        self.update_warp(event.get('new'))
 
     def copy_warp_schema(self, button):
         from IPython.display import Javascript
@@ -483,7 +526,6 @@ class Map:
         from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
 
         self.warp_editor_validate_source()
-        markers: dict = {'src': [], 'dst': []}
         marker_style = (
             'border-radius: 50%; position: relative;'
             'height: 16px; width: 16px; top: -8px; left: -8px;'
@@ -515,10 +557,13 @@ class Map:
         )
 
         def create_reference_point_pair(coord):
-            converted = self.convert_warp_coordinate(coord)
+            converted = self.convert_coordinate_map_to_warp(coord)
+            locations = dict(src=converted, dst=converted)
+            if transform_checkbox.value:
+                locations['src'] = self.inverse_warp(locations['src'])
             index = len(self.warp_points['src'])
-            self.warp_points['src'].append(converted)
-            self.warp_points['dst'].append(converted)
+            self.warp_points['src'].append(locations['src'])
+            self.warp_points['dst'].append(locations['dst'])
 
             for group_name, color in [
                 ('src', '#ff6a5e'), ('dst', '#19a7ff'),
@@ -526,14 +571,15 @@ class Map:
                 html = f'<div style="background-color: {color}; {marker_style}">{index}</div>'
                 icon = DivIcon(html=html, icon_size=[0, 0])
                 marker = Marker(
-                    location=coord,
+                    location=self.convert_coordinate_warp_to_map(locations[group_name]),
                     draggable=True,
                     icon=icon,
                     title=f'{group_name} {index}',
+                    visible=(group_name == 'dst' or not transform_checkbox.value),
                 )
                 marker.on_dblclick(lambda m=marker, **e: remove_reference_point_pair(m))
                 marker.observe(handle_drag, 'location')
-                markers[group_name].append(marker)
+                self._warp_markers[group_name].append(marker)
                 if self._map is not None:
                     self._map.add(marker)
 
@@ -542,10 +588,10 @@ class Map:
             for group_name in ['src', 'dst']:
                 del self.warp_points[group_name][index]
                 if self._map is not None:
-                    self._map.remove(markers[group_name][index])
-                del markers[group_name][index]
+                    self._map.remove(self._warp_markers[group_name][index])
+                del self._warp_markers[group_name][index]
                 # reset indices of remaining markers
-                for i, m in enumerate(markers[group_name]):
+                for i, m in enumerate(self._warp_markers[group_name]):
                     m.title = f'{group_name} {i}'
                     html = re.sub(r'>\d+<', f'>{i}<', m.icon.html)
                     m.icon = DivIcon(html=html, icon_size=[0, 0])
@@ -556,7 +602,7 @@ class Map:
             marker_title = event.get('owner').title
             group_name = marker_title[:3]
             index = int(marker_title[3:])
-            self.warp_points[group_name][index] = self.convert_warp_coordinate(new)
+            self.warp_points[group_name][index] = self.convert_coordinate_map_to_warp(new)
             self.update_warp_schemas()
 
         def handle_interaction(**kwargs):
@@ -713,6 +759,8 @@ class Map:
         return x, self._metadata['sizeY'] - y
 
     def update_warp(self, show_warp):
+        for marker in self._warp_markers['src']:
+            marker.visible = not show_warp
         current_frame = self.frame_selector.currentFrame if self.frame_selector is not None else 0
         if show_warp and len(self.warp_points['src']):
             self.update_layer_query(frame=current_frame, style=dict(warp=self.warp_points))
