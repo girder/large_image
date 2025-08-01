@@ -412,7 +412,7 @@ class Map:
 
     def get_warp_schema(self):
         if self._ts is None:
-            return
+            return None
         return dict(sources=[
             dict(
                 path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
