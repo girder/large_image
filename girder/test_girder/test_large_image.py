@@ -58,6 +58,7 @@ def _createThumbnails(server, admin, spec, cancel=False):
         resp = server.request('/job/%s' % str(job['_id']), user=admin)
         assert utilities.respStatus(resp) == 200
         if resp.json.get('status') == JobStatus.SUCCESS:
+            time.sleep(0.5)
             return True
         if resp.json.get('status') == JobStatus.ERROR:
             return False
