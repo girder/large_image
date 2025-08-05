@@ -69,9 +69,6 @@ class SharedArray:
     def view(self):
         if self.is_torch:
             import torch # type: ignore
-            # self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype
-            # if self.shape[0] != 64:
-            #     pass
             self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
             return self.buf
         else:

@@ -241,8 +241,6 @@ class EagerIterator:
             self.transform = transform
             self.is_torch = False
 
-        pass
-
     def _initialize(self, batch: int, prefetch: int):
         self.prefetch = prefetch
         self.batch = batch
