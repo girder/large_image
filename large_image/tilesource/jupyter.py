@@ -468,12 +468,16 @@ class Map:
     def get_warp_schema(self):
         if self._ts is None:
             return None
-        return dict(sources=[
+        schema = dict(sources=[
             dict(
                 path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
                 z=0, position=dict(x=0, y=0, warp=self.warp_points),
             ),
         ])
+        json_content = json.dumps(schema, indent=4)
+        # convert from json to avoid aliases
+        yaml_content = yaml.dump(json.loads(json_content))
+        return (json_content, yaml_content)
 
     def copy_warp_schema(self, button):
         from IPython.display import Javascript
@@ -481,15 +485,16 @@ class Map:
         schema_copy_output = self._warp_widgets.get('copy_output')
         if schema_copy_output is not None:
             content = ''
-            schema = self.get_warp_schema()
+            json_content, yaml_content = self.get_warp_schema()
             desc = button.description
             if 'YAML' in desc:
-                content = yaml.dump(schema)
+                content = yaml_content
             elif 'JSON' in desc:
-                content = json.dumps(schema)
-            copy_js = Javascript(f"navigator.clipboard.writeText('{re.escape(content)}')")
+                content = json_content
+            content = content.replace('\n', '\\n')
+            command = f"navigator.clipboard.writeText(unescape('{content}'))"
             schema_copy_output.clear_output()
-            schema_copy_output.append_display_data(copy_js)
+            schema_copy_output.append_display_data(Javascript(command))
             button.description = 'Copied!'
             button.icon = 'fa-check'
             time.sleep(2)
@@ -511,9 +516,7 @@ class Map:
             help_text is None
         ):
             return
-        schema = self.get_warp_schema()
-        json_content = json.dumps(schema, indent=4)
-        yaml_content = yaml.dump(json.loads(json_content))  # convert from json to avoid aliases
+        json_content, yaml_content = self.get_warp_schema()
         yaml_schema.value = f'<pre>{yaml_content}</pre>'
         json_schema.value = f'<pre>{json_content}</pre>'
         schema_accordion.layout.display = 'block'
