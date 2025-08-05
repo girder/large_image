@@ -225,6 +225,7 @@ class Map:
             self.warp_points: dict[str, list[Optional[list[int]]]] = dict(src=[], dst=[])
             self._warp_widgets: dict = dict()
             self._warp_markers: dict = {'src': [], 'dst': []}
+            self._dragging_marker_id: Optional[str] = None
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
             if id is None:
@@ -521,6 +522,20 @@ class Map:
         )
         self.update_warp(transform_checkbox.value)
 
+    def start_drag(self, marker):
+        self._dragging_marker_id = marker.title
+
+    def handle_drag(self, coords):
+        if self._dragging_marker_id is not None:
+            marker_title = self._dragging_marker_id
+            group_name = marker_title[:3]
+            index = int(marker_title[3:])
+            self.warp_points[group_name][index] = self.convert_coordinate_map_to_warp(coords)
+            self.update_warp_schemas()
+
+    def end_drag(self):
+        self._dragging_marker_id = None
+
     def add_warp_editor(self):
         from ipyleaflet import DivIcon, Marker
         from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
@@ -578,7 +593,8 @@ class Map:
                     visible=(group_name == 'dst' or not transform_checkbox.value),
                 )
                 marker.on_dblclick(lambda m=marker, **e: remove_reference_point_pair(m))
-                marker.observe(handle_drag, 'location')
+                marker.on_mousedown(lambda m=marker, **e: self.start_drag(m))
+                marker.on_mouseup(lambda **e: self.end_drag())
                 self._warp_markers[group_name].append(marker)
                 if self._map is not None:
                     self._map.add(marker)
@@ -597,22 +613,18 @@ class Map:
                     m.icon = DivIcon(html=html, icon_size=[0, 0])
             self.update_warp_schemas()
 
-        def handle_drag(event):
-            new = [round(v) for v in event.get('new')]
-            marker_title = event.get('owner').title
-            group_name = marker_title[:3]
-            index = int(marker_title[3:])
-            self.warp_points[group_name][index] = self.convert_coordinate_map_to_warp(new)
-            self.update_warp_schemas()
-
         def handle_interaction(**kwargs):
-            if kwargs.get('type') == 'click':
-                create_reference_point_pair(kwargs.get('coordinates'))
+            event_type = kwargs.get('type')
+            coords = [round(v) for v in kwargs.get('coordinates')]
+            if event_type == 'click':
+                create_reference_point_pair(coords)
                 self.update_warp_schemas()
                 help_text.value = (
                     'After placing reference points, you can drag them to define the warp. '
                     'You may also double-click any point to remove the point pair.'
                 )
+            elif event_type == 'mousemove':
+                self.handle_drag(coords)
 
         if self._map is not None:
             self._map.on_interaction(handle_interaction)
