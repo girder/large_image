@@ -1,5 +1,5 @@
 import os
-from typing import Union, List
+from typing import Union, List, Any
 import multiprocessing.shared_memory
 import operator
 import functools
@@ -30,6 +30,26 @@ class SharedArray:
         
         self.created = True
 
+    def resize_shm(self, shape: Union[tuple, list]):
+        '''
+        Resize the shared memory to be appropriate for a new shape.
+        This is used to adjust the shape of the shared memory to be appropriate for a new shape.
+        This is necessary for pytorch because reshape requires the tensor to be contiguous and 
+        expects a certain size based on the shape provided.
+        '''
+        self.shape = shape
+        self.shm.close()
+        self.shm.unlink()
+        if self.is_torch:
+            import torch.multiprocessing # type: ignore
+            self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
+            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)            
+            self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+        else:
+            self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
+            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
+            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
+
     def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int): # type: ignore
         """Insert a batch dimension slice."""
         self.buf[i] = arr
@@ -49,7 +69,11 @@ class SharedArray:
     def view(self):
         if self.is_torch:
             import torch # type: ignore
-            return torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+            # self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype
+            # if self.shape[0] != 64:
+            #     pass
+            self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+            return self.buf
         else:
             return np.ndarray(self.shape, self.dtype, buffer=self.shm.buf)
 

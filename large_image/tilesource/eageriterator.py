@@ -277,7 +277,8 @@ class EagerIterator:
 
         # last batch may only have partial size
         if self.pos == len(self.read_kwargs) and not len(self.queue):
-            tiles.shape = [len(batch_read_kwargs), tiles.shape[1], tiles.shape[2], tiles.shape[3]]
+            # Use resize_shm to adjust the shape of the shared memory to prevent issues if using pytorch tensors
+            tiles.resize_shm([len(batch_read_kwargs), tiles.shape[1], tiles.shape[2], tiles.shape[3]])
 
         return tiles, self._read_kwargs_to_dict(batch_read_kwargs)
     
@@ -498,6 +499,8 @@ class EagerIterator:
             self.pad_mode,
             self.pad_fill_mode
         )
+    
+    # def _out_dims_adjust(self, out_dims: list):        
 
     def _fill(self):
         def _fill_while():
@@ -526,6 +529,13 @@ class EagerIterator:
                     # number of batches spanned by this read
                     reads = self.read_kwargs[self.pos]
                     batches = math.ceil((len(reads) + offset) / self.batch)
+
+                    # check if on last batch
+                    # if (self.pos + 1) >= len(self.read_kwargs):
+                    #     batch_dims = list(self.out_dims)
+                    #     batch_dims[0] = len(batch_kwargs) + len(reads)
+                    # else:
+                    #     batch_dims = self.out_dims
 
                     # create additional arrays if this read spans multiple batches
                     tiles = [
