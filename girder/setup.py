@@ -52,5 +52,8 @@ setup(
         'girder.plugin': [
             'large_image = girder_large_image:LargeImagePlugin',
         ],
+        'girder_worker_plugins': [
+            'import_tracker = girder_large_image.girder_worker_plugin:LargeImageWorkerPlugin',
+        ],
     },
 )
