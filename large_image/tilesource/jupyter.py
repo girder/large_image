@@ -449,19 +449,21 @@ class Map:
         if len(warp_src) == 0:
             return coord
         if len(warp_src) == 1:
-            inverse_coord = [
-                v + warp_src[0][i] - warp_dst[0][i]
-                for i, v in enumerate(coord)
-            ]
-            return inverse_coord
+            if warp_src[0] is not None and warp_dst[0] is not None:
+                inverse_coord = [
+                    v + warp_src[0][i] - warp_dst[0][i]
+                    for i, v in enumerate(coord)
+                ]
+                return inverse_coord
         _lazyImportSkimageTransform()
-        if len(warp_src) <= 3:
-            transformer = skimage_transform.AffineTransform()
-        else:
-            transformer = skimage_transform.ThinPlateSplineTransform()
-        transformer.estimate(np.array(warp_dst), np.array(warp_src))
-        inverse_coord = transformer([coord])[0]
-        return [int(v) for v in inverse_coord]
+        if skimage_transform is not None:
+            if len(warp_src) <= 3:
+                transformer = skimage_transform.AffineTransform()
+            else:
+                transformer = skimage_transform.ThinPlateSplineTransform()
+            transformer.estimate(np.array(warp_dst), np.array(warp_src))
+            inverse_coord = transformer([coord])[0]
+            return [int(v) for v in inverse_coord]
 
     def get_warp_schema(self):
         if self._ts is None:
@@ -615,7 +617,7 @@ class Map:
 
         def handle_interaction(**kwargs):
             event_type = kwargs.get('type')
-            coords = [round(v) for v in kwargs.get('coordinates')]
+            coords = [round(v) for v in kwargs.get('coordinates', [])]
             if event_type == 'click':
                 create_reference_point_pair(coords)
                 self.update_warp_schemas()
