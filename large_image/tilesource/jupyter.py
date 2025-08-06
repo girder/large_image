@@ -444,25 +444,35 @@ class Map:
         self.update_warp(event.get('new'))
 
     def inverse_warp(self, coord):
-        warp_src = self.warp_points['src']
-        warp_dst = self.warp_points['dst']
-        if len(warp_src) == 0:
+        _lazyImportSkimageTransform()
+
+        warp_src = np.array(self.warp_points['src'])
+        warp_dst = np.array(self.warp_points['dst'])
+        n_points = warp_src.shape[0]
+        inverse_coord = None
+        if n_points == 0:
             return coord
-        if len(warp_src) == 1:
+        if n_points == 1:
             if warp_src[0] is not None and warp_dst[0] is not None:
                 inverse_coord = [
                     v + warp_src[0][i] - warp_dst[0][i]
                     for i, v in enumerate(coord)
                 ]
-                return inverse_coord
-        _lazyImportSkimageTransform()
-        if skimage_transform is not None:
-            if len(warp_src) <= 3:
+        elif skimage_transform is not None:
+            srcsvd = np.linalg.svd(warp_src - warp_src.mean(axis=0), compute_uv=False)
+            dstsvd = np.linalg.svd(warp_dst - warp_dst.mean(axis=0), compute_uv=False)
+            useSimilarity = n_points < 3 or min(
+                srcsvd[1] / (srcsvd[0] or 1), dstsvd[1] / (dstsvd[0] or 1)) < 1e-3
+
+            if useSimilarity:
+                transformer = skimage_transform.SimilarityTransform()
+            elif n_points <= 3:
                 transformer = skimage_transform.AffineTransform()
             else:
                 transformer = skimage_transform.ThinPlateSplineTransform()
-            transformer.estimate(np.array(warp_dst), np.array(warp_src))
+            transformer.estimate(warp_dst, warp_src)
             inverse_coord = transformer([coord])[0]
+        if inverse_coord is not None:
             return [int(v) for v in inverse_coord]
 
     def get_warp_schema(self):
