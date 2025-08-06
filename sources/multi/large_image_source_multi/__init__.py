@@ -686,10 +686,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
         warp_dst = warp_dst[:warp_src.shape[0], :]
 
-        srcsvd = np.linalg.svd(warp_src - warp_src.mean(axis=0), compute_uv=False)
-        dstsvd = np.linalg.svd(warp_dst - warp_dst.mean(axis=0), compute_uv=False)
-        useSimilarity = warp_src.shape[0] < 3 or min(
-            srcsvd[1] / (srcsvd[0] or 1), dstsvd[1] / (dstsvd[0] or 1)) < 1e-3
+        useSimilarity = False
+        if len(warp_src) > 0 and len(warp_dst) > 0:
+            srcsvd = np.linalg.svd(warp_src - warp_src.mean(axis=0), compute_uv=False)
+            dstsvd = np.linalg.svd(warp_dst - warp_dst.mean(axis=0), compute_uv=False)
+            useSimilarity = warp_src.shape[0] < 3 or min(
+                srcsvd[1] / (srcsvd[0] or 1), dstsvd[1] / (dstsvd[0] or 1)) < 1e-3
 
         if warp_src.shape[0] < 1:
             pass
