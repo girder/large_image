@@ -1,9 +1,11 @@
 import asyncio
+import json
 import os
 from urllib.parse import parse_qs, urlparse
 
 import aiohttp
 import pytest
+import yaml
 
 import large_image
 
@@ -210,6 +212,53 @@ def testJupyterEditWarpConvertCoords():
     sourceMap, _ = initEditWarp()
     assert sourceMap.convert_coordinate_map_to_warp([10, 12]) == [12, 65526]
     assert sourceMap.convert_coordinate_warp_to_map([12, 65526]) == [10, 12]
+
+
+def testJupyterEditWarpCreateAndDeletePointPairs():
+    sourceMap, _ = initEditWarp()
+    sourceMap.create_warp_reference_point_pair([10, 10])
+    assert len(sourceMap._warp_markers['src']) == 1
+    assert len(sourceMap._warp_markers['dst']) == 1
+    marker = sourceMap._warp_markers['src'][0]
+    assert marker.location == [10, 10]
+    sourceMap.remove_warp_reference_point_pair(marker)
+    assert len(sourceMap._warp_markers['src']) == 0
+    assert len(sourceMap._warp_markers['dst']) == 0
+
+
+def testJupyterEditWarpSchemas():
+    sourceMap, display = initEditWarp()
+    warp = dict(
+        src=[[10, 10]],
+        dst=[[15, 15]],
+    )
+    expected = dict(sources=[
+        dict(
+            path=str(sourceMap._ts.largeImagePath),
+            z=0, position=dict(x=0, y=0, warp=warp),
+        ),
+    ])
+    sourceMap.warp_points = warp
+    sourceMap.update_warp_schemas()
+    json_schema = sourceMap._warp_widgets.get('json')
+    assert json_schema.value == f'<pre>{json.dumps(expected, indent=4)}</pre>'
+    yaml_schema = sourceMap._warp_widgets.get('yaml')
+    assert yaml_schema.value == f'<pre>{yaml.dump(expected)}</pre>'
+
+    assert len(display.children) == 2
+    vbox = display.children[1]
+    assert len(vbox.children) == 4
+    copy_output = vbox.children[3]
+    accordion = vbox.children[2]
+    yaml_section = accordion.children[0]
+    copy_yaml_button = yaml_section.children[0]
+    sourceMap.copy_warp_schema(copy_yaml_button)
+    assert len(copy_output.outputs) == 1
+    output = copy_output.outputs[0]
+    assert output['data']['application/javascript'] == (
+        "navigator.clipboard.writeText(unescape('%s'))"
+        % yaml.dump(expected).replace('\n', '\\n')
+    )
 
 
 def testJupyterEditWarpInverseWarp():
