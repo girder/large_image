@@ -164,3 +164,77 @@ def testJupyterIpyleafletMapGeospatialRegion():
     for callback in m._interaction_callbacks.callbacks:
         callback(type='click', coordinates=[lat, lon])
     assert source._map.info_label.value == ''.join([f'<div>{e}</div>' for e in expected])
+
+
+def testJupyterReferenceLayer():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath1 = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+    imagePath2 = os.path.join(testDir, 'test_files', 'rgba_geotiff.tiff')
+    source1 = large_image.open(imagePath1, projection='EPSG:3857', noCache=True)
+    source2 = large_image.open(imagePath2, projection='EPSG:3857', noCache=True, reference=source1)
+    display = source2._map.make_map(
+        source2.metadata, source2.as_leaflet_layer(), source2.getCenter(srs='EPSG:4326'),
+    )
+    assert len(display.children) == 2
+    [slider, leafletMap] = display.children
+    assert slider.description == 'Reference Opacity'
+    for path in [imagePath1, imagePath2]:
+        assert any(path in layer.url for layer in leafletMap.layers)
+
+
+def initEditWarp():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+    source = large_image.open(imagePath, projection='EPSG:3857', noCache=True, editWarp=True)
+    display = source._map.make_map(
+        source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326'),
+    )
+    return source._map, display
+
+
+def testJupyterEditWarp():
+    _, display = initEditWarp()
+    assert len(display.children) == 2
+    vbox = display.children[1]
+    assert len(vbox.children) == 4
+    assert vbox.children[0].description == 'Show Transformed'
+    assert vbox.children[0].layout.display == 'none'
+    assert vbox.children[1].value == (
+        'To begin editing a warp, click on the image to place reference points.'
+    )
+    assert vbox.children[2].titles == ('YAML', 'JSON')
+    assert vbox.children[3].layout.display == 'none'
+
+
+def testJupyterEditWarpConvertCoords():
+    sourceMap, _ = initEditWarp()
+    assert sourceMap.convert_coordinate_map_to_warp([10, 12]) == [12, 65526]
+    assert sourceMap.convert_coordinate_warp_to_map([12, 65526]) == [10, 12]
+
+
+def testJupyterEditWarpInverseWarp():
+    sourceMap, _ = initEditWarp()
+    # inverse from single ref point
+    sourceMap.warp_points = dict(
+        src=[[10, 10]],
+        dst=[[15, 15]],
+    )
+    assert sourceMap.inverse_warp([5, 5]) == [0, 0]
+    # inverse from two ref points
+    sourceMap.warp_points = dict(
+        src=[[10, 10], [5, 5]],
+        dst=[[15, 15], [3, 4]],
+    )
+    assert sourceMap.inverse_warp([2, 4]) == [4, 4]
+    # inverse from three ref points
+    sourceMap.warp_points = dict(
+        src=[[10, 10], [5, 5], [2, 4]],
+        dst=[[15, 15], [3, 4], [3, 6]],
+    )
+    assert sourceMap.inverse_warp([6, 9]) == [2, 5]
+    # inverse from four ref points
+    sourceMap.warp_points = dict(
+        src=[[10, 10], [5, 5], [2, 4], [6, 9]],
+        dst=[[15, 15], [3, 4], [3, 6], [3, 5]],
+    )
+    assert sourceMap.inverse_warp([8, 8]) == [7, 6]
