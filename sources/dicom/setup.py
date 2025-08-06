@@ -1,5 +1,4 @@
 import os
-import sys
 
 from setuptools import find_packages, setup
 
@@ -21,6 +20,9 @@ entry_points = {
     ],
     'girder_large_image.source': [
         'dicom = large_image_source_dicom.girder_source:DICOMGirderTileSource',
+    ],
+    'girder.plugin': [
+        'dicomweb = large_image_source_dicom.girder_plugin:DICOMwebPlugin',
     ],
 }
 
@@ -44,7 +46,6 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
@@ -64,6 +65,5 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*', 'test_dicom', 'test_dicom.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.8',
     entry_points=entry_points,
 )

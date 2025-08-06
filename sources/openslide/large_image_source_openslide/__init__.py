@@ -139,19 +139,22 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # load an appropriate area and scale it to the tile size later.
         maxSize = 16384   # This should probably be based on available memory
         for level in range(self.levels):
-            levelW = max(1, self.sizeX / 2 ** (self.levels - 1 - level))
-            levelH = max(1, self.sizeY / 2 ** (self.levels - 1 - level))
+            levelpow = 2 ** (self.levels - 1 - level)
+            levelW = max(1, self.sizeX / levelpow)
+            levelH = max(1, self.sizeY / levelpow)
             # bestlevel and scale will be the picked svs level and the scale
             # between that level and what we really wanted.  We expect scale to
             # always be a positive integer power of two.
             bestlevel = svsAvailableLevels[0]['level']
             scale = 1
+            svsscale = 0
             for svslevel in range(len(svsAvailableLevels)):
                 if (svsAvailableLevels[svslevel]['width'] < levelW - 1 or
                         svsAvailableLevels[svslevel]['height'] < levelH - 1):
                     break
                 bestlevel = svsAvailableLevels[svslevel]['level']
                 scale = int(round(svsAvailableLevels[svslevel]['width'] / levelW))
+                svsscale = svsAvailableLevels[svslevel].get('downsample', 0)
             # If there are no tiles at a particular level, we have to read a
             # larger area of a higher resolution level.  If such an area would
             # be excessively large, we could have memory issues, so raise an
@@ -165,6 +168,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._svslevels.append({
                 'svslevel': bestlevel,
                 'scale': scale,
+                'svsscale': ((svsscale / levelpow) if svsscale else 1) * scale,
             })
         self._bounds = None
         try:
@@ -245,6 +249,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         levels = []
         svsLevelDimensions = self._openslide.level_dimensions
+
         for svslevel in range(len(svsLevelDimensions)):
             try:
                 self._openslide.read_region((0, 0), svslevel, (1, 1))
@@ -253,6 +258,10 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'width': svsLevelDimensions[svslevel][0],
                     'height': svsLevelDimensions[svslevel][1],
                 }
+                try:
+                    level['downsample'] = self._openslide.level_downsamples[svslevel]
+                except Exception:
+                    pass
                 if level['width'] > 0 and level['height'] > 0:
                     # add to the list so that we can sort by resolution and
                     # then by earlier entries
@@ -344,12 +353,31 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             tile, format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
         else:
             retries = 3
+            svsTileWidth = self.tileWidth * svslevel['scale']
+            svsTileHeight = self.tileHeight * svslevel['scale']
+            # Peculiarly, openslide has a "downsample" factor which isn't the
+            # power of 2 one would expect.  This is computed based on the
+            # actual dimensions of levels, but since higher-resolution levels
+            # are not fully populated at the right and bottom, this ends up
+            # with not the actual downsampling, but some slightly higher number
+            # (e.g., 16.0018 rather than 16).  Internally, when asking for a
+            # region for anything other than the maximum resolution lever, the
+            # openslide library is passed coordinates in what _seems_ to be
+            # base image coordinates, but is actually inflated by the ratio of
+            # their downsample value and the actual downsample value (e.g.,
+            # 16.0018 / 16).  We multiple our values by this ratio so when
+            # openslide misapplies its downsampling we get the region we
+            # actually want
+            if svslevel['svsscale'] != 1:
+                offsetx = int(round(offsetx * svslevel['svsscale']))
+                offsety = int(round(offsety * svslevel['svsscale']))
+                svsTileWidth = int(round(svsTileWidth * svslevel['svsscale']))
+                svsTileHeight = int(round(svsTileHeight * svslevel['svsscale']))
             while retries > 0:
                 try:
                     tile = self._openslide.read_region(
                         (offsetx, offsety), svslevel['svslevel'],
-                        (self.tileWidth * svslevel['scale'],
-                         self.tileHeight * svslevel['scale']))
+                        (svsTileWidth, svsTileHeight))
                     format = TILE_FORMAT_PIL
                     break
                 except openslide.lowlevel.OpenSlideError as exc:
