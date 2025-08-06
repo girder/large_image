@@ -31,6 +31,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         f'large-image{limit_version}',
         # Pin zarr < 3.0 due to refactoring of stores:
@@ -53,7 +54,6 @@ setup(
     keywords='large_image, tile source',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/girder/large_image',
-    python_requires='>=3.6',
     entry_points={
         'large_image.source': [
             'zarr = large_image_source_zarr:ZarrFileTileSource',

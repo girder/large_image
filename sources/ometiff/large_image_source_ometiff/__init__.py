@@ -85,7 +85,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
     # case tile.
     _maxUntiledChunk = 512 * 1024 * 1024
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, **kwargs):  # noqa
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -129,19 +129,27 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         if base._tiffInfo.get('istiled'):
             if usesSubIfds:
                 self._omeLevels = [None] * max(usesSubIfds) + [self._omeLevels[-1]]
-            self._tiffDirectories = [
-                self.getTiffDir(int(entry['TiffData'][0].get('IFD', 0)))
-                if entry else None
-                for entry in self._omeLevels]
+            try:
+                self._tiffDirectories = [
+                    self.getTiffDir(int(entry['TiffData'][0].get('IFD', 0)))
+                    if entry else None
+                    for entry in self._omeLevels]
+            except Exception as exc:
+                msg = f'Cannot process OME tiff file: {exc}'
+                raise TileSourceError(msg)
             if usesSubIfds:
                 for lvl in usesSubIfds:
                     if self._tiffDirectories[lvl] is None:
                         self._tiffDirectories[lvl] = False
         else:
-            self._tiffDirectories = [
-                self.getTiffDir(0, mustBeTiled=None)
-                if entry else None
-                for entry in self._omeLevels]
+            try:
+                self._tiffDirectories = [
+                    self.getTiffDir(0, mustBeTiled=None)
+                    if entry else None
+                    for entry in self._omeLevels]
+            except Exception as exc:
+                msg = f'Cannot process OME tiff file: {exc}'
+                raise TileSourceError(msg)
             self._checkForInefficientDirectories(warn=False)
             _maxChunk = min(base.imageWidth, base.tileWidth * self._skippedLevels ** 2) * \
                 min(base.imageHeight, base.tileHeight * self._skippedLevels ** 2)

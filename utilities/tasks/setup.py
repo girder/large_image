@@ -36,20 +36,20 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         # Packages required by both producer and consumer side installations
-        'girder-worker-utils>=0.8.5',
     ],
     extras_require={
         'girder': [
             # Dependencies required on the producer (Girder) side.
             f'large-image-converter{limit_version}',
-            'girder-worker[girder]>=0.6.0',
+            'girder-worker[girder]>=5.0.0a8',
         ],
         'worker': [
             # Dependencies required on the consumer (Girder Worker) side.
             f'large-image-converter[sources]{limit_version}',
-            'girder-worker[worker]>=0.6.0',
+            'girder-worker[worker]>=5.0.0a8',
         ],
     },
     entry_points={

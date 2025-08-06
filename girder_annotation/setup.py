@@ -31,6 +31,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
+    python_requires='>=3.9',
     install_requires=[
         'jsonschema>=2.5.1',
         f'girder-large-image{limit_version}',

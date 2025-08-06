@@ -1,9 +1,9 @@
+import datetime
 import json
 import logging
 import time
 import uuid
 
-import cachetools
 import orjson
 from girder_large_image_annotation.models.annotation import Annotation
 from girder_large_image_annotation.utils import isGeoJSON
@@ -14,10 +14,22 @@ from girder.constants import AccessType
 from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
+from girder.models.model_base import Model
 from girder.models.user import User
 
-_recentIdentifiers = cachetools.TTLCache(maxsize=100, ttl=86400)
 logger = logging.getLogger(__name__)
+
+
+class RecentIdentifier(Model):
+    def initialize(self):
+        self.name = 'large_image_annotation_recent_identifier'
+        self.ensureIndices(['uuid', 'updated'])
+
+    def validate(self, doc):
+        if 'created' not in doc:
+            doc['created'] = datetime.datetime.now(datetime.timezone.utc)
+        doc['updated'] = datetime.datetime.now(datetime.timezone.utc)
+        return doc
 
 
 def itemFromEvent(event, identifierEnding, itemAccessLevel=AccessType.READ):  # noqa
@@ -40,12 +52,15 @@ def itemFromEvent(event, identifierEnding, itemAccessLevel=AccessType.READ):  # 
     if isinstance(reference, dict) and isinstance(reference.get('identifier'), str):
         identifier = reference['identifier']
     if identifier and 'uuid' in reference:
-        if reference['uuid'] not in _recentIdentifiers:
-            _recentIdentifiers[reference['uuid']] = {}
-        _recentIdentifiers[reference['uuid']][identifier] = info
-        reprocessFunc = _recentIdentifiers[reference['uuid']].pop('_reprocess', None)
-        if reprocessFunc:
-            reprocessFunc()
+        recent = RecentIdentifier().findOne({'uuid': reference['uuid']}) or {}
+        recent['uuid'] = reference['uuid']
+        recent[identifier] = info
+        reprocessOpts = recent.pop('reprocess', None)
+        RecentIdentifier().save(recent)
+        if reprocessOpts:
+            processAnnotationsTask(**reprocessOpts)
+        RecentIdentifier().removeWithQuery({'updated': {
+            '$lte': datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)}})
     if identifier is not None and identifier.endswith(identifierEnding):
         if identifier == 'LargeImageAnnotationUpload' and 'uuid' not in reference:
             reference['uuid'] = str(uuid.uuid4())
@@ -102,11 +117,17 @@ def resolveAnnotationGirderIds(
             girderIds.append(element)
     if not len(girderIds):
         return True
-    idRecord = _recentIdentifiers.get(results.get('uuid'))
+    idRecord = RecentIdentifier().findOne({'uuid': results['uuid']}) if 'uuid' in results else None
+    if not idRecord:
+        return True
     if idRecord and not all(element['girderId'] in idRecord for element in girderIds):
-        idRecord['_reprocess'] = lambda: processAnnotationsTask(
-            event, referenceName, removeSingularFileItem)
+        idRecord['reprocess'] = {
+            'event': getattr(event, 'info', event),
+            'referenceName': referenceName,
+            'removeSingularFileItem': removeSingularFileItem}
+        RecentIdentifier().save(idRecord)
         return False
+    RecentIdentifier().remove(idRecord)
     for element in girderIds:
         element['girderId'] = str(idRecord[element['girderId']]['file']['itemId'])
         # Currently, all girderIds inside annotations are expected to be

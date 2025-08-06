@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.11 3.8 3.9 3.10 3.12 3.13"
+    PYTHON_VERSIONS="3.11 3.9 3.10 3.12 3.13"
 
 # Consumers of this package aren't expecting an existing ubuntu user (there
 # wasn't one in the ubuntu:22.04 base)
@@ -125,6 +125,32 @@ RUN . ~/.bashrc && \
     nvm install 14 && \
     nvm alias default 14 && \
     nvm use default && \
+    cd /root/.nvm/versions/node/v14.21.3/lib && \
+    npm install 'form-data@^2.5.5' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
+    npm install 'cross-spawn@^6.0.6' && \
+    npm install 'form-data@^2.5.5' && \
+    npm install 'http-cache-semantics@^4.1.1' && \
+    npm install 'semver@^5.7.2' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
+    # ip package has an unaddressed HIGH CVE, ip-address is a direct sustitute \
+    npm install --no-save ip-address && \
+    rm -rf node_modules/ip && \
+    mv node_modules/ip-address node_modules/ip && \
+    find / -xdev -name ip -exec grep '"version"' {}/package.json \; && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/term-size && \
+    npm install 'cross-spawn@^6.0.6' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/execa && \
+    npm install 'cross-spawn@^6.0.6' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/request && \
+    npm install 'form-data@^2.5.5' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/string-width && \
+    npm install 'ansi-regex@^3.0.1' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/yargs && \
+    npm install 'ansi-regex@^4.1.1' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/make-fetch-happen && \
+    npm install 'http-cache-semantics@^4.1.1' && \
+    find / -xdev -name ip -exec grep '"version"' {}/package.json \; && \
     rm -rf /root/.nvm/.cache && \
     ln -s $(dirname `which npm`) /usr/local/node
 

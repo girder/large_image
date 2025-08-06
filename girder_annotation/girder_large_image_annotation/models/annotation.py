@@ -35,9 +35,9 @@ from girder.exceptions import AccessException, ValidationException
 from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.model_base import AccessControlledModel
-from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.models.user import User
+from girder.notification import Notification
 
 from ..utils import AnnotationGeoJSON, GeoJSONAnnotation, isGeoJSON
 from .annotationelement import Annotationelement
@@ -825,11 +825,11 @@ class Annotation(AccessControlledModel):
         self.setUserAccess(doc, user=creator, level=AccessType.ADMIN, save=False)
 
         doc = self.save(doc)
-        Notification().createNotification(
+        Notification(
             type='large_image_annotation.create',
             data={'_id': doc['_id'], 'itemId': doc['itemId']},
             user=creator,
-            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
+        ).flush()
         return doc
 
     def load(self, id, region=None, getElements=True, *args, **kwargs):
@@ -898,11 +898,11 @@ class Annotation(AccessControlledModel):
                     result = super().remove(annotation, *args, **kwargs)
                 finally:
                     self.collection.delete_one = delete_one
-        Notification().createNotification(
+        Notification(
             type='large_image_annotation.remove',
             data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
             user=User().load(annotation['creatorId'], force=True),
-            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
+        ).flush()
         return result
 
     def save(self, annotation, *args, **kwargs):  # noqa
@@ -1012,11 +1012,11 @@ class Annotation(AccessControlledModel):
         annotation['updated'] = datetime.datetime.now(datetime.timezone.utc)
         annotation['updatedId'] = updateUser['_id'] if updateUser else None
         annotation = self.save(annotation)
-        Notification().createNotification(
+        Notification(
             type='large_image_annotation.update',
             data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
             user=User().load(annotation['creatorId'], force=True),
-            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
+        ).flush()
         return annotation
 
     def _similarElementStructure(self, a, b, parentKey=None):  # noqa
@@ -1248,12 +1248,11 @@ class Annotation(AccessControlledModel):
             if justCheck:
                 return annotation
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
-            Notification().createNotification(
+            Notification(
                 type='large_image_annotation.revert',
                 data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
-                user=user,
-                expires=datetime.datetime.now(datetime.timezone.utc) +
-                datetime.timedelta(seconds=1))
+                user=user or User().load(annotation['creatorId'], force=True),
+            ).flush()
         return annotation
 
     def findAnnotatedImages(self, imageNameFilter=None, creator=None,
