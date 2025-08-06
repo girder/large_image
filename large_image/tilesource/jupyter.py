@@ -551,16 +551,63 @@ class Map:
     def end_drag(self):
         self._dragging_marker_id = None
 
-    def add_warp_editor(self):
+    def create_warp_reference_point_pair(self, coord):
         from ipyleaflet import DivIcon, Marker
-        from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
 
-        self.warp_editor_validate_source()
         marker_style = (
             'border-radius: 50%; position: relative;'
             'height: 16px; width: 16px; top: -8px; left: -8px;'
             'text-align: center; font-size: 11px;'
         )
+        converted = self.convert_coordinate_map_to_warp(coord)
+        locations = dict(src=converted, dst=converted)
+        transform_checkbox = self._warp_widgets.get('transform')
+        transform_enabled = transform_checkbox.value if transform_checkbox is not None else True
+        if transform_enabled:
+            locations['src'] = self.inverse_warp(locations['src'])
+        index = len(self.warp_points['src'])
+        self.warp_points['src'].append(locations['src'])
+        self.warp_points['dst'].append(locations['dst'])
+
+        for group_name, color in [
+            ('src', '#ff6a5e'), ('dst', '#19a7ff'),
+        ]:
+            html = f'<div style="background-color: {color}; {marker_style}">{index}</div>'
+            icon = DivIcon(html=html, icon_size=[0, 0])
+            marker = Marker(
+                location=self.convert_coordinate_warp_to_map(locations[group_name]),
+                draggable=True,
+                icon=icon,
+                title=f'{group_name} {index}',
+                visible=(group_name == 'dst' or not transform_enabled),
+            )
+            marker.on_dblclick(lambda m=marker, **e: self.remove_warp_reference_point_pair(m))
+            marker.on_mousedown(lambda m=marker, **e: self.start_drag(m))
+            marker.on_mouseup(lambda **e: self.end_drag())
+            self._warp_markers[group_name].append(marker)
+            if self._map is not None:
+                self._map.add(marker)
+
+    def remove_warp_reference_point_pair(self, marker):
+        from ipyleaflet import DivIcon
+
+        index = int(marker.title[3:])
+        for group_name in ['src', 'dst']:
+            del self.warp_points[group_name][index]
+            if self._map is not None:
+                self._map.remove(self._warp_markers[group_name][index])
+            del self._warp_markers[group_name][index]
+            # reset indices of remaining markers
+            for i, m in enumerate(self._warp_markers[group_name]):
+                m.title = f'{group_name} {i}'
+                html = re.sub(r'>\d+<', f'>{i}<', m.icon.html)
+                m.icon = DivIcon(html=html, icon_size=[0, 0])
+        self.update_warp_schemas()
+
+    def add_warp_editor(self):
+        from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
+
+        self.warp_editor_validate_source()
         help_text = Label('To begin editing a warp, click on the image to place reference points.')
         transform_checkbox = Checkbox(description='Show Transformed', value=True)
         transform_checkbox.layout.display = 'none'
@@ -586,53 +633,11 @@ class Map:
             copy_output=schema_copy_output,
         )
 
-        def create_reference_point_pair(coord):
-            converted = self.convert_coordinate_map_to_warp(coord)
-            locations = dict(src=converted, dst=converted)
-            if transform_checkbox.value:
-                locations['src'] = self.inverse_warp(locations['src'])
-            index = len(self.warp_points['src'])
-            self.warp_points['src'].append(locations['src'])
-            self.warp_points['dst'].append(locations['dst'])
-
-            for group_name, color in [
-                ('src', '#ff6a5e'), ('dst', '#19a7ff'),
-            ]:
-                html = f'<div style="background-color: {color}; {marker_style}">{index}</div>'
-                icon = DivIcon(html=html, icon_size=[0, 0])
-                marker = Marker(
-                    location=self.convert_coordinate_warp_to_map(locations[group_name]),
-                    draggable=True,
-                    icon=icon,
-                    title=f'{group_name} {index}',
-                    visible=(group_name == 'dst' or not transform_checkbox.value),
-                )
-                marker.on_dblclick(lambda m=marker, **e: remove_reference_point_pair(m))
-                marker.on_mousedown(lambda m=marker, **e: self.start_drag(m))
-                marker.on_mouseup(lambda **e: self.end_drag())
-                self._warp_markers[group_name].append(marker)
-                if self._map is not None:
-                    self._map.add(marker)
-
-        def remove_reference_point_pair(marker):
-            index = int(marker.title[3:])
-            for group_name in ['src', 'dst']:
-                del self.warp_points[group_name][index]
-                if self._map is not None:
-                    self._map.remove(self._warp_markers[group_name][index])
-                del self._warp_markers[group_name][index]
-                # reset indices of remaining markers
-                for i, m in enumerate(self._warp_markers[group_name]):
-                    m.title = f'{group_name} {i}'
-                    html = re.sub(r'>\d+<', f'>{i}<', m.icon.html)
-                    m.icon = DivIcon(html=html, icon_size=[0, 0])
-            self.update_warp_schemas()
-
         def handle_interaction(**kwargs):
             event_type = kwargs.get('type')
             coords = [round(v) for v in kwargs.get('coordinates', [])]
             if event_type == 'click':
-                create_reference_point_pair(coords)
+                self.create_warp_reference_point_pair(coords)
                 self.update_warp_schemas()
                 help_text.value = (
                     'After placing reference points, you can drag them to define the warp. '
