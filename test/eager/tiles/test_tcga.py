@@ -4,14 +4,27 @@ import matplotlib.pyplot as plt
 import large_image
 import numpy as np
 
+from torchvision.utils import save_image
+from torchvision.transforms import v2
+
 def test_tcga_image(image_path, save_dir):
     os.makedirs(save_dir, exist_ok=True)
     test_image_path = os.path.join(save_dir, 'test_image.png')
     test_large_image_path = os.path.join(save_dir, 'test_large_image.png')
     test_region_path = os.path.join(save_dir, 'test_region.png')
+
+    transform = v2.Compose(
+        [
+            v2.Resize(224),
+            v2.ToTensor(),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+
+    print(type(transform))
     
     source = large_image.open(image_path)
-    eager_iter = source.eagerIterator(scale_mode='mm', target_scale=(0.000625*16, 0.000625*16), tile_size=(224, 224), dtype=np.uint8, batch=64)
+    eager_iter = source.eagerIterator(scale_mode='mm', target_scale=(0.000625*16, 0.000625*16), tile_size=(224, 224), batch=64, transform=transform)
 
     size_x = eager_iter.slide_dimensions['tile_target_range_x'] + 1
     size_y = eager_iter.slide_dimensions['tile_target_range_y'] + 1
@@ -29,8 +42,7 @@ def test_tcga_image(image_path, save_dir):
     # tr = source.convertRegion(sourceRegion=kwargs, targetScale=scale)
     # test_region, _ = source.getRegionAtAnotherScale(sourceRegion=tr, targetScale=scale, format='numpy')
     # plt.imsave(test_region_path, test_region)
-
-    test_large_image = np.zeros((size_y*224, size_x*224, 3), dtype=np.uint8)
+    # test_large_image = np.zeros((size_y*224, size_x*224, 3), dtype=np.uint8)
 
     for batch in eager_iter:
         batch_images = batch[0].view()
@@ -41,9 +53,10 @@ def test_tcga_image(image_path, save_dir):
             y = int(batch_read_kwargs['tile_position']['region_y'][i].item())
             
             image = batch_images[i]
-            test_large_image[y*224:(y+1)*224, x*224:(x+1)*224, :] = image
+            # test_large_image[y*224:(y+1)*224, x*224:(x+1)*224, :] = image
+            save_image(image, f'{save_dir}/test_image_{x}_{y}.png', normalize=True)
             
-    plt.imsave(test_large_image_path, test_large_image)
+    # plt.imsave(test_large_image_path, test_large_image)
 
     pass
 

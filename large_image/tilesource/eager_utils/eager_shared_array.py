@@ -69,7 +69,7 @@ class SharedArray:
     def view(self):
         if self.is_torch:
             import torch # type: ignore
-            self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+            self.buf = torch.frombuffer(self.shm.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
             return self.buf
         else:
             return np.ndarray(self.shape, self.dtype, buffer=self.shm.buf)

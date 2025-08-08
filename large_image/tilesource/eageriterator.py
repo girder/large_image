@@ -224,7 +224,7 @@ class EagerIterator:
             self.out_dims = tuple([self.out_dims[0]] + list(test_out['image'].shape))
             self.transform = transform
             self.is_torch = False
-        elif 'torchvision.transforms.v2._container.Compose' in str(type(transform)):
+        elif 'torchvision.transforms' in str(type(transform)):
             test_out = transform(test_data)
             self.dtype = test_out.dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
