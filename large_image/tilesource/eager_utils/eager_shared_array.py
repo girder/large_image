@@ -1,4 +1,5 @@
 import os
+import weakref
 from typing import Union, List, Any
 import multiprocessing.shared_memory
 import operator
@@ -29,7 +30,7 @@ class SharedArray:
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
         
         self.created = True
-
+    
     def close(self) -> None:
         """Attempt to release the shared memory segment.
 
@@ -41,23 +42,31 @@ class SharedArray:
         """
         if not hasattr(self, "shm"):
             return
+        
         try:
             # Drop our direct reference before closing to avoid BufferError
             if hasattr(self, "buf"):
                 del self.buf
+        except Exception:
+            # Ignore errors when deleting buffer reference
+            pass
+        
+        try:
             self.shm.close()
-        except (BufferError):
+        except BufferError:
             # Other exported pointers still exist; cannot close now.
+            # This is expected when user code still holds references to view() results
             return
         except Exception:
             # Ignore other shutdown-time issues
             return
+            
+        # Only attempt to unlink if close() succeeded
         try:
             if getattr(self, "created", None) is True:
-                shm_path = f"/dev/shm/{self.shm.name}"
-                if os.path.exists(shm_path):
-                    self.shm.unlink()
+                self.shm.unlink()
         except FileNotFoundError:
+            # Already cleaned up
             pass
         except Exception:
             # Ignore unlink issues during interpreter shutdown
@@ -100,10 +109,15 @@ class SharedArray:
     def view(self):
         if self.is_torch:
             import torch # type: ignore
-            self.buf = torch.frombuffer(self.shm.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
-            return self.buf
+            # copy bytes for view
+            copied_bytes = bytearray(self.shm.buf[:self.shm_size])
+            view_buf = torch.frombuffer(copied_bytes, dtype=self.dtype).reshape(self.shape)
+            return view_buf
         else:
-            return np.ndarray(self.shape, self.dtype, buffer=self.shm.buf)
+            # copy bytes for view
+            copied_bytes = bytearray(self.shm.buf)
+            view_buf = np.ndarray(self.shape, self.dtype, buffer=copied_bytes)
+            return view_buf
 
     # If we want easier interoperability, we could, instead, forward a
     # whitelist of attributes to our underlying np.ndarray object; these could
@@ -126,6 +140,8 @@ class SharedArray:
         state = state.copy()
         shm_name = state.pop("shm_name")
         self.__dict__.update(state)
+        self._closed = False  # Reset closed state when unpickling
+        self._exported_refs = weakref.WeakSet()  # Initialize reference tracking
         self.shm = multiprocessing.shared_memory.SharedMemory(shm_name)
         if self.is_torch:
             import torch # type: ignore
