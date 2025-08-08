@@ -38,16 +38,16 @@ class SharedArray:
         expects a certain size based on the shape provided.
         '''
         self.shape = shape
-        self.shm.close()
-        self.shm.unlink()
         if self.is_torch:
             import torch.multiprocessing # type: ignore
-            self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
-            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)            
-            self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+            self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize            
+            self.buf = torch.frombuffer(self.shm.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
         else:
-            self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
-            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
+            if callable(self.dtype):
+                itemsize = self.dtype().itemsize
+            else:
+                itemsize = self.dtype.itemsize
+            self.shm_size = functools.reduce(operator.mul, shape, 1) * itemsize
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
 
     def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int): # type: ignore

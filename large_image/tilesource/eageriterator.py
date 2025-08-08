@@ -30,8 +30,8 @@ class EagerIterator:
             pad_fill_mode: str = 'default',
             nchw: bool = False,
             batch: int = 64,
-            prefetch: int = 16,
-            workers: int = 16,
+            prefetch: int = 1,
+            workers: int = 1,
             tiles: Optional[Union[list, np.ndarray]] = None,
             regions: Optional[Union[list, np.ndarray]] = None,
             transform: Optional[Callable] = None,
@@ -255,7 +255,7 @@ class EagerIterator:
     def get_output_image_count(self):
         count = 0
         for read_kwargs in self.read_kwargs:
-            count += len(read_kwargs)
+            count += len(read_kwargs) 
         return count
 
     def __next__(self):
@@ -263,6 +263,11 @@ class EagerIterator:
             if self.randomize_chunks:
                 random.shuffle(self.read_kwargs)
             raise StopIteration
+
+        # Handle race condition where the first batch is not filled
+
+        while len(self.queue) < self.prefetch:
+            time.sleep(0.01)
 
         # wait on the futures linked to the next batch
         try:
