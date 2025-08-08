@@ -44,12 +44,12 @@ setup(
         'girder': [
             # Dependencies required on the producer (Girder) side.
             f'large-image-converter{limit_version}',
-            'girder-worker[girder]>=5.0.0a8',
+            'girder-worker[girder]>=5.0.0a10',
         ],
         'worker': [
             # Dependencies required on the consumer (Girder Worker) side.
             f'large-image-converter[sources]{limit_version}',
-            'girder-worker[worker]>=5.0.0a8',
+            'girder-worker[worker]>=5.0.0a10',
         ],
     },
     entry_points={

@@ -12,7 +12,7 @@
         "url": "https://github.com/girder/large_image.git"
     },
     "dependencies": {
-        "@girder/core": "^5.0.0-a8",
+        "@girder/core": "^5.0.0-a10",
         "tinycolor2": "~1.4.1"
     },
     "main": "./index.js",
