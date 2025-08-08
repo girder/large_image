@@ -24,7 +24,7 @@ def test_tcga_image(image_path, save_dir):
     print(type(transform))
     
     source = large_image.open(image_path)
-    eager_iter = source.eagerIterator(scale_mode='mm', target_scale=(0.000625*16, 0.000625*16), tile_size=(224, 224), batch=64, transform=transform)
+    eager_iter = source.eagerIterator(scale_mode='mm', target_scale=(0.000625, 0.000625), tile_size=(224, 224), batch=1000, transform=transform)
 
     size_x = eager_iter.slide_dimensions['tile_target_range_x'] + 1
     size_y = eager_iter.slide_dimensions['tile_target_range_y'] + 1
@@ -47,14 +47,17 @@ def test_tcga_image(image_path, save_dir):
     for batch in eager_iter:
         batch_images = batch[0].view()
         batch_read_kwargs = batch[1]
+        min_val = batch_images.min()
+        max_val = batch_images.max()
 
         for i in range(batch_images.shape[0]):
             x = int(batch_read_kwargs['tile_position']['region_x'][i].item())
             y = int(batch_read_kwargs['tile_position']['region_y'][i].item())
             
             image = batch_images[i]
+            
             # test_large_image[y*224:(y+1)*224, x*224:(x+1)*224, :] = image
-            save_image(image, f'{save_dir}/test_image_{x}_{y}.png', normalize=True)
+            save_image(image, f'{save_dir}/test_image_{x}_{y}.png', normalize=True, value_range=(min_val, max_val))
             
     # plt.imsave(test_large_image_path, test_large_image)
 

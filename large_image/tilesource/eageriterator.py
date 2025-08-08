@@ -1,4 +1,4 @@
-import math, os, random
+import math, os, random, time
 from typing import Optional, Tuple, Union, Callable
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
@@ -30,8 +30,8 @@ class EagerIterator:
             pad_fill_mode: str = 'default',
             nchw: bool = False,
             batch: int = 64,
-            prefetch: int = 1,
-            workers: int = 1,
+            prefetch: int = 16,
+            workers: int = 16,
             tiles: Optional[Union[list, np.ndarray]] = None,
             regions: Optional[Union[list, np.ndarray]] = None,
             transform: Optional[Callable] = None,
@@ -252,6 +252,28 @@ class EagerIterator:
     def __iter__(self):
         return self
     
+    def cleanup(self):
+        """Clean up resources including the process pool and any remaining shared memory."""
+        if hasattr(self, 'pool'):
+            self.pool.shutdown(wait=True, cancel_futures=True)
+        # Clear any remaining shared arrays in the queue
+        while self.queue:
+            try:
+                futures, tiles, batch_kwargs = self.queue.pop()
+                # Wait for futures to complete before cleanup
+                if futures:
+                    wait(futures, timeout=5, return_when=ALL_COMPLETED)
+                del tiles  # This will trigger the SharedArray.__del__ method
+            except Exception:
+                pass  # Ignore cleanup errors
+    
+    def __del__(self):
+        """Destructor to ensure cleanup on garbage collection."""
+        try:
+            self.cleanup()
+        except Exception:
+            pass  # Ignore cleanup errors during garbage collection
+    
     def get_output_image_count(self):
         count = 0
         for read_kwargs in self.read_kwargs:
@@ -263,11 +285,6 @@ class EagerIterator:
             if self.randomize_chunks:
                 random.shuffle(self.read_kwargs)
             raise StopIteration
-
-        # Handle race condition where the first batch is not filled
-
-        while len(self.queue) < self.prefetch:
-            time.sleep(0.01)
 
         # wait on the futures linked to the next batch
         try:
@@ -512,6 +529,8 @@ class EagerIterator:
                 the leftmost element in self.queue contains the futures, shared array,
                 and read_kwargs to start the current batch"""
                 if self.overflow:
+                    while len(self.queue) == 0:
+                        time.sleep(0.01)
                     futures, tiles, batch_kwargs = self.queue.popleft()
                 else:
                     """last read aligned with batch boundary, create new shared array,

@@ -41,14 +41,12 @@ class SharedArray:
         if self.is_torch:
             import torch.multiprocessing # type: ignore
             self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize            
-            self.buf = torch.frombuffer(self.shm.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
         else:
             if callable(self.dtype):
                 itemsize = self.dtype().itemsize
             else:
                 itemsize = self.dtype.itemsize
             self.shm_size = functools.reduce(operator.mul, shape, 1) * itemsize
-            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
 
     def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int): # type: ignore
         """Insert a batch dimension slice."""
@@ -104,8 +102,15 @@ class SharedArray:
 
     def __del__(self):
         if hasattr(self, "shm"):
-            self.shm.close()
-            if getattr(self, "created", None) is True:
-                # Fix for problem with linux when the shared memory is being created and destroyed too fast
-                if os.path.exists('/dev/shm/{}'.format(self.shm.name)):
-                    self.shm.unlink()
+            try:
+                # Clear buffer reference to prevent "exported pointers exist" error
+                if hasattr(self, "buf"):
+                    del self.buf
+                self.shm.close()
+                if getattr(self, "created", None) is True:
+                    # Fix for problem with linux when the shared memory is being created and destroyed too fast
+                    if os.path.exists('/dev/shm/{}'.format(self.shm.name)):
+                        self.shm.unlink()
+            except (FileNotFoundError, BufferError):
+                # Shared memory may have already been cleaned up or is in use
+                pass
