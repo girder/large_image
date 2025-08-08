@@ -19,7 +19,7 @@ class SharedArray:
         if is_torch:
             import torch.multiprocessing # type: ignore
             self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
-            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)            
+            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
             self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
         else:
             if callable(self.dtype):
@@ -52,7 +52,8 @@ class SharedArray:
             pass
         
         try:
-            self.shm.close()
+            if hasattr(self, "shm"):
+                self.shm.close()
         except BufferError:
             # Other exported pointers still exist; cannot close now.
             # This is expected when user code still holds references to view() results
