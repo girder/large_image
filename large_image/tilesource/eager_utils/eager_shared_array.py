@@ -30,6 +30,39 @@ class SharedArray:
         
         self.created = True
 
+    def close(self) -> None:
+        """Attempt to release the shared memory segment.
+
+        This removes our exported pointer first (self.buf), then closes the
+        SharedMemory handle and unlinks it if we created it. If any exported
+        pointers still exist elsewhere (e.g., arrays returned from view()),
+        close() may raise BufferError; in that case we silently skip so the
+        process can continue and rely on the OS to clean up at exit.
+        """
+        if not hasattr(self, "shm"):
+            return
+        try:
+            # Drop our direct reference before closing to avoid BufferError
+            if hasattr(self, "buf"):
+                del self.buf
+            self.shm.close()
+        except (BufferError):
+            # Other exported pointers still exist; cannot close now.
+            return
+        except Exception:
+            # Ignore other shutdown-time issues
+            return
+        try:
+            if getattr(self, "created", None) is True:
+                shm_path = f"/dev/shm/{self.shm.name}"
+                if os.path.exists(shm_path):
+                    self.shm.unlink()
+        except FileNotFoundError:
+            pass
+        except Exception:
+            # Ignore unlink issues during interpreter shutdown
+            pass
+
     def resize_shm(self, shape: Union[tuple, list]):
         '''
         Resize the shared memory to be appropriate for a new shape.
@@ -101,16 +134,8 @@ class SharedArray:
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
 
     def __del__(self):
-        if hasattr(self, "shm"):
-            try:
-                # Clear buffer reference to prevent "exported pointers exist" error
-                if hasattr(self, "buf"):
-                    del self.buf
-                self.shm.close()
-                if getattr(self, "created", None) is True:
-                    # Fix for problem with linux when the shared memory is being created and destroyed too fast
-                    if os.path.exists('/dev/shm/{}'.format(self.shm.name)):
-                        self.shm.unlink()
-            except (FileNotFoundError, BufferError):
-                # Shared memory may have already been cleaned up or is in use
-                pass
+        try:
+            self.close()
+        except Exception:
+            # Suppress any shutdown-time exceptions
+            pass

@@ -252,6 +252,15 @@ class EagerIterator:
     def __iter__(self):
         return self
     
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self.cleanup()
+        finally:
+            return False
+    
     def cleanup(self):
         """Clean up resources including the process pool and any remaining shared memory."""
         if hasattr(self, 'pool'):
@@ -263,7 +272,12 @@ class EagerIterator:
                 # Wait for futures to complete before cleanup
                 if futures:
                     wait(futures, timeout=5, return_when=ALL_COMPLETED)
-                del tiles  # This will trigger the SharedArray.__del__ method
+                try:
+                    # Prefer explicit close to avoid BufferError on shutdown
+                    if hasattr(tiles, 'close'):
+                        tiles.close()
+                finally:
+                    del tiles
             except Exception:
                 pass  # Ignore cleanup errors
     
