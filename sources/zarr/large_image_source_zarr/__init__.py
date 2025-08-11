@@ -1443,8 +1443,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             params = {}
             if lossy and self.dtype == np.uint8:
                 params['compression'] = 'jpeg'
+            params['overwrite'] = overwriteAllowed
             params.update(converterParams)
-            convert(str(attrs_path), path, overwrite=overwriteAllowed, **params)
+            convert(str(attrs_path), path, **params)
 
             self._applyGeoReferencing(path)
 
