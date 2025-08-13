@@ -1,7 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./**/*.{js,ts,jsx,tsx,styl,css,pug,vue}",
+    "./views/**/*.{js,ts,jsx,tsx,styl,css,pug,vue}",
+    "./templates/**/*.{js,ts,jsx,tsx,styl,css,pug,vue}",
+    "./stylesheets/**/*.{js,ts,jsx,tsx,styl,css,pug,vue}",
+    "./vue/**/*.{js,ts,jsx,tsx,styl,css,pug,vue}",
+    "./widgets/**/*.{js,ts,jsx,tsx,styl,css,pug,vue}",
+    "./*.{js,ts,jsx,tsx,styl,css,pug,vue}",
   ],
   safelist: [
     {
