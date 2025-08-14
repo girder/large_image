@@ -853,6 +853,7 @@ wrap(ItemListWidget, 'render', function (render) {
                         <span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>
                         </span>
                 `);
+                this._tableViewSelectVue = null;
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(
                         this._generalFilter
