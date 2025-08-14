@@ -37,10 +37,5 @@ export default {
       },
     },
   },
-  plugins: [
-    function ({ addVariant, matchUtilities }) {
-        console.log('TAILWIND SCANNING CONTENT');
-    }
-  ],
   blocklist: ['collapse'], // disable because bootstrap uses it for something else
 }
