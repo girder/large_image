@@ -22,6 +22,8 @@
 - Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
 - Harden reading ometiff that have certain planar configurations ([#1956](../../pull/1956))
 - If a tile is larger than expected, guard its size ([#1955](../../pull/1955))
+- Zarr Write: Prevent multiple values for the overwrite kwarg ([#1965](../../pull/1965))
+- Eliminate a javascript exception in the histogram viewer ([#1967](../../pull/1967))
 
 ## 1.32.11
 
