@@ -176,15 +176,15 @@ def source_compare(sourcePath, opts):  # noqa
     thumbs = opts.thumbs
     if thumbs and os.path.isdir(thumbs):
         thumbs = os.path.join(thumbs, 'compare-' + os.path.basename(sourcePath))
-    kwargs = {}
-    if opts.encoding:
-        kwargs['encoding'] = opts.encoding
     styles = [None if val == '' else val for val in (opts.style or [None])]
     projections = [None if val == '' else val for val in (opts.projection or [None])]
     results['styles'] = []
     for (styleidx, style), (projidx, projection) in itertools.product(
             enumerate(styles), enumerate(projections)):
         results['styles'].append({'style': style, 'projection': projection, 'sources': {}})
+        kwargs = {}
+        if opts.encoding:
+            kwargs['encoding'] = opts.encoding
         kwargs['style'] = style
         if style is None:
             kwargs.pop('style', None)
