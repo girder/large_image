@@ -161,7 +161,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
-        is_netcdf = self._checkNetCDF()
+        self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
         except (RuntimeError, ZeroDivisionError) as exc:
@@ -171,7 +171,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
         if (self.projection or self._getDriver() in {
             'PNG',
-        }) and not scale and not is_netcdf:
+        }) and not scale and not getattr(self, '_allowNoScale', False):
             msg = ('File does not have a projected scale, so will not be '
                    'opened via GDAL with a projection.')
             raise TileSourceError(msg)
@@ -248,10 +248,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         return self._driver
 
     def _checkNetCDF(self):
-        if self._getDriver() == 'netCDF':
-            msg = 'netCDF file will not be read via GDAL source'
-            raise TileSourceError(msg)
-        return False
+        return bool(self._getDriver() == 'netCDF')
 
     def _getPopulatedLevels(self):
         try:

@@ -17,6 +17,7 @@
 - Do not check if items are used as annotation elements in DocumentDB ([#1949](../../pull/1949), [#1953](../../pull/1953))
 - Ensure a valid gdal version ([#1945](../../pull/1945))
 - Drop support for Python 3.8 ([#1950](../../pull/1950), [#1957](../../pull/1957))
+- Change some internals on how allowing netcdf files without scale are handled ([#1970](../../pull/1970))
 
 ### Bug Fixes
 
