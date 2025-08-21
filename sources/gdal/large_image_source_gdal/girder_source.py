@@ -35,6 +35,8 @@ class GDALGirderTileSource(GDALFileTileSource, GirderTileSource):
     name = 'gdal'
     cacheName = 'tilesource'
 
+    _mayHaveAdjacentFiles = True
+
     @staticmethod
     def getLRUHash(*args, **kwargs):
         return GirderTileSource.getLRUHash(*args, **kwargs) + ',%s,%s' % (

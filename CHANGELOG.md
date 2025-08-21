@@ -11,6 +11,7 @@
 - Improve reading certain tiles via tiff source ([#1946](../../pull/1946))
 - Clearer error messages on jsonschema issues in the multi source ([#1951](../../pull/1951))
 - Add an option to the image converter to preserve float datatypes ([#1968](../../pull/1968))
+- Specify that geospatial girder sources could be multi-file to better find adjacent files to a vrt ([#1971](../../pull/1971))
 
 ### Changes
 
