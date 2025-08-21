@@ -33,14 +33,14 @@ setup(
     ],
     python_requires='>=3.9',
     install_requires=[
-        'girder>=5.0.0a8',
-        'girder-jobs>=5.0.0a8',
+        'girder>=5.0.0a10',
+        'girder-jobs>=5.0.0a10',
         f'large_image{limit_version}',
     ],
     extras_require={
         'tasks': [
             f'large-image-tasks[girder]{limit_version}',
-            'girder-worker[girder]>=5.0.0a8',
+            'girder-worker[girder]>=5.0.0a10',
         ],
     },
     include_package_data=True,
