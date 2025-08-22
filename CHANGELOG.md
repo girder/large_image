@@ -5,6 +5,7 @@
 ### Features
 
 - Multi-source Thin Plate Spline Warping ([#1947](../../pull/1947))
+- Support subdatasets and frames in geospatial sources ([#1972](../../pull/1972))
 
 ### Improvements
 
