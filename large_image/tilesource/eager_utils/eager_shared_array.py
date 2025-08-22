@@ -110,14 +110,11 @@ class SharedArray:
     def view(self):
         if self.is_torch:
             import torch # type: ignore
-            # copy bytes for view
-            copied_bytes = bytearray(self.shm.buf[:self.shm_size])
-            view_buf = torch.frombuffer(copied_bytes, dtype=self.dtype).reshape(self.shape)
+            view_buf = torch.frombuffer(self.shm.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
             return view_buf
         else:
             # copy bytes for view
-            copied_bytes = bytearray(self.shm.buf)
-            view_buf = np.ndarray(self.shape, self.dtype, buffer=copied_bytes)
+            view_buf = np.ndarray(self.shape, self.dtype, buffer=self.shm.buf)
             return view_buf
 
     # If we want easier interoperability, we could, instead, forward a
