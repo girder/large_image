@@ -800,6 +800,15 @@ class Map:
             self.update_layer_query(frame=current_frame, style=dict())
 
     def update_frame(self, frame, style, **kwargs):
+        if self._edit_warp:
+            transform_checkbox = self._warp_widgets.get('transform')
+            if (
+                transform_checkbox is not None and
+                transform_checkbox.value and
+                self.warp_points is not None and
+                len(self.warp_points['src'])
+            ):
+                style['warp'] = self.warp_points
         self.update_layer_query(frame=frame, style=style)
 
     def update_layer_query(self, frame, style, **kwargs):
