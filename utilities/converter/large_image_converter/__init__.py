@@ -589,7 +589,7 @@ def _convert_large_image_frame(
         preferredVipsCast=preferredVipsCast, **kwargs)
 
 
-def _output_type(lidata):  # noqa
+def _output_type(lidata, keepFloat=False):  # noqa
     """
     Determine how to cast and scale vips data based on actual image contents.
     """
@@ -599,6 +599,10 @@ def _output_type(lidata):  # noqa
         return None
     if intype == np.uint8 or intype == np.uint16:
         return None
+    if keepFloat and np.issubdtype(intype, np.floating):
+        if intype == np.float16 or intype == np.float32:
+            return (pyvips.BandFormat.FLOAT, 0, 1)
+        return (pyvips.BandFormat.DOUBLE, 0, 1)
     logger.debug('Checking data range')
     minval = maxval = None
     for frame in range(len(lidata['metadata'].get('frames', [0]))):
@@ -657,7 +661,7 @@ def _convert_large_image(inputPath, outputPath, tempPath, lidata, **kwargs):
         images.
     """
     ts = lidata['tilesource']
-    lidata['_vips_cast'] = _output_type(lidata)
+    lidata['_vips_cast'] = _output_type(lidata, kwargs.get('keepFloat', False))
     numFrames = len(lidata['metadata'].get('frames', [0]))
     outputList = []
     tasks = []
@@ -986,6 +990,8 @@ def convert(inputPath, outputPath=None, **kwargs):  # noqa: C901
         primary ifds.
     :param overwrite: if not True, throw an exception if the output path
         already exists.
+    :param keepFloat: if True, keep float or double data types as they are, if
+        possible.
 
     Additional optional parameters:
 

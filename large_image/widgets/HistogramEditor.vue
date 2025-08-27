@@ -308,7 +308,7 @@ export default {
             );
         },
         initializePositions() {
-            if (!this.histogram) return;
+            if (!this.histogram || !this.$refs.minHandle || !this.$refs.maxHandle) return;
 
             const currentMinPosition = parseFloat(this.$refs.minHandle.getAttribute('x1'));
             const currentMaxPosition = parseFloat(this.$refs.maxHandle.getAttribute('x1'));

@@ -5,23 +5,29 @@
 ### Features
 
 - Multi-source Thin Plate Spline Warping ([#1947](../../pull/1947))
+- Support subdatasets and frames in geospatial sources ([#1972](../../pull/1972))
 
 ### Improvements
 
 - Improve reading certain tiles via tiff source ([#1946](../../pull/1946))
 - Clearer error messages on jsonschema issues in the multi source ([#1951](../../pull/1951))
+- Add an option to the image converter to preserve float datatypes ([#1968](../../pull/1968))
+- Specify that geospatial girder sources could be multi-file to better find adjacent files to a vrt ([#1971](../../pull/1971))
 
 ### Changes
 
 - Do not check if items are used as annotation elements in DocumentDB ([#1949](../../pull/1949), [#1953](../../pull/1953))
 - Ensure a valid gdal version ([#1945](../../pull/1945))
 - Drop support for Python 3.8 ([#1950](../../pull/1950), [#1957](../../pull/1957))
+- Change some internals on how allowing netcdf files without scale are handled ([#1970](../../pull/1970))
 
 ### Bug Fixes
 
 - Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
 - Harden reading ometiff that have certain planar configurations ([#1956](../../pull/1956))
 - If a tile is larger than expected, guard its size ([#1955](../../pull/1955))
+- Zarr Write: Prevent multiple values for the overwrite kwarg ([#1965](../../pull/1965))
+- Eliminate a javascript exception in the histogram viewer ([#1967](../../pull/1967))
 
 ## 1.32.11
 

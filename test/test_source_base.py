@@ -37,8 +37,8 @@ SourceAndFiles = {
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
-        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
+        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff|nc)|18[-0-9a-f]{34}\.dcm)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         'skip': r'nokeyframe\.ome\.tiff$',
         'skipTiles': r'\.*nc$',
     },
