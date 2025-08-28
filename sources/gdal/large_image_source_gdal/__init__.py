@@ -33,7 +33,8 @@ from large_image.constants import (PROJECTION_SENTINEL, TILE_FORMAT_IMAGE,
                                    SourcePriority, TileOutputMimeTypes)
 from large_image.exceptions import (TileSourceError,
                                     TileSourceFileNotFoundError,
-                                    TileSourceInefficientError)
+                                    TileSourceInefficientError,
+                                    TileSourceXYZRangeError)
 from large_image.tilesource.geo import (GDALBaseFileTileSource,
                                         ProjUnitsAcrossLevel0,
                                         ProjUnitsAcrossLevel0_MaxSize)
@@ -161,7 +162,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
             raise TileSourceError('File cannot be opened via GDAL: %r' % exc)
-        is_netcdf = self._checkNetCDF()
+        self._checkNetCDF()
         try:
             scale = self.getPixelSizeInMeters()
         except (RuntimeError, ZeroDivisionError) as exc:
@@ -171,13 +172,39 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             raise TileSourceError(msg)
         if (self.projection or self._getDriver() in {
             'PNG',
-        }) and not scale and not is_netcdf:
+        }) and not scale and not getattr(self, '_allowNoScale', False):
             msg = ('File does not have a projected scale, so will not be '
                    'opened via GDAL with a projection.')
             raise TileSourceError(msg)
         self.sourceLevels = self.levels = int(max(0, math.ceil(max(
             math.log(float(self.sizeX) / self.tileWidth),
             math.log(float(self.sizeY) / self.tileHeight)) / math.log(2))) + 1)
+        with self._getDatasetLock:
+            try:
+                subdatasets = self.dataset.GetSubDatasets()
+            except (RuntimeError, ZeroDivisionError):
+                subdatasets = None
+            if subdatasets and len(subdatasets) > 1:
+                self._frames = []
+                for sdsrecord in subdatasets:
+                    sdspath = os.path.join(os.path.dirname(self._largeImagePath), sdsrecord[0])
+                    try:
+                        sds = gdal.OpenEx(sdspath, gdalconst.GA_ReadOnly)
+                    except Exception:
+                        sdspath = sdsrecord[0]
+                        try:
+                            sds = gdal.OpenEx(sdspath, gdalconst.GA_ReadOnly)
+                        except Exception:
+                            sds = None
+                    try:
+                        if (sds and sds.RasterXSize == self.sourceSizeX and
+                                sds.RasterYSize == self.sourceSizeY and
+                                self.dataset.RasterCount == sds.RasterCount):
+                            self._frames.append(sdspath)
+                    except Exception:
+                        pass
+                if len(self._frames) <= 1:
+                    delattr(self, '_frames')
         self._unitsPerPixel = unitsPerPixel
         if self.projection:
             self._initWithProjection(unitsPerPixel)
@@ -248,10 +275,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         return self._driver
 
     def _checkNetCDF(self):
-        if self._getDriver() == 'netCDF':
-            msg = 'netCDF file will not be read via GDAL source'
-            raise TileSourceError(msg)
-        return False
+        return bool(self._getDriver() == 'netCDF')
 
     def _getPopulatedLevels(self):
         try:
@@ -261,15 +285,16 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             pass
 
     def _scanForMinMax(self, dtype, frame=None, analysisSize=1024, onlyMinMax=True):
-        frame = frame or 0
-        bandInfo = self.getBandInformation()
-        if (not frame and onlyMinMax and all(
+        frame = self._getFrame(frame=frame or 0)
+        ds = self._getFrameDataset(frame)
+        bandInfo = self.getBandInformation(dataset=ds)
+        if (onlyMinMax and all(
                 band.get('min') is not None and band.get('max') is not None
                 for band in bandInfo.values())):
             with self._getDatasetLock:
                 dtype = gdal_array.GDALTypeCodeToNumericTypeCode(
-                    self.dataset.GetRasterBand(1).DataType)
-            self._bandRanges[0] = {
+                    ds.GetRasterBand(1).DataType)
+            self._bandRanges[frame] = {
                 'min': np.array([band['min'] for band in bandInfo.values()], dtype=dtype),
                 'max': np.array([band['max'] for band in bandInfo.values()], dtype=dtype),
             }
@@ -615,7 +640,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
         """
         if not getattr(self, '_bandInfo', None) or dataset:
             with self._getDatasetLock:
-                cache = not dataset
+                cache = not dataset or dataset == self.dataset
                 if not dataset:
                     dataset = self.dataset
                 infoSet = JSONDict({})
@@ -698,6 +723,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 'sourceBounds': self.getBounds(),
                 'bands': self.getBandInformation(),
             })
+        if hasattr(self, '_frames'):
+            metadata['frames'] = [{} for _ in self._frames]
+            self._addMetadataFrameInformation(metadata)
         return metadata
 
     def getInternalMetadata(self, **kwargs):
@@ -784,8 +812,30 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             return None
         return int(band)
 
+    def _getFrameDataset(self, frame):
+        ds = self.dataset
+        if frame or hasattr(self, '_frames'):
+            if frame < 0 or not hasattr(self, '_frames') or frame >= len(self._frames):
+                msg = 'Frame does not exist'
+                raise TileSourceXYZRangeError(msg)
+            if not hasattr(self, '_frameCache') or not hasattr(self, '_frameCacheMaxSize'):
+                self._frameCache = {}
+                self._frameCacheMaxSize = 10
+            if frame in self._frameCache:
+                ds = self._frameCache[frame]
+            else:
+                with self._getDatasetLock:
+                    if len(self._frameCache) >= self._frameCacheMaxSize:
+                        self._frameCache = {}
+                    ds = gdal.OpenEx(self._frames[frame], gdalconst.GA_ReadOnly)
+                    self._frameCache[frame] = ds
+        return ds
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):
+        frame = self._getFrame(**kwargs)
+        ds = self._getFrameDataset(frame)
+        tile = None
         if not self.projection:
             self._xyzInRange(x, y, z)
             factor = int(2 ** (self.levels - 1 - z))
@@ -797,11 +847,10 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             h = int(max(1, round((y1 - y0) / factor)))
             with self._getDatasetLock:
                 try:
-                    tile = self.dataset.ReadAsArray(
+                    tile = ds.ReadAsArray(
                         xoff=x0, yoff=y0, xsize=x1 - x0, ysize=y1 - y0, buf_xsize=w, buf_ysize=h)
                 except Exception:
                     self.logger.exception('Failed to getTile')
-                    tile = np.zeros((1, 1))
         else:
             xmin, ymin, xmax, ymax = self.getTileCorners(z, x, y)
             bounds = self.getBounds(self.projection)
@@ -816,7 +865,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                                  self.projection.decode())
             with self._getDatasetLock:
                 ds = gdal.Warp(
-                    '', self.dataset, format='VRT',
+                    '', ds, format='VRT',
                     srcSRS=self._warpSRS[0], dstSRS=self._warpSRS[1],
                     dstAlpha=True,
                     # Valid options are GRA_NearestNeighbour, GRA_Bilinear,
@@ -835,7 +884,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     tile = ds.ReadAsArray()
                 except Exception:
                     self.logger.exception('Failed to getTile')
-                    tile = np.zeros((1, 1))
+        if tile is None:
+            tile = np.zeros((1, 1))
         if len(tile.shape) == 3:
             tile = np.rollaxis(tile, 0, 3)
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
@@ -871,9 +921,11 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 # convert to native pixel coordinates
                 x, y = self.toNativePixelCoordinates(x, y)
             if 0 <= int(x) < self.sizeX and 0 <= int(y) < self.sizeY:
+                frame = self._getFrame(**kwargs)
+                ds = self._getFrameDataset(frame)
                 with self._getDatasetLock:
-                    for i in range(self.dataset.RasterCount):
-                        band = self.dataset.GetRasterBand(i + 1)
+                    for i in range(ds.RasterCount):
+                        band = ds.GetRasterBand(i + 1)
                         try:
                             value = band.ReadRaster(int(x), int(y), 1, 1, buf_type=gdal.GDT_Float32)
                             if value:
