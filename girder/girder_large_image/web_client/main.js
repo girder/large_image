@@ -1,6 +1,5 @@
 // import modules for side effects
 import './routes';
-import './eventStream';
 import './views/fileList';
 import './views/itemList';
 import './views/itemView';

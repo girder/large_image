@@ -130,18 +130,23 @@ class ImageItem(Item):
                 item['_id'], item['name'])
             # No source was successful
             del item['largeImage']['fileId']
+            item['largeImage']['expected'] = True
+            item['largeImage']['notify'] = notify
+            item['largeImage']['originalId'] = fileObj['_id']
+            item = self.save(item)
             if not localJob:
                 job = self._createLargeImageJob(item, fileObj, user, token, **kwargs)
             else:
                 job = self._createLargeImageLocalJob(item, fileObj, user, **kwargs)
-            item['largeImage']['expected'] = True
-            item['largeImage']['notify'] = notify
-            item['largeImage']['originalId'] = fileObj['_id']
-            item['largeImage']['jobId'] = job['_id']
+            item = self.load(item['_id'], force=True)
+            if 'expected' in item['largeImage']:
+                item['largeImage']['jobId'] = job['_id']
+                item = self.save(item)
             logger.debug(
                 'createImageItem created a job to generate a largeImage for item %s (%s)',
                 item['_id'], item['name'])
-        self.save(item)
+        else:
+            self.save(item)
         return job
 
     def _createLargeImageJob(

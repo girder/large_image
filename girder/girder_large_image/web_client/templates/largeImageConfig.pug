@@ -132,20 +132,5 @@ form#g-large-image-form(role="form")
       .input-group-btn
         button.g-open-browser.btn.btn-default(type="button")
           i.icon-folder-open
-  .form-group
-    label Server Notification Stream Fallback
-    p.g-large-image-description
-      | If the Server Notification Stream is turned off, should polling be used
-      | instead?  If neither is used, some web pages will need to be manually
-      | refreshed to see updates.  If this is changed and the notification
-      | streams are off, existing web pages will need to be reloaded once for
-      | the change to take effect.
-    .g-large-image-stream-fallback-container
-      label.radio-inline
-        input.g-large-image-stream-fallback(type="radio", name="g-large-image-stream", checked=settings['large_image.notification_stream_fallback'] !== false ? 'checked': undefined)
-        | Polling fallback
-      label.radio-inline
-        input.g-large-image-stream-no-fallback(type="radio", name="g-large-image-stream", checked=settings['large_image.notification_stream_fallback'] !== false ? undefined : 'checked')
-        | No polling
   p#g-large-image-error-message.g-validation-failed-message
   input.btn.btn-sm.btn-primary(type="submit", value="Save")
