@@ -25,31 +25,20 @@ RUN apt-get update && \
       #  We had been installing \
       # software-properties-common \
       #  but this includes a copy of python which we will install later, so \
-      #  install its component parts without python (see \
+      #  install some of its component parts without python (see \
       #  https://packages.debian.org/stable/software-properties-common) \
-      ca-certificates \
-      distro-info-data \
       gir1.2-glib-2.0 \
-      gir1.2-packagekitglib-1.0 \
       gpg \
       iso-codes \
       lsb-release \
-      packagekit \
       # as specified by \
       # https://github.com/pyenv/pyenv/wiki#suggested-build-environment \
       build-essential \
       curl \
-      libbz2-dev \
       libffi-dev \
       liblzma-dev \
-      libncursesw5-dev \
       libreadline-dev \
       libsqlite3-dev \
-      libssl-dev \
-      libxml2-dev \
-      libxmlsec1-dev \
-      # llvm \
-      make \
       tk-dev \
       wget \
       xz-utils \
@@ -64,10 +53,8 @@ RUN apt-get update && \
       bzip2 \
       dirmngr \
       git \
-      gpg-agent \
       less \
       locales \
-      ssh \
       vim \
       # testing convenience \
       fonts-dejavu \
@@ -75,18 +62,14 @@ RUN apt-get update && \
       # shrink docker image \
       rdfind \
       # core girder \
-      gcc \
-      cmake \
       iptables \
       dnsutils \
-      automake \
-      rsync \
       universal-ctags \
       && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
-    rm -r /etc/ssh/ssh_host* && \
+    rm -rf /etc/ssh/ssh_host* && \
     rm -rf /usr/share/vim/vim91/doc/* /usr/share/vim/vim91/tutor/* /usr/share/doc && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/*
 
