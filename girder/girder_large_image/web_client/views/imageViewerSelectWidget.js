@@ -16,7 +16,7 @@ import PresetsMenu from '../vue/components/PresetsMenu.vue';
 const $ = girder.$;
 const _ = girder._;
 const {wrap} = girder.utilities.PluginUtils;
-const eventStream = girder.utilities.EventStream;
+const eventStream = girder.utilities.eventStream;
 const ItemView = girder.views.body.ItemView;
 const View = girder.views.View;
 const {restRequest} = girder.rest;
