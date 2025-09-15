@@ -2,6 +2,10 @@
 
 ## 1.33.4
 
+### Improvements
+
+- Remove locking in reading nd2 tiles ([#1977](../../pull/1977))
+
 ### Changes
 
 - Increase the detail threshold for large annotations ([#1995](../../pull/1995))
