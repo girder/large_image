@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# used because some of the libraries (mapnik in particular) rely on this being
+# loaded first and don't cause it to happen when sphinx-apidoc is invoked
+export LD_PRELOAD=$(ldconfig -p | awk '/libstdc\+\+\.so\.6/{print $NF; exit}') || echo "libstdc++.so.6 not found, not setting LD_PRELOAD"
+
 set -e
 
 cd "$(dirname $0)"
