@@ -242,17 +242,21 @@ class Annotationelement(Model):
         queryLimit = max(minElements, maxDetails) if maxDetails and (
             not limit or max(minElements, maxDetails) < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
-        logger.debug('element query %r for %r', query, region)
         fields = {'_id': True, 'element': True, 'bbox.details': True, 'datafile': True}
         centroids = str(region.get('centroids')).lower() == 'true'
         if centroids:
-            # fields = {'_id': True, 'element': True, 'bbox': True}
             fields = {
                 '_id': True,
                 'element.id': True,
-                'bbox': True}
+                'bbox.lowx': True,
+                'bbox.lowy': True,
+                'bbox.highx': True,
+                'bbox.highy': True,
+                'bbox.size': True,
+            }
             proplist = []
-            propskeys = ['type', 'fillColor', 'lineColor', 'lineWidth', 'closed']
+            # MUST match below
+            propskeys = ('type', 'fillColor', 'lineColor', 'lineWidth', 'closed')
             # This should match the javascript
             defaultProps = {
                 'fillColor': 'rgba(0,0,0,0)',
@@ -265,12 +269,10 @@ class Annotationelement(Model):
             info['centroids'] = True
             info['props'] = proplist
             info['propskeys'] = propskeys
-        elif region.get('bbox'):
-            fields.pop('bbox.details')
-            fields['bbox'] = True
-        if bbox:
+        elif region.get('bbox') or bbox:
             fields.pop('bbox.details', None)
             fields['bbox'] = True
+        logger.debug('element query %r (%r) for %r', query, fields, region)
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
             offset=offset, fields=fields)
@@ -290,19 +292,23 @@ class Annotationelement(Model):
             info['limit'] = limit
         for entry in elementCursor:
             element = entry['element']
-            element.setdefault('id', entry['_id'])
             if centroids:
                 bbox = entry.get('bbox')
                 if not bbox or 'lowx' not in bbox or 'size' not in bbox:
                     continue
-                prop = tuple(
-                    element.get(key, defaultProps.get(key)) for key in propskeys
-                    if element.get(key, defaultProps.get(key)) is not None)
+                # MUST match above; faster than
+                #   prop = tuple(element.get(key) for key in propskeys)
+                prop = (
+                    element.get('type'),
+                    element.get('fillColor'),
+                    element.get('lineColor'),
+                    element.get('lineWidth'),
+                    element.get('closed'))
                 if prop not in props:
                     props[prop] = len(props)
-                    proplist.append(list(prop))
+                    proplist.append([element.get(key, defaultProps.get(key)) for key in propskeys])
                 yield [
-                    str(element['id']),
+                    str(element.get('id') or entry['_id']),
                     (bbox['lowx'] + bbox['highx']) / 2,
                     (bbox['lowy'] + bbox['highy']) / 2,
                     bbox['size'] if entry.get('type') != 'point' else 0,
@@ -310,6 +316,7 @@ class Annotationelement(Model):
                 ]
                 details += 1
             else:
+                element.setdefault('id', entry['_id'])
                 if entry.get('datafile'):
                     datafile = entry['datafile']
                     chunksize = 1024 ** 2
