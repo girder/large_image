@@ -942,6 +942,7 @@ class Annotation(AccessControlledModel):
         _elementQuery = annotation.pop('_elementQuery', None)
         annotation.pop('_active', None)
         annotation.pop('_annotationId', None)
+        annotation.pop('_versionId', None)
         if annotation['annotation'] and not annotation['annotation'].get('name'):
             now = datetime.datetime.now(datetime.timezone.utc)
             annotation['annotation']['name'] = now.strftime('Annotation %Y-%m-%d %H:%M')

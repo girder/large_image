@@ -35,7 +35,7 @@ def testIsVips():
         'af6f-14fefbbdf7bd.svs')
     assert large_image_converter.is_vips(imagePath) is True
 
-    imagePath = datastore.fetch('HENormalN801.czi')
+    imagePath = datastore.fetch('synthetic_channels.zarr.db')
     assert large_image_converter.is_vips(imagePath) is False
 
 
