@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.33.1
+
+### Improvements
+
+- Speed up annotation centroid queries ([#1981](../../pull/1981))
+
 ## 1.33.0
 
 ### Features
