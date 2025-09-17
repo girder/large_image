@@ -174,6 +174,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 'min': 'min',
                 'max': 'max',
             })
+        self._allowNoScale = True
         return True
 
     def _setDefaultStyle(self):

@@ -35,7 +35,7 @@ def testIsVips():
         'af6f-14fefbbdf7bd.svs')
     assert large_image_converter.is_vips(imagePath) is True
 
-    imagePath = datastore.fetch('HENormalN801.czi')
+    imagePath = datastore.fetch('synthetic_channels.zarr.db')
     assert large_image_converter.is_vips(imagePath) is False
 
 
@@ -133,6 +133,15 @@ def testConvertTiffFloatPixels(tmpdir):
     info = tifftools.read_tiff(outputPath)
     assert (info['ifds'][0]['tags'][tifftools.Tag.SampleFormat.value]['data'][0] ==
             tifftools.constants.SampleFormat.uint.value)
+
+
+def testConvertTiffPreserveFloatPixels(tmpdir):
+    imagePath = datastore.fetch('d042-353.crop.small.float32.tif')
+    outputPath = os.path.join(tmpdir, 'out.tiff')
+    large_image_converter.convert(imagePath, outputPath, keepFloat=True)
+    info = tifftools.read_tiff(outputPath)
+    assert (info['ifds'][0]['tags'][tifftools.Tag.SampleFormat.value]['data'][0] ==
+            tifftools.constants.SampleFormat.float.value)
 
 
 def testConvertJp2kCompression(tmpdir):

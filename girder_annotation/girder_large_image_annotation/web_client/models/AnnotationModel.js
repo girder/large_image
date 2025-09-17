@@ -77,7 +77,7 @@ const AnnotationModel = AccessControlledModel.extend({
         annotation: {},
         minElements: 5000,
         maxDetails: 250000,
-        maxCentroids: 2000000
+        maxCentroids: 5000000
     },
 
     initialize() {
@@ -227,10 +227,7 @@ const AnnotationModel = AccessControlledModel.extend({
         var restOpts = {
             url: url,
             data: {
-                sort: 'size',
-                sortdir: -1,
                 centroids: true,
-                limit: this.get('maxCentroids'),
                 _: (this.get('updated') || this.get('created')) + '_' + this.get('_version')
             },
             xhrFields: {
@@ -238,7 +235,11 @@ const AnnotationModel = AccessControlledModel.extend({
             },
             error: null
         };
-
+        if ((this.get('_elementQuery') || {}).count && (this.get('_elementQuery') || {}).count > this.get('maxCentroids')) {
+            restOpts.data.sort = 'size';
+            restOpts.data.sortdir = -1;
+            restOpts.data.limit = this.get('maxCentroids');
+        }
         return restRequest(restOpts).done((resp) => {
             let dv = new DataView(resp);
             let z0 = 0, z1 = dv.byteLength - 1;

@@ -30,6 +30,8 @@ class RasterioGirderTileSource(RasterioFileTileSource, GirderTileSource):
     name = 'rasterio'
     cacheName = 'tilesource'
 
+    _mayHaveAdjacentFiles = True
+
     @staticmethod
     def getLRUHash(*args, **kwargs):
         projection = kwargs.get(
