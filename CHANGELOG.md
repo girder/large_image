@@ -7,6 +7,10 @@
 - Speed up annotation centroid queries ([#1981](../../pull/1981))
 - Improve large annotation load and display speed ([#1982](../../pull/1982))
 
+### Bug Fixes
+
+- Add a guard to avoid a javascript except if annotations are not loaded enough ([#1983](../../pull/1983))
+
 ## 1.33.0
 
 ### Features
