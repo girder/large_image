@@ -625,6 +625,8 @@ class Annotationelement(Model):
                     len(entries), time.time() - chunkStartTime, prepTime,
                     chunk + len(entries), len(elements)))
                 lastTime = time.time()
+            return len(entries), sum(
+                el.get('bbox', {}).get('details') or 1 for el in entries)
         except Exception:
             logger.exception('Failed to update element chunk')
             raise
@@ -639,18 +641,26 @@ class Annotationelement(Model):
         startTime = time.time()
         elements = annotation['annotation'].get('elements', [])
         if not len(elements):
-            return
+            return 0, 0
         now = datetime.datetime.now(datetime.timezone.utc)
         threads = large_image.config.cpu_count()
         chunkSize = int(max(100000 // threads, 10000))
         insertLock = threading.Lock()
+        count, details = 0, 0
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
+            futures = []
             for chunk in range(0, len(elements), chunkSize):
-                pool.submit(self.updateElementChunk, elements, chunk,
-                            chunkSize, annotation, now, insertLock)
+                futures.append(pool.submit(
+                    self.updateElementChunk, elements, chunk, chunkSize,
+                    annotation, now, insertLock))
+            for future in concurrent.futures.as_completed(futures):
+                chunkCount, chunkDetails = future.result()
+                count += chunkCount
+                details += chunkDetails
         if time.time() - startTime > 10:
             logger.info('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))
+        return count, details
 
     def getElementGroupSet(self, annotation):
         query = {
