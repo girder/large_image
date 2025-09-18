@@ -1,10 +1,9 @@
 import $ from 'jquery';
 import _ from 'underscore';
 import Backbone from 'backbone';
-
 import events from '@girder/core/events';
 import {wrap} from '@girder/core/utilities/PluginUtils';
-import {restRequest} from '@girder/core/rest';
+import {restRequest, getApiRoot} from '@girder/core/rest';
 
 import convertAnnotation from '../../annotations/geojs/convert';
 
@@ -29,7 +28,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._unclampBoundsForOverlay = true;
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
-        this._highlightFeatureSizeLimit = settings.highlightFeatureSizeLimit || 10000;
         this.listenTo(events, 's:widgetDrawRegionEvent', this.drawRegion);
         this.listenTo(events, 's:widgetClearRegion', this.clearRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
@@ -163,7 +161,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
             if (_.isFunction(layerParams.url) || levelDifference) {
-                layerParams.url = (x, y, z) => 'api/v1/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                layerParams.url = (x, y, z) => getApiRoot() + '/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             } else {
                 layerParams.url = layerParams.url + '?encoding=PNG';
             }
@@ -210,7 +208,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileWidth, overlayImageMetadata.tileHeight
             );
             params.layer.useCredentials = true;
-            params.layer.url = `api/v1/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
+            params.layer.url = `${getApiRoot()}/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
             if (this._countDrawnImageOverlays() <= 6) {
                 params.layer.autoshareRenderer = false;
             } else {
@@ -224,7 +222,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             levelDifference -= this._getOverlayRelativeScale(overlay);
 
             if (this.levels !== overlayImageMetadata.levels) {
-                params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
                 params.layer.minLevel = levelDifference;
                 params.layer.maxLevel += levelDifference;
 
@@ -247,7 +245,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference);
             } else if (overlay.hasAlpha) {
                 params.layer.keepLower = false;
-                params.layer.url = (x, y, z) => 'api/v1/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
             }
             return params.layer;
         },
@@ -283,7 +281,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             let immediateUpdate = false;
             if (present) {
                 _.each(this._annotations[annotation.id].features, (feature, idx) => {
-                    if (idx || !annotation._centroids || feature.data().length !== annotation._centroids.data.length) {
+                    if (idx || !annotation._centroids || !feature._centroidFeature) {
                         if (feature._ownLayer) {
                             feature.layer().map().deleteLayer(feature.layer());
                         } else {
@@ -334,6 +332,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             // draw centroids except for otherwise shown values
             if (annotation._centroids && !centroidFeature) {
                 const feature = this.featureLayer.createFeature('point');
+                feature._centroidFeature = true;
                 featureList.push(feature);
                 feature.data(annotation._centroids.data).position((d, i) => ({
                     x: annotation._centroids.centroids.x[i],
@@ -351,7 +350,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         return r;
                     },
                     stroke: (d, i) => {
-                        return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
+                        return !annotation._shownIds || (annotation._centroids.centroids.id[i] && !annotation._shownIds.has(annotation._centroids.centroids.id[i]));
                     },
                     strokeColor: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
@@ -366,7 +365,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         return annotation._centroids.props[s].strokeWidth;
                     },
                     fill: (d, i) => {
-                        return !annotation._shownIds || !annotation._shownIds.has(annotation._centroids.centroids.id[i]);
+                        return !annotation._shownIds || (annotation._centroids.centroids.id[i] && !annotation._shownIds.has(annotation._centroids.centroids.id[i]));
                     },
                     fillColor: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
@@ -404,6 +403,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         }
                     }
                 });
+                annotation._centroids._redraw = false;
+            } else if (annotation._centroids && centroidFeature && annotation._centroids._redraw) {
+                centroidFeature.data(annotation._centroids.data);
+                annotation._centroids._redraw = false;
+                immediateUpdate = true;
             }
             // draw overlays
             if (this.getUnclampBoundsForOverlay() && this._annotations[annotation.id].overlays.length > 0) {
@@ -415,9 +419,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 restRequest({
                     url: `item/${overlayItemId}/tiles`
                 }).done((response) => {
-                    // Since overlay layers are created asynchronously, we need to ensure that an attempt
-                    // to draw the same overlays happening at roughly the same time does not create
-                    // extra layers
+                    // Since overlay layers are created asynchronously, we need
+                    // to ensure that an attempt to draw the same overlays
+                    // happening at roughly the same time does not create extra
+                    // layers
+                    if (!this.viewer) {
+                        return;
+                    }
                     const conflictingLayers = this.viewer.layers().filter(
                         (layer) => layer.id() === overlay.id);
                     if (conflictingLayers.length > 0) {
@@ -478,41 +486,36 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         );
 
                         // store the original opacities for the elements in each feature
-                        const data = feature.data();
                         if (annotation._centroids) {
                             annotation._shownIds = new Set(feature.data().map((d) => d.id));
                         }
-                        if (data.length <= this._highlightFeatureSizeLimit && !annotation._centroids) {
-                            this._featureOpacity[annotation.id][feature.featureType] = feature.data()
-                                .map(({id, properties}) => {
-                                    return {
-                                        id,
-                                        fillOpacity: properties.fillOpacity,
-                                        strokeOpacity: properties.strokeOpacity
-                                    };
-                                });
-                        }
+                        this._featureOpacity[annotation.id][feature.featureType] = feature.data()
+                            .map(({id, properties}) => {
+                                return {
+                                    id,
+                                    fillOpacity: properties.fillOpacity,
+                                    strokeOpacity: properties.strokeOpacity
+                                };
+                            });
                     });
                     this._mutateFeaturePropertiesForHighlight(annotation.id, features);
-                    if (annotation._centroids && featureList[0]) {
-                        if (featureList[0].verticesPerFeature) {
+                    const centroidFeature = featureList.find((f) => f._centroidFeature);
+                    if (annotation._centroids && centroidFeature) {
+                        if (centroidFeature.verticesPerFeature) {
                             this.viewer.scheduleAnimationFrame(() => {
-                                const vpf = featureList[0].verticesPerFeature(),
-                                    count = featureList[0].data().length,
-                                    shown = new Float32Array(vpf * count);
-                                for (let i = 0, j = 0; i < count; i += 1) {
-                                    const val = annotation._shownIds.has(annotation._centroids.centroids.id[i]) ? 0 : 1;
-                                    for (let k = 0; k < vpf; k += 1, j += 1) {
-                                        shown[j] = val;
-                                    }
+                                const centroidFeature = featureList.find((f) => f._centroidFeature);
+                                const count = centroidFeature.data().length;
+                                const shown = new Float32Array(count);
+                                for (let i = 0; i < count; i += 1) {
+                                    shown[i] = annotation._shownIds.has(annotation._centroids.centroids.id[i]) ? 0 : 1;
                                 }
-                                featureList[0].updateStyleFromArray({
+                                centroidFeature.updateStyleFromArray({
                                     stroke: shown,
                                     fill: shown
                                 }, undefined, true);
                             });
                         } else {
-                            featureList[0].modified();
+                            centroidFeature.modified();
                         }
                     }
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
@@ -563,6 +566,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             this._hideElement = element;
             _.each(this._annotations, (layer, annotationId) => {
                 const features = layer.features;
+                console.log(features); // DWM::
                 this._mutateFeaturePropertiesForHighlight(annotationId, features);
             });
             this.viewer.scheduleAnimationFrame(this.viewer.draw);
@@ -570,7 +574,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         /**
-         * Use geojs's `updateStyleFromArray` to modify the opacities of alli
+         * Use geojs's `updateStyleFromArray` to modify the opacities of all
          * elements in a feature.  This method uses the private attributes
          * `_highlightAnntotation` and `_highlightElement` to determine which
          * element to modify.
@@ -579,8 +583,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             _.each(features, (feature) => {
                 const data = this._featureOpacity[annotationId][feature.featureType];
                 if (!data) {
-                    // skip highlighting code on features with a lot of entities because
-                    // this slows down interactivity considerably.
+                    // skip highlighting on features with a lot of entities
+                    // because this slows down interactivity considerably.
                     return;
                 }
                 var prop = {

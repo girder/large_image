@@ -1,12 +1,9 @@
 import os
-import sys
 import tempfile
 
 import pytest
 
-# We support Python 3.9 and greater for DICOMweb
 pytestmark = [
-    pytest.mark.skipif(sys.version_info < (3, 9), reason='requires python3.9 or higher'),
     pytest.mark.skipif(os.getenv('DICOMWEB_TEST_URL') is None,
                        reason='DICOMWEB_TEST_URL is not set'),
 ]

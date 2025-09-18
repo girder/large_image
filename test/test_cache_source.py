@@ -51,6 +51,8 @@ def testCacheSourceStyleFirst():
 def testCacheSourceBadStyle():
     cachesClear()
     imagePath = datastore.fetch('ITGA3Hi_export_crop2.nd2')
+    oldval = large_image.config.getConfig('source_bioformats_ignored_names')
+    large_image.config.setConfig('source_bioformats_ignored_names', 'r.*nd2$')
     ts1 = large_image.open(imagePath, style='{"bands": [{"max": 128}]}')
     tile1 = ts1.getTile(0, 0, 0)
     # With nd2 files, a bad style could cause a future segfault
@@ -60,6 +62,7 @@ def testCacheSourceBadStyle():
     tile2 = ts2.getTile(0, 0, 0)
     assert tile1 == tile2
     ts1 = ts2 = None
+    large_image.config.setConfig('source_bioformats_ignored_names', oldval)
     cachesClear()
 
 

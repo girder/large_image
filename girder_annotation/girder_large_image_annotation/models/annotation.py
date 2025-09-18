@@ -384,6 +384,12 @@ class AnnotationSchema:
                 'exclusiveMinimum': 0,
                 'description': 'radius used for heatmap interpretation',
             },
+            'scaleWithZoom': {
+                'type': 'boolean',
+                'description':
+                    'If true, and interpreted as a heatmap, scale the size '
+                    'of points with the zoom level of the map.',
+            },
             'colorRange': colorRangeSchema,
             'rangeValues': rangeValueSchema,
             'normalizeRange': {
@@ -657,7 +663,7 @@ class Annotation(AccessControlledModel):
         })
 
         self.exposeFields(AccessType.READ, (
-            'annotation', '_version', '_elementQuery', '_active',
+            'annotation', '_version', '_elementQuery', '_active', '_elementCount', '_detailsCount',
         ) + self.baseFields)
         events.bind('model.item.remove', 'large_image_annotation', self._onItemRemove)
         events.bind('model.item.copy.prepare', 'large_image_annotation', self._prepareCopyItem)
@@ -836,7 +842,7 @@ class Annotation(AccessControlledModel):
         """
         annotation = super().load(id, *args, **kwargs)
         if annotation is None:
-            return
+            return None
 
         if getElements:
             # It is possible that we are trying to read the elements of an
@@ -897,7 +903,7 @@ class Annotation(AccessControlledModel):
             expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
         return result
 
-    def save(self, annotation, *args, **kwargs):
+    def save(self, annotation, *args, **kwargs):  # noqa
         """
         When saving an annotation, override the collection insert_one and
         replace_one methods so that we don't save the elements with the main
@@ -934,9 +940,13 @@ class Annotation(AccessControlledModel):
         _elementQuery = annotation.pop('_elementQuery', None)
         annotation.pop('_active', None)
         annotation.pop('_annotationId', None)
+        annotation.pop('_versionId', None)
+        if annotation['annotation'] and not annotation['annotation'].get('name'):
+            now = datetime.datetime.now(datetime.timezone.utc)
+            annotation['annotation']['name'] = now.strftime('Annotation %Y-%m-%d %H:%M')
 
         def replaceElements(query, doc, *args, **kwargs):
-            Annotationelement().updateElements(doc)
+            elementCount, detailsCount = Annotationelement().updateElements(doc)
             elements = doc['annotation'].pop('elements', None)
             if self._historyEnabled:
                 oldAnnotation = self.collection.find_one(query)
@@ -944,6 +954,9 @@ class Annotation(AccessControlledModel):
                     oldAnnotation['_annotationId'] = oldAnnotation.pop('_id')
                     oldAnnotation['_active'] = False
                     insert_one(oldAnnotation)
+            if elements is not None:
+                doc['_elementCount'] = elementCount
+                doc['_detailsCount'] = detailsCount
             ret = replace_one(query, doc, *args, **kwargs)
             if elements:
                 doc['annotation']['elements'] = elements
@@ -956,10 +969,13 @@ class Annotation(AccessControlledModel):
             # the annotation without elements, then restore the elements.
             doc.setdefault('_id', ObjectId())
             if doc['annotation'].get('elements') is not None:
-                Annotationelement().updateElements(doc)
+                elementCount, detailsCount = Annotationelement().updateElements(doc)
             # If we are inserting, we shouldn't have any old elements, so don't
             # bother removing them.
             elements = doc['annotation'].pop('elements', None)
+            if elements is not None:
+                doc['_elementCount'] = elementCount
+                doc['_detailsCount'] = detailsCount
             ret = insert_one(doc, *args, **kwargs)
             if elements is not None:
                 doc['annotation']['elements'] = elements
@@ -1102,7 +1118,7 @@ class Annotation(AccessControlledModel):
                     element['id'] = str(element['id'])
                 # Handle elements with large arrays by checking that a
                 # conversion to a numpy array works
-                keys = None
+                keys = {}
                 if len(element.get('points', element.get('values', []))) > VALIDATE_ARRAY_LENGTH:
                     key = 'points' if 'points' in element else 'values'
                     try:
@@ -1138,6 +1154,9 @@ class Annotation(AccessControlledModel):
                     lastTime = time.time()
             annot['elements'] = elements
         except jsonschema.ValidationError as exp:
+            from large_image.exceptions import _improveJsonschemaValidationError
+
+            _improveJsonschemaValidationError(exp)
             raise ValidationException(exp)
         if time.time() - startTime > 10:
             logger.info('Validated in %5.3fs' % (time.time() - startTime))
@@ -1224,13 +1243,19 @@ class Annotation(AccessControlledModel):
                 version = oldVersions[1]['_version']
         annotation = Annotation().getVersion(id, version, user, force=force)
         if annotation is None:
-            return
+            return None
         # If this is the most recent (active) annotation, don't do anything.
         # Otherwise, revert it.
         if not annotation.get('_active', True):
             if not force:
                 self.requireAccess(annotation, user=user, level=AccessType.WRITE)
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
+            Notification().createNotification(
+                type='large_image_annotation.revert',
+                data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
+                user=user,
+                expires=datetime.datetime.now(datetime.timezone.utc) +
+                datetime.timedelta(seconds=1))
         return annotation
 
     def findAnnotatedImages(self, imageNameFilter=None, creator=None,
@@ -1349,16 +1374,15 @@ class Annotation(AccessControlledModel):
             logger.info('Counting inactive annotations, %r' % report)
             logtime = time.time()
         report['recentVersions'] = self.collection.count_documents({'_active': False})
-        recentDateStep = {'$addFields': {'mostRecentDate': {'$max': [
-            '$created', {'$ifNull': ['$updated', '$created']}]}}}
         itemLookupStep = {'$lookup': {
             'from': 'item',
             'localField': 'itemId',
             'foreignField': '_id',
             'as': 'item',
         }}
-        oldDeletedPipeline = [recentDateStep, itemLookupStep, {
-            '$match': {'item': {'$size': 0}, 'mostRecentDate': {'$lt': age}},
+        oldDeletedPipeline = [itemLookupStep, {
+            '$match': {'item': {'$size': 0}, 'created': {'$lt': age}, '$or': [
+                {'updated': {'$exists': False}}, {'updated': {'$lt': age}}]},
         }, {
             '$project': {'item': 0},
         }]
@@ -1390,8 +1414,9 @@ class Annotation(AccessControlledModel):
             '$unwind': '$annotations',
         }, {
             '$replaceRoot': {'newRoot': '$annotations'},
-        }, recentDateStep, {
-            '$match': {'mostRecentDate': {'$lt': age}},
+        }, {
+            '$match': {'created': {'$lt': age}, '$or': [
+                {'updated': {'$exists': False}}, {'updated': {'$lt': age}}]},
         }]
         if time.time() - logtime > 10:
             logger.info('Finding old annotations, %r' % report)
