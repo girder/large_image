@@ -83,6 +83,20 @@ class Annotationelement(Model):
                 ('_version', SortDir.DESCENDING),
                 ('bbox.size', SortDir.DESCENDING),
             ], {}),
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('bbox.lowx', SortDir.ASCENDING),
+                ('bbox.highx', SortDir.ASCENDING),
+                ('bbox.size', SortDir.DESCENDING),
+            ], {}),
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('bbox.lowy', SortDir.ASCENDING),
+                ('bbox.highy', SortDir.ASCENDING),
+                ('bbox.size', SortDir.DESCENDING),
+            ], {}),
         ])
 
         self.exposeFields(AccessType.READ, (
@@ -223,12 +237,14 @@ class Annotationelement(Model):
             'annotationId': annotation.get('_annotationId', annotation['_id']),
             '_version': annotation['_version'],
         }
+        includeCount = True
         for key in region:
             if key in self.bboxKeys and self.bboxKeys[key][1]:
                 if self.bboxKeys[key][1] == '$gte' and float(region[key]) <= 0:
                     continue
                 query[self.bboxKeys[key][0]] = {
                     self.bboxKeys[key][1]: float(region[key])}
+                includeCount = False
         if region.get('sort') in self.bboxKeys:
             sortkey = self.bboxKeys[region['sort']][0]
         else:
@@ -240,8 +256,11 @@ class Annotationelement(Model):
         queryLimit = max(minElements, maxDetails) if maxDetails and (
             not limit or max(minElements, maxDetails) < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
-        fields = {'_id': True, 'element': True, 'bbox.details': True, 'datafile': True}
         centroids = str(region.get('centroids')).lower() == 'true'
+        # Specifying a limit helps mongo choose a better index
+        if maxDetails:
+            queryLimit = max(maxDetails, minElements) if queryLimit is None else min(
+                queryLimit, max(maxDetails, minElements))
         if centroids:
             fields = {
                 '_id': True,
@@ -267,20 +286,21 @@ class Annotationelement(Model):
             info['centroids'] = True
             info['props'] = proplist
             info['propskeys'] = propskeys
-        elif region.get('bbox') or bbox:
-            fields.pop('bbox.details', None)
-            fields['bbox'] = True
+        else:
+            # Note that it is faster to get all of bbox rather than just
+            # bbox.details (this is not true for centroids)
+            fields = {'_id': True, 'element': True, 'bbox': True, 'datafile': True}
         logger.debug('element query %r (%r) for %r', query, fields, region)
         elementCursor = self.find(
             query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
             offset=offset, fields=fields)
-
         info.update({
-            'count': elementCursor.count(),
             'offset': offset,
             'filter': query,
             'sort': [sortkey, sortdir],
         })
+        if includeCount:
+            info['count'] = elementCursor.count()
         details = count = 0
         if maxDetails:
             info['maxDetails'] = maxDetails
