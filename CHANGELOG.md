@@ -6,6 +6,7 @@
 
 - Speed up annotation centroid queries ([#1981](../../pull/1981))
 - Improve large annotation load and display speed ([#1982](../../pull/1982))
+- Denormalize some values in the annotation collection to support improving display speed ([#1984](../../pull/1984))
 
 ### Bug Fixes
 
