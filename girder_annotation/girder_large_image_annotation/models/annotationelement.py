@@ -22,6 +22,8 @@ import pickle
 import threading
 import time
 
+import bson.codec_options
+import bson.raw_bson
 import pymongo
 from girder_large_image.models.image_item import ImageItem
 
@@ -291,9 +293,31 @@ class Annotationelement(Model):
             # bbox.details (this is not true for centroids)
             fields = {'_id': True, 'element': True, 'bbox': True, 'datafile': True}
         logger.debug('element query %r (%r) for %r', query, fields, region)
-        elementCursor = self.find(
-            query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
-            offset=offset, fields=fields)
+        if centroids:
+            elementCursor = self.find(
+                query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
+                offset=offset, fields=fields)
+        else:
+            # By using raw bson to some extent, we save some decoding time
+            # from bson to python.  It isn't clear to me why this reduces
+            # decoding time by 25% or more, but it seems consistent.  When
+            # applied to the centoids, this was actually much slower.
+
+            class SemiRawDocument(bson.raw_bson.RawBSONDocument):
+                def __getitem__(self, key):
+                    if key in {'element', 'bbox'}:
+                        if hasattr(self, key):
+                            return getattr(self, key)
+                        val = {k: v if not isinstance(v, bson.raw_bson.RawBSONDocument) else
+                               bson.decode(v.raw) for k, v in super().__getitem__(key).items()}
+                        setattr(self, key, val)
+                        return val
+                    return super().__getitem__(key)
+
+            elementCursor = self.collection.with_options(
+                codec_options=bson.codec_options.CodecOptions(document_class=SemiRawDocument)).find(
+                    filter=query, sort=[(sortkey, sortdir)], limit=queryLimit,
+                    skip=offset, projection=fields)
         info.update({
             'offset': offset,
             'filter': query,
