@@ -22,6 +22,8 @@ import pickle
 import threading
 import time
 
+import bson.codec_options
+import bson.raw_bson
 import pymongo
 from girder_large_image.models.image_item import ImageItem
 
@@ -37,7 +39,7 @@ from girder.models.upload import Upload
 # store part of them in an associated file.  This is slower, so don't do it for
 # small ones.
 MAX_ELEMENT_CHECK = 100
-MAX_ELEMENT_DOCUMENT = 10000
+MAX_ELEMENT_DOCUMENT = 100000
 MAX_ELEMENT_USER_DOCUMENT = 1000000
 
 
@@ -61,20 +63,6 @@ class Annotationelement(Model):
             '_version',
             ([
                 ('annotationId', SortDir.ASCENDING),
-                ('bbox.lowx', SortDir.DESCENDING),
-                ('bbox.highx', SortDir.ASCENDING),
-                ('bbox.size', SortDir.DESCENDING),
-            ], {
-                'name': 'annotationBboxIdx',
-            }),
-            ([
-                ('annotationId', SortDir.ASCENDING),
-                ('bbox.size', SortDir.DESCENDING),
-            ], {
-                'name': 'annotationBboxSizeIdx',
-            }),
-            ([
-                ('annotationId', SortDir.ASCENDING),
                 ('_version', SortDir.DESCENDING),
                 ('element.group', SortDir.ASCENDING),
             ], {
@@ -92,11 +80,34 @@ class Annotationelement(Model):
                 ('_version', SortDir.ASCENDING),
             ], {}),
             'element.girderId',
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('bbox.size', SortDir.DESCENDING),
+            ], {}),
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('bbox.lowx', SortDir.ASCENDING),
+                ('bbox.highx', SortDir.ASCENDING),
+                ('bbox.size', SortDir.DESCENDING),
+            ], {}),
+            ([
+                ('annotationId', SortDir.ASCENDING),
+                ('_version', SortDir.DESCENDING),
+                ('bbox.lowy', SortDir.ASCENDING),
+                ('bbox.highy', SortDir.ASCENDING),
+                ('bbox.size', SortDir.DESCENDING),
+            ], {}),
         ])
 
         self.exposeFields(AccessType.READ, (
             '_id', '_version', 'annotationId', 'created', 'element'))
         self.versionId = None
+
+    def _createIndex(self, index):
+        """This creates indices in the background."""
+        threading.Thread(target=super()._createIndex, args=(index,), daemon=True).start()
 
     def getNextVersionValue(self):
         """
@@ -228,12 +239,14 @@ class Annotationelement(Model):
             'annotationId': annotation.get('_annotationId', annotation['_id']),
             '_version': annotation['_version'],
         }
+        includeCount = True
         for key in region:
             if key in self.bboxKeys and self.bboxKeys[key][1]:
                 if self.bboxKeys[key][1] == '$gte' and float(region[key]) <= 0:
                     continue
                 query[self.bboxKeys[key][0]] = {
                     self.bboxKeys[key][1]: float(region[key])}
+                includeCount = False
         if region.get('sort') in self.bboxKeys:
             sortkey = self.bboxKeys[region['sort']][0]
         else:
@@ -245,17 +258,24 @@ class Annotationelement(Model):
         queryLimit = max(minElements, maxDetails) if maxDetails and (
             not limit or max(minElements, maxDetails) < limit) else limit
         offset = int(region['offset']) if region.get('offset') else 0
-        logger.debug('element query %r for %r', query, region)
-        fields = {'_id': True, 'element': True, 'bbox.details': True, 'datafile': True}
         centroids = str(region.get('centroids')).lower() == 'true'
+        # Specifying a limit helps mongo choose a better index
+        if maxDetails:
+            queryLimit = max(maxDetails, minElements) if queryLimit is None else min(
+                queryLimit, max(maxDetails, minElements))
         if centroids:
-            # fields = {'_id': True, 'element': True, 'bbox': True}
             fields = {
                 '_id': True,
                 'element.id': True,
-                'bbox': True}
+                'bbox.lowx': True,
+                'bbox.lowy': True,
+                'bbox.highx': True,
+                'bbox.highy': True,
+                'bbox.size': True,
+            }
             proplist = []
-            propskeys = ['type', 'fillColor', 'lineColor', 'lineWidth', 'closed']
+            # MUST match below
+            propskeys = ('type', 'fillColor', 'lineColor', 'lineWidth', 'closed')
             # This should match the javascript
             defaultProps = {
                 'fillColor': 'rgba(0,0,0,0)',
@@ -268,22 +288,43 @@ class Annotationelement(Model):
             info['centroids'] = True
             info['props'] = proplist
             info['propskeys'] = propskeys
-        elif region.get('bbox'):
-            fields.pop('bbox.details')
-            fields['bbox'] = True
-        if bbox:
-            fields.pop('bbox.details', None)
-            fields['bbox'] = True
-        elementCursor = self.find(
-            query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
-            offset=offset, fields=fields)
+        else:
+            # Note that it is faster to get all of bbox rather than just
+            # bbox.details (this is not true for centroids)
+            fields = {'_id': True, 'element': True, 'bbox': True, 'datafile': True}
+        logger.debug('element query %r (%r) for %r', query, fields, region)
+        if centroids:
+            elementCursor = self.find(
+                query=query, sort=[(sortkey, sortdir)], limit=queryLimit,
+                offset=offset, fields=fields)
+        else:
+            # By using raw bson to some extent, we save some decoding time
+            # from bson to python.  It isn't clear to me why this reduces
+            # decoding time by 25% or more, but it seems consistent.  When
+            # applied to the centoids, this was actually much slower.
 
+            class SemiRawDocument(bson.raw_bson.RawBSONDocument):
+                def __getitem__(self, key):
+                    if key in {'element', 'bbox'}:
+                        if hasattr(self, key):
+                            return getattr(self, key)
+                        val = {k: v if not isinstance(v, bson.raw_bson.RawBSONDocument) else
+                               bson.decode(v.raw) for k, v in super().__getitem__(key).items()}
+                        setattr(self, key, val)
+                        return val
+                    return super().__getitem__(key)
+
+            elementCursor = self.collection.with_options(
+                codec_options=bson.codec_options.CodecOptions(document_class=SemiRawDocument)).find(
+                    filter=query, sort=[(sortkey, sortdir)], limit=queryLimit,
+                    skip=offset, projection=fields)
         info.update({
-            'count': elementCursor.count(),
             'offset': offset,
             'filter': query,
             'sort': [sortkey, sortdir],
         })
+        if includeCount:
+            info['count'] = elementCursor.count()
         details = count = 0
         if maxDetails:
             info['maxDetails'] = maxDetails
@@ -293,19 +334,23 @@ class Annotationelement(Model):
             info['limit'] = limit
         for entry in elementCursor:
             element = entry['element']
-            element.setdefault('id', entry['_id'])
             if centroids:
                 bbox = entry.get('bbox')
                 if not bbox or 'lowx' not in bbox or 'size' not in bbox:
                     continue
-                prop = tuple(
-                    element.get(key, defaultProps.get(key)) for key in propskeys
-                    if element.get(key, defaultProps.get(key)) is not None)
+                # MUST match above; faster than
+                #   prop = tuple(element.get(key) for key in propskeys)
+                prop = (
+                    element.get('type'),
+                    element.get('fillColor'),
+                    element.get('lineColor'),
+                    element.get('lineWidth'),
+                    element.get('closed'))
                 if prop not in props:
                     props[prop] = len(props)
-                    proplist.append(list(prop))
+                    proplist.append([element.get(key, defaultProps.get(key)) for key in propskeys])
                 yield [
-                    str(element['id']),
+                    str(element.get('id') or entry['_id']),
                     (bbox['lowx'] + bbox['highx']) / 2,
                     (bbox['lowy'] + bbox['highy']) / 2,
                     bbox['size'] if entry.get('type') != 'point' else 0,
@@ -313,29 +358,26 @@ class Annotationelement(Model):
                 ]
                 details += 1
             else:
+                element.setdefault('id', entry['_id'])
                 if entry.get('datafile'):
                     datafile = entry['datafile']
-                    data = io.BytesIO()
                     chunksize = 1024 ** 2
-                    with File().open(File().load(datafile['fileId'], force=True)) as fptr:
-                        while True:
-                            chunk = fptr.read(chunksize)
-                            if not len(chunk):
-                                break
-                            data.write(chunk)
-                    data.seek(0)
-                    element[datafile['key']] = pickle.load(data)
-                    if 'userFileId' in datafile:
+                    for key, fileid in [
+                        (datafile['key'], 'fileId'),
+                        ('user', 'userFileId'),
+                        ('holes', 'holeFileId'),
+                    ]:
+                        if fileid not in datafile:
+                            continue
                         data = io.BytesIO()
-                        chunksize = 1024 ** 2
-                        with File().open(File().load(datafile['userFileId'], force=True)) as fptr:
+                        with File().open(File().load(datafile[fileid], force=True)) as fptr:
                             while True:
                                 chunk = fptr.read(chunksize)
                                 if not len(chunk):
                                     break
                                 data.write(chunk)
                         data.seek(0)
-                        element['user'] = pickle.load(data)
+                        element[key] = pickle.load(data)
                 if region.get('bbox') and 'bbox' in entry:
                     element['_bbox'] = entry['bbox']
                     if 'bbox' not in info:
@@ -375,7 +417,7 @@ class Annotationelement(Model):
         attachedQuery = query.copy()
         attachedQuery['datafile'] = {'$exists': True}
         for element in self.collection.find(attachedQuery):
-            for key in {'fileId', 'userFileId'}:
+            for key in {'fileId', 'userFileId', 'holeFileId'}:
                 if key in element['datafile']:
                     file = File().load(element['datafile'][key], force=True)
                     if file:
@@ -536,7 +578,7 @@ class Annotationelement(Model):
         # simplify to points
         return bbox
 
-    def _entryIsLarge(self, entry):
+    def _entryIsLarge(self, entry, checkUser=False):
         """
         Return True is an entry is alrge enough it might not fit in a mongo
         document.
@@ -547,7 +589,10 @@ class Annotationelement(Model):
         if len(entry['element'].get('points', entry['element'].get(
                 'values', []))) > MAX_ELEMENT_DOCUMENT:
             return True
-        if ('user' in entry['element'] and
+        if ('holes' in entry['element'] and
+                sum(len(h) for h in entry['element']['holes']) > MAX_ELEMENT_DOCUMENT):
+            return True
+        if (checkUser and 'user' in entry['element'] and
                 len(pickle.dumps(entry['element'], protocol=4)) > MAX_ELEMENT_USER_DOCUMENT):
             return True
         return False
@@ -561,8 +606,8 @@ class Annotationelement(Model):
         :param entries: the database entries document.  Modified.
         """
         item = Item().load(annotation['itemId'], force=True)
-        for idx, entry in enumerate(entries[:MAX_ELEMENT_CHECK]):
-            if not self._entryIsLarge(entry):
+        for idx, entry in enumerate(entries):
+            if not self._entryIsLarge(entry, idx < MAX_ELEMENT_CHECK):
                 continue
             element = entry['element'].copy()
             entries[idx]['element'] = element
@@ -574,18 +619,23 @@ class Annotationelement(Model):
                 io.BytesIO(data), size=len(data), name='_annotationElementData',
                 parentType='item', parent=item, user=None,
                 mimeType='application/json', attachParent=True)
-            userdata = None
+            entry['datafile'] = {
+                'key': key,
+                'fileId': elementFile['_id'],
+            }
+            if 'holes' in element:
+                holedata = pickle.dumps(element.pop('holes'), protocol=4)
+                holeFile = Upload().uploadFromFile(
+                    io.BytesIO(holedata), size=len(holedata), name='_annotationElementHoleData',
+                    parentType='item', parent=item, user=None,
+                    mimeType='application/json', attachParent=True)
+                entry['datafile']['holeFileId'] = holeFile['_id']
             if 'user' in element:
                 userdata = pickle.dumps(element.pop('user'), protocol=4)
                 userFile = Upload().uploadFromFile(
                     io.BytesIO(userdata), size=len(userdata), name='_annotationElementUserData',
                     parentType='item', parent=item, user=None,
                     mimeType='application/json', attachParent=True)
-            entry['datafile'] = {
-                'key': key,
-                'fileId': elementFile['_id'],
-            }
-            if userdata:
                 entry['datafile']['userFileId'] = userFile['_id']
             logger.debug('Storing element as file (%r)', entry)
 
@@ -594,30 +644,36 @@ class Annotationelement(Model):
         Update the database for a chunk of elements.  See the updateElements
         method for details.
         """
-        lastTime = time.time()
-        chunkStartTime = time.time()
-        entries = [{
-            'annotationId': annotation['_id'],
-            '_version': annotation['_version'],
-            'created': now,
-            'bbox': self._boundingBox(element),
-            'element': element,
-        } for element in elements[chunk:chunk + chunkSize]]
-        prepTime = time.time() - chunkStartTime
-        if (len(entries) <= MAX_ELEMENT_CHECK and any(
-                self._entryIsLarge(entry) for entry in entries[:MAX_ELEMENT_CHECK])):
-            self.saveElementAsFile(annotation, entries)
-        with insertLock:
-            res = self.collection.insert_many(entries, ordered=False)
-        for pos, entry in enumerate(entries):
-            if 'id' not in entry['element']:
-                entry['element']['id'] = str(res.inserted_ids[pos])
-        # If the insert is slow, log information about it.
-        if time.time() - lastTime > 10:
-            logger.info('insert %d elements in %4.2fs (prep time %4.2fs), chunk %d/%d' % (
-                len(entries), time.time() - chunkStartTime, prepTime,
-                chunk + len(entries), len(elements)))
+        try:
             lastTime = time.time()
+            chunkStartTime = time.time()
+            entries = [{
+                'annotationId': annotation['_id'],
+                '_version': annotation['_version'],
+                'created': now,
+                'bbox': self._boundingBox(element),
+                'element': element,
+            } for element in elements[chunk:chunk + chunkSize]]
+            prepTime = time.time() - chunkStartTime
+            if any(self._entryIsLarge(entry, idx < MAX_ELEMENT_CHECK)
+                   for idx, entry in enumerate(entries)):
+                self.saveElementAsFile(annotation, entries)
+            with insertLock:
+                res = self.collection.insert_many(entries, ordered=False)
+            for pos, entry in enumerate(entries):
+                if 'id' not in entry['element']:
+                    entry['element']['id'] = str(res.inserted_ids[pos])
+            # If the insert is slow, log information about it.
+            if time.time() - lastTime > 10:
+                logger.info('insert %d elements in %4.2fs (prep time %4.2fs), chunk %d/%d' % (
+                    len(entries), time.time() - chunkStartTime, prepTime,
+                    chunk + len(entries), len(elements)))
+                lastTime = time.time()
+            return len(entries), sum(
+                el.get('bbox', {}).get('details') or 1 for el in entries)
+        except Exception:
+            logger.exception('Failed to update element chunk')
+            raise
 
     def updateElements(self, annotation):
         """
@@ -629,18 +685,26 @@ class Annotationelement(Model):
         startTime = time.time()
         elements = annotation['annotation'].get('elements', [])
         if not len(elements):
-            return
+            return 0, 0
         now = datetime.datetime.now(datetime.timezone.utc)
         threads = large_image.config.cpu_count()
         chunkSize = int(max(100000 // threads, 10000))
         insertLock = threading.Lock()
+        count, details = 0, 0
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
+            futures = []
             for chunk in range(0, len(elements), chunkSize):
-                pool.submit(self.updateElementChunk, elements, chunk,
-                            chunkSize, annotation, now, insertLock)
+                futures.append(pool.submit(
+                    self.updateElementChunk, elements, chunk, chunkSize,
+                    annotation, now, insertLock))
+            for future in concurrent.futures.as_completed(futures):
+                chunkCount, chunkDetails = future.result()
+                count += chunkCount
+                details += chunkDetails
         if time.time() - startTime > 10:
             logger.info('inserted %d elements in %4.2fs' % (
                 len(elements), time.time() - startTime))
+        return count, details
 
     def getElementGroupSet(self, annotation):
         query = {

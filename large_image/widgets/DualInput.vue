@@ -1,5 +1,6 @@
 <script>
-export default {
+module.exports = {
+    name: 'DualInput',
     props: ['label', 'currentValue', 'valueMax', 'sliderLabels', 'maxMerge'],
     emits: ['updateValue', 'updateMaxMerge'],
     data() {
@@ -59,7 +60,7 @@ export default {
           v-if="sliderLabels && sliderLabels.length > value"
           :style="'left:'+value/valueMax*100+'%; transform:translateX(-'+value/valueMax*100+'%)'"
           class="bubble-after"
-        />
+        ></span>
       </div>
     </td>
     <td
@@ -79,12 +80,12 @@ export default {
 
 <style scoped>
 .dual-controls > * > * {
-    margin-right: 15px;
-    white-space: nowrap;
+  margin-right: 15px;
+  white-space: nowrap;
 }
 .dual-controls.tall {
-    height: 40px;
-    vertical-align: top;
+  height: 50px;
+  vertical-align: top;
 }
 .bubble-wrap {
   position: relative;
@@ -111,6 +112,9 @@ export default {
   left: 50%;
 }
 .slider-control-cell {
+  vertical-align: middle;
+}
+.slider-control-cell, .slider-control-cell > input {
   width: 100%;
 }
 .max-merge-cell {

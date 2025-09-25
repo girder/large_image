@@ -2,6 +2,7 @@ import glob
 import io
 import json
 import os
+import tempfile
 
 import numpy as np
 import PIL.Image
@@ -252,7 +253,7 @@ class _BaseGeoTests:
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
         assert result[0] == pytest.approx(147, 1)
         assert result[1] == pytest.approx(149, 1)
-        assert result[2:] == (None, None, 'base_pixels')
+        assert result[2:] == (None, None, None, None, 'base_pixels')
 
         result = tsNoProj._convertProjectionUnits(
             None, None, -13080040, 3961860, None, None, 'EPSG:3857')
@@ -275,7 +276,7 @@ class _BaseGeoTests:
             -117.5, 33, None, None, 0.5, 0.5, 'EPSG:4326', unitsWH='base_pixels')
         assert result[0] == pytest.approx(96, 1)
         assert result[1] == pytest.approx(149, 1)
-        assert result[2:] == (None, None, 'base_pixels')
+        assert result[2:] == (None, None, 0.5, 0.5, 'base_pixels')
 
         with pytest.raises(TileSourceError, match='Cannot convert'):
             tsNoProj._convertProjectionUnits(
@@ -286,7 +287,7 @@ class _BaseGeoTests:
             -13024380, 3895303, None, None, None, None, 'EPSG:3857')
         assert result[0] == pytest.approx(-13024380, 1)
         assert result[1] == pytest.approx(3895303, 1)
-        assert result[2:] == (None, None, 'projection')
+        assert result[2:] == (None, None, None, None, 'projection')
 
     def testGuardAgainstBadLatLong(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
@@ -356,9 +357,83 @@ class _GDALBaseSourceTest(_BaseGeoTests):
     def testGetRegionWithProjection(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
         ts = self.basemodule.open(imagePath, projection='EPSG:3857')
-        region, _ = ts.getRegion(output=dict(maxWidth=1024, maxHeight=1024),
-                                 format=constants.TILE_FORMAT_NUMPY)
+        region, _ = ts.getRegion(
+            output=dict(maxWidth=1024, maxHeight=1024),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
         assert region.shape == (1024, 1024, 3)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=39.45,
+                left=-79.25,
+                bottom=39.377943,
+                right=-79.366177,
+                units='EPSG:4326',
+            ),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
+        assert region.shape == (17, 21, 3)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=39.45,
+                left=-79.25,
+                units='EPSG:4326',
+                width=10,
+                height=8,
+                unitsWH='kilometer',
+            ),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
+        assert region.shape == (17, 21, 3)
+        region, _ = ts.getRegion(
+            region=dict(
+                bottom=39.377943,
+                right=-79.366177,
+                units='EPSG:4326',
+                width=10,
+                height=8,
+                unitsWH='kilometer',
+            ),
+            format=constants.TILE_FORMAT_NUMPY,
+        )
+        assert region.shape == (17, 21, 3)
+
+    def testGetRegionWithoutProjection(self):
+        imagePath = datastore.fetch('TC_NG_SFBay_US_Geo_COG.tif')
+        ts = self.basemodule.open(imagePath)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=37.84,
+                left=-122.49,
+                units='EPSG:4326',
+                width=4000000,
+                height=4000000,
+                unitsWH='mm'),
+            format='numpy',
+        )
+        assert region.shape == (289, 289, 4)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=37.84,
+                left=-122.49,
+                units='EPSG:4326',
+                width=4000,
+                height=4000,
+                unitsWH='m'),
+            format='numpy',
+        )
+        assert region.shape == (289, 289, 4)
+        region, _ = ts.getRegion(
+            region=dict(
+                top=37.84,
+                left=-122.49,
+                units='EPSG:4326',
+                width=4,
+                height=4,
+                unitsWH='km'),
+            format='numpy',
+        )
+        assert region.shape == (289, 289, 4)
 
     def testGCPProjection(self):
         imagePath = datastore.fetch('region_gcp.tiff')
@@ -446,6 +521,11 @@ class _GDALBaseSourceTest(_BaseGeoTests):
             style={'bands': [{'band': 1, 'max': 100, 'min': 5, 'nodata': 0}]})
         assert source.getThumbnail()[0]
 
+    def testScale(self):
+        imagePath = datastore.get_url('TC_NG_SFBay_US_Geo_COG.tif')
+        source = self.basemodule.open(imagePath)
+        assert 13500 < source.metadata['mm_x'] < 14000
+
     def testGetTiledRegionWithProjection(self):
         imagePath = datastore.fetch('landcover_sample_1000.tif')
         ts = self.basemodule.open(imagePath, projection='EPSG:3857')
@@ -476,7 +556,22 @@ class _GDALBaseSourceTest(_BaseGeoTests):
         assert tileMetadata['bounds']['srs']
         region.unlink()
 
-    def testIsGeospaital(self):
+    def testGetTiledRegionAsFile(self):
+        imagePath = datastore.fetch('landcover_sample_1000.tif')
+        ts = self.basemodule.open(imagePath, projection='epsg:3857')
+        with tempfile.TemporaryDirectory() as temp_dir:
+            resultPath = os.path.join(temp_dir, 'test_files', 'region.tiff')
+            region, _ = ts.getRegion(
+                output=dict(maxWidth=1024, maxHeight=1024, path=resultPath),
+                encoding='TILED',
+            )
+            self.basemodule.open(str(region))
+            assert region.exists()
+            assert region.name == 'region.tiff'
+            assert os.path.exists(resultPath)
+            region.unlink()
+
+    def testIsGeospatial(self):
         testDir = os.path.dirname(os.path.realpath(__file__))
         imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
         assert self.baseclass.isGeospatial(imagePath) is True
