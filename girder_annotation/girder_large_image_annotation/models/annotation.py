@@ -656,6 +656,10 @@ class Annotation(AccessControlledModel):
             ], {}),
             '_version',
             'updated',
+            ([
+                ('_active', SortDir.ASCENDING),
+                ('_elementCount', SortDir.ASCENDING),
+            ], {}),
         ])
         self.ensureTextIndex({
             'annotation.name': 10,
@@ -751,6 +755,47 @@ class Annotation(AccessControlledModel):
         # Check that all annotations have groups
         for annotation in self.collection.find({'groups': {'$exists': False}}):
             self.injectAnnotationGroupSet(annotation)
+        threading.Thread(target=self._migrateDatabaseBackground, daemon=True).start()
+
+    def _migrateDatabaseBackground(self):
+        needed = self.find({
+            '_active': {'$ne': False},
+            '$or': [
+                {'_elementCount': {'$exists': False}},
+                {'_detailsCount': {'$exists': False}},
+            ],
+        })
+        count = needed.count()
+        if count:
+            logger.info(f'Adding {count} count/details record(s) to existing annotations')
+            lastlog = 0
+            for idx, annot in enumerate(needed):
+                try:
+                    entry = next(Annotationelement().collection.aggregate([{
+                        '$match': {'_version': annot['_version']},
+                    }, {
+                        '$group': {
+                            '_id': None,
+                            '_elementCount': {'$sum': 1},
+                            '_detailsCount': {'$sum': {'$ifNull': ['$bbox.details', 1]}},
+                        },
+                    }]))
+                except StopIteration:
+                    entry = {'_elementCount': 0, '_detailsCount': 0}
+                if time.time() - lastlog > 10:
+                    logger.info(
+                        f'Adding {idx}/{count} count/detail record for '
+                        f'{str(annot["_id"])}, version {annot["_version"]}, '
+                        f'count {entry["_elementCount"]}, details '
+                        f'{entry["_detailsCount"]}')
+                    lastlog = time.time()
+                self.collection.update_one(
+                    {'_id': annot['_id']},
+                    {'$set': {
+                        '_elementCount': entry['_elementCount'],
+                        '_detailsCount': entry['_detailsCount'],
+                    }},
+                )
 
     def _migrateACL(self, annotation):
         """

@@ -1257,8 +1257,8 @@ class TileSource(IPyLeafletMixin):
             else:
                 color = PIL.ImageColor.getcolor(self.edge, mode)
                 tile = tile.copy()
-                tile[:, contentWidth:] = color
-                tile[contentHeight:] = color
+                cast(np.ndarray, tile)[:, contentWidth:] = color
+                cast(np.ndarray, tile)[contentHeight:] = color
         if isinstance(tile, np.ndarray) and numpyAllowed:
             return tile
         tile = _imageToPIL(tile)
