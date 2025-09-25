@@ -10,6 +10,10 @@
 - Improve indices for annotationelement queries ([#1985](../../pull/1985))
 - Use some raw bson handling to speed up annotationelement serialization ([#1986](../../pull/1986))
 
+### Changes
+
+- Skip adjacent DICOM file search during Girder import ([#1987](../../pull/1987))
+
 ### Bug Fixes
 
 - Add a guard to avoid a javascript except if annotations are not loaded enough ([#1983](../../pull/1983))
