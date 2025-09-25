@@ -21,6 +21,11 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
 
     _mayHaveAdjacentFiles = True
 
+    def __init__(self, item, *args, **kwargs):
+        # This must be set before super() because parent's __init__ calls _getLargeImagePath()
+        self._noCache = kwargs.get('noCache', False)
+        super().__init__(item, *args, **kwargs)
+
     def _getAssetstore(self):
         files = Item().childFiles(self.item, limit=1)
         if not files:
@@ -45,6 +50,13 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
         filelist = [
             File().getLocalFilePath(file) for file in Item().childFiles(self.item)
             if self._pathMightBeDicom(file['name'])]
+
+        if self._noCache:
+            # Skip expensive folder scan during import checks.
+            # During import, just return files from current item.
+            # Adjacent files will be found later when actually viewing.
+            return filelist if filelist else None
+
         if len(filelist) != 1:
             return filelist
         try:
