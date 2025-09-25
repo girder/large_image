@@ -16,6 +16,7 @@
 
 import io
 import json
+import logging
 import os
 import pickle
 import threading
@@ -24,7 +25,6 @@ import pymongo
 from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
-from girder import logger
 from girder.constants import SortDir
 from girder.exceptions import FilePathException, GirderException, ValidationException
 from girder.models.assetstore import Assetstore
@@ -37,6 +37,8 @@ from large_image.constants import TileOutputMimeTypes
 from large_image.exceptions import TileGeneralError, TileSourceError
 
 from .. import constants, girder_tilesource
+
+logger = logging.getLogger(__name__)
 
 
 class ImageItem(Item):
@@ -128,26 +130,31 @@ class ImageItem(Item):
                 item['_id'], item['name'])
             # No source was successful
             del item['largeImage']['fileId']
+            item['largeImage']['expected'] = True
+            item['largeImage']['notify'] = notify
+            item['largeImage']['originalId'] = fileObj['_id']
+            item = self.save(item)
             if not localJob:
                 job = self._createLargeImageJob(item, fileObj, user, token, **kwargs)
             else:
                 job = self._createLargeImageLocalJob(item, fileObj, user, **kwargs)
-            item['largeImage']['expected'] = True
-            item['largeImage']['notify'] = notify
-            item['largeImage']['originalId'] = fileObj['_id']
-            item['largeImage']['jobId'] = job['_id']
+            item = self.load(item['_id'], force=True)
+            if 'expected' in item['largeImage']:
+                item['largeImage']['jobId'] = job['_id']
+                item = self.save(item)
             logger.debug(
                 'createImageItem created a job to generate a largeImage for item %s (%s)',
                 item['_id'], item['name'])
-        self.save(item)
+        else:
+            self.save(item)
         return job
 
     def _createLargeImageJob(
             self, item, fileObj, user, token, toFolder=False, folderId=None, name=None, **kwargs):
         import large_image_tasks.tasks
-        from girder_worker_utils.transforms.common import TemporaryDirectory
-        from girder_worker_utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
-        from girder_worker_utils.transforms.girder_io import (GirderUploadToFolder,
+        from girder_worker.utils.transforms.common import TemporaryDirectory
+        from girder_worker.utils.transforms.contrib.girder_io import GirderFileIdAllowDirect
+        from girder_worker.utils.transforms.girder_io import (GirderUploadToFolder,
                                                               GirderUploadToItem)
 
         try:
@@ -178,6 +185,7 @@ class ImageItem(Item):
 
     def _createLargeImageLocalJob(
             self, item, fileObj, user=None, toFolder=False, folderId=None, name=None, **kwargs):
+        # TODO convert this job to celery
         job = Job().createLocalJob(
             module='large_image_tasks.tasks',
             function='convert_image_job',
@@ -192,7 +200,6 @@ class ImageItem(Item):
             type='large_image_tiff',
             user=user,
             public=True,
-            asynchronous=True,
         )
         # For consistency with the non-local job
         job['meta'] = {
@@ -730,6 +737,7 @@ class ImageItem(Item):
             the tileFrames method.
         :param user: the user owning the job.
         """
+        # TODO convert this job to celery
         job = Job().createLocalJob(
             module='large_image_tasks.tasks',
             function='cache_tile_frames_job',
@@ -741,7 +749,6 @@ class ImageItem(Item):
             type='large_image_cache_tile_frames',
             user=user,
             public=True,
-            asynchronous=True,
         )
         Job().scheduleJob(job)
         return job
@@ -755,6 +762,7 @@ class ImageItem(Item):
             the histogram method.
         :param user: the user owning the job.
         """
+        # TODO convert this job to celery
         job = Job().createLocalJob(
             module='large_image_tasks.tasks',
             function='cache_histograms_job',
@@ -766,7 +774,6 @@ class ImageItem(Item):
             type='large_image_cache_histograms',
             user=user,
             public=True,
-            asynchronous=True,
         )
         Job().scheduleJob(job)
         return job
