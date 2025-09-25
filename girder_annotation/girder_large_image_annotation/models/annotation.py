@@ -658,6 +658,10 @@ class Annotation(AccessControlledModel):
             ], {}),
             '_version',
             'updated',
+            ([
+                ('_active', SortDir.ASCENDING),
+                ('_elementCount', SortDir.ASCENDING),
+            ], {}),
         ])
         self.ensureTextIndex({
             'annotation.name': 10,
@@ -665,7 +669,7 @@ class Annotation(AccessControlledModel):
         })
 
         self.exposeFields(AccessType.READ, (
-            'annotation', '_version', '_elementQuery', '_active',
+            'annotation', '_version', '_elementQuery', '_active', '_elementCount', '_detailsCount',
         ) + self.baseFields)
         events.bind('model.item.remove', 'large_image_annotation', self._onItemRemove)
         events.bind('model.item.copy.prepare', 'large_image_annotation', self._prepareCopyItem)
@@ -753,6 +757,47 @@ class Annotation(AccessControlledModel):
         # Check that all annotations have groups
         for annotation in self.collection.find({'groups': {'$exists': False}}):
             self.injectAnnotationGroupSet(annotation)
+        threading.Thread(target=self._migrateDatabaseBackground, daemon=True).start()
+
+    def _migrateDatabaseBackground(self):
+        needed = self.find({
+            '_active': {'$ne': False},
+            '$or': [
+                {'_elementCount': {'$exists': False}},
+                {'_detailsCount': {'$exists': False}},
+            ],
+        })
+        count = needed.count()
+        if count:
+            logger.info(f'Adding {count} count/details record(s) to existing annotations')
+            lastlog = 0
+            for idx, annot in enumerate(needed):
+                try:
+                    entry = next(Annotationelement().collection.aggregate([{
+                        '$match': {'_version': annot['_version']},
+                    }, {
+                        '$group': {
+                            '_id': None,
+                            '_elementCount': {'$sum': 1},
+                            '_detailsCount': {'$sum': {'$ifNull': ['$bbox.details', 1]}},
+                        },
+                    }]))
+                except StopIteration:
+                    entry = {'_elementCount': 0, '_detailsCount': 0}
+                if time.time() - lastlog > 10:
+                    logger.info(
+                        f'Adding {idx}/{count} count/detail record for '
+                        f'{str(annot["_id"])}, version {annot["_version"]}, '
+                        f'count {entry["_elementCount"]}, details '
+                        f'{entry["_detailsCount"]}')
+                    lastlog = time.time()
+                self.collection.update_one(
+                    {'_id': annot['_id']},
+                    {'$set': {
+                        '_elementCount': entry['_elementCount'],
+                        '_detailsCount': entry['_detailsCount'],
+                    }},
+                )
 
     def _migrateACL(self, annotation):
         """
@@ -948,7 +993,7 @@ class Annotation(AccessControlledModel):
             annotation['annotation']['name'] = now.strftime('Annotation %Y-%m-%d %H:%M')
 
         def replaceElements(query, doc, *args, **kwargs):
-            Annotationelement().updateElements(doc)
+            elementCount, detailsCount = Annotationelement().updateElements(doc)
             elements = doc['annotation'].pop('elements', None)
             if self._historyEnabled:
                 oldAnnotation = self.collection.find_one(query)
@@ -956,6 +1001,9 @@ class Annotation(AccessControlledModel):
                     oldAnnotation['_annotationId'] = oldAnnotation.pop('_id')
                     oldAnnotation['_active'] = False
                     insert_one(oldAnnotation)
+            if elements is not None:
+                doc['_elementCount'] = elementCount
+                doc['_detailsCount'] = detailsCount
             ret = replace_one(query, doc, *args, **kwargs)
             if elements:
                 doc['annotation']['elements'] = elements
@@ -968,10 +1016,13 @@ class Annotation(AccessControlledModel):
             # the annotation without elements, then restore the elements.
             doc.setdefault('_id', ObjectId())
             if doc['annotation'].get('elements') is not None:
-                Annotationelement().updateElements(doc)
+                elementCount, detailsCount = Annotationelement().updateElements(doc)
             # If we are inserting, we shouldn't have any old elements, so don't
             # bother removing them.
             elements = doc['annotation'].pop('elements', None)
+            if elements is not None:
+                doc['_elementCount'] = elementCount
+                doc['_detailsCount'] = detailsCount
             ret = insert_one(doc, *args, **kwargs)
             if elements is not None:
                 doc['annotation']['elements'] = elements

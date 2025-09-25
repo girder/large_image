@@ -292,6 +292,27 @@ const AnnotationModel = AccessControlledModel.extend({
         });
     },
 
+    fetchCentroidsWrapper: function (opts) {
+        this._inFetch = 'centroids';
+        return this.fetchCentroids().then(() => {
+            this._inFetch = true;
+            if (opts.extraPath) {
+                this.trigger('g:fetched.' + opts.extraPath);
+            } else {
+                this.trigger('g:fetched');
+            }
+            return null;
+        }).always(() => {
+            this._inFetch = false;
+            if (this._nextFetch) {
+                var nextFetch = this._nextFetch;
+                this._nextFetch = null;
+                nextFetch();
+            }
+            return null;
+        });
+    },
+
     /**
      * Fetch a single resource from the server. Triggers g:fetched on success,
      * or g:error on error.
@@ -317,13 +338,28 @@ const AnnotationModel = AccessControlledModel.extend({
         if (opts.ignoreError) {
             restOpts.error = null;
         }
+        if (this._pageElements === undefined && (this.get('_elementCount') || 0) > this.get('minElements') && (this.get('_detailsCount') || 0) > this.get('maxDetails')) {
+            this._pageElements = true;
+            return this.fetchCentroidsWrapper(opts);
+        }
         this._inFetch = true;
         if (this._refresh) {
             delete this._pageElements;
             delete this._centroids;
             this._refresh = false;
         }
-        return restRequest(restOpts).done((resp) => {
+        return restRequest(restOpts).always(() => {
+            if (this._inFetch !== 'centroids') {
+                this._inFetch = false;
+                if (this._nextFetch) {
+                    var nextFetch = this._nextFetch;
+                    this._nextFetch = null;
+                    if (this._pageElements !== false) {
+                        nextFetch();
+                    }
+                }
+            }
+        }).done((resp) => {
             const annotation = resp.annotation || {};
             const elements = annotation.elements || [];
 
@@ -333,24 +369,7 @@ const AnnotationModel = AccessControlledModel.extend({
             if (this._pageElements === undefined && resp._elementQuery) {
                 this._pageElements = resp._elementQuery.count > resp._elementQuery.returned;
                 if (this._pageElements) {
-                    this._inFetch = 'centroids';
-                    this.fetchCentroids().then(() => {
-                        this._inFetch = true;
-                        if (opts.extraPath) {
-                            this.trigger('g:fetched.' + opts.extraPath);
-                        } else {
-                            this.trigger('g:fetched');
-                        }
-                        return null;
-                    }).always(() => {
-                        this._inFetch = false;
-                        if (this._nextFetch) {
-                            var nextFetch = this._nextFetch;
-                            this._nextFetch = null;
-                            nextFetch();
-                        }
-                        return null;
-                    });
+                    this.fetchCentroidsWrapper(opts);
                 } else {
                     this._nextFetch = null;
                 }
@@ -367,17 +386,6 @@ const AnnotationModel = AccessControlledModel.extend({
             this._fromFetch = null;
         }).fail((err) => {
             this.trigger('g:error', err);
-        }).always(() => {
-            if (this._inFetch !== 'centroids') {
-                this._inFetch = false;
-                if (this._nextFetch) {
-                    var nextFetch = this._nextFetch;
-                    this._nextFetch = null;
-                    if (this._pageElements !== false) {
-                        nextFetch();
-                    }
-                }
-            }
         });
     },
 

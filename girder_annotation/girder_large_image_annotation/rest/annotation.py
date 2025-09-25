@@ -117,8 +117,8 @@ class AnnotationResource(Resource):
         fields = list(
             (
                 'annotation.name', 'annotation.description',
-                'annotation.attributes', 'annotation.display',
-                'access', 'groups', '_version',
+                'annotation.attributes', 'annotation.display', 'access',
+                'groups', '_version', '_elementCount', '_detailsCount',
             ) + Annotation().baseFields)
         return Annotation().findWithPermissions(
             query, sort=sort, fields=fields, user=self.getCurrentUser(),

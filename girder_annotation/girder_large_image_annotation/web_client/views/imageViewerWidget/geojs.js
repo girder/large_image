@@ -503,6 +503,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (annotation._centroids && centroidFeature) {
                         if (centroidFeature.verticesPerFeature) {
                             this.viewer.scheduleAnimationFrame(() => {
+                                if (!annotation._shownIds) {
+                                    return;
+                                }
                                 const centroidFeature = featureList.find((f) => f._centroidFeature);
                                 const count = centroidFeature.data().length;
                                 const shown = new Float32Array(count);
