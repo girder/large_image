@@ -1,5 +1,5 @@
 import math, os, random, time
-from typing import Optional, Tuple, Union, Callable
+from typing import Optional, Tuple, Union, Callable, Dict, Any
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
 from .eager_utils.eager_shared_array import SharedArray
@@ -17,11 +17,10 @@ class EagerIterator:
             self, 
             source: 'tilesource.TileSource',
             output_mode: str = 'tiles',
-            scale_mode: str ='mag',
-            overlap: Union[float, int] = 0,
+            tile_overlap: Union[Dict[str, int] | Dict[str, float]] = {'x': 0, 'y': 0},
             mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
-            target_scale: Optional[Union[Tuple[float, float], float, Tuple[int, int], int]] = None,
-            tile_size: Optional[Tuple[int, int]] = None,
+            scale: Optional[Dict[str, Any]] = None,
+            tile_size: Optional[Dict[str, int]] = None,
             region_size: Optional[Tuple[int, int]] = None,
             dtype: np.typing.DTypeLike = np.uint8,
             chunk_mult: int = 2,
@@ -51,7 +50,7 @@ class EagerIterator:
             by the large image library if you use the tile source's eagerIterator method.
         :param output_mode: A string corresponding to the output mode of the iterator. Can be either 'tiles' or 'regions'.  Defaults to 'tiles'.
         :param scale_mode: A string corresponding to the scale mode of the iterator. Can be either 'mag' or 'mm'.  Defaults to 'mag'.
-        :param overlap: A float or integer defining the overlap in percentage between tiles.  If float, must be in range of 0 and 1.  Cannot be 1.  
+        :param tile_overlap: A float or integer defining the tile_overlap in percentage between tiles.  If float, must be in range of 0 and 1.  Cannot be 1.  
             If integer, must be in range of 0 and the smallest dimension of the tile size.  Defaults to 0.
         :param mask: An optional numpy array or path to a 1 channel image that will be used to filter the tiles (only useful in tile mode).  This mask image is interpreted 
             based on two additional optional parameters: area_threshold and threshold_mask.  area_threshold is used to determine if a patch acquired from the mask
@@ -131,8 +130,15 @@ class EagerIterator:
         if output_mode == 'regions' and pad_mode == 'wsi_edge':
             raise ValueError("pad_mode cannot be wsi_edge if output_mode is regions.  Please use pad_mode='equal' instead")
         
-        if scale_mode not in ['mag', 'mm']:
-            raise ValueError("scale_mode must be either 'mag' or 'mm'")
+        if scale is not None:
+            if 'magnification' not in scale and ('mm_x' not in scale and 'mm_y' not in scale):
+                raise ValueError("scale must be a dictionary with either 'magnification' or 'mm_x' and 'mm_y'")
+            elif 'magnification' in scale and ('mm_x' in scale or 'mm_y' in scale):
+                raise ValueError("scale cannot have both 'magnification' and 'mm_x' or 'mm_y'")
+            elif 'mm_x' in scale and 'mm_y' not in scale:
+                raise ValueError("scale must have both 'mm_x' and 'mm_y'")
+            elif 'mm_x' not in scale and 'mm_y' in scale:
+                raise ValueError("scale must have both 'mm_x' and 'mm_y'")
 
         self.dtype = dtype
         self.nchw = nchw
@@ -141,22 +147,21 @@ class EagerIterator:
         self.transform = transform
         self.batch = batch
         self.output_mode = output_mode
-        self.scale_mode = scale_mode
+        self.scale = scale
         self.pad_fill_mode = pad_fill_mode
         self.pad_mode = pad_mode
         self.chunk_mult = chunk_mult
         self.randomize_chunks = randomize_chunks
         self.seed = seed
-        self.overlap = overlap
-        self.target_scale = target_scale
+        self.tile_overlap = tile_overlap
         self.is_torch = False
 
         # Use the mask to determine the tiles if in tile mode
         if output_mode == 'tiles':
             # Use default tile source to determine slide dimensions
-            self.slide_dimensions = calculate_slide_dimensions(self.source, scale_mode, target_scale, tile_size)
+            self.slide_dimensions = calculate_slide_dimensions(self.source, scale, tile_size)
             if tiles is None:
-                tiles = return_relevant_tile_indexes_for_slide_dim(self.slide_dimensions, overlap)
+                tiles = return_relevant_tile_indexes_for_slide_dim(self.slide_dimensions, tile_overlap)
             if mask is not None:
                 # If mask is a path, check if the path exists, attempt to open the image with PIL and convert to numpy array
                 if isinstance(mask, str) and os.path.exists(mask):
@@ -175,7 +180,7 @@ class EagerIterator:
             # Use default region source to determine slide dimensions
             if region_size is not None:
                 # Regions of form (left, top, width, height)
-                self.slide_dimensions = calculate_slide_dimensions(self.source, scale_mode, target_scale, region_size)
+                self.slide_dimensions = calculate_slide_dimensions(self.source, scale, region_size)
 
                 # Check if region size is appropriate
                 h_max = regions[:, 2].max() / self.slide_dimensions['conv_mm_y']
@@ -316,9 +321,9 @@ class EagerIterator:
             # Use resize_shm to adjust the shape of the shared memory to prevent issues if using pytorch tensors
             tiles.resize_shm([len(batch_read_kwargs), tiles.shape[1], tiles.shape[2], tiles.shape[3]])
 
-        return tiles, self._read_kwargs_to_dict(batch_read_kwargs)
+        return self._tiles_and_read_kwargs_to_dict(tiles, batch_read_kwargs)
     
-    def _read_kwargs_to_dict(self, read_kwargs: list):
+    def _tiles_and_read_kwargs_to_dict(self, tiles: SharedArray, read_kwargs: list):
         """
         Convert the read_kwargs list to a dictionary for simplified access to the relevant read arguments in a way that is more consistent with the original tileIterator.
         The dictionary is returned with the following keys:
@@ -347,6 +352,7 @@ class EagerIterator:
 
         return {
             'format': 'numpy',
+            'tile': tiles,
             'gx': np_read_kwargs[:, 6], # left
             'gy': np_read_kwargs[:, 4], # top
             'level_x': np_read_kwargs[:, 1],

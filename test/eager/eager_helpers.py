@@ -45,11 +45,11 @@ def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = F
     add_default_wsi_dimensions(performance_data, file_path)
 
     if without_cache:
-        setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, True)
+        setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, True, **kwargs)
         add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, read_time)
 
-    # setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, False)
-    # add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, read_time)
+    setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, False, **kwargs)
+    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, read_time)
 
     return performance_data
 
@@ -89,12 +89,12 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
     
     start_time = time.time()
     tile_source = large_image.open(file_path)
-    eager_iter = tile_source.eagerIterator()
+    eager_iter = tile_source.eagerIterator(**kwargs)
     setup_time = time.time() - start_time
     
     # Test read only performance
     for batch in eager_iter:
-        batch_images = batch[0].view()
+        batch_images = batch['tile'].view()
 
     read_time = time.time() - start_time
 
@@ -110,11 +110,11 @@ def run_eager_performance_evaluation(file_path: str, without_cache: bool = False
 
     # Test performance with default resolution without caching
     if without_cache:
-        setup_time, read_time = run_eager_read_performance_evaluation(file_path, True)
+        setup_time, read_time = run_eager_read_performance_evaluation(file_path, True, **kwargs)
         add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, read_time)
 
     # Test read only performance with cache
-    setup_time, read_time = run_eager_read_performance_evaluation(file_path, False)
+    setup_time, read_time = run_eager_read_performance_evaluation(file_path, False, **kwargs)
     add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, read_time)
 
     return performance_data
@@ -130,13 +130,16 @@ def add_default_wsi_dimensions(performance_data: dict, file_path: str):
     target_dimensions['tile_height'] = source.getMetadata()['tileHeight']
     target_dimensions['mm_x'] = source.getMetadata()['mm_x']
     target_dimensions['mm_y'] = source.getMetadata()['mm_y']
-    target_dimensions['mag'] = source.getMetadata()['magnification']
+    target_dimensions['magnification'] = source.getMetadata()['magnification']
 
     performance_data['file_dimensions'] = target_dimensions.copy()
 
     del source
 
 def aggregate_runs(runs: list[dict], output_file_path: str):
+    if len(runs) == 0:
+        return
+    
     file_dir = os.path.dirname(output_file_path)
     os.makedirs(file_dir, exist_ok=True)
 
@@ -179,7 +182,7 @@ def add_performance_data(performance_data: dict, target_dimensions: dict, perfor
 
     performance_data[performance_type] = performance_entry
 
-def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False):
+def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, **kwargs):
     eager_runs = []
     non_eager_runs = []
 
@@ -190,12 +193,12 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, out
     non_eager_output_file_path = os.path.join(output_dir, non_eager_output_filename)
     os.makedirs(output_dir, exist_ok=True)
     
-    # for i in range(n_runs):
-    #     performance_data = run_eager_performance_evaluation(file_path, without_cache)
-    #     eager_runs.append(performance_data)
+    for i in range(n_runs):
+        performance_data = run_eager_performance_evaluation(file_path, without_cache, **kwargs)
+        eager_runs.append(performance_data)
 
     for i in range(n_runs):
-        performance_data = run_non_eager_performance_evaluation(file_path, without_cache)
+        performance_data = run_non_eager_performance_evaluation(file_path, without_cache, **kwargs)
         non_eager_runs.append(performance_data)
     
     eager_runs = aggregate_runs(eager_runs, eager_output_file_path)
@@ -254,7 +257,7 @@ def run_eager_iterator_with_albumentations_transform(tile_source: large_image.ti
         # Count tiles provided by the iterator
         count = 0
         for batch in iterator:
-            batch_images = batch[0].view()
+            batch_images = batch['tile']
             count += batch_images.shape[0]
 
         del iterator
