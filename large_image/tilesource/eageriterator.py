@@ -57,8 +57,8 @@ class EagerIterator:
             contains enough signal to be used for a tile to be included in the output.  threshold_mask is used to determine if a pixel value within the mask corresponds to 
             signal.  If the mask is a uint8 array with values 0 to 1, then area_threshold will effectively be 1 instead of the default 100.  If the mask is a boolean array,
             then any True value will be considered signal.  Defaults to None.
-        :param target_scale: An optional integer or tuple of floats defining the target scale produced for the iterator. If scale_mode is 'mag' can be an integer or float.
-            If scale mode is 'mm' can be a tuple of (x, y) floating point numbers in mm.  Defaults ot None for base image scale.  Defaults to None.
+        :param scale: An optional dictionary defining the scale produced for the iterator. If scale can be configured for both magnification and mm.
+            If 'magnification' is defined in dictionary then it will be in magnification scaling mode.  If 'mm_x' and 'mm_y' then it will use a mm/px scaling mode.  Defaults to None.
         :param tile_size: An optional tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.  Defaults to None.
         :param region_size: An optional tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.  Defaults to None.
         :param dtype: An optional numpy data type for the output image batch. Defaults to np.uint8.
@@ -86,15 +86,15 @@ class EagerIterator:
             of the tile that must be signal defined in the mask to be included in the output.  Defaults to 0.25.
         :param threshold_mask: An integer defining the pixel value threshold for for a pixel to contribute to signal as defined in the mask.  Defaults to 100.
 
-        :returns: An iterator that returns a tuple of (SharedNumpyArray, dict) where SharedNumpyArray is a numpy array of a batch of tiles or regions based
-            on the output_mode configured.  The numpy SharedNumpyArray corresponding the images can be accessed for use by using .view() (for example, batch[0].view())  
-            read_kwargs is a list of the read arguments used to produce the SharedNumpyArray.  Keys that are not-consistent between tiles (such as gx, gy, level_x, level_y, etc.) will return a numpy array of values
-              with values specific for tiles or regions returned in a batch.  The read_kwargs is a dictionary with the following keys:
+        :returns: An iterator that returns a dictionary with keys defined below. The image key is 'tile' which returns a SharedArray of the images.  The SharedArray can be accessed for use by using .view() (for example, batch['tile'].view())  
+            Keys that are not-consistent between tiles (such as tile, gx, gy, level_x, level_y, etc.) will return a numpy array of values
+              with values specific for tiles or regions returned in a batch.  The dictionary has the following keys:
             'format': 'numpy',
             'gx': left,
             'gy': top,
             'level_x': level_x,
             'level_y': level_y,
+            'tile': tile images in the form of a SharedArray,
             'tile_position': {'level_x': level_x, 'level_y': level_y, 'region_x': region_x, 'region_y': region_y},
             'width': width,
             'height': height,
@@ -108,11 +108,9 @@ class EagerIterator:
         Given its specific use case, the eager iterator does not support all of the options available in the tileIterator.  
         The eager iterator does not support the following options:
             - region
-            - scale
-            - tile_overlap
             - format
 
-        This iterator is experimental andmay not work with all tile sources.  Please consider the different expected inputs when attempting to use the eager iterator.
+        This iterator is experimental and may not work with all tile sources.  Please consider the different expected inputs when attempting to use the eager iterator.
         """
         # Import eager_utils here to avoid attempting to load pykdtree when not needed
         from .eager_utils.eager_read_args import gen_read_args_for_tiles, gen_read_args_for_regions
