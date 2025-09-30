@@ -261,10 +261,10 @@ class EagerIterator:
         finally:
             return False
     
-    def cleanup(self):
+    def cleanup(self, wait=True):
         """Clean up resources including the process pool and any remaining shared memory."""
         if hasattr(self, 'pool'):
-            self.pool.shutdown(wait=True, cancel_futures=True)
+            self.pool.shutdown(wait=wait, cancel_futures=True)
         # Clear any remaining shared arrays in the queue
         while self.queue:
             try:
@@ -284,7 +284,9 @@ class EagerIterator:
     def __del__(self):
         """Destructor to ensure cleanup on garbage collection."""
         try:
-            self.cleanup()
+            # Use wait false to avoid waiting for submitted processes to execute
+            # causing immediate exiting and returning to the main thread
+            self.cleanup(wait=False)
         except Exception:
             pass  # Ignore cleanup errors during garbage collection
     
