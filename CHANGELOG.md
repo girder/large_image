@@ -9,6 +9,7 @@
 - Denormalize some values in the annotation collection to support improving display speed ([#1984](../../pull/1984))
 - Improve indices for annotationelement queries ([#1985](../../pull/1985))
 - Use some raw bson handling to speed up annotationelement serialization ([#1986](../../pull/1986))
+- Improve indices used in large image associated files in girder ([#1988](../../pull/1988))
 
 ### Changes
 
