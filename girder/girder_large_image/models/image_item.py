@@ -52,14 +52,16 @@ class ImageItem(Item):
         self.ensureIndices(['largeImage.fileId'])
         File().ensureIndices([
             ([
-                ('isLargeImageThumbnail', pymongo.ASCENDING),
-                ('attachedToType', pymongo.ASCENDING),
                 ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageThumbnail', pymongo.ASCENDING),
+                ('thumbnailKey', pymongo.ASCENDING),
             ], {}),
             ([
-                ('isLargeImageData', pymongo.ASCENDING),
-                ('attachedToType', pymongo.ASCENDING),
                 ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageData', pymongo.ASCENDING),
+                ('thumbnailKey', pymongo.ASCENDING),
             ], {}),
         ])
 
