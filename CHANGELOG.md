@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- Speed up annotation centroid queries ([#1981](../../pull/1981))
+- Speed up annotation centroid queries ([#1981](../../pull/1981), [#1990](../../pull/1990))
 - Improve large annotation load and display speed ([#1982](../../pull/1982))
 - Denormalize some values in the annotation collection to support improving display speed ([#1984](../../pull/1984))
 - Improve indices for annotationelement queries ([#1985](../../pull/1985))
