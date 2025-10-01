@@ -49,7 +49,6 @@ class EagerIterator:
         :param source: the tile source to use. this object should be provided a large_image tile source and will be provided
             by the large image library if you use the tile source's eagerIterator method.
         :param output_mode: A string corresponding to the output mode of the iterator. Can be either 'tiles' or 'regions'.  Defaults to 'tiles'.
-        :param scale_mode: A string corresponding to the scale mode of the iterator. Can be either 'mag' or 'mm'.  Defaults to 'mag'.
         :param tile_overlap: A float or integer defining the tile_overlap in percentage between tiles.  If float, must be in range of 0 and 1.  Cannot be 1.  
             If integer, must be in range of 0 and the smallest dimension of the tile size.  Defaults to 0.
         :param mask: An optional numpy array or path to a 1 channel image that will be used to filter the tiles (only useful in tile mode).  This mask image is interpreted 

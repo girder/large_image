@@ -37,29 +37,41 @@ def clear_cache():
     for object in objects:
         object.cache_clear()
 
+    # Also use cachesClear utility to clear the cache that is managed by large_image special
+    # cache wrapper
+    from large_image.cache_util import cachesClear
+    cachesClear() 
+
     print(f"LRU cache cleared")
 
 
-def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, *args, **kwargs):
+def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
     if without_cache:
-        setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, True, **kwargs)
+        setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, True, without_icc, **kwargs)
         add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, read_time)
 
-    setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, False, **kwargs)
+    setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, False, without_icc, **kwargs)
     add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, read_time)
 
     return performance_data
 
-def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, *args, **kwargs):
+def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
     clear_cache()
     
+    # Set caching
     if without_cache:
         large_image.config.setConfig('cache_sources', False)
     else:
         large_image.config.setConfig('cache_sources', True)
+
+    # Set ICC correction
+    if without_icc:
+        large_image.config.setConfig('icc_correction', False)
+    else:
+        large_image.config.setConfig('icc_correction', True)
 
     # Test performance without caching
     start_time = time.time()
@@ -78,14 +90,21 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
 
     return setup_time, read_time
 
-def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, *args, **kwargs):
+def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
     # Clear all caches for fair comparison
     clear_cache()
 
+    # Set caching
     if without_cache:
         large_image.config.setConfig('cache_sources', False)
     else:
         large_image.config.setConfig('cache_sources', True)
+
+    # Set ICC correction
+    if without_icc:
+        large_image.config.setConfig('icc_correction', False)
+    else:
+        large_image.config.setConfig('icc_correction', True)
     
     start_time = time.time()
     tile_source = large_image.open(file_path)
@@ -104,17 +123,17 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
     return setup_time, read_time
 
 
-def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, *args, **kwargs):
+def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
     # Test performance with default resolution without caching
     if without_cache:
-        setup_time, read_time = run_eager_read_performance_evaluation(file_path, True, **kwargs)
+        setup_time, read_time = run_eager_read_performance_evaluation(file_path, True, without_icc, **kwargs)
         add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, read_time)
 
     # Test read only performance with cache
-    setup_time, read_time = run_eager_read_performance_evaluation(file_path, False, **kwargs)
+    setup_time, read_time = run_eager_read_performance_evaluation(file_path, False, without_icc, **kwargs)
     add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, read_time)
 
     return performance_data
@@ -182,7 +201,7 @@ def add_performance_data(performance_data: dict, target_dimensions: dict, perfor
 
     performance_data[performance_type] = performance_entry
 
-def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, **kwargs):
+def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, only_eager: bool = False, without_icc: bool = False, **kwargs):
     eager_runs = []
     non_eager_runs = []
 
@@ -194,12 +213,13 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, out
     os.makedirs(output_dir, exist_ok=True)
     
     for i in range(n_runs):
-        performance_data = run_eager_performance_evaluation(file_path, without_cache, **kwargs)
+        performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, **kwargs)
         eager_runs.append(performance_data)
 
-    for i in range(n_runs):
-        performance_data = run_non_eager_performance_evaluation(file_path, without_cache, **kwargs)
-        non_eager_runs.append(performance_data)
+    if not only_eager:
+        for i in range(n_runs):
+            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, **kwargs)
+            non_eager_runs.append(performance_data)
     
     eager_runs = aggregate_runs(eager_runs, eager_output_file_path)
     non_eager_runs = aggregate_runs(non_eager_runs, non_eager_output_file_path)
