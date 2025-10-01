@@ -14,6 +14,7 @@
 ### Changes
 
 - Skip adjacent DICOM file search during Girder import ([#1987](../../pull/1987))
+- Update to work with the most recent wsidicom ([#1989](../../pull/1989))
 
 ### Bug Fixes
 
