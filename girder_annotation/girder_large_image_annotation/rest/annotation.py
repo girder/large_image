@@ -14,6 +14,7 @@
 #  limitations under the License.
 ##############################################################################
 
+import binascii
 import json
 import struct
 import time
@@ -217,6 +218,14 @@ class AnnotationResource(Resource):
         :param params: paging and region parameters for the annotation.
         :returns: a function that will return a generator.
         """
+        import gc
+
+        # We increase the threshold2 value for python's gc, because we may
+        # return a massive number of annotations and the garbage collection
+        # full scan is _slow_ but probably not useful.
+        threshold = gc.get_threshold()
+        if threshold[2] < 100:
+            gc.set_threshold(threshold[0], threshold[1], 100)
         # Set the response time limit to a very long value
         setResponseTimeLimit(86400)
         # Ensure that we have read access to the parent item.  We could fail
@@ -241,6 +250,7 @@ class AnnotationResource(Resource):
             if centroids:
                 # Add a null byte to indicate the start of the binary data
                 yield b'\x00'
+                packing = struct.Struct('<fffl')
             for element in Annotationelement().yieldElements(annotation, params, info):
                 # The json conversion is fastest if we use defaults as much as
                 # possible.  The only value in an annotation element that needs
@@ -257,9 +267,9 @@ class AnnotationResource(Resource):
                             [int(x) if isinstance(x, float) and x.is_integer() else x for x in sub]
                             for sub in hole] for hole in element['holes']]
                 else:
-                    element = struct.pack(
-                        '>QL', int(element[0][:16], 16), int(element[0][16:24], 16),
-                    ) + struct.pack('<fffl', *element[1:])
+                    element = (
+                        binascii.unhexlify(element[0]) if isinstance(element[0], str) else
+                        element[0].binary) + packing.pack(*element[1:])
                 # Use orjson; it is much faster.  The standard json library
                 # could be used in its most default mode instead like so:
                 #   result = json.dumps(element, separators=(',', ':'))

@@ -350,7 +350,7 @@ class Annotationelement(Model):
                     props[prop] = len(props)
                     proplist.append([element.get(key, defaultProps.get(key)) for key in propskeys])
                 yield [
-                    str(element.get('id') or entry['_id']),
+                    element.get('id', entry['_id']),
                     (bbox['lowx'] + bbox['highx']) / 2,
                     (bbox['lowy'] + bbox['highy']) / 2,
                     bbox['size'] if entry.get('type') != 'point' else 0,
