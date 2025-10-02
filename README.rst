@@ -1,25 +1,23 @@
 Large Image
 ===========
 
-|build-status| |codecov-io| |license-badge| |doi-badge| |pypi-badge|
+.. image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
+  :target: https://circleci.com/gh/girder/large_image
+  :alt: Build Status
 
-.. |build-status| image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
-    :target: https://circleci.com/gh/girder/large_image
-    :alt: Build Status
+.. image:: https://img.shields.io/badge/license-Apache%202-blue.svg
+  :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
+  :alt: License
 
-.. |license-badge| image:: https://img.shields.io/badge/license-Apache%202-blue.svg
-    :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
-    :alt: License
+.. image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
+  :target: https://codecov.io/github/girder/large_image?branch=master
+  :alt: codecov.io
 
-.. |codecov-io| image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
-   :target: https://codecov.io/github/girder/large_image?branch=master
-   :alt: codecov.io
+.. image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4562625-blue.svg
+  :target: https://doi.org/10.5281/zenodo.4562625
 
-.. |doi-badge| image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4723355-blue.svg
-   :target: https://zenodo.org/badge/latestdoi/45569214
-
-.. |pypi-badge| image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
-   :target: https://pypi.org/project/large-image/
+.. image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
+  :target: https://pypi.org/project/large-image/
 
 *Python modules to work with large, multiresolution images.*
 
@@ -156,13 +154,15 @@ There is also cache management to balance memory use and speed of response in Gi
 
 Most tile sources can be used with Girder Large Image.  You can specify an extras_require of ``girder`` to install the following packages:
 
-  - ``girder-large-image``: Large Image as a Girder 3.x plugin.
-    You can install ``large-image[tasks]`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
+- ``girder-large-image``: Large Image as a Girder 3.x plugin.
 
-  - ``girder-large-image-annotation``: Adds models to the Girder database for supporting annotating large images.  These annotations can be rendered on images. Annotations can include polygons, points, image overlays, and other types. Each annotation can have a label and metadata.
+  You can install ``large-image[tasks]`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
 
-  - ``large-image-tasks``: A utility for running the converter via Girder Worker.
-    You can specify an extras_require of ``girder`` to include modules needed to work with the Girder remote worker or ``worker`` to include modules needed on the remote side of the Girder remote worker.  If neither is specified, some conversion tasks can be run using Girder local jobs.
+- ``girder-large-image-annotation``: Adds models to the Girder database for supporting annotating large images.  These annotations can be rendered on images. Annotations can include polygons, points, image overlays, and other types. Each annotation can have a label and metadata.
+
+- ``large-image-tasks``: A utility for running the converter via Girder Worker.
+
+  You can specify an extras_require of ``girder`` to include modules needed to work with the Girder remote worker or ``worker`` to include modules needed on the remote side of the Girder remote worker.  If neither is specified, some conversion tasks can be run using Girder local jobs.
 
 
 

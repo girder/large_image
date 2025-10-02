@@ -70,7 +70,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     cacheName = 'tilesource'
     name = 'openjpeg'
     extensions = {
-        None: SourcePriority.MEDIUM,
+        None: SourcePriority.LOW,
         'jp2': SourcePriority.PREFERRED,
         'jpf': SourcePriority.PREFERRED,
         'j2c': SourcePriority.PREFERRED,
@@ -251,7 +251,7 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def _readbox(self, box):
         if box.length > 16 * 1024 * 1024:
-            return
+            return None
         try:
             fp = builtins.open(self._largeImagePath, 'rb')
             headerLength = 16

@@ -17,6 +17,7 @@
 import math
 import os
 import threading
+import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
@@ -49,6 +50,9 @@ def _lazyImport():
         except ImportError:
             msg = 'nd2 module not found.'
             raise TileSourceError(msg)
+        # the dask module emits a warning about an open handle even those we
+        # close file handles properly.  Suppress them
+        warnings.filterwarnings('ignore', category=UserWarning, module='.*dask.*')
 
 
 def namedtupleToDict(obj):
@@ -138,7 +142,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # We use dask to allow lazy reading of large images
         try:
             self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)
-        except (TypeError, ValueError, OSError) as exc:
+        except (TypeError, ValueError, OSError, NotImplementedError) as exc:
             self.logger.debug('Failed to read nd2 file: %s', exc)
             msg = 'File cannot be opened via the nd2 source.'
             raise TileSourceError(msg)

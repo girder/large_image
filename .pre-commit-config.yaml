@@ -5,7 +5,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
       - id: check-ast
@@ -46,33 +46,34 @@ repos:
         files: README.rst
         name: rst-linter of README.rst
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.3.0
+    rev: v2.4.1
     hooks:
       - id: codespell
         args:
+          - --ignore-regex
+          - '(^\s*"image/\S+": ".*)'
           - --ignore-words-list
-          - "hist,indext,pixelx,thex,subtile,slippy,fram"
-        exclude: '.*\.ipynb$'
+          - "hist,indext,pixelx,thex,subtile,slippy,fram,thet"
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.18
     hooks:
       - id: circleci-config-validate
   - repo: https://github.com/ThisIsManta/stylus-supremacy
-    rev: v2.17.5
+    rev: v4.0.0
     hooks:
       - id: stylus-supremacy
         args:
           - '--options'
           - './girder/girder_large_image/web_client/package.json'
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.17.0
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         args:
-          - --py38-plus
+          - --py39-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.1
+    rev: v0.12.1
     hooks:
       - id: ruff
         args:
@@ -87,11 +88,11 @@ repos:
     hooks:
       - id: autopep8
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.1
+    rev: 7.3.0
     hooks:
       - id: flake8
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 6.0.1
     hooks:
       - id: isort
         name: isort (python)

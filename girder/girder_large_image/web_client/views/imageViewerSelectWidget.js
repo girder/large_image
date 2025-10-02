@@ -1,17 +1,26 @@
 import $ from 'jquery';
 import _ from 'underscore';
+import Vue from 'vue';
 
 import {wrap} from '@girder/core/utilities/PluginUtils';
 import eventStream from '@girder/core/utilities/EventStream';
 import ItemView from '@girder/core/views/body/ItemView';
 import View from '@girder/core/views/View';
 
+import {restRequest} from '@girder/core/rest';
+
 import largeImageConfig from './configView';
 import * as viewers from './imageViewerWidget';
 
 import imageViewerSelectWidget from '../templates/imageViewerSelectWidget.pug';
 import '../stylesheets/imageViewerSelectWidget.styl';
-import FrameSelector from '../vue/components/FrameSelector.vue';
+
+import FrameSelector from '../widgets/FrameSelector.vue';
+import DualInput from '../widgets/DualInput.vue';
+import CompositeLayers from '../widgets/CompositeLayers.vue';
+import HistogramEditor from '../widgets/HistogramEditor.vue';
+import colors from '../widgets/colors.json';
+import PresetsMenu from '../vue/components/PresetsMenu.vue';
 
 wrap(ItemView, 'render', function (render) {
     // ItemView is a special case in which rendering is done asynchronously,
@@ -73,13 +82,33 @@ var ImageViewerSelectWidget = View.extend({
 
     _createVue(imageMetadata, frameUpdate) {
         const el = this.$('#vue-container').get(0);
-        const vm = new FrameSelector({
+        const getFrameHistogram = (params) => {
+            params = Object.assign({}, params);
+            restRequest({
+                type: 'GET',
+                url: 'item/' + this.itemId + '/tiles/histogram',
+                data: params
+            }).then((response) => {
+                const frameHistograms = this.vueApp._props.frameHistograms || {};
+                frameHistograms[params.frame] = response;
+                this.vueApp._props.frameHistograms = Object.assign({}, frameHistograms);
+                return undefined;
+            });
+        };
+        CompositeLayers.components = {HistogramEditor};
+        FrameSelector.components = {DualInput, CompositeLayers, HistogramEditor, PresetsMenu};
+        const Component = Vue.extend(FrameSelector);
+        const vm = new Component({
             el,
             propsData: {
+                currentFrame: 0,
                 itemId: this.itemId,
                 imageMetadata: imageMetadata,
-                frameUpdate: frameUpdate,
-                liConfig: this._liConfig
+                frameUpdate,
+                liConfig: this._liConfig,
+                frameHistograms: undefined,
+                getFrameHistogram,
+                colors
             }
         });
         this.vueApp = vm;

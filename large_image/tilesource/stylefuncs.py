@@ -1,7 +1,7 @@
 # This module contains functions for use in styles
 
 from types import SimpleNamespace
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -10,7 +10,7 @@ from .utilities import _imageToNumpy, _imageToPIL
 
 def maskPixelValues(
         image: np.ndarray, context: SimpleNamespace,
-        values: List[Union[int, List[int], Tuple[int, ...]]],
+        values: list[Union[int, list[int], tuple[int, ...]]],
         negative: Optional[int] = None, positive: Optional[int] = None) -> np.ndarray:
     """
     This is a style utility function that returns a black-and-white 8-bit image
@@ -33,7 +33,7 @@ def maskPixelValues(
     src = context.image
     mask = np.full(src.shape[:2], False)
     for val in values:
-        vallist: List[float]
+        vallist: list[float]
         if not isinstance(val, (list, tuple)):
             if src.shape[-1] == 1:
                 vallist = [val]
@@ -93,9 +93,9 @@ def medianFilter(
         pimg: np.ndarray = image.astype(float)
         if len(pimg.shape) == 2:
             pimg = np.resize(pimg, (pimg.shape[0], pimg.shape[1], 1))
-        pimg = pimg[:, :, :fimg.shape[2]]  # type: ignore[index,misc]
+        pimg = pimg[:, :, :fimg.shape[2]]
         dimg = (pimg - fimg.astype(float) * mul) * weight
-        pimg = pimg[:, :, :fimg.shape[2]] + dimg  # type: ignore[index,misc]
+        pimg = pimg[:, :, :fimg.shape[2]] + dimg
         if clip:
             pimg = pimg.clip(0, clip)
         if len(image.shape) != 3:
