@@ -73,9 +73,13 @@ def return_constant_color(image: np.ndarray, pad_fill_mode: str):
     # Determine the color that will be used for paadding
     if image.shape[0] == 0 or image.shape[1] == 0:
         return (0, 0, 0)
-    if pad_fill_mode == 'default':
+    if pad_fill_mode == 'mean_color':
         mean_pixel = np.floor(np.mean(image, axis=(0, 1))).astype(np.uint8)
         constant_color = (mean_pixel[0], mean_pixel[1], mean_pixel[2])
+    elif pad_fill_mode == 'default':
+        constant_color = (0, 0, 0)
+    elif pad_fill_mode == 'white':
+        constant_color = (255, 255, 255)
     elif pad_fill_mode == 'max':
         max_pixel = np.max(image)
         constant_color = (max_pixel, max_pixel, max_pixel)

@@ -213,11 +213,13 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, out
     os.makedirs(output_dir, exist_ok=True)
     
     for i in range(n_runs):
+        print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
         performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, **kwargs)
         eager_runs.append(performance_data)
 
     if not only_eager:
         for i in range(n_runs):
+            print(f"Running non-eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
             performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, **kwargs)
             non_eager_runs.append(performance_data)
     
