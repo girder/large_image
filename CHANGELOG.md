@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.33.2
+
+### Bug Fixes
+
+- Fix some raw bson handling ([#1991](../../pull/1991))
+
 ## 1.33.1
 
 ### Improvements
