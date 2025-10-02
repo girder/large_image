@@ -306,12 +306,23 @@ class Annotationelement(Model):
             # applied to the centoids, this was actually much slower.
 
             class SemiRawDocument(bson.raw_bson.RawBSONDocument):
+                def _decode(self, val):
+                    if isinstance(val, bson.raw_bson.RawBSONDocument):
+                        return self._decode(bson.decode(val.raw))
+                    if isinstance(val, dict):
+                        return {k: self._decode(v) for k, v in val.items()}
+                    if isinstance(val, list):
+                        if not val:
+                            return val
+                        if isinstance(val[0], (bson.raw_bson.RawBSONDocument, dict)):
+                            return [self._decode(v) for v in val]
+                    return val
+
                 def __getitem__(self, key):
                     if key in {'element', 'bbox'}:
                         if hasattr(self, key):
                             return getattr(self, key)
-                        val = {k: v if not isinstance(v, bson.raw_bson.RawBSONDocument) else
-                               bson.decode(v.raw) for k, v in super().__getitem__(key).items()}
+                        val = self._decode(super().__getitem__(key))
                         setattr(self, key, val)
                         return val
                     return super().__getitem__(key)
