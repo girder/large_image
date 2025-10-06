@@ -80,6 +80,8 @@ def patchLibtiff():
     libtiff_ctypes.TIFFDataType.TIFF_SLONG8 = 17
     # BigTIFF 64-bit unsigned integer (offset)
     libtiff_ctypes.TIFFDataType.TIFF_IFD8 = 18
+    # Some versions of pylibtiff specify an argtypes where they shouldn't
+    libtiff_ctypes.libtiff.TIFFGetField.argtypes = None
 
 
 patchLibtiff()
