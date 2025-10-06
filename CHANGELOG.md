@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.33.3
+
+### Changes
+
+- Handle a recent change in pylibtiff ([#1992](../../pull/1992))
+
 ## 1.33.2
 
 ### Bug Fixes
