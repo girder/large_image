@@ -16,6 +16,7 @@ lint.ignore = [
     "B017",  # assert raises exception
     "B026",  # star arg unpacking after keyword arg
     "B904",  # raise without from inside except
+    "B905",  # require strict= in zip calls (can't do it until python 3.10)
     "C408",  # unnecessary collection call (would prohibit dict())
     "D100",
     "D101",
