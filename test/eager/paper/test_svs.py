@@ -3,6 +3,7 @@ import os
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
+import albumentations as A
 from torchvision.transforms import v2
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -105,6 +106,15 @@ def test_svs_with_tiff_source(test_path):
 def test_svs_with_efficientnet(test_path):
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_efficientnet", without_cache=False, only_eager=True, performance_type='inference_efficientnetb0')
 
+def test_albumentations_transform(test_path):
+    transform = A.Compose([
+        A.ToFloat(),
+        A.Resize(288, 288),
+        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_albumentations_transform", without_cache=False, only_eager=False, performance_type='albumentations_transform', transform=transform)
+
 
 def test_svs_with_pytorch_transform(test_path):
     # transform = v2.Compose([
@@ -170,7 +180,10 @@ if __name__ == "__main__":
     # test_write_transform(test_path)
 
     # Test performance with pytorch transform
-    test_svs_with_pytorch_transform(test_path)
+    # test_svs_with_pytorch_transform(test_path)
+
+    # Test performance with albumentations transform
+    test_albumentations_transform(test_path)
 
     # Test performance with sobel
     # test_svs_sobel(test_path)

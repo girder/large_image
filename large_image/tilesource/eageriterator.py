@@ -191,8 +191,8 @@ class EagerIterator:
                 self.slide_dimensions = calculate_slide_dimensions(self.source, scale, region_size)
 
                 # Check if region size is appropriate
-                h_max = regions[:, 2].max() / self.slide_dimensions['conv_mm_y']
-                w_max = regions[:, 3].max() / self.slide_dimensions['conv_mm_x']
+                h_max = regions[:, 2].max() * (self.slide_dimensions['base_size_y'] / self.slide_dimensions['target_height'])
+                w_max = regions[:, 3].max() * (self.slide_dimensions['base_size_x'] / self.slide_dimensions['target_width'])
 
                 if h_max > self.slide_dimensions['tile_height_before_scaling'] or w_max > self.slide_dimensions['tile_width_before_scaling']:
                     raise ValueError("Desired region_size is smaller than needed for the regions provided \n Height, width max {}, {} \n Region height, width before scaling {}, {}".format(h_max, w_max, self.slide_dimensions['tile_height_before_scaling'], self.slide_dimensions['tile_width_before_scaling']))

@@ -169,7 +169,7 @@ def gen_read_args_for_regions(slide_dimensions: dict, regions: Union[list, np.nd
     # Regions of form (center_y, center_x, top, bottom, left, right)
     regions = np.column_stack((org_tile_y, org_tile_x, center_y, center_x, regions[:, 0], yb, regions[:, 1], xr))
     # Distance from 0, 0
-    dist = center_y ** 2 + center_x ** 2 / 2
+    dist = (center_y ** 2 + center_x ** 2) ** 0.5
     # Sort regions by distance from 0, 0
     idx = np.argsort(dist)
     sorted_regions = regions[idx]
