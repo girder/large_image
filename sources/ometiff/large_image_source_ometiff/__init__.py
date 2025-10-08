@@ -124,7 +124,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             float(entry['SizeX']) / base.tileWidth,
             float(entry['SizeY']) / base.tileHeight)) / math.log(2))))
             for entry in omeimages]
-        omebylevel = dict(zip(levels, omeimages))
+        omebylevel = dict(zip(levels, omeimages, strict=False))
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
         if base._tiffInfo.get('istiled'):
             if usesSubIfds:
