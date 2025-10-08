@@ -21,7 +21,7 @@ class EagerIterator:
             mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
             scale: Optional[Dict[str, Any]] = None,
             tile_size: Optional[Dict[str, int]] = None,
-            region_size: Optional[Tuple[int, int]] = None,
+            region_size: Optional[Dict[str, int]] = None,
             dtype: np.typing.DTypeLike = np.uint8,
             chunk_mult: int = 2,
             edge: bool = False,

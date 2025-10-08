@@ -123,7 +123,7 @@ def test_svs_with_pytorch_transform(test_path):
         ]
     )
 
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_pytorch_transform", without_cache=False, only_eager=False, performance_type='pytorch_transform', transform=transform)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_pytorch_transform", without_cache=False, only_eager=True, performance_type='pytorch_transform', transform=transform)
 
 
 def test_svs_sobel(test_path):
