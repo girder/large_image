@@ -2644,9 +2644,9 @@ class TileSource(IPyLeafletMixin):
         img = _imageToPIL(tile['tile'])
         if img.size[0] >= 1 and img.size[1] >= 1:
             if len(img.mode) > 1:
-                pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0], strict=False)))
+                pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0])))
             else:
-                pixel.update(dict(zip([img.mode.lower()], [img.load()[0, 0]], strict=False)))
+                pixel.update(dict(zip([img.mode.lower()], [img.load()[0, 0]])))
         return JSONDict(pixel)
 
     @property
