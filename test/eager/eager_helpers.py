@@ -4,6 +4,7 @@ import os
 import stat
 import time
 import functools
+import multiprocessing
 
 import h5py
 from pathlib import Path
@@ -15,7 +16,9 @@ import large_image
 import albumentations as A
 import numpy as np
 import torch
+
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
+from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb
 
 def clear_cache():
     clear_cahce_shell_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'paper', 'clear_cache.sh')
@@ -45,20 +48,43 @@ def clear_cache():
     print(f"LRU cache cleared")
 
 
-def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
+def setup_sobel_inference():
+    # 
+    pass
+
+def setup_uni2_inference():
+    # 
+    pass
+
+def setup_cnn_inference():
+    # 
+    pass
+
+def setup_transform():
+    # Setup transform
+    pass
+
+def setup_transform_write():
+    def transform_write(image: np.ndarray):
+        # Write image
+        plt.imsave()
+        return image
+    pass
+
+def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
     if without_cache:
-        setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, True, without_icc, **kwargs)
-        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, read_time)
+        setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, **kwargs)
+        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time)
 
-    setup_time, read_time = run_non_eager_read_performance_evaluation(file_path, False, without_icc, **kwargs)
-    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, read_time)
+    setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, **kwargs)
+    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time)
 
     return performance_data
 
-def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
+def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
     clear_cache()
     
     # Set caching
@@ -75,24 +101,69 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
 
     # Test performance without caching
     start_time = time.time()
-    tile_source = large_image.open(file_path)
+    # Set tiff source if needed
+    if not with_tiff_source:
+        tile_source = large_image.open(file_path)
+    else:
+        import large_image_source_tiff
+        tile_source = large_image_source_tiff.open(file_path)
+
+    kwargs.update({'format': large_image.constants.TILE_FORMAT_NUMPY})
+
     tile_iterator = tile_source.tileIterator(**kwargs)
     setup_time = time.time() - start_time
     
-    for tile_dict in tile_iterator:
-        image = tile_dict['tile']
-    
-    read_time = time.time() - start_time
+    if performance_type == 'read':
+        for tile_dict in tile_iterator:
+                image = tile_dict['tile']
+    elif performance_type == 'transform':
+        for tile_dict in tile_iterator:
+            image = tile_dict['tile']
+    elif performance_type == 'inference':
+        for tile_dict in tile_iterator:
+            image = tile_dict['tile']
+    elif performance_type == 'write':
+        for tile_dict in tile_iterator:
+            image = tile_dict['tile']
+            plt.imsave("./image_{}_{}.png".format(tile_dict['tile_position']['region_x'], tile_dict['tile_position']['region_y']), image)
+    elif performance_type == 'pytorch_transform':
+        for tile_dict in tile_iterator:
+            image = rgba2rgb(tile_dict['tile'])
+            transformed_image_batch = kwargs['transform'](image)
+    elif performance_type == 'write_multiprocessing':
+        images_to_save = []
+        
+        for tile_dict in tile_iterator:
+            images_to_save.append(["./image_{}_{}.png".format(tile_dict['tile_position']['region_x'], tile_dict['tile_position']['region_y']), tile_dict['tile']])
+        
+        with multiprocessing.Pool(processes=16) as pool:
+            pool.starmap(plt.imsave, images_to_save)
+            pool.close()
+            pool.join()
+    elif performance_type == 'inference_efficientnetb0':
+        batch_images = []
+        for tile_dict in tile_iterator:
+            image = tile_dict['tile']
+            iamge = torch.tensor(image)
+            image = image.permute(2, 0, 1)
+            batch_images.append(image)
+        batch_images = torch.tensor(batch_images)
+        if batch_images.shape[0] == 64:
+            output = model(batch_images)
+
+    process_time = time.time() - start_time
 
     # Clean up
     del tile_iterator
     del tile_source
 
-    return setup_time, read_time
+    return setup_time, process_time
 
-def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
+def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
     # Clear all caches for fair comparison
     clear_cache()
+
+    model = None
 
     # Set caching
     if without_cache:
@@ -105,36 +176,91 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
         large_image.config.setConfig('icc_correction', False)
     else:
         large_image.config.setConfig('icc_correction', True)
+
+    if performance_type == 'inference_sobel':
+        from test.eager.paper.pytorch_sobel_model import SobelFilter
+        model = SobelFilter()
+        model.eval()
+        model.to('cuda')
     
+    # Set tiff source if needed
     start_time = time.time()
-    tile_source = large_image.open(file_path)
+    if not with_tiff_source:
+        tile_source = large_image.open(file_path)
+    else:
+        import large_image_source_tiff
+        tile_source = large_image_source_tiff.open(file_path)
+    
     eager_iter = tile_source.eagerIterator(**kwargs)
     setup_time = time.time() - start_time
     
     # Test read only performance
-    for batch in eager_iter:
-        batch_images = batch['tile'].view()
+    if performance_type == 'read':
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+    # Run write
+    elif performance_type == 'write':
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
 
-    read_time = time.time() - start_time
+    # Run write with multiprocessing
+    elif performance_type == 'write_multiprocessing':
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+
+            images_to_save = []        
+            for i in range(batch_images.shape[0]):
+                images_to_save.append(["./image_{}_{}.png".format(batch['tile_position']['region_x'][i], batch['tile_position']['region_y'][i]), batch_images[i]])
+            
+            with multiprocessing.Pool(processes=10) as pool:
+                pool.starmap(plt.imsave, images_to_save)
+                pool.close()
+                pool.join()
+
+            
+    # Run read with transform
+    elif performance_type == 'pytorch_transform':
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+            del batch_images
+    # Run read with uni2
+    elif performance_type == 'inference_uni2':
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+    # Run read with sobel
+    elif performance_type == 'inference_sobel':
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+
+            output = model(batch_images)
+    elif performance_type == "inference_efficientnetb0":
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+            batch_images = torch.tensor(batch_images)
+            batch_images = batch_images.permute(0, 3, 1, 2)
+            output = model(batch_images)
+            pass
+
+    performance_time = time.time() - start_time
 
     del eager_iter
     del tile_source
 
-    return setup_time, read_time
+    return setup_time, performance_time
 
 
-def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, *args, **kwargs):
+def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
     # Test performance with default resolution without caching
     if without_cache:
-        setup_time, read_time = run_eager_read_performance_evaluation(file_path, True, without_icc, **kwargs)
-        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, read_time)
+        setup_time, process_time = run_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, **kwargs)
+        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time)
 
     # Test read only performance with cache
-    setup_time, read_time = run_eager_read_performance_evaluation(file_path, False, without_icc, **kwargs)
-    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, read_time)
+    setup_time, process_time = run_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, **kwargs)
+    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time)
 
     return performance_data
 
@@ -165,43 +291,43 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
     with h5py.File(output_file_path, 'w') as f:
         setup_times_with_cache = []
         setup_times_without_cache = []
-        read_times_with_cache = []
-        read_times_without_cache = []
+        process_times_with_cache = []
+        process_times_without_cache = []
 
         # aggregate runs
         for run in runs:
             if 'with_cache' in run:
                 setup_times_with_cache.append(run['with_cache']['setup_time'])
-                read_times_with_cache.append(run['with_cache']['read_time'])
+                process_times_with_cache.append(run['with_cache']['process_time'])
             if 'without_cache' in run:
                 setup_times_without_cache.append(run['without_cache']['setup_time'])
-                read_times_without_cache.append(run['without_cache']['read_time'])
+                process_times_without_cache.append(run['without_cache']['process_time'])
 
         if len(setup_times_with_cache) > 0:
             setup_times_with_cache = np.array(setup_times_with_cache)
             f.create_dataset('setup_times_with_cache', data=setup_times_with_cache)
-        if len(read_times_with_cache) > 0:
-            read_times_with_cache = np.array(read_times_with_cache)
-            f.create_dataset('read_times_with_cache', data=read_times_with_cache)
+        if len(process_times_with_cache) > 0:
+            process_times_with_cache = np.array(process_times_with_cache)
+            f.create_dataset('process_times_with_cache', data=process_times_with_cache)
         if len(setup_times_without_cache) > 0:
             setup_times_without_cache = np.array(setup_times_without_cache)
             f.create_dataset('setup_times_without_cache', data=setup_times_without_cache)
-        if len(read_times_without_cache) > 0:
-            read_times_without_cache = np.array(read_times_without_cache)
-            f.create_dataset('read_times_without_cache', data=read_times_without_cache)
+        if len(process_times_without_cache) > 0:
+            process_times_without_cache = np.array(process_times_without_cache)
+            f.create_dataset('process_times_without_cache', data=process_times_without_cache)
 
-    return setup_times_with_cache, read_times_with_cache, setup_times_without_cache, read_times_without_cache
+    return setup_times_with_cache, process_times_with_cache, setup_times_without_cache, process_times_without_cache
 
 
-def add_performance_data(performance_data: dict, target_dimensions: dict, performance_type: str, setup_time: float, read_time: float):
+def add_performance_data(performance_data: dict, target_dimensions: dict, performance_type: str, setup_time: float, process_time: float):
     performance_entry = {}
     performance_entry['target_dimensions'] = target_dimensions
     performance_entry['setup_time'] = setup_time
-    performance_entry['read_time'] = read_time
+    performance_entry['process_time'] = process_time
 
     performance_data[performance_type] = performance_entry
 
-def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, only_eager: bool = False, without_icc: bool = False, **kwargs):
+def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, only_eager: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', **kwargs):
     eager_runs = []
     non_eager_runs = []
 
@@ -212,15 +338,15 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, out
     non_eager_output_file_path = os.path.join(output_dir, non_eager_output_filename)
     os.makedirs(output_dir, exist_ok=True)
     
-    for i in range(n_runs):
-        print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-        performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, **kwargs)
-        eager_runs.append(performance_data)
+    # for i in range(n_runs):
+    #     print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
+    #     performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, **kwargs)
+    #     eager_runs.append(performance_data)
 
     if not only_eager:
         for i in range(n_runs):
             print(f"Running non-eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, **kwargs)
+            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, **kwargs)
             non_eager_runs.append(performance_data)
     
     eager_runs = aggregate_runs(eager_runs, eager_output_file_path)

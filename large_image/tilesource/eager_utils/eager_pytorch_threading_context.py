@@ -14,10 +14,8 @@ class _PyTorchThreadingContext:
             self.torch_available = True
             # Save current settings
             self.original_num_threads = torch.get_num_threads()
-            # self.original_interop_threads = torch.get_num_interop_threads()
             # Set to single thread
             torch.set_num_threads(1)
-            # torch.set_num_interop_threads(1)
         except ImportError:
             self.torch_available = False
         return self

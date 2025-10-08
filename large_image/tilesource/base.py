@@ -2394,7 +2394,7 @@ class TileSource(IPyLeafletMixin):
             then any True value will be considered signal.  Defaults to None.
         :param scale: An optional dictionary defining the scale produced for the iterator. If scale can be configured for both magnification and mm.
             If 'magnification' is defined in dictionary then it will be in magnification scaling mode.  If 'mm_x' and 'mm_y' then it will use a mm/px scaling mode.  Defaults to None.
-        :param tile_size: An optional tuple of integers (x, y) defining the desired size in pixels of output tiles. If None, will use the default tile size of the slide.  Defaults to None.
+        :param tile_size: An optional dictionary specifying the desired width and height in pixels of the output tiles.  If provided, width and height must be provided as integers If None, will use the default tile size of the slide.  Defaults to None.
         :param region_size: An optional tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.  Defaults to None.
         :param dtype: An optional numpy data type for the output image batch. Defaults to np.uint8.
         :param chunk_mult: An integer shaping the number regions/tiles to be grouped in a single read. Defaults to 2.  

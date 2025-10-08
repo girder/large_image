@@ -88,6 +88,16 @@ def return_relevant_tile_indexes_for_slide_dim(slide_dimensions: dict, tile_over
     return cartesian2(range_x, range_y)
 
 def get_patch_from_mask_for_tile(mask: np.ndarray, base_size_x: int, base_size_y: int, tile_width_before_scaling: int, tile_height_before_scaling: int, tile: list):
+    """
+    A function that returns a patch from the mask for a given tile.
+    :param mask: The mask.
+    :param base_size_x: The base size x.
+    :param base_size_y: The base size y.
+    :param tile_width_before_scaling: The tile width before scaling.
+    :param tile_height_before_scaling: The tile height before scaling.
+    :param tile: The tile.
+    :returns: The patch from the mask.
+    """
     tile_y, tile_x = tile
 
     mask_size_x = mask.shape[1]
@@ -107,6 +117,11 @@ def get_patch_from_mask_for_tile(mask: np.ndarray, base_size_x: int, base_size_y
     return patch_mask
 
 def get_base_mm_from_meta(source_meta):
+    """
+    A function that returns the base mm from the source metadata.
+    :param source_meta: The source metadata.
+    :returns: The base mm.
+    """
     mm_x = None
     mm_y = None
 
@@ -121,6 +136,11 @@ def get_base_mm_from_meta(source_meta):
         return (mm_x, mm_y)
 
 def return_target_scaling_feature(feature):
+    """
+    A function that returns the target scaling feature.
+    :param feature: The feature.
+    :returns: The target scaling feature.
+    """
     out = None
     if isinstance(feature, str):
         out = float(feature)
@@ -131,6 +151,13 @@ def return_target_scaling_feature(feature):
     return out
 
 def generate_assumptions_for_x_y_given_mag(x, y, z):
+    """
+    A function that generates assumptions for the x and y dimensions given a magnification.
+    :param x: The x dimension.
+    :param y: The y dimension.
+    :param z: The magnification.
+    :returns: The x and y dimensions.
+    """
     if z is None:
         raise Exception("Unable to assume using magnification is not defined")
     # Prefer scaling using base dimensions
@@ -151,7 +178,7 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
     :param source_meta: A large image source metadata.
     :param mode: The mode used for scaling. Should be either 'mag' or 'mm'.
     :param target_scale: The desired target scale as an int for magnification in 'mag' mode or a tuple of (x, y) in 'mm' mode.
-    :return: A dictionary defining scaling.
+    :returns: A dictionary defining scaling.
     '''
     # Define none for both target (i, j, k) and base (x, y, z) values
     i, j, k, x, y, z = None, None, None, None, None, None
@@ -221,14 +248,14 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
 
     return out
 
-def calculate_slide_dimensions(source: TileSource, scale: Optional[Dict[str, Any]] = None, tile_size: Optional[tuple] = None):
+def calculate_slide_dimensions(source: TileSource, scale: Optional[Dict[str, Any]] = None, tile_size: Optional[Dict[str, int]] = None):
     '''
     A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
     :param source: A large image tile source.
     :param mode: The magnification mode used for scaling.
     :param target_scale: The target scale for the image in 'mm' or 'mag' mode. For 'mag' mode should be integer.  For 'mm' mode should be a tuple of (x, y).
     :param tile_size: A tuple of (x, y) defining the tile size in pixels.
-    :return: A slide dimensions dictionary that can be used for scaling any tile/region created using the source/iterator.
+    :returns: A slide dimensions dictionary that can be used for scaling any tile/region created using the source/iterator.
     '''
     # Use base scale pixel size to calculate conversion to get a region of a target size
     # todo: use large image convert scale to replace as many values here as possible
@@ -246,6 +273,16 @@ def calculate_slide_dimensions(source: TileSource, scale: Optional[Dict[str, Any
     else:
         scale = {'magnification': None}
         slide_dimensions['scale_mode'] = 'mag'
+
+    if tile_size is not None:
+        if 'width' not in tile_size and 'height' not in tile_size:
+            raise ValueError("Tile size must be a dictionary with both 'width' and 'height'")
+        elif tile_size['width'] <= 0 or tile_size['height'] <= 0:
+            raise ValueError("Tile size width and height must be greater than 0")
+        else:
+            slide_dimensions['tile_size'] = (tile_size['width'], tile_size['height'])
+    else:
+        slide_dimensions['tile_size'] = (source_meta['tileWidth'], source_meta['tileHeight'])
 
     slide_dimensions['base_magnification'] = source_meta['magnification']
 
@@ -307,14 +344,15 @@ def calculate_slide_dimensions(source: TileSource, scale: Optional[Dict[str, Any
     else:
         raise ValueError("Mode is not valid for creating slide dimensions")
 
-    if tile_size is None:
-        tile_size = (source_meta['tileWidth'], source_meta['tileHeight'])
-
     slide_dimensions['conv_mm_x'] = slide_dimensions['target_mm_x'] / slide_dimensions['base_mm_x']
     slide_dimensions['conv_mm_y'] = slide_dimensions['target_mm_y'] / slide_dimensions['base_mm_y']
 
-    slide_dimensions['tile_width_before_scaling'] = math.ceil(slide_dimensions['conv_mm_x'] * tile_size[0])
-    slide_dimensions['tile_height_before_scaling'] = math.ceil(slide_dimensions['conv_mm_y'] * tile_size[1])
+    if tile_size is not None:
+        slide_dimensions['tile_width_before_scaling'] = math.ceil(slide_dimensions['conv_mm_x'] * tile_size['width'])
+        slide_dimensions['tile_height_before_scaling'] = math.ceil(slide_dimensions['conv_mm_y'] * tile_size['height'])
+    else:
+        slide_dimensions['tile_width_before_scaling'] = source_meta['tileWidth']
+        slide_dimensions['tile_height_before_scaling'] = source_meta['tileHeight']
 
     slide_dimensions['base_size_x_mm'] = convert_scale_mm['width']
     slide_dimensions['base_size_y_mm'] = convert_scale_mm['height']
@@ -326,6 +364,5 @@ def calculate_slide_dimensions(source: TileSource, scale: Optional[Dict[str, Any
 
     slide_dimensions['tile_target_range_x'] = math.ceil(source_meta['sizeX'] / slide_dimensions['tile_width_before_scaling'])
     slide_dimensions['tile_target_range_y'] = math.ceil(source_meta['sizeY'] / slide_dimensions['tile_height_before_scaling'])
-    slide_dimensions['tile_size'] = tile_size
 
     return slide_dimensions

@@ -43,14 +43,9 @@ class SharedArray:
         if not hasattr(self, "shm"):
             return
         
-        try:
-            # Drop our direct reference before closing to avoid BufferError
-            if hasattr(self, "buf"):
-                del self.buf
-        except Exception:
-            # Ignore errors when deleting buffer reference
-            pass
-        
+        # Close shm first to avoid issues with deleting buffer reference
+        # when buffer is still in use
+        # Otherwise, we get a BufferError: cannot close exported pointers exist
         try:
             if hasattr(self, "shm"):
                 self.shm.close()
@@ -61,6 +56,14 @@ class SharedArray:
         except Exception:
             # Ignore other shutdown-time issues
             return
+
+        try:
+            # Drop our direct reference before closing to avoid BufferError
+            if hasattr(self, "buf"):
+                del self.buf
+        except Exception:
+            # Ignore errors when deleting buffer reference
+            pass
             
         # Only attempt to unlink if close() succeeded
         try:
@@ -96,6 +99,7 @@ class SharedArray:
         self.buf[i] = arr
 
     def copy(self, arr: Union[np.ndarray, 'torch.Tensor']): # type: ignore
+        """Copy an array into the shared memory."""
         self.shape = arr.shape
         if self.is_torch:
             import torch # type: ignore
@@ -105,9 +109,11 @@ class SharedArray:
         self.buf[:] = arr[:]
 
     def tobytes(self):
+        """Convert the shared memory to bytes."""
         return self.buf.tobytes()
 
     def view(self):
+        """View the shared memory."""
         if self.is_torch:
             import torch # type: ignore
             view_buf = torch.frombuffer(self.shm.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
@@ -121,12 +127,15 @@ class SharedArray:
     # whitelist of attributes to our underlying np.ndarray object; these could
     # be enumerated and done via __getattribute__
     def __getitem__(self, idx: int):
+        """Get an item from the shared memory."""
         return self.buf[idx]
 
     def __array__(self, dtype: Union[np.dtype, 'torch.dtype'] = None): # type: ignore
+        """Convert the shared memory to an array."""
         return self.buf.copy().astype(dtype) if dtype is not None else self.buf.copy()
 
     def __getstate__(self):
+        """Get the state of the shared memory."""
         state = self.__dict__.copy()
         del state["shm"]
         state.pop("buf", None)
@@ -135,6 +144,7 @@ class SharedArray:
         return state
 
     def __setstate__(self, state: dict):
+        """Set the state of the shared memory."""
         state = state.copy()
         shm_name = state.pop("shm_name")
         self.__dict__.update(state)
@@ -148,6 +158,7 @@ class SharedArray:
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
 
     def __del__(self):
+        """Delete the shared memory."""
         try:
             self.close()
         except Exception:

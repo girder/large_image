@@ -38,9 +38,15 @@ def sparse_chunks(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray, t
     return chunks
 
 def gen_read_args_incomplete_grid(sorted_in: np.ndarray, chunk_size: int):
-    # todo: add documentation
-    # todo: version for grouped by tiles
-    # Spatial indexing for proximity-based grouping
+    """A function that generates read arguments for an incomplete grid.
+
+    :param sorted_in: _description_
+    :type sorted_in: np.ndarray
+    :param chunk_size: _description_
+    :type chunk_size: int
+    :returns: A list of chunks.
+    :rtype: list
+    """
 
     points = sorted_in[:, :2].astype(float)
     used = np.zeros(sorted_in.shape[0], dtype=bool)
@@ -55,7 +61,26 @@ def gen_read_args_incomplete_grid(sorted_in: np.ndarray, chunk_size: int):
     return chunks
 
 def chunks_from_kd_tree(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray, tree: KDTree, chunks: list, chunk_size: int, k_mod: int = 1):
-    # todo: add documentation
+    """A function that generates chunks from a kd tree.
+
+    :param sorted_in: The sorted regions or tiles to check for edges
+    :type sorted_in: np.ndarray
+    :param used: The used regions or tiles
+    :type used: np.ndarray
+    :param points: The points to check for edges
+    :type points: np.ndarray
+    :param tree: The kd tree
+    :type tree: KDTree
+    :param chunks: The chunks to generate
+    :type chunks: list
+    :param chunk_size: The chunk size
+    :type chunk_size: int
+    :param k_mod: The k mod
+    :type k_mod: int
+    :returns: A sorted list of chunks.
+    :rtype: _type_
+    """
+
     # version for grouped by tiles
     chunk = []
 
@@ -93,7 +118,7 @@ def check_edge_condition(base_size_x: int, base_size_y: int, sorted_in: np.ndarr
     :param base_size_y: The base image's size in the y dimension
     :param sorted_in: The sorted regions or tiles to check for edges
 
-    :return:
+    :returns: A soreted list of chunks.
     '''
     if edge:
         condition = (sorted_in[:, 7] < base_size_x) & (sorted_in[:, 5] < base_size_y) & (sorted_in[:, 6] >= 0) & (sorted_in[:, 4] >= 0)

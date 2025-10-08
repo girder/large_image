@@ -22,6 +22,14 @@ def padding(array: np.ndarray, xx: int, yy: int):
     return np.pad(array, pad_width=((a, aa), (b, bb), (0, 0)), mode='constant')
 
 def rgba2rgb(img_rgba: np.ndarray, background: tuple = (255, 255, 255)):
+    """A function that converts a rgba image to a rgb image.
+    :param img_rgba: The rgba image
+    :type img_rgba: np.ndarray
+    :param background: The background color
+    :type background: tuple
+    :returns: The rgb image
+    :rtype: np.ndarray
+    """
     row, col, ch = img_rgba.shape
 
     if ch == 3:
