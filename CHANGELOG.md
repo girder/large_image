@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.33.4
+
+### Changes
+
+- Increase the detail threshold for large annotations ([#1995](../../pull/1995))
+
+### Bug Fixes
+
+- Fixed recursion in the create large images in a folder endpoint ([#1993](../../pull/1993))
+
 ## 1.33.3
 
 ### Changes

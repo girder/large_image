@@ -76,7 +76,7 @@ const AnnotationModel = AccessControlledModel.extend({
     defaults: {
         annotation: {},
         minElements: 5000,
-        maxDetails: 250000,
+        maxDetails: 500000,
         maxCentroids: 5000000
     },
 
