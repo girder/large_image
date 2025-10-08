@@ -130,6 +130,10 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
         for tile_dict in tile_iterator:
             image = rgba2rgb(tile_dict['tile'])
             transformed_image_batch = kwargs['transform'](image)
+    elif performance_type == 'albumentations_transform':
+        for tile_dict in tile_iterator:
+            image = tile_dict['tile']
+            transformed_image_batch = kwargs['transform'](image=image)
     elif performance_type == 'write_multiprocessing':
         images_to_save = []
         
@@ -216,8 +220,11 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
                 pool.starmap(plt.imsave, images_to_save)
                 pool.close()
                 pool.join()
-
-            
+    # Run read with albumentations transform
+    elif performance_type == 'albumentations_transform':
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+            del batch_images
     # Run read with transform
     elif performance_type == 'pytorch_transform':
         for batch in eager_iter:

@@ -254,7 +254,7 @@ def calculate_slide_dimensions(source: TileSource, scale: Optional[Dict[str, Any
     :param source: A large image tile source.
     :param mode: The magnification mode used for scaling.
     :param target_scale: The target scale for the image in 'mm' or 'mag' mode. For 'mag' mode should be integer.  For 'mm' mode should be a tuple of (x, y).
-    :param tile_size: A tuple of (x, y) defining the tile size in pixels.
+    :param tile_size: A dictionary with 'width' and 'height' defining the tile size in pixels.
     :returns: A slide dimensions dictionary that can be used for scaling any tile/region created using the source/iterator.
     '''
     # Use base scale pixel size to calculate conversion to get a region of a target size
@@ -348,8 +348,8 @@ def calculate_slide_dimensions(source: TileSource, scale: Optional[Dict[str, Any
     slide_dimensions['conv_mm_y'] = slide_dimensions['target_mm_y'] / slide_dimensions['base_mm_y']
 
     if tile_size is not None:
-        slide_dimensions['tile_width_before_scaling'] = math.ceil(slide_dimensions['conv_mm_x'] * tile_size['width'])
-        slide_dimensions['tile_height_before_scaling'] = math.ceil(slide_dimensions['conv_mm_y'] * tile_size['height'])
+        slide_dimensions['tile_width_before_scaling'] = math.ceil(slide_dimensions['conv_mm_x'] * slide_dimensions['tile_size'][0])
+        slide_dimensions['tile_height_before_scaling'] = math.ceil(slide_dimensions['conv_mm_y'] * slide_dimensions['tile_size'][1])
     else:
         slide_dimensions['tile_width_before_scaling'] = source_meta['tileWidth']
         slide_dimensions['tile_height_before_scaling'] = source_meta['tileHeight']
