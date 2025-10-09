@@ -9,6 +9,7 @@
 ### Bug Fixes
 
 - Fixed recursion in the create large images in a folder endpoint ([#1993](../../pull/1993))
+- When overlaying many image annotations, some showed artifacts ([#1998](../../pull/1998))
 
 ## 1.33.3
 
