@@ -10,6 +10,7 @@
 
 - Fixed recursion in the create large images in a folder endpoint ([#1993](../../pull/1993))
 - When overlaying many image annotations, some showed artifacts ([#1998](../../pull/1998))
+- Fix annotation caching with different users ([#1999](../../pull/1999))
 
 ## 1.33.3
 
