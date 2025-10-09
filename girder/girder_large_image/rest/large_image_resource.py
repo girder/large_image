@@ -501,7 +501,7 @@ class LargeImageResource(Resource):
         if recurse:
             for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
                 result['childFoldersRecursed'] += 1
-                self.createLargeImagesRecurse(
+                self._createLargeImagesRecurse(
                     childFolder, user, recurse, createJobs, localJobs,
                     cancelJobs, redo, result)
         for item in Folder().childItems(folder=folder):
