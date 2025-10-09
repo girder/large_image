@@ -16,9 +16,10 @@ import large_image
 import albumentations as A
 import numpy as np
 import torch
+from torch.nn.functional import pad
 
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
-from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb
+from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb, padding
 
 def clear_cache():
     clear_cahce_shell_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'paper', 'clear_cache.sh')
@@ -86,6 +87,11 @@ def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = F
 
 def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
     clear_cache()
+
+    if 'batch' in kwargs:
+        batch_size = kwargs['batch']
+    else:
+        batch_size = 64
     
     # Set caching
     if without_cache:
@@ -99,11 +105,19 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
     else:
         large_image.config.setConfig('icc_correction', True)
 
+    model = None
+    # Set sobel model if needed
+    if performance_type == 'inference_sobel':
+        from test.eager.paper.pytorch_sobel_model import SobelFilter
+        model = SobelFilter()
+        model.eval()
+        model.to('cuda')
+
     # Test performance without caching
     start_time = time.time()
     # Set tiff source if needed
     if not with_tiff_source:
-        tile_source = large_image.open(file_path)
+        tile_source = large_image.open(file_path, edge='#000000')
     else:
         import large_image_source_tiff
         tile_source = large_image_source_tiff.open(file_path)
@@ -129,11 +143,11 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
     elif performance_type == 'pytorch_transform':
         for tile_dict in tile_iterator:
             image = rgba2rgb(tile_dict['tile'])
-            transformed_image_batch = kwargs['transform'](image)
+            transformed_image = kwargs['transform'](image)
     elif performance_type == 'albumentations_transform':
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
-            transformed_image_batch = kwargs['transform'](image=image)
+            transformed_image = kwargs['transform'](image=image)
     elif performance_type == 'write_multiprocessing':
         images_to_save = []
         
@@ -144,6 +158,34 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
             pool.starmap(plt.imsave, images_to_save)
             pool.close()
             pool.join()
+    elif performance_type == 'inference_sobel':
+        batch_images = []
+        image_shape = None
+
+        def preprocess_image(image, image_shape):
+            image = rgba2rgb(image)
+            if image.shape[1] != image_shape[1] or image.shape[0] != image_shape[0]:
+                pad_width= image_shape[1] - image.shape[1]
+                pad_height = image_shape[0] - image.shape[0]
+                image = np.pad(image, pad_width=((0, pad_height), (0, pad_width), (0, 0)), mode='constant')            
+            transformed_image = kwargs['transform'](image)
+            return transformed_image
+
+        for tile_dict in tile_iterator:
+            image = tile_dict['tile']
+            if image_shape is None:
+                image_shape = image.shape
+            transformed_image = preprocess_image(image, image_shape)
+            batch_images.append(transformed_image)
+            if len(batch_images) == batch_size:
+                batch_images = torch.stack(batch_images)
+                output = model(batch_images)
+                batch_images = []
+
+        if len(batch_images) > 0:
+            batch_images = torch.stack(batch_images)
+            output = model(batch_images)
+            batch_images = []
     elif performance_type == 'inference_efficientnetb0':
         batch_images = []
         for tile_dict in tile_iterator:
@@ -181,6 +223,7 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
     else:
         large_image.config.setConfig('icc_correction', True)
 
+    # Set sobel model if needed
     if performance_type == 'inference_sobel':
         from test.eager.paper.pytorch_sobel_model import SobelFilter
         model = SobelFilter()
@@ -237,8 +280,7 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
     # Run read with sobel
     elif performance_type == 'inference_sobel':
         for batch in eager_iter:
-            batch_images = batch['tile'].view()
-
+            batch_images = batch['tile'].view().cuda()
             output = model(batch_images)
     elif performance_type == "inference_efficientnetb0":
         for batch in eager_iter:

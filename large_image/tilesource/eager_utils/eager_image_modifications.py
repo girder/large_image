@@ -57,11 +57,6 @@ def pad_color(image: np.ndarray, top: int, bottom: int, left: int, right: int, c
     return np.stack((r, g, b), axis=-1)
 
 def pad_tile(tile: np.ndarray, w: int, h: int, pad_mode: str, pad_fill_mode: str):
-    p_t = 0
-    p_b = 0
-    p_l = 0
-    p_r = 0
-
     out = tile.copy()
 
     constant_color = return_constant_color(tile, pad_fill_mode)

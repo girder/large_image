@@ -1,5 +1,7 @@
 from typing import Union, Optional, Tuple, List, Dict, Any
 import math
+import warnings
+
 import large_image
 import numpy as np
 
@@ -201,7 +203,7 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
                 i = x * (z / k)
                 j = y * (z / k)
             except:
-                raise UserWarning("Unable to define scaling from mm to mag")
+                warnings.warn("Unable to define scaling from mm to mag", UserWarning)
 
 
         if k is None:
@@ -221,10 +223,11 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
             zoom_x = z * (x / i)
             zoom_y = z * (y / j)
             if zoom_x != zoom_y:
-                raise UserWarning(
+                warnings.warn(
                     "Pixel dimensions for x and y are not the same. X = {}, Y = {}, Zoom X = {}, Zoom Y = {}"
-                    .format(x, y, zoom_x, zoom_y)
-                    )
+                    .format(x, y, zoom_x, zoom_y),
+                    UserWarning
+                )
             else:
                 k = zoom_x
 

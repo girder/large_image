@@ -144,7 +144,7 @@ def test_svs_sobel(test_path):
             v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ]
     )
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/sobel", without_cache=False, only_eager=False, performance_type='inference_sobel', transform=transform)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/sobel", without_cache=False, only_eager=True, performance_type='inference_sobel', transform=transform)
 
 if __name__ == "__main__":
     test_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
@@ -183,10 +183,10 @@ if __name__ == "__main__":
     # test_svs_with_pytorch_transform(test_path)
 
     # Test performance with albumentations transform
-    test_albumentations_transform(test_path)
+    # test_albumentations_transform(test_path)
 
     # Test performance with sobel
-    # test_svs_sobel(test_path)
+    test_svs_sobel(test_path)
 
     pass
 
