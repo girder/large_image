@@ -157,13 +157,15 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @param {number} levelDifference The difference in zoom level between the base image and the overlay
          * @returns An object containing parameters needed to create a pixelmap layer.
          */
-        _addPixelmapLayerParams(layerParams, pixelmapElement, levelDifference) {
+        _addPixelmapLayerParams(layerParams, pixelmapElement, levelDifference, extraArg) {
+            extraArg = extraArg || '';
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
+            // DWM::
             if (_.isFunction(layerParams.url) || levelDifference) {
-                layerParams.url = (x, y, z) => getApiRoot() + '/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                layerParams.url = (x, y, z) => getApiRoot() + '/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG` + extraArg;
             } else {
-                layerParams.url = layerParams.url + '?encoding=PNG';
+                layerParams.url = layerParams.url + '?encoding=PNG' + extraArg;
             }
             let pixelmapData = pixelmapElement.values;
             if (pixelmapElement.boundaries) {
@@ -209,10 +211,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             );
             params.layer.useCredentials = true;
             params.layer.url = `${getApiRoot()}/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
-            if (this._countDrawnImageOverlays() <= 6) {
+            let extraarg = '';
+            if (this._countDrawnImageOverlays() <= 5) {
                 params.layer.autoshareRenderer = false;
             } else {
                 params.layer.renderer = 'canvas';
+                extraarg = '&edge=%23ffffff00';
+                params.layer.url += '?' + extraarg.substr(1);
             }
             params.layer.opacity = overlay.opacity || 1;
             params.layer.opacity *= this._globalAnnotationOpacity;
@@ -222,7 +227,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             levelDifference -= this._getOverlayRelativeScale(overlay);
 
             if (this.levels !== overlayImageMetadata.levels) {
-                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}` + (extraarg ? ('?' + extraarg.substr(1)) : '');
                 params.layer.minLevel = levelDifference;
                 params.layer.maxLevel += levelDifference;
 
@@ -242,10 +247,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 };
             }
             if (overlay.type === 'pixelmap') {
-                params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference);
+                params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference, extraarg);
             } else if (overlay.hasAlpha) {
                 params.layer.keepLower = false;
-                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG` + extraarg;
             }
             return params.layer;
         },

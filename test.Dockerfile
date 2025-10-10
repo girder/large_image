@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
     PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.11 3.9 3.10 3.12 3.13"
+    PYTHON_VERSIONS="3.11 3.9 3.10 3.12 3.13 3.14"
 
 # Consumers of this package aren't expecting an existing ubuntu user (there
 # wasn't one in the ubuntu:22.04 base)
