@@ -30,6 +30,7 @@ girder-jobs>=3.0.3
 
 # Extras from main setup.py
 matplotlib
+tol-colors>=2.0.0
 pylibmc>=1.5.1
 redis
 simplejpeg

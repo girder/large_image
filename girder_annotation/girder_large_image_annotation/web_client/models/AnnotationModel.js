@@ -327,10 +327,11 @@ const AnnotationModel = AccessControlledModel.extend({
         }
 
         opts = opts || {};
+        var user = getCurrentUser();
         var restOpts = {
             url: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
             /* Add our region request into the query */
-            data: Object.assign({}, this._region, {_: (this.get('updated') || this.get('created')) + '_' + this.get('_version')})
+            data: Object.assign({}, this._region, {_: (this.get('updated') || this.get('created')) + (user && user.id ? '_' + user.id : '') + '_' + this.get('_version')})
         };
         if (opts.extraPath) {
             restOpts.url += '/' + opts.extraPath;
