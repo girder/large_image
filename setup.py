@@ -20,7 +20,7 @@ extraReqs = {
     'memcached': ['pylibmc>=1.5.1 ; platform_system != "Windows"'],
     'redis': ['redis>=4.5.5'],
     'converter': [f'large-image-converter{limit_version}'],
-    'colormaps': ['matplotlib', 'tol_colors'],
+    'colormaps': ['matplotlib', 'tol-colors>=2.0.0'],
     'jupyter': ['aiohttp', 'ipyvue', 'ipyleaflet'],
     'tiledoutput': ['pyvips'],
     'performance': [

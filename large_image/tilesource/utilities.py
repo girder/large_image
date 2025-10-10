@@ -692,6 +692,11 @@ def getPaletteColors(value: Union[str, list[Union[str, float, tuple[float, ...]]
             pass
     if palette is None:
         try:
+            # Add to matplotlib if available
+            import tol_colors  # noqa F401
+        except (ImportError, TypeError):
+            pass
+        try:
             import matplotlib as mpl
 
             if value in mpl.colors.get_named_colors_mapping():
@@ -703,18 +708,6 @@ def getPaletteColors(value: Union[str, list[Union[str, float, tuple[float, ...]]
                 palette = _mpl_lsc_to_palette(cmap)  # type: ignore
         except (ImportError, ValueError, AttributeError):
             pass
-    if palette is None:
-        if str(value).startswith('tol.'):
-            key = value[4:]
-            try:
-                import tol_colors
-
-                if key in tol_colors.colorsets:
-                    palette = list(tol_colors.colorsets[key])
-                elif key in tol_colors.TOLcmaps().namelist:
-                    palette = _mpl_lsc_to_palette(tol_colors.tol_cmap(key))  # type: ignore
-            except ImportError:
-                pass
     if palette is None:
         raise ValueError('cannot be used as a color palette.: %r.' % value)
     return _arrayToPalette(palette)
@@ -775,6 +768,11 @@ def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False)
         palettes |= set(colormap.keys())
     _recursePalettablePalettes(palettable, palettes)
     try:
+        # Add to matplotlib if available
+        import tol_colors  # noqa F401
+    except (ImportError, TypeError):
+        pass
+    try:
         import matplotlib as mpl
 
         if includeColors:
@@ -785,13 +783,6 @@ def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False)
         for key in mplcm:
             if isValidPalette(key):
                 palettes.add(key)
-    except ImportError:
-        pass
-    try:
-        import tol_colors
-
-        palettes |= {f'tol.{key}' for key in tol_colors.colorsets}
-        palettes |= {f'tol.{key}' for key in tol_colors.TOLcmaps().namelist}
     except ImportError:
         pass
     if reduced:
