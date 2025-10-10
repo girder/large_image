@@ -321,9 +321,15 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fc //= self._nd2sizes[axis]
             tileframe = tileframe[fp // fc]
             fp = fp % fc
-        with self._tileLock:
-            # Have dask use single-threaded since we are using a lock anyway.
-            tile = tileframe[y0:y1:step, x0:x1:step].compute(scheduler='single-threaded').copy()
+        # We had done
+        #   with self._tileLock:
+        #       # Have dask use single-threaded since we are using a lock anyway.
+        #       tile = tileframe[y0:y1:step, x0:x1:step].compute(scheduler='single-threaded').copy()
+        # but this is no longer necessary.  We could limit the number of thread
+        # workers used by dask, but this doesn't actually change much.  We
+        # could also use scheduler='processes', but this fails to close handles
+        # a certain way and prints a lot of warnings and is slower.
+        tile = tileframe[y0:y1:step, x0:x1:step].compute().copy()
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 
