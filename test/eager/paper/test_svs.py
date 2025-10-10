@@ -133,8 +133,17 @@ def test_svs_with_pytorch_transform(test_path):
         ]
     )
 
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_pytorch_transform", without_cache=False, only_eager=True, performance_type='pytorch_transform', transform=transform)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_pytorch_transform", without_cache=False, only_eager=False, performance_type='pytorch_transform', transform=transform)
 
+def test_svs_with_efficientnet(test_path):
+    transform = v2.Compose(
+        [
+            v2.Resize(224),
+            v2.ToTensor(),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_efficientnet", without_cache=False, only_eager=False, performance_type='inference_efficientnetb0', transform=transform)
 
 def test_svs_sobel(test_path):
     transform = v2.Compose(
@@ -186,7 +195,10 @@ if __name__ == "__main__":
     # test_albumentations_transform(test_path)
 
     # Test performance with sobel
-    test_svs_sobel(test_path)
+    # test_svs_sobel(test_path)
+
+    # Test performance with efficientnet
+    test_svs_with_efficientnet(test_path)
 
     pass
 

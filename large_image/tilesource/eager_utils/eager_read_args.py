@@ -99,6 +99,9 @@ def chunks_from_kd_tree(sorted_in: np.ndarray, used: np.ndarray, points: np.ndar
             else:
                 possible_neighbors = neighbors[0]
 
+            # Fix for case where the amount of read arguments is less the pykdtree k parameter (chunk_size * k_mod)
+            possible_neighbors = possible_neighbors[possible_neighbors < sorted_in.shape[0]]
+
             not_used_neighbors = np.logical_not(used[possible_neighbors])
             values_neighbors = sorted_in[possible_neighbors]
             chunk = values_neighbors[not_used_neighbors]
