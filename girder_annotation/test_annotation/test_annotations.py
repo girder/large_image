@@ -51,6 +51,34 @@ sampleAnnotationWithMetadata = {
         'height': 15.0,
     }],
 }
+sampleAnnotationWithPointsAndMetadata = {
+    'name': 'sample',
+    'attributes': {
+        'key1': 'value1',
+    },
+    'elements': [{
+        'lineColor': 'rgb(255, 0, 0)',
+        'fillColor': 'rgba(255, 0, 0, 0.25)',
+        'type': 'point',
+        'center': [25608, 21928, 0],
+        'id': '0123456789abcdef01234560',
+        'group': 'Red',
+    }, {
+        'lineColor': 'rgb(255, 0, 0)',
+        'fillColor': 'rgba(255, 0, 0, 0.25)',
+        'type': 'point',
+        'center': [19259, 20750, 0],
+        'id': '0123456789abcdef01234561',
+        'group': 'Red',
+    }, {
+        'lineColor': 'rgb(255, 0, 0)',
+        'fillColor': 'rgba(255, 0, 0, 0.25)',
+        'type': 'point',
+        'center': [16652, 25502, 0],
+        'id': '0123456789abcdef01234562',
+        'group': 'Red',
+    }],
+}
 
 
 def makeLargeSampleAnnotation():
@@ -197,7 +225,7 @@ class TestLargeImageAnnotation:
         versions = list(Annotation().versionList(saved2['_id']))
         assert len(versions) == 2
         # If we save with an old version, we should get the original id back
-        assert not versions[1]['_id'] == loaded['_id']
+        assert versions[1]['_id'] != loaded['_id']
         saved3 = Annotation().save(versions[1])
         assert saved3['_id'] == loaded['_id']
 
