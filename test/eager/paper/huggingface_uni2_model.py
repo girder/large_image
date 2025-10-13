@@ -4,7 +4,7 @@ from timm.data import resolve_data_config
 from timm.data.transforms_factory import create_transform
 from huggingface_hub import login
 
-def build_huggingface_uni2_model():
+def make_huggingface_uni2_model(compile_model: bool = False, cuda_device: str = 'cuda:0'):
     # pretrained=True needed to load UNI2-h weights (and download weights for the first time)
     timm_kwargs = {
                 'img_size': 224, 
@@ -22,6 +22,13 @@ def build_huggingface_uni2_model():
                 'dynamic_img_size': True
             }
     model = timm.create_model("hf-hub:MahmoodLab/UNI2-h", pretrained=True, **timm_kwargs)
+
+    # Compile model if needed
+    if compile_model:
+        model = torch.compile(model)
+    
     model.eval()
+
+    model.to(cuda_device)
 
     return model

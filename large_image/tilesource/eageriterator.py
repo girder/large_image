@@ -237,7 +237,7 @@ class EagerIterator:
             self.out_dims = tuple([self.out_dims[0]] + list(test_out['image'].shape))
             self.transform = transform
             self.is_torch = False
-        elif 'torchvision.transforms' in str(type(transform)):
+        elif 'torchvision.transforms' in str(type(transform)) or 'torchvision.transforms.v2' in str(type(transform)):
             test_out = transform(test_data)
             self.dtype = test_out.dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
@@ -269,7 +269,7 @@ class EagerIterator:
             elif len(transform_parameters) == 1:
                 try:
                     test_out = transform(test_data)
-                    if not isinstance(test_out, np.ndarray) or not isinstance(test_out, torch.Tensor):
+                    if not isinstance(test_out, np.ndarray) and not isinstance(test_out, torch.Tensor):
                         raise ValueError("Transform callable must return a numpy array or torch.Tensor")
                     self.dtype = test_out.dtype
                     self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
@@ -569,9 +569,9 @@ class EagerIterator:
                     transform(image=tile)['image'].astype(dtype)
                     for tile in tiles
                 ]
-            elif 'torchvision.transforms.v2._container.Compose' in str(type(transform)):                    
+            elif 'torchvision.transforms' in str(type(transform)):                    
                 tiles = [
-                    transform(tile).to(dtype)
+                    transform(tile)
                     for tile in tiles
                 ]
             else:

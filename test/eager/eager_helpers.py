@@ -20,7 +20,10 @@ from torch.nn.functional import pad
 
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb, padding
+
 from test.eager.paper.keras_efficientnet import make_efficientnet_model
+from test.eager.paper.huggingface_uni2_model import make_huggingface_uni2_model
+from test.eager.paper.pytorch_sobel_model import make_sobel_model
 
 def clear_cache():
     clear_cahce_shell_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'paper', 'clear_cache.sh')
@@ -49,25 +52,19 @@ def clear_cache():
 
     print(f"LRU cache cleared")
 
-def setup_inference_model(performance_type: str):
+def setup_inference_model(performance_type: str, compile_model: bool = False, cuda_device: str = 'cuda:0'):
     model = None
     # Set sobel model if needed
     if performance_type == 'inference_sobel':
-        from test.eager.paper.pytorch_sobel_model import SobelFilter
-        model = SobelFilter()
-        model.eval()
-        model.to('cuda')
+        model = make_sobel_model(compile_model=compile_model, cuda_device=cuda_device)
     elif performance_type == 'inference_efficientnetb0':
-        model = make_efficientnet_model()
-        model.eval()
-        model.to('cuda')
+        model = make_efficientnet_model(compile_model=compile_model, cuda_device=cuda_device)
+    elif performance_type == 'inference_uni2':
+        model = make_huggingface_uni2_model(compile_model=compile_model, cuda_device=cuda_device)
     
     return model
 
-    
-
-
-def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_iterator: Iterable, **kwargs):
+def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_iterator: Iterable, cuda_device: str = 'cuda:0', **kwargs):
     batch_images = []
     image_shape = None
 
@@ -84,48 +81,55 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
             image = np.pad(image, pad_width=((0, pad_height), (0, pad_width), (0, 0)), mode='constant')            
         transformed_image = kwargs['transform'](image)
         return transformed_image
+    
+    with torch.inference_mode():
+        for tile_dict in tile_iterator:
+            image = tile_dict['tile']
+            if image_shape is None:
+                image_shape = image.shape
+            transformed_image = preprocess_image(image, image_shape)
+            batch_images.append(transformed_image)
+            if len(batch_images) == batch_size:
+                batch_images = torch.stack(batch_images)
+                batch_images = batch_images.to(cuda_device)
+                output = model(batch_images)
+                del batch_images
+                batch_images = []
 
-    for tile_dict in tile_iterator:
-        image = tile_dict['tile']
-        if image_shape is None:
-            image_shape = image.shape
-        transformed_image = preprocess_image(image, image_shape)
-        batch_images.append(transformed_image)
-        if len(batch_images) == batch_size:
-            batch_images = torch.stack(batch_images).cuda()
+        if len(batch_images) > 0:
+            batch_images = torch.stack(batch_images)
+            batch_images = batch_images.to(cuda_device)
             output = model(batch_images)
+            del batch_images
             batch_images = []
-
-    if len(batch_images) > 0:
-        batch_images = torch.stack(batch_images).cuda()
-        output = model(batch_images)
-        batch_images = []
     
     return True
 
-def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
+def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
     if without_cache:
-        setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, **kwargs)
+        setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
         add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time)
 
-    setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, **kwargs)
+    setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
     add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time)
 
     return performance_data
 
-def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_iter: Iterable):
-    for batch in eager_iter:
-        batch_images = batch['tile'].view()
-        batch_images = torch.tensor(batch_images)
-        batch_images = batch_images.cuda()
-        output = model(batch_images)
+def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_iter: Iterable, cuda_device: str = 'cuda:0'):
+    with torch.inference_mode():
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+            batch_images = torch.tensor(batch_images)
+            batch_images = batch_images.to(cuda_device)
+            output = model(batch_images)
+            del batch_images
 
-    return True
+        return True
 
-def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
+def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
     clear_cache()
     
     # Set caching
@@ -140,9 +144,7 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
     else:
         large_image.config.setConfig('icc_correction', True)
 
-    model = setup_inference_model(performance_type)
-    
-
+    model = setup_inference_model(performance_type, compile_model)
 
     # Test performance without caching
     start_time = time.time()
@@ -193,20 +195,23 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
         model_output = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
     elif performance_type == 'inference_efficientnetb0':
         model_output = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
+    elif performance_type == 'inference_uni2':
+        model_output = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
 
     process_time = time.time() - start_time
 
     # Clean up
     del tile_iterator
     del tile_source
+    del model
 
     return setup_time, process_time
 
-def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
+def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
     # Clear all caches for fair comparison
     clear_cache()
 
-    model = setup_inference_model(performance_type)
+    model = setup_inference_model(performance_type, compile_model)
 
     # Set caching
     if without_cache:
@@ -219,13 +224,14 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
         large_image.config.setConfig('icc_correction', False)
     else:
         large_image.config.setConfig('icc_correction', True)
-
-    
     
     # Set tiff source if needed
     start_time = time.time()
     if not with_tiff_source:
-        tile_source = large_image.open(file_path)
+        if os.path.exists(file_path):
+            tile_source = large_image.open(file_path)
+        else:
+            raise FileNotFoundError(f"File does not exist: {file_path}")
     else:
         import large_image_source_tiff
         tile_source = large_image_source_tiff.open(file_path)
@@ -265,23 +271,19 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
         for batch in eager_iter:
             batch_images = batch['tile'].view()
             del batch_images
-    # Run read with uni2
-    elif performance_type == 'inference_uni2':
-        for batch in eager_iter:
-            batch_images = batch['tile'].view()
     # Run read with sobel
     elif performance_type == 'inference_sobel':
-        for batch in eager_iter:
-            batch_images = batch['tile'].view().cuda()
-            output = model(batch_images)
+        perform_eager_inference_with_pytorch_model(model, eager_iter)
     elif performance_type == "inference_efficientnetb0":
         perform_eager_inference_with_pytorch_model(model, eager_iter)
-        
+    elif performance_type == 'inference_uni2':
+        perform_eager_inference_with_pytorch_model(model, eager_iter)        
 
     performance_time = time.time() - start_time
 
     del eager_iter
     del tile_source
+    del model
 
     return setup_time, performance_time
 
@@ -364,7 +366,8 @@ def add_performance_data(performance_data: dict, target_dimensions: dict, perfor
 
     performance_data[performance_type] = performance_entry
 
-def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, only_eager: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', **kwargs):
+def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, only_eager: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, **kwargs):
+    print("Running reproducible performance evaluation with output directory: ", output_dir)
     eager_runs = []
     non_eager_runs = []
 
@@ -377,13 +380,13 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, out
     
     for i in range(n_runs):
         print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-        performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, **kwargs)
+        performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
         eager_runs.append(performance_data)
 
     if not only_eager:
         for i in range(n_runs):
             print(f"Running non-eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, **kwargs)
+            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
             non_eager_runs.append(performance_data)
     
     eager_runs = aggregate_runs(eager_runs, eager_output_file_path)

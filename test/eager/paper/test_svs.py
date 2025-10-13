@@ -1,5 +1,6 @@
 import sys
 import os
+from tkinter import FALSE
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -109,7 +110,7 @@ def test_svs_with_efficientnet(test_path):
 def test_albumentations_transform(test_path):
     transform = A.Compose([
         A.ToFloat(),
-        A.Resize(288, 288),
+        A.Resize(224, 224),
         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
@@ -117,13 +118,13 @@ def test_albumentations_transform(test_path):
 
 
 def test_svs_with_pytorch_transform(test_path):
-    # transform = v2.Compose([
-    #     v2.ToImage(),
-    #     v2.RandomResizedCrop(size=(288, 288), antialias=True),
-    #     v2.RandomHorizontalFlip(p=0.5),
-    #     v2.ToDtype(torch.float32, scale=True),
-    #     v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    # ])
+    transform = v2.Compose([
+        v2.ToImage(),
+        v2.RandomResizedCrop(size=(288, 288), antialias=True),
+        v2.RandomHorizontalFlip(p=0.5),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
 
     transform = v2.Compose(
         [
@@ -153,7 +154,39 @@ def test_svs_sobel(test_path):
             v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ]
     )
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/sobel", without_cache=False, only_eager=True, performance_type='inference_sobel', transform=transform)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/sobel", without_cache=False, only_eager=False, performance_type='inference_sobel', transform=transform)
+
+def test_svs_uni2(test_path):
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.Resize(size=(224, 224)),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_uni2", without_cache=False, only_eager=True, performance_type='inference_uni2', compile_model=True, transform=transform)
+
+    transform_rescale = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+
+    run_reproducible_performance_evaluation(
+        test_path, 
+        n_runs=5, 
+        output_dir="/scr/arosado/performance/with_uni2_rescale", 
+        without_cache=False, 
+        only_eager=False, 
+        performance_type='inference_uni2', 
+        compile_model=True,
+        scale={'mm_x': 0.0005, 'mm_y': 0.0005},
+        tile_size={'width': 224, 'height': 224},
+        transform=transform_rescale
+        )
 
 if __name__ == "__main__":
     test_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
@@ -198,7 +231,10 @@ if __name__ == "__main__":
     # test_svs_sobel(test_path)
 
     # Test performance with efficientnet
-    test_svs_with_efficientnet(test_path)
+    # test_svs_with_efficientnet(test_path)
+
+    # Test performance with uni2
+    test_svs_uni2(test_path)
 
     pass
 

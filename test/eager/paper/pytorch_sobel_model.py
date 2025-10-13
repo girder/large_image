@@ -4,6 +4,18 @@ import torch.nn.functional as F
 
 from torchvision import io
 
+def make_sobel_model(compile_model: bool = False, cuda_device: str = 'cuda:0'):
+    model = SobelFilter()
+
+    if compile_model:
+        model = torch.compile(model)
+
+    model.eval()
+
+    model.to(cuda_device)
+
+    return model
+
 class SobelFilter(nn.Module):
     def __init__(self):
         super(SobelFilter, self).__init__()
