@@ -5,6 +5,7 @@
 ### Improvements
 
 - Remove locking in reading nd2 tiles ([#1977](../../pull/1977))
+- Get a pixel from multiple frames in a single REST call ([#2002](../../pull/2002))
 
 ### Changes
 
@@ -16,6 +17,7 @@
 - Fixed recursion in the create large images in a folder endpoint ([#1993](../../pull/1993))
 - When overlaying many image annotations, some showed artifacts ([#1998](../../pull/1998))
 - Fix annotation caching with different users ([#1999](../../pull/1999))
+- Work around how bioformats handles DICOMs in Monochrome1 ([#1834](../../pull/1834))
 
 ## 1.33.3
 

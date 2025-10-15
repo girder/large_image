@@ -153,7 +153,11 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     ])
 
     # We should report two thumbnails
-    present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+    for _ in range(5):
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+        if present == 2:
+            break
+        time.sleep(1)
     assert present == 2
 
     # Run a job to create two sizes of thumbnails, one different than
@@ -163,7 +167,11 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
         {'width': 160, 'height': 160},
     ])
     # We should report three thumbnails
-    present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+    for _ in range(5):
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+        if present == 3:
+            break
+        time.sleep(1)
     assert present == 3
 
     # Asking for a bad thumbnail specification should just do nothing

@@ -33,7 +33,7 @@ SourceAndFiles = {
     'deepzoom': {},
     'dicom': {
         'read': r'\.dcm$',
-        'noread': r'tcia.*\.dcm$',
+        'noread': r'(tcia.*|monochrome1)\.dcm$',
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
@@ -63,7 +63,7 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi)',  # noqa
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi|monochrome1.dcm)',  # noqa
         'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff|\.czi$',
         'skipTiles': r'one_layer_missing',
     },
@@ -83,14 +83,14 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm)$)' +  # noqa
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm|monochrome1.dcm)$)' +  # noqa
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
         'skip': r'indica' if sys.version_info < (3, 9) else '^$',
     },
     'vips': {
         'read': r'',
-        'noread': r'(\.(nc|nd2|yml|yaml|json|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm)$',
+        'noread': r'(\.(nc|nd2|yml|yaml|json|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm|monochrome1.dcm)$',  # noqa
         'skip': r'\.czi$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)',  # noqa
     },
