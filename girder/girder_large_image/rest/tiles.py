@@ -958,6 +958,12 @@ class TilesItemResource(ItemResource):
         .param('frame', 'For multiframe images, the 0-based frame number.  '
                'This is ignored on non-multiframe images.', required=False,
                dataType='int')
+        .param('frameList', 'Comma-separated list of frame numbers to query. '
+               'If provided, returns a list of pixel values for each frame.',
+               required=False)
+        .notes('When frameList is provided, returns a list of pixel '
+               'dictionaries, one for each frame. Otherwise returns a '
+               'single pixel dictionary.')
         .errorResponse('ID was invalid.')
         .errorResponse('Read access was denied for the item.', 403),
     )
@@ -971,7 +977,34 @@ class TilesItemResource(ItemResource):
             ('bottom', float, 'region', 'bottom'),
             ('units', str, 'region', 'units'),
             ('frame', int),
+            ('frameList', str),
         ])
+
+        # Check if frameList is provided for batch frame query
+        if 'frameList' in params:
+            frameList = [
+                int(f.strip()) for f in str(params['frameList']).lstrip(
+                    '[').rstrip(']').split(',')]
+            # Remove frameList and frame from params
+            params.pop('frameList', None)
+            params.pop('frame', None)
+
+            # Get pixel for each frame
+            results = []
+            for frameNum in frameList:
+                frameParams = params.copy()
+                frameParams['frame'] = frameNum
+                try:
+                    pixel = self.imageItemModel.getPixel(item, **frameParams)
+                    pixel['frame'] = frameNum  # Include frame number in result
+                    results.append(pixel)
+                except TileGeneralError as e:
+                    raise RestException(e.args[0])
+                except ValueError as e:
+                    raise RestException('Value Error: %s' % e.args[0])
+            return results
+
+        # Otherwise, use single-frame behavior
         try:
             pixel = self.imageItemModel.getPixel(item, **params)
         except TileGeneralError as e:
