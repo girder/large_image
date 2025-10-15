@@ -339,6 +339,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             delattr(self, '_lastGetTileException')
         except Exception as exc:
             raise TileSourceError('Bioformats cannot read a tile: %r' % exc)
+        self._checkForOffset()
         self._populatedLevels = len([
             v for v in self._metadata['frameSeries'][0]['series'] if v is not None])
 
@@ -356,6 +357,40 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 with _javabridgeAttachLock:
                     if javabridge.get_env():
                         javabridge.detach()
+
+    def _checkForOffset(self):
+        """
+        The bioformats DICOM reader does unfortunate things to MONOCHROME1
+        16-bit images.  Store an offset to undo it, if appropriate.
+        """
+        if self._metadata.get('readerClassName') != 'loci.formats.in.DicomReader':
+            return
+        if self._metadata.get('seriesMetadata', {}).get(
+                '0028,0004 Photometric Interpretation') != 'MONOCHROME1':
+            return
+        if np.issubdtype(self.dtype, np.uint8):
+            self._fix_offset = 255
+            return
+        if not np.issubdtype(self.dtype, np.int16) and not np.issubdtype(self.dtype, '>i2'):
+            return
+        # This is bioformats behavior
+        try:
+            maxPixelRange = int(self._metadata['seriesMetadata'].get(
+                '0028,1051 Window Width', 0))
+        except Exception:
+            maxPixelRange = -1
+        try:
+            centerPixelValue = int(self._metadata['seriesMetadata'].get(
+                '0028,1050 Window Center', 0))
+        except Exception:
+            centerPixelValue = -1
+        maxPixelValue = maxPixelRange + (centerPixelValue // 2)
+        maxAllowRange = 2 ** int(self._metadata['seriesMetadata'].get(
+            '0028,0101 Bits Stored', 16)) - 1
+        if maxPixelRange == -1 or centerPixelValue < maxPixelRange // 2:
+            maxPixelValue = maxAllowRange
+        if maxPixelValue:
+            self._fix_offset = maxPixelValue
 
     def _metadataForCurrentSeries(self, rdr):
         self._metadata = getattr(self, '_metadata', {})
@@ -723,6 +758,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             retile[0:min(tile.shape[0], finalHeight), 0:min(tile.shape[1], finalWidth)] = tile[
                 0:min(tile.shape[0], finalHeight), 0:min(tile.shape[1], finalWidth)]
             tile = retile
+        if hasattr(self, '_fix_offset') and format == TILE_FORMAT_NUMPY:
+            tile = self._fix_offset - tile
         return self._outputTile(tile, format, x, y, z, pilImageAllowed, numpyAllowed, **kwargs)
 
     def getAssociatedImagesList(self):
