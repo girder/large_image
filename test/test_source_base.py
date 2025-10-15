@@ -23,7 +23,7 @@ from .datastore import datastore, registry
 # a download order.
 SourceAndFiles = {
     'bioformats': {
-        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi)|[0-9a-f].*\.dcm)$',
+        'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi|nd2)|[0-9a-f].*\.dcm)$',
         'noread': r'JK-kidney_B',
         'skip': r'TCGA-AA-A02O.*\.svs',
         # We need to modify the bioformats reader similar to tiff's
@@ -33,11 +33,12 @@ SourceAndFiles = {
     'deepzoom': {},
     'dicom': {
         'read': r'\.dcm$',
+        'noread': r'(tcia.*|monochrome1)\.dcm$',
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
-        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
+        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff|nc)|18[-0-9a-f]{34}\.dcm)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         'skip': r'nokeyframe\.ome\.tiff$',
         'skipTiles': r'\.*nc$',
     },
@@ -62,34 +63,36 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled)',  # noqa
-        'skip': r'nokeyframe\.ome\.tiff$',
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi|monochrome1.dcm)',  # noqa
+        'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff|\.czi$',
         'skipTiles': r'one_layer_missing',
     },
     'pil': {
         'read': r'(\.(jpg|jpeg|png|tif.*)|18[-0-9a-f]{34}\.dcm)$',
-        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview)',  # noqa
+        'noread': r'(G10-3|JK-kidney|d042-353.*tif|huron|one_layer_missing|US_Geo|extraoverview|indica|TCGA-55.*\.ome\.tiff)',  # noqa
     },
     'rasterio': {
         'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
-        'skip': r'nokeyframe\.ome\.tiff$',
+        'skip': r'(indica|nokeyframe\.ome\.tiff$)',
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
         'read': r'(\.(ptif|scn|svs|tif.*|qptiff)|[-0-9a-f]{36}\.dcm)$',
-        'noread': r'(DDX58_AXL|G10-3_pelvis_crop|landcover_sample|US_Geo\.|imagej)',
+        'noread': r'(DDX58_AXL|G10-3_pelvis_crop|landcover_sample|US_Geo\.|imagej|indica)',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|ndpi|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm)$)' +  # noqa
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm|monochrome1.dcm)$)' +  # noqa
                   (r'|bad_axes' if sys.version_info < (3, 9) else '') +
                   r')',
+        'skip': r'indica' if sys.version_info < (3, 9) else '^$',
     },
     'vips': {
         'read': r'',
-        'noread': r'\.(nc|nd2|yml|yaml|json|czi|png|svs|scn|zarr\.db|zarr\.zip)$',
-        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)'  # noqa
+        'noread': r'(\.(nc|nd2|yml|yaml|json|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm|monochrome1.dcm)$',  # noqa
+        'skip': r'\.czi$',
+        'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)',  # noqa
     },
     'zarr': {'read': r'\.(zarr|zgroup|zattrs|db|zarr\.zip)$'},
 }
@@ -196,6 +199,7 @@ def testSourcesTilesAndMethods(filename, source):
     tileMetadata = ts.getMetadata()
     assert ts.metadata['sizeX'] == tileMetadata['sizeX']
     assert ts.bandCount == tileMetadata['bandCount']
+    assert ts.channelNames == tileMetadata.get('channels')
     utilities.checkTilesZXY(ts, tileMetadata)
     # All of these should succeed
     assert ts.getInternalMetadata() is not None
@@ -369,6 +373,26 @@ def testTileOverlapWithRegionOffset():
     assert firstTile['tile_overlap']['right'] == 200
 
 
+def testLazyTileWithScale():
+    imagePath = datastore.fetch('sample_Easy1.png')
+    ts = large_image.open(imagePath)
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=3)
+    assert tile['width'] == 31
+    assert tile['height'] == 256
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=4)
+    assert tile['width'] == 256
+    assert tile['height'] == 211
+    tile = ts.getSingleTile(
+        format=large_image.constants.TILE_FORMAT_NUMPY,
+        tile_size={'width': 256}, output={'maxWidth': 800}, tile_position=7)
+    assert tile['width'] == 31
+    assert tile['height'] == 211
+
+
 def testGetRegionAutoOffset():
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)
@@ -380,6 +404,30 @@ def testGetRegionAutoOffset():
         tile_size=dict(width=240, height=240),
         format=large_image.constants.TILE_FORMAT_NUMPY)
     assert np.all(region2 == region1)
+
+
+def testGetGeospatialRegion():
+    imagePath = datastore.fetch('sample_image.ptif')
+    source = large_image.open(imagePath)
+    assert not source.geospatial
+
+    source_projection = 'epsg:3857'
+    source_gcps = [
+        (-8579444.9288, 4699883.5582, 0, 0),
+        (-8579444.9288, 4709189.7664, 0, source.sizeY),
+        (-8568132.2486, 4709189.7664, source.sizeX, source.sizeY),
+    ]
+    target_projection = 'epsg:4326'
+    target_region = {
+        'left': -77.010351,
+        'top': 38.889638,
+        'right': -77.009847,
+        'bottom': 38.889968,
+    }
+    region, _ = source.getGeospatialRegion(
+        source_projection, source_gcps, target_projection, target_region, format='numpy',
+    )
+    assert region.shape == (62, 290, 3)
 
 
 @pytest.mark.parametrize((

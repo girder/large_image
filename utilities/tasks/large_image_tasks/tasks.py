@@ -94,6 +94,7 @@ def convert_image_job(job):
 
     from girder_jobs.constants import JobStatus
     from girder_jobs.models.job import Job
+    from girder_large_image.models.image_item import ImageItem
 
     from girder.constants import AccessType
     from girder.models.file import File
@@ -106,6 +107,8 @@ def convert_image_job(job):
     toFolder = kwargs.pop('toFolder', True)
     item = Item().load(kwargs.pop('itemId'), force=True)
     fileObj = File().load(kwargs.pop('fileId'), force=True)
+
+    mayHaveAdjacent = ImageItem().mayHaveAdjacentFiles(item)
     userId = kwargs.pop('userId', None)
     user = User().load(userId, force=True) if userId else None
     if toFolder:
@@ -131,7 +134,8 @@ def convert_image_job(job):
             try:
                 inputPath = File().getGirderMountFilePath(
                     fileObj,
-                    **({'preferFlat': True} if 'preferFlat' in inspect.signature(
+                    **({'preferFlat': True} if mayHaveAdjacent != 'local' and
+                        'preferFlat' in inspect.signature(
                         File.getGirderMountFilePath).parameters else {}))
             except Exception:
                 pass

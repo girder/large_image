@@ -2,7 +2,7 @@ import functools
 import pickle
 import threading
 import uuid
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import cachetools
 from typing_extensions import ParamSpec
@@ -100,7 +100,7 @@ def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
                     return self.cache[k]
             except KeyError:
                 pass  # key not found
-            except (ValueError, pickle.UnpicklingError):
+            except (ValueError, pickle.UnpicklingError, ModuleNotFoundError):
                 # this can happen if a different version of python wrote the record
                 pass
             v = func(self, *args, **kwargs)
@@ -122,10 +122,10 @@ def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
 
 
 class LruCacheMetaclass(type):
-    namedCaches: Dict[str, Any] = {}
-    classCaches: Dict[type, Any] = {}
+    namedCaches: dict[str, Any] = {}
+    classCaches: dict[type, Any] = {}
 
-    def __new__(metacls, name, bases, namespace, **kwargs):
+    def __new__(mcs, name, bases, namespace, **kwargs):
         # Get metaclass parameters by finding and removing them from the class
         # namespace (necessary for Python 2), or preferentially as metaclass
         # arguments (only in Python 3).
@@ -151,7 +151,7 @@ class LruCacheMetaclass(type):
         timeout = kwargs.get('cacheTimeout', timeout)
 
         cls = super().__new__(
-            metacls, name, bases, namespace)
+            mcs, name, bases, namespace)
         if not cacheName:
             cacheName = cls
 
@@ -260,7 +260,7 @@ class LruCacheMetaclass(type):
         return instance
 
 
-def getTileCache() -> Tuple[cachetools.Cache, Optional[threading.Lock]]:
+def getTileCache() -> tuple[cachetools.Cache, Optional[threading.Lock]]:
     """
     Get the preferred tile cache and lock.
 

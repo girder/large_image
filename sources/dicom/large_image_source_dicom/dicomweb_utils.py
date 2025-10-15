@@ -26,7 +26,10 @@ def get_dicomweb_metadata(client, study_uid, series_uid):
 
 def get_first_wsi_volume_metadata(client, study_uid, series_uid):
     # Find the first WSI Volume and return the DICOMweb metadata
-    from wsidicom.uid import WSI_SOP_CLASS_UID
+    try:
+        from pydicom.uid import VLWholeSlideMicroscopyImageStorage
+    except ImportError:
+        from wsidicom.uid import WSI_SOP_CLASS_UID as VLWholeSlideMicroscopyImageStorage
 
     image_type_tag = dicom_key_to_tag('ImageType')
     instance_uid_tag = dicom_key_to_tag('SOPInstanceUID')
@@ -46,7 +49,7 @@ def get_first_wsi_volume_metadata(client, study_uid, series_uid):
     volume_instance = None
     for instance in wsi_instances:
         class_type = instance.get(class_uid_tag, {}).get('Value')
-        if not class_type or class_type[0] != WSI_SOP_CLASS_UID:
+        if not class_type or class_type[0] != VLWholeSlideMicroscopyImageStorage:
             # Only look at WSI classes
             continue
 

@@ -28,5 +28,5 @@ class OpenslideGirderTileSource(OpenslideFileTileSource, GirderTileSource):
     cacheName = 'tilesource'
     name = 'openslide'
 
-    extensionsWithAdjacentFiles = {'mrxs'}
-    mimeTypesWithAdjacentFiles = {'image/mirax'}
+    extensionsWithAdjacentFiles = {'mrxs', 'dcm', 'dicom'}
+    mimeTypesWithAdjacentFiles = {'image/mirax', 'application/dicom'}

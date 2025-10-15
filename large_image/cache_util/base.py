@@ -1,7 +1,7 @@
 import hashlib
 import threading
 import time
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import cachetools
 
@@ -16,7 +16,7 @@ class BaseCache(cachetools.Cache):
             getsizeof: Optional[Callable[[_VT], float]] = None,
             **kwargs) -> None:
         super().__init__(maxsize=maxsize, getsizeof=getsizeof, **kwargs)
-        self.lastError: Dict[Tuple[Any, Callable], Dict[str, Any]] = {}
+        self.lastError: dict[tuple[Any, Callable], dict[str, Any]] = {}
         self.throttleErrors = 10  # seconds between logging errors
 
     def logError(self, err: Any, func: Callable, msg: str) -> None:
@@ -30,7 +30,7 @@ class BaseCache(cachetools.Cache):
         """
         curtime = time.time()
         key = (err, func)
-        if (curtime - self.lastError.get(key, {}).get('time', 0) > self.throttleErrors):
+        if curtime - self.lastError.get(key, {}).get('time', 0) > self.throttleErrors:
             skipped = self.lastError.get(key, {}).get('skipped', 0)
             if skipped:
                 msg += '  (%d similar messages)' % skipped
@@ -81,6 +81,6 @@ class BaseCache(cachetools.Cache):
         raise NotImplementedError
 
     @staticmethod
-    def getCache() -> Tuple[Optional['BaseCache'], threading.Lock]:
+    def getCache() -> tuple[Optional['BaseCache'], threading.Lock]:
         # return cache, cacheLock
         raise NotImplementedError

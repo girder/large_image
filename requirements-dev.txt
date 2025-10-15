@@ -29,9 +29,13 @@ girder-jobs>=3.0.3
 -e girder_annotation/.[compute]
 
 # Extras from main setup.py
-pylibmc>=1.5.1
 matplotlib
+tol-colors>=2.0.0
+pylibmc>=1.5.1
+redis
 simplejpeg
+ipyvue
+aiohttp
 
 # External dependencies
 pip>=9
