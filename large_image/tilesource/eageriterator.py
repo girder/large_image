@@ -174,14 +174,10 @@ class EagerIterator:
                 # If mask is a path, check if the path exists, attempt to open the image with PIL and convert to numpy array
                 if isinstance(mask, str) and os.path.exists(mask):
                     mask = np.array(Image.open(mask))
-                else:
-                    raise ValueError("Mask file path must exist")
-
-                # If mask is numpy array:q, use it to filter the tiles
-                if isinstance(mask, np.ndarray):
+                elif isinstance(mask, np.ndarray):
                     tiles = return_tile_slides_meeting_area_threshold(mask, self.slide_dimensions, tiles, area_threshold=area_threshold, threshold_mask=threshold_mask)
                 else:
-                    raise ValueError("Mask must be a numpy array")
+                    raise ValueError("Mask must be a file path that exists or a numpy array")
         elif output_mode == 'regions' and regions is not None:
             if isinstance(regions, list):
                 regions = np.array(regions)

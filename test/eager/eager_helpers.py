@@ -394,8 +394,11 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, out
     
     return eager_runs, non_eager_runs
 
+def run_multi_slide_performance_evaluation():
+    mrxs_dir = os.path.join("/scr/arosado/")
 
-def run_eager_iterator_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs'], output_file: str = "./performance_testing.json"):
+
+def run_eager_iterator_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs', '.ndpi'], output_file: str = "./performance_testing.json"):
     # Make directory for output file if it doesn't exist
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
