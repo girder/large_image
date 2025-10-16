@@ -513,6 +513,14 @@ class LargeImagePlugin(GirderPlugin):
 
     def load(self, info):
         try:
+            # the mapnik binary files can complain about TLS exhaustion if they
+            # aren't loaded early.  This seems to be somehow slightly
+            # intractable in linux, so just load them now, but fail quietly
+            # since they are optional
+            import large_image_source_mapnik  # noqa
+        except Exception:
+            pass
+        try:
             getPlugin('worker').load(info)
         except Exception:
             logger.debug('worker plugin is unavailable')
