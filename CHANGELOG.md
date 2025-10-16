@@ -11,6 +11,7 @@
 
 - Increase the detail threshold for large annotations ([#1995](../../pull/1995))
 - Update to work with tol-colors >= 2 ([#2000](../../pull/2000))
+- Load some sources earlier in Girder ([#2004](../../pull/2004))
 
 ### Bug Fixes
 
