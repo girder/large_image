@@ -6,6 +6,7 @@
 
 - Remove locking in reading nd2 tiles ([#1977](../../pull/1977))
 - Get a pixel from multiple frames in a single REST call ([#2002](../../pull/2002))
+- Add another index to speed up deleting large images in Girder ([#2005](../../pull/2005))
 
 ### Changes
 
