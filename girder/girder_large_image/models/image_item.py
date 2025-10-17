@@ -61,6 +61,18 @@ class ImageItem(Item):
                 ('isLargeImageData', pymongo.ASCENDING),
                 ('thumbnailKey', pymongo.ASCENDING),
             ], {}),
+            ([
+                ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageThumbnail', pymongo.ASCENDING),
+                ('_id', pymongo.DESCENDING),
+            ], {}),
+            ([
+                ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageData', pymongo.ASCENDING),
+                ('_id', pymongo.DESCENDING),
+            ], {}),
         ])
 
     def checkForDocumentDB(self):
