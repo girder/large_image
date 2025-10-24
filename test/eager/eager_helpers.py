@@ -8,7 +8,7 @@ import multiprocessing
 
 import h5py
 from pathlib import Path
-from typing import Callable, Union, Any, Iterable
+from typing import Callable, Union, Any, Iterable, Optional
 
 import pytest
 from matplotlib import pyplot as plt
@@ -17,6 +17,7 @@ import albumentations as A
 import numpy as np
 import torch
 from torch.nn.functional import pad
+from torchvision.transforms import v2
 
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb, padding
@@ -64,6 +65,13 @@ def setup_inference_model(performance_type: str, compile_model: bool = False, cu
     
     return model
 
+def calculate_batch_retreival_time(start_iterator_retreival_time: float, end_batch_retreival_time: float, end_inference_times: list[float]):
+    if len(end_inference_times) == 0:
+        return end_batch_retreival_time - start_iterator_retreival_time
+    elif len(end_inference_times) > 0:
+        last_batch_retreival_time = end_inference_times[-1]
+        return end_batch_retreival_time - last_batch_retreival_time
+
 def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_iterator: Iterable, cuda_device: str = 'cuda:0', **kwargs):
     batch_images = []
     image_shape = None
@@ -82,6 +90,10 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
         transformed_image = kwargs['transform'](image)
         return transformed_image
     
+    inference_times = []
+    end_inference_times = []
+    batch_retreival_times = []
+    start_iterator_retreival_time = time.time()
     with torch.inference_mode():
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
@@ -90,11 +102,18 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
             transformed_image = preprocess_image(image, image_shape)
             batch_images.append(transformed_image)
             if len(batch_images) == batch_size:
+                end_batch_retreival_time = time.time()
+                batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, end_inference_times)
+                batch_retreival_times.append(batch_retreival_time)
                 batch_images = torch.stack(batch_images)
                 batch_images = batch_images.to(cuda_device)
+                start_inference_time = time.time()
                 output = model(batch_images)
+                end_inference_time = time.time()
+                inference_times.append(end_inference_time - start_inference_time)
                 del batch_images
                 batch_images = []
+                end_inference_times.append(end_inference_time)
 
         if len(batch_images) > 0:
             batch_images = torch.stack(batch_images)
@@ -103,34 +122,49 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
             del batch_images
             batch_images = []
     
-    return True
+    return batch_retreival_times, inference_times
 
 def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
     if without_cache:
-        setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
-        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time)
+        setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
+        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
-    setup_time, process_time = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
-    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time)
+    setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
+    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
     return performance_data
 
 def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_iter: Iterable, cuda_device: str = 'cuda:0'):
+    inference_times = []
+    end_inference_times = []
+    batch_retreival_times = []
+    start_iterator_retreival_time = time.time()
     with torch.inference_mode():
         for batch in eager_iter:
+            end_batch_retreival_time = time.time()
+            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, end_inference_times)
+            batch_retreival_times.append(batch_retreival_time)
             batch_images = batch['tile'].view()
+            start_inference_time = time.time()
             batch_images = torch.tensor(batch_images)
             batch_images = batch_images.to(cuda_device)
             output = model(batch_images)
+            end_inference_time = time.time()
+            inference_times.append(end_inference_time - start_inference_time)
+            end_inference_times.append(end_inference_time)
             del batch_images
 
-        return True
+        return batch_retreival_times, inference_times
 
 def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
     clear_cache()
+
+    batch_retreival_times = []
+    write_times = []
+    inference_times = []
     
     # Set caching
     if without_cache:
@@ -160,43 +194,72 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
     tile_iterator = tile_source.tileIterator(**kwargs)
     setup_time = time.time() - start_time
     
+    start_iterator_retreival_time = time.time()
     if performance_type == 'read':
         for tile_dict in tile_iterator:
-                image = tile_dict['tile']
+            image = tile_dict['tile']
+            end_batch_retreival_time = time.time()
+            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
+            batch_retreival_times.append(batch_retreival_time)
+                
     elif performance_type == 'transform':
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
+            end_batch_retreival_time = time.time()
+            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
+            batch_retreival_times.append(batch_retreival_time)
     elif performance_type == 'inference':
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
+            end_batch_retreival_time = time.time()
+            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
+            batch_retreival_times.append(batch_retreival_time)
     elif performance_type == 'write':
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
+            end_batch_retreival_time = time.time()
             plt.imsave("./image_{}_{}.png".format(tile_dict['tile_position']['region_x'], tile_dict['tile_position']['region_y']), image)
+            write_image_time = time.time() - end_batch_retreival_time
+            write_times.append(write_image_time)
+            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
+            batch_retreival_times.append(batch_retreival_time)
     elif performance_type == 'pytorch_transform':
         for tile_dict in tile_iterator:
             image = rgba2rgb(tile_dict['tile'])
             transformed_image = kwargs['transform'](image)
+            end_batch_retreival_time = time.time()
+            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
+            batch_retreival_times.append(batch_retreival_time)
     elif performance_type == 'albumentations_transform':
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
             transformed_image = kwargs['transform'](image=image)
+            end_batch_retreival_time = time.time()
+            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
+            batch_retreival_times.append(batch_retreival_time)
     elif performance_type == 'write_multiprocessing':
         images_to_save = []
+
+        def save_image(image_to_save):
+            start_save_time = time.time()
+            plt.imsave(images_to_save[0], images_to_save[1])
+            end_save_time = time.time()
+            return end_save_time - start_save_time
         
         for tile_dict in tile_iterator:
             images_to_save.append(["./image_{}_{}.png".format(tile_dict['tile_position']['region_x'], tile_dict['tile_position']['region_y']), tile_dict['tile']])
         
         with multiprocessing.Pool(processes=16) as pool:
-            pool.starmap(plt.imsave, images_to_save)
+            write_times = pool.starmap(save_image, images_to_save)
             pool.close()
             pool.join()
+        
     elif performance_type == 'inference_sobel':
-        model_output = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
+        batch_retreival_times, inference_times = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
     elif performance_type == 'inference_efficientnetb0':
-        model_output = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
+        batch_retreival_times, inference_times = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
     elif performance_type == 'inference_uni2':
-        model_output = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
+        batch_retreival_times, inference_times = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
 
     process_time = time.time() - start_time
 
@@ -204,12 +267,16 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
     del tile_iterator
     del tile_source
     del model
+    
+    return setup_time, process_time, batch_retreival_times, inference_times, write_times
 
-    return setup_time, process_time
-
-def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
+def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
     # Clear all caches for fair comparison
     clear_cache()
+
+    batch_retreival_times = []
+    inference_times = []
+    write_times = []
 
     model = setup_inference_model(performance_type, compile_model)
 
@@ -273,11 +340,11 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
             del batch_images
     # Run read with sobel
     elif performance_type == 'inference_sobel':
-        perform_eager_inference_with_pytorch_model(model, eager_iter)
+        batch_retreival_times, inference_times = perform_eager_inference_with_pytorch_model(model, eager_iter)
     elif performance_type == "inference_efficientnetb0":
-        perform_eager_inference_with_pytorch_model(model, eager_iter)
+        batch_retreival_times, inference_times = perform_eager_inference_with_pytorch_model(model, eager_iter)
     elif performance_type == 'inference_uni2':
-        perform_eager_inference_with_pytorch_model(model, eager_iter)        
+        batch_retreival_times, inference_times = perform_eager_inference_with_pytorch_model(model, eager_iter)        
 
     performance_time = time.time() - start_time
 
@@ -285,7 +352,7 @@ def run_eager_read_performance_evaluation(file_path: str, without_cache: bool = 
     del tile_source
     del model
 
-    return setup_time, performance_time
+    return setup_time, performance_time, batch_retreival_times, inference_times, write_times
 
 
 def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
@@ -294,12 +361,12 @@ def run_eager_performance_evaluation(file_path: str, without_cache: bool = False
 
     # Test performance with default resolution without caching
     if without_cache:
-        setup_time, process_time = run_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, **kwargs)
-        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time)
+        setup_time, process_time, batch_retreival_times, inference_times, write_times = run_eager_task_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, **kwargs)
+        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
     # Test read only performance with cache
-    setup_time, process_time = run_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, **kwargs)
-    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time)
+    setup_time, process_time, batch_retreival_times, inference_times, write_times = run_eager_task_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, **kwargs)
+    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
     return performance_data
 
@@ -315,6 +382,8 @@ def add_default_wsi_dimensions(performance_data: dict, file_path: str):
     target_dimensions['mm_x'] = source.getMetadata()['mm_x']
     target_dimensions['mm_y'] = source.getMetadata()['mm_y']
     target_dimensions['magnification'] = source.getMetadata()['magnification']
+    target_dimensions['levels'] = source.getMetadata()['levels']
+    target_dimensions['band_count'] = source.getMetadata()['bandCount']
 
     performance_data['file_dimensions'] = target_dimensions.copy()
 
@@ -333,36 +402,142 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         process_times_with_cache = []
         process_times_without_cache = []
 
+        run_inference_times_with_cache = []
+        run_inference_times_without_cache = []
+        run_batch_retreival_times_with_cache = []
+        run_batch_retreival_times_without_cache = []
+        run_write_times_with_cache = []
+        run_write_times_without_cache = []
+
+        aggregated_inference_times_with_cache = np.array([])
+        aggregated_inference_times_without_cache = np.array([])
+        aggregated_batch_retreival_times_with_cache = np.array([])
+        aggregated_batch_retreival_times_without_cache = np.array([])
+        aggregated_write_times_with_cache = np.array([])
+        aggregated_write_times_without_cache = np.array([])
+
+        f.attrs['tile_width'] = runs[0]['file_dimensions']['tile_width']
+        f.attrs['tile_height'] = runs[0]['file_dimensions']['tile_height']
+        f.attrs['x'] = runs[0]['file_dimensions']['x']
+        f.attrs['y'] = runs[0]['file_dimensions']['y']
+        f.attrs['magnification'] = runs[0]['file_dimensions']['magnification']
+        f.attrs['levels'] = runs[0]['file_dimensions']['levels']
+        f.attrs['band_count'] = runs[0]['file_dimensions']['band_count']
+
+        output_data = {}
+
         # aggregate runs
         for run in runs:
             if 'with_cache' in run:
                 setup_times_with_cache.append(run['with_cache']['setup_time'])
                 process_times_with_cache.append(run['with_cache']['process_time'])
+
+                if 'inference_times' in run['with_cache']:
+                    run_inference_times_with_cache.append(run['with_cache']['inference_times'])
+                    aggregated_inference_times_with_cache = np.concatenate([aggregated_inference_times_with_cache, run['with_cache']['inference_times']])
+                if 'batch_retreival_times' in run['with_cache']:
+                    run_batch_retreival_times_with_cache.append(run['with_cache']['batch_retreival_times'])
+                    aggregated_batch_retreival_times_with_cache = np.concatenate([aggregated_batch_retreival_times_with_cache, run['with_cache']['batch_retreival_times']])
+                if 'write_times' in run['with_cache']:
+                    run_write_times_with_cache.append(run['with_cache']['write_times'])
+                    aggregated_write_times_with_cache = np.concatenate([aggregated_write_times_with_cache, run['with_cache']['write_times']])
+
             if 'without_cache' in run:
                 setup_times_without_cache.append(run['without_cache']['setup_time'])
                 process_times_without_cache.append(run['without_cache']['process_time'])
 
+                if 'inference_times' in run['without_cache']:
+                    run_inference_times_without_cache.append(run['without_cache']['inference_times'])
+                    aggregated_inference_times_without_cache = np.concatenate([aggregated_inference_times_without_cache, run['without_cache']['inference_times']])
+                if 'batch_retreival_times' in run['without_cache']:
+                    run_batch_retreival_times_without_cache.append(run['without_cache']['batch_retreival_times'])
+                    aggregated_batch_retreival_times_without_cache = np.concatenate([aggregated_batch_retreival_times_without_cache, run['without_cache']['batch_retreival_times']])
+                if 'write_times' in run['without_cache']:
+                    run_write_times_without_cache.append(run['without_cache']['write_times'])
+                    aggregated_write_times_without_cache = np.concatenate([aggregated_write_times_without_cache, run['without_cache']['write_times']])
+
         if len(setup_times_with_cache) > 0:
             setup_times_with_cache = np.array(setup_times_with_cache)
-            f.create_dataset('setup_times_with_cache', data=setup_times_with_cache)
+            output_data['setup_times_with_cache'] = setup_times_with_cache
         if len(process_times_with_cache) > 0:
             process_times_with_cache = np.array(process_times_with_cache)
-            f.create_dataset('process_times_with_cache', data=process_times_with_cache)
+            output_data['process_times_with_cache'] = process_times_with_cache
         if len(setup_times_without_cache) > 0:
             setup_times_without_cache = np.array(setup_times_without_cache)
-            f.create_dataset('setup_times_without_cache', data=setup_times_without_cache)
+            output_data['setup_times_without_cache'] = setup_times_without_cache
         if len(process_times_without_cache) > 0:
             process_times_without_cache = np.array(process_times_without_cache)
-            f.create_dataset('process_times_without_cache', data=process_times_without_cache)
+            output_data['process_times_without_cache'] = process_times_without_cache
 
-    return setup_times_with_cache, process_times_with_cache, setup_times_without_cache, process_times_without_cache
+        if len(run_inference_times_with_cache) > 0:
+            output_data['run_inference_times_with_cache'] = run_inference_times_with_cache
+            output_data['aggregated_inference_times_with_cache'] = aggregated_inference_times_with_cache
+        if len(run_batch_retreival_times_with_cache) > 0:
+            output_data['run_batch_retreival_times_with_cache'] = run_batch_retreival_times_with_cache
+            output_data['aggregated_batch_retreival_times_with_cache'] = aggregated_batch_retreival_times_with_cache
+        if len(run_write_times_with_cache) > 0:
+            output_data['run_write_times_with_cache'] = run_write_times_with_cache
+            output_data['aggregated_write_times_with_cache'] = aggregated_write_times_with_cache
+
+        if len(run_inference_times_without_cache) > 0:
+            output_data['run_inference_times_without_cache'] = run_inference_times_without_cache
+            output_data['aggregated_inference_times_without_cache'] = aggregated_inference_times_without_cache
+        if len(run_batch_retreival_times_without_cache) > 0:
+            output_data['run_batch_retreival_times_without_cache'] = run_batch_retreival_times_without_cache
+            output_data['aggregated_batch_retreival_times_without_cache'] = aggregated_batch_retreival_times_without_cache
+        if len(run_write_times_without_cache) > 0:
+            output_data['run_write_times_without_cache'] = run_write_times_without_cache
+            output_data['aggregated_write_times_without_cache'] = aggregated_write_times_without_cache
+
+        for key in output_data:
+            split_key = key.split('_')
+            if split_key[0] == 'run':
+                runs_data = output_data[key]
+                for n in range(len(runs_data)):
+                    if runs_data[n].shape[0] > 0:
+                        data = runs_data[n]
+                        if data.shape[0] > 0:
+                            f.create_dataset(f'{n}_{key}', data=runs_data[n])
+        
+            else:
+                data = output_data[key]
+                f.create_dataset(f'{key}', data=output_data[key])        
+
+    return output_data
 
 
-def add_performance_data(performance_data: dict, target_dimensions: dict, performance_type: str, setup_time: float, process_time: float):
+def add_performance_data(performance_data: dict, target_dimensions: dict, performance_type: str, setup_time: float, process_time: float, batch_retreival_times: Optional[list[float]] = [], inference_times: Optional[list[float]] = [], write_times: Optional[list[float]] = []):
     performance_entry = {}
     performance_entry['target_dimensions'] = target_dimensions
     performance_entry['setup_time'] = setup_time
     performance_entry['process_time'] = process_time
+    
+    if len(batch_retreival_times) > 0:
+        batch_retreival_times_array = np.array(batch_retreival_times)
+        avg_batch_retreival_time = np.mean(batch_retreival_times_array)
+        std_batch_retreival_time = np.std(batch_retreival_times_array)
+
+        performance_entry['inference_times'] = batch_retreival_times_array
+        performance_entry['avg_inference_time'] = avg_batch_retreival_time
+        performance_entry['std_inference_time'] = std_batch_retreival_time
+    
+    if len(inference_times) > 0:
+        inference_times_array = np.array(inference_times)
+        avg_inference_time = np.mean(inference_times_array)
+        std_inference_time = np.std(inference_times_array)
+
+        performance_entry['batch_retreival_times'] = inference_times_array
+        performance_entry['avg_batch_retreival_time'] = avg_inference_time        
+        performance_entry['std_batch_retreival_time'] = std_inference_time
+
+    if len(write_times) > 0:
+        write_times_array = np.array(write_times)
+        avg_write_time = np.mean(write_times_array)
+        std_write_time = np.std(write_times_array)
+
+        performance_entry['write_times'] = write_times_array
+        performance_entry['avg_write_time'] = avg_write_time
+        performance_entry['std_write_time'] = std_write_time
 
     performance_data[performance_type] = performance_entry
 
@@ -398,10 +573,9 @@ def run_multi_slide_performance_evaluation():
     mrxs_dir = os.path.join("/scr/arosado/")
 
 
-def run_eager_iterator_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs', '.ndpi'], output_file: str = "./performance_testing.json"):
+def run_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs', '.ndpi'], performance_types: list[str] = ['read', 'write', 'inference_sobel', 'inference_efficientnetb0', 'inference_uni2'], output_dir: str = "./performance", n_runs: int=1, **kwargs):
     # Make directory for output file if it doesn't exist
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
+    os.makedirs(output_dir, exist_ok=True)
     
     # Search through the directory for files with the given extensions
     for root, dirs, files in os.walk(directory):
@@ -411,12 +585,100 @@ def run_eager_iterator_performance_testing_on_directory(directory: str, file_ext
                 file_ext = os.path.splitext(file)[1]
                 file_path = os.path.join(root, file)
                 file_size = os.path.getsize(file_path)
+                base_filename = os.path.basename(file_path)
 
-                performance_data = run_eager_performance_evaluation(file_path)
-                
-                pass
-                
+                if file_ext in [".ndpi", ".mrxs"]:
+                    with_tiff_source = False
+                else:
+                    with_tiff_source = True
 
+                # Define output paths and check if they exist
+                eager_sobel_output_path = os.path.join(output_dir, f'{base_filename}_eager_performance_sobel.h5')
+                eager_efficientnetb0_output_path = os.path.join(output_dir, f'{base_filename}_eager_performance_efficientnetb0.h5')
+                eager_uni2_output_path = os.path.join(output_dir, f'{base_filename}_eager_performance_uni2.h5')
+                non_eager_sobel_output_path = os.path.join(output_dir, f'{base_filename}_non_eager_performance_sobel.h5')
+                non_eager_efficientnetb0_output_path = os.path.join(output_dir, f'{base_filename}_non_eager_performance_efficientnetb0.h5')
+                non_eager_uni2_output_path = os.path.join(output_dir, f'{base_filename}_non_eager_performance_uni2.h5')
+
+                if os.path.exists(eager_sobel_output_path):
+                    skip_eager_sobel = True
+                else:
+                    skip_eager_sobel = False
+                if os.path.exists(eager_efficientnetb0_output_path):
+                    skip_eager_efficientnetb0 = True
+                else:
+                    skip_eager_efficientnetb0 = False
+                if os.path.exists(eager_uni2_output_path):
+                    skip_eager_uni2 = True
+                else:
+                    skip_eager_uni2 = False
+                if os.path.exists(non_eager_sobel_output_path):
+                    skip_non_eager_sobel = True
+                else:
+                    skip_non_eager_sobel = False
+                if os.path.exists(non_eager_efficientnetb0_output_path):
+                    skip_non_eager_efficientnetb0 = True
+                else:
+                    skip_non_eager_efficientnetb0 = False
+                if os.path.exists(non_eager_uni2_output_path):
+                    skip_non_eager_uni2 = True
+                else:
+                    skip_non_eager_uni2 = False
+
+                if skip_eager_sobel and skip_eager_efficientnetb0 and skip_eager_uni2 and skip_non_eager_sobel and skip_non_eager_efficientnetb0 and skip_non_eager_uni2:
+                    print(f"Skipping performance evaluation for file: {file_path} because output files already exist")
+                    continue
+                
+                # Setup lists to track performance runs
+                eager_performance_sobel = []
+                eager_performance_efficientnetb0 = []
+                eager_performance_uni2 = []
+
+                non_eager_performance_sobel = []
+                non_eager_performance_efficientnetb0 = []
+                non_eager_performance_uni2 = []
+
+                print("Starting performance evaluation for file: ", file_path)
+
+                # Run performance evaluation for each run
+                for n in range(n_runs):                    
+                    # Do every type of inference for eager and non-eager
+                    if not skip_eager_sobel:
+                        print(f"Running eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                        eager_performance_sobel.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', **kwargs))
+                    if not skip_eager_efficientnetb0:
+                        print(f"Running eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                        eager_performance_efficientnetb0.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', **kwargs))
+                    if not skip_eager_uni2:
+                        print(f"Running eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                        eager_performance_uni2.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', **kwargs))
+
+                    if not skip_non_eager_sobel:
+                        print(f"Running non-eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                        non_eager_performance_sobel.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', **kwargs))
+                    if not skip_non_eager_efficientnetb0:
+                        print(f"Running non-eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                        non_eager_performance_efficientnetb0.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', **kwargs))
+                    if not skip_non_eager_uni2:
+                        print(f"Running non-eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                        non_eager_performance_uni2.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', **kwargs))
+
+                # Aggregate performance runs
+                if not skip_eager_sobel:
+                    aggregate_runs(eager_performance_sobel, eager_sobel_output_path)
+                if not skip_eager_efficientnetb0:
+                    aggregate_runs(eager_performance_efficientnetb0, eager_efficientnetb0_output_path)
+                if not skip_eager_uni2:
+                    aggregate_runs(eager_performance_uni2, eager_uni2_output_path)
+
+                if not skip_non_eager_sobel:
+                    aggregate_runs(non_eager_performance_sobel, non_eager_sobel_output_path)
+                if not skip_non_eager_efficientnetb0:
+                    aggregate_runs(non_eager_performance_efficientnetb0, non_eager_efficientnetb0_output_path)
+                if not skip_non_eager_uni2:
+                    aggregate_runs(non_eager_performance_uni2, non_eager_uni2_output_path)
+                    
+            
 def run_batch_size(tile_source: large_image.tilesource, batch_size: int=64):
     iterator = tile_source.eagerIterator(output_mode='tiles', batch=batch_size)
     for batch in iterator:
