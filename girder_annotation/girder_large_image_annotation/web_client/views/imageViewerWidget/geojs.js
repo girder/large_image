@@ -963,7 +963,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         _onMouseFeature: function (evt, overlay, overlayLayer) {
-            var properties = evt.data.properties || {};
+            var properties = (evt.data || {}).properties || {};
             var eventType;
 
             if (!this._eventTypes) {
