@@ -168,7 +168,7 @@ Heatmap
 ~~~~~~~
 
 A list of points with values that is interpreted as a heatmap so that
-near by values aggregate together when viewed.
+nearby values aggregate together when viewed.
 
 ::
 
@@ -295,12 +295,12 @@ a ``2x2`` affine matrix.
 Tiled pixelmap overlays
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Tiled pixelmap overlay annotations allow specifying a girder large
-image item to display on top of the base image to help represent
-categorical data. The specified large image overlay should be a
-lossless tiled image where pixel values represent category indices
-instead of colors. Data provided along with the ID of the image item
-is used to color the pixelmap based on the categorical data.
+Tiled pixelmap overlay annotations allow specifying a girder large image item
+to display on top of the base image to help represent categorical data.  This
+is often used with superpixels.  The specified large image overlay should be a
+lossless tiled image where pixel values represent category indices instead of
+colors. Data provided along with the ID of the image item is used to color the
+pixelmap based on the categorical data.
 
 The element must contain a ``values`` array. The indices of this
 array correspond to pixel values on the pixelmap, and the values are
