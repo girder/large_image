@@ -20,6 +20,7 @@
 - When overlaying many image annotations, some showed artifacts ([#1998](../../pull/1998))
 - Fix annotation caching with different users ([#1999](../../pull/1999))
 - Work around how bioformats handles DICOMs in Monochrome1 ([#1834](../../pull/1834))
+- Guard a missing data field in pixelmap annotation actions ([#2010](../../pull/2010), [#2011](../../pull/2011))
 
 ## 1.33.3
 
