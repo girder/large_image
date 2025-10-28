@@ -161,7 +161,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             extraArg = extraArg || '';
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
-            // DWM::
             if (_.isFunction(layerParams.url) || levelDifference) {
                 layerParams.url = (x, y, z) => getApiRoot() + '/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG` + extraArg;
             } else {
@@ -180,12 +179,15 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const boundaries = pixelmapElement.boundaries;
             layerParams.style = {
                 color: (d, i) => {
-                    if (d < 0 || d >= categoryMap.length) {
+                    if (d < 0 || d >= categoryMap.length || d === undefined) {
                         console.warn(`No category found at index ${d} in the category map.`);
                         return 'rgba(0, 0, 0, 0)';
                     }
                     let color;
                     const category = categoryMap[d];
+                    if (!category) {
+                        return 'rgba(0, 0, 0, 0)';
+                    }
                     if (boundaries) {
                         color = (i % 2 === 0) ? category.fillColor : category.strokeColor;
                     } else {
