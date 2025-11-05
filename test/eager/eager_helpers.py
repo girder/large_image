@@ -35,7 +35,6 @@ def clear_cache():
     else:
         print(f"Disk cache cleared")
 
-    # Collect garbage for clearing all LRU cache as well
     gc.collect()
 
     # All objects collected that have LRU cache
@@ -51,9 +50,15 @@ def clear_cache():
     from large_image.cache_util import cachesClear
     cachesClear() 
 
+    # Clear GPU
+    torch.cuda.empty_cache()
+
+    # Collect garbage for clearing all LRU cache as well
+    gc.collect()
+
     print(f"LRU cache cleared")
 
-def setup_inference_model(performance_type: str, compile_model: bool = False, cuda_device: str = 'cuda:0'):
+def setup_inference_model(performance_type: str, compile_model: bool = True, cuda_device: str = 'cuda:0'):
     model = None
     # Set sobel model if needed
     if performance_type == 'inference_sobel':
@@ -270,7 +275,7 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
     
     return setup_time, process_time, batch_retreival_times, inference_times, write_times
 
-def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
+def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
     # Clear all caches for fair comparison
     clear_cache()
 
@@ -573,14 +578,19 @@ def run_multi_slide_performance_evaluation():
     mrxs_dir = os.path.join("/scr/arosado/")
 
 
-def run_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs', '.ndpi'], performance_types: list[str] = ['read', 'write', 'inference_sobel', 'inference_efficientnetb0', 'inference_uni2'], output_dir: str = "./performance", n_runs: int=1, **kwargs):
+def run_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs', '.ndpi'], performance_types: list[str] = ['read', 'write', 'inference_sobel', 'inference_efficientnetb0', 'inference_uni2'], output_dir: str = "./performance", n_runs: int=1, n_files: int=1, **kwargs):
     # Make directory for output file if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
+
+    file_count = 0
     
     # Search through the directory for files with the given extensions
     for root, dirs, files in os.walk(directory):
         for file in files:
+            if file_count >= n_files:
+                break
             if file.endswith(tuple(file_extensions)):
+                file_count += 1
                 # Get information about the file
                 file_ext = os.path.splitext(file)[1]
                 file_path = os.path.join(root, file)
@@ -652,7 +662,6 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                     if not skip_eager_uni2:
                         print(f"Running eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
                         eager_performance_uni2.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', **kwargs))
-
                     if not skip_non_eager_sobel:
                         print(f"Running non-eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
                         non_eager_performance_sobel.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', **kwargs))
@@ -677,6 +686,8 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                     aggregate_runs(non_eager_performance_efficientnetb0, non_eager_efficientnetb0_output_path)
                 if not skip_non_eager_uni2:
                     aggregate_runs(non_eager_performance_uni2, non_eager_uni2_output_path)
+
+                print(f"Finished performance evaluation for file: {file_path}")
                     
             
 def run_batch_size(tile_source: large_image.tilesource, batch_size: int=64):

@@ -4,7 +4,7 @@ from timm.data import resolve_data_config
 from timm.data.transforms_factory import create_transform
 from huggingface_hub import login
 
-def make_huggingface_uni2_model(compile_model: bool = False, cuda_device: str = 'cuda:0'):
+def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
     # pretrained=True needed to load UNI2-h weights (and download weights for the first time)
     timm_kwargs = {
                 'img_size': 224, 

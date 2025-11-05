@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from torchvision import io
 
-def make_sobel_model(compile_model: bool = False, cuda_device: str = 'cuda:0'):
+def make_sobel_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
     model = SobelFilter()
 
     if compile_model:
