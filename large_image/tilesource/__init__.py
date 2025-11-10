@@ -271,6 +271,8 @@ def listSources(
     for key, source in availableSources.items():
         if hasattr(source, 'addKnownExtensions'):
             source.addKnownExtensions()
+        if hasattr(source, 'addKnownMimetypes'):
+            source.addKnownMimetypes()
         results['sources'][key] = {
             'extensions': {
                 k or 'default': v for k, v in source.extensions.items()},
