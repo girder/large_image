@@ -14,6 +14,7 @@
 - Update to work with tol-colors >= 2 ([#2000](../../pull/2000))
 - Load some sources earlier in Girder ([#2004](../../pull/2004))
 - Increase number of annotation elements processed for metadata plots ([#2012](../../pull/2012))
+- More listed mimetypes ([#2013](../../pull/2013))
 
 ### Bug Fixes
 

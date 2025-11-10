@@ -23,7 +23,8 @@ import PIL.ImageDraw
 from .. import config, exceptions
 from ..cache_util import getTileCache, methodcache, strhash
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
-                         SourcePriority, TileInputUnits, TileOutputMimeTypes,
+                         ExtraExtensionsToMimetypes, SourcePriority,
+                         TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat)
 from . import utilities
 from .jupyter import IPyLeafletMixin
@@ -2763,3 +2764,13 @@ class FileTileSource(TileSource):
             return True
         except exceptions.TileSourceError:
             return False
+
+    @classmethod
+    def addKnownMimetypes(cls):
+        """
+        Based on already listed extensions and a set of common extension-
+        mimetype list, add mimetypes if they do not already exist.
+        """
+        for ext, mimetype in ExtraExtensionsToMimetypes.items():
+            if ext in cls.extensions and mimetype not in cls.mimeTypes:
+                cls.mimeTypes[mimetype] = SourcePriority.IMPLICIT_LOW
