@@ -6,12 +6,15 @@
 
 - Remove locking in reading nd2 tiles ([#1977](../../pull/1977))
 - Get a pixel from multiple frames in a single REST call ([#2002](../../pull/2002))
+- Add another index to speed up deleting large images in Girder ([#2005](../../pull/2005))
 
 ### Changes
 
 - Increase the detail threshold for large annotations ([#1995](../../pull/1995))
 - Update to work with tol-colors >= 2 ([#2000](../../pull/2000))
 - Load some sources earlier in Girder ([#2004](../../pull/2004))
+- Increase number of annotation elements processed for metadata plots ([#2012](../../pull/2012))
+- More listed mimetypes ([#2013](../../pull/2013))
 
 ### Bug Fixes
 
@@ -19,6 +22,7 @@
 - When overlaying many image annotations, some showed artifacts ([#1998](../../pull/1998))
 - Fix annotation caching with different users ([#1999](../../pull/1999))
 - Work around how bioformats handles DICOMs in Monochrome1 ([#1834](../../pull/1834))
+- Guard a missing data field in pixelmap annotation actions ([#2010](../../pull/2010), [#2011](../../pull/2011))
 
 ## 1.33.3
 
