@@ -31,8 +31,9 @@ class TileSourceMalformedError(TileSourceError):
 
 
 class TileSourceFileNotFoundError(TileSourceError, FileNotFoundError):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(errno.ENOENT, *args, **kwargs)
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
+        self.errno = errno.ENOENT
 
 
 class TileCacheError(TileGeneralError):
