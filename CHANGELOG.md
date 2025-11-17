@@ -15,6 +15,7 @@
 - Load some sources earlier in Girder ([#2004](../../pull/2004))
 - Increase number of annotation elements processed for metadata plots ([#2012](../../pull/2012))
 - More listed mimetypes ([#2013](../../pull/2013))
+- Make it easier to rebind annotation models ([#2014](../../pull/2014))
 
 ### Bug Fixes
 
