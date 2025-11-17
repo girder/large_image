@@ -155,7 +155,7 @@ export default {
         },
         styleToAutoRange(band) {
             band = Object.assign({}, band); // new reference
-            if (band.min && band.min.includes('min:')) {
+            if (band.min && band.min.toString().includes('min:')) {
                 band.autoRange = parseFloat(band.min.replace('min:', '')) * 100;
                 delete band.min;
                 delete band.max;

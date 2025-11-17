@@ -17,6 +17,7 @@
 import math
 import os
 import threading
+import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _importlib_version
 
@@ -49,6 +50,9 @@ def _lazyImport():
         except ImportError:
             msg = 'nd2 module not found.'
             raise TileSourceError(msg)
+        # the dask module emits a warning about an open handle even those we
+        # close file handles properly.  Suppress them
+        warnings.filterwarnings('ignore', category=UserWarning, module='.*dask.*')
 
 
 def namedtupleToDict(obj):
@@ -138,7 +142,7 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         # We use dask to allow lazy reading of large images
         try:
             self._nd2array = self._nd2.to_dask(copy=False, wrapper=False)
-        except (TypeError, ValueError, OSError) as exc:
+        except (TypeError, ValueError, OSError, NotImplementedError) as exc:
             self.logger.debug('Failed to read nd2 file: %s', exc)
             msg = 'File cannot be opened via the nd2 source.'
             raise TileSourceError(msg)
@@ -317,9 +321,15 @@ class ND2FileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             fc //= self._nd2sizes[axis]
             tileframe = tileframe[fp // fc]
             fp = fp % fc
-        with self._tileLock:
-            # Have dask use single-threaded since we are using a lock anyway.
-            tile = tileframe[y0:y1:step, x0:x1:step].compute(scheduler='single-threaded').copy()
+        # We had done
+        #   with self._tileLock:
+        #       # Have dask use single-threaded since we are using a lock anyway.
+        #       tile = tileframe[y0:y1:step, x0:x1:step].compute(scheduler='single-threaded').copy()
+        # but this is no longer necessary.  We could limit the number of thread
+        # workers used by dask, but this doesn't actually change much.  We
+        # could also use scheduler='processes', but this fails to close handles
+        # a certain way and prints a lot of warnings and is slower.
+        tile = tileframe[y0:y1:step, x0:x1:step].compute().copy()
         return self._outputTile(tile, TILE_FORMAT_NUMPY, x, y, z,
                                 pilImageAllowed, numpyAllowed, **kwargs)
 

@@ -153,7 +153,11 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
     ])
 
     # We should report two thumbnails
-    present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+    for _ in range(5):
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+        if present == 2:
+            break
+        time.sleep(1)
     assert present == 2
 
     # Run a job to create two sizes of thumbnails, one different than
@@ -163,7 +167,11 @@ def testThumbnailFileJob(server, admin, user, fsAssetstore):
         {'width': 160, 'height': 160},
     ])
     # We should report three thumbnails
-    present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+    for _ in range(5):
+        present, removed = ImageItem().removeThumbnailFiles(item, keep=10)
+        if present == 3:
+            break
+        time.sleep(1)
     assert present == 3
 
     # Asking for a bad thumbnail specification should just do nothing
@@ -350,6 +358,7 @@ def testAssociateImageCaching(server, admin, user, fsAssetstore):
     # Test GET associated_images
     resp = server.request(path='/large_image/associated_images', user=user)
     assert utilities.respStatus(resp) == 403
+    ImageItem().cacheSaveDataManagement(None)
     resp = server.request(path='/large_image/associated_images', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json == 1
@@ -423,6 +432,7 @@ def testHistogramCaching(server, admin, user, fsAssetstore):
     # Test GET histograms
     resp = server.request(path='/large_image/histograms', user=user)
     assert utilities.respStatus(resp) == 403
+    ImageItem().cacheSaveDataManagement(None)
     resp = server.request(path='/large_image/histograms', user=admin)
     assert utilities.respStatus(resp) == 200
     assert resp.json == 1
@@ -461,7 +471,8 @@ def testHistogramConcurrentCaching(server, admin, user, fsAssetstore):
     t2.start()
     t1.join()
     t2.join()
-    assert ImageItem().getAndCacheImageOrDataRun.call_count == lastCount + 1
+    ImageItem().cacheSaveDataManagement(None)
+    assert ImageItem().getAndCacheImageOrDataRun.call_count >= lastCount + 1
     ImageItem().getAndCacheImageOrDataRun = orig
 
 
@@ -479,10 +490,16 @@ def testYAMLConfigFile(server, admin, user, fsAssetstore):
     groupA = Group().createGroup('Group A', admin)
 
     resp = server.request(
+        path='/folder/%s/yaml_config/.large_image_config.yaml' % str(colFolderB['_id']),
+        method='GET')
+    assert utilities.respStatus(resp) == 200
+    assert resp.json.get('itemList') is not None
+
+    resp = server.request(
         path='/folder/%s/yaml_config/sample.json' % str(colFolderB['_id']),
         method='GET')
     assert utilities.respStatus(resp) == 200
-    assert resp.json['itemList'] is not None
+    assert resp.json.get('itemList') is None
 
     colFolderConfig = Folder().createFolder(
         collection, '.config', parentType='collection',

@@ -27,9 +27,10 @@ class SourcePriority(enum.IntEnum):
     LOWER = 6
     IMPLICIT_HIGH = 7
     IMPLICIT = 8
-    FALLBACK_HIGH = 9
-    FALLBACK = 10
-    MANUAL = 11  # This and higher values will never be selected automatically
+    IMPLICIT_LOW = 9
+    FALLBACK_HIGH = 10
+    FALLBACK = 11
+    MANUAL = 12  # This and higher values will never be selected automatically
 
 
 TILE_FORMAT_IMAGE = 'image'
@@ -38,6 +39,9 @@ TILE_FORMAT_NUMPY = 'numpy'
 
 
 NEW_IMAGE_PATH_FLAG = '__new_image__'
+
+
+PROJECTION_SENTINEL = '__default__'
 
 
 TileOutputMimeTypes = {
@@ -67,9 +71,24 @@ TileInputUnits = {
     'mag_pixels': 'mag_pixels',
     'magnification_pixel': 'mag_pixels',
     'magnification_pixels': 'mag_pixels',
+    'nm': 'nm',
+    'nanometer': 'nm',
+    'nanometers': 'nm',
+    'um': 'um',
+    'μm': 'um',
+    'micrometers': 'um',
+    'micrometer': 'um',
+    'microns': 'um',
+    'micron': 'um',
     'mm': 'mm',
     'millimeter': 'mm',
     'millimeters': 'mm',
+    'm': 'm',
+    'meter': 'm',
+    'meters': 'm',
+    'km': 'km',
+    'kilometer': 'km',
+    'kilometers': 'km',
     'fraction': 'fraction',
     'projection': 'projection',
     'proj': 'projection',
@@ -91,3 +110,50 @@ dtypeToGValue = {
     'I': 'uint',
 }
 GValueToDtype = {v: k for k, v in dtypeToGValue.items()}
+
+
+ExtraExtensionsToMimetypes = {
+    'adf': 'image/x-esri-grid',
+    'apng': 'image/apng',
+    'bil': 'image/x-envi-bil',
+    'bip': 'image/x-envi-bip',
+    'cr2': 'image/x-canon-cr2',
+    'dds': 'image/x-dds',
+    'dem': 'image/x-usgs-dem',
+    'ers': 'image/x-erdas-ers',
+    'exr': 'image/x-exr',
+    'fit': 'image/fits',
+    'fits': 'image/fits',
+    'flc': 'image/x-autodesk-flc',
+    'fli': 'image/x-autodesk-fli',
+    'flt': 'image/x-flt',
+    'grd': 'image/x-surfer-grd',
+    'hdr': 'image/x-hdr',
+    'img': 'image/x-erdas-hfa',
+    'lan': 'image/x-erdas-lan',
+    'lei': 'image/x-leica-lei',
+    'lif': 'image/x-leica-lif',
+    'lsm': 'image/x-zeiss-lsm',
+    'mng': 'image/x-mng',
+    'mrw': 'image/x-minolta-mrw',
+    'ndpi': 'image/x-ndpi',
+    'nef': 'image/x-nikon-nef',
+    'oib': 'image/x-olympus-oib',
+    'oir': 'image/x-olympus-oir',
+    'pbm': 'image/x-portable-bitmap',
+    'pgm': 'image/x-portable-graymap',
+    'pict': 'image/x-pict',
+    'pix': 'image/x-pcidsk',
+    'ppm': 'image/x-portable-pixmap',
+    'qoi': 'image/qoi',
+    'ras': 'image/x-cmu-raster',
+    'rgb': 'image/x-rgb',
+    'rgba': 'image/x-rgba',
+    'sid': 'image/x-mrsid',
+    'stk': 'image/x-metamorph-stk',
+    'svg': 'image/svg+xml',
+    'svs': 'image/x-svs',
+    'ter': 'image/x-terragen-terrain',
+    'zif': 'image/zif',
+    'zvi': 'image/x-zeiss-zvi',
+}

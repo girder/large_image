@@ -15,7 +15,7 @@
 #############################################################################
 
 import atexit
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 from .cache import (CacheProperties, LruCacheMetaclass, getTileCache,
                     isTileCacheSetup, methodcache, strhash)
@@ -32,7 +32,7 @@ try:
 except ImportError:
     RedisCache = None
 
-_cacheClearFuncs: List[Callable] = []
+_cacheClearFuncs: list[Callable] = []
 
 
 @atexit.register
@@ -66,7 +66,7 @@ def cachesClear(*args, **kwargs) -> None:
             pass
 
 
-def cachesInfo(*args, **kwargs) -> Dict[str, Dict[str, int]]:
+def cachesInfo(*args, **kwargs) -> dict[str, dict[str, int]]:
     """
     Report on each cache.
 
