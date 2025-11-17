@@ -82,7 +82,7 @@ const AnnotationModel = AccessControlledModel.extend({
 
     initialize() {
         if (!this.get('updated') && getCurrentUser()) {
-            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+            this.attributes.updated = (new Date()).toISOString(); // eslint-disable-line backbone/no-model-attributes
             this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
         }
         this._region = {
@@ -99,18 +99,20 @@ const AnnotationModel = AccessControlledModel.extend({
             this.get('annotation').elements || []
         );
         this._elements.annotation = this;
-
-        this.listenTo(this._elements, 'change add remove reset', () => {
-            // copy the object to ensure a change event is triggered
-            var annotation = _.extend({}, this.get('annotation'));
-
-            annotation.elements = this._elements.toJSON();
-            this.set('annotation', annotation);
-        });
+        this.bindListeners();
+    },
+    bindListeners: function () {
+        this.listenTo(this._elements, 'change add remove reset', this.handleChangeEvent);
         this.listenTo(this._elements, 'change add', this.handleElementChanged);
         this.listenTo(this._elements, 'remove', this.handleElementRemoved);
     },
+    handleChangeEvent: function () {
+        // copy the object to ensure a change event is triggered
+        var annotation = _.extend({}, this.get('annotation'));
 
+        annotation.elements = this._elements.toJSON();
+        this.set('annotation', annotation);
+    },
     handleElementChanged: function (element, collection, options) {
         if (!this._centroids) {
             return;
@@ -521,7 +523,7 @@ const AnnotationModel = AccessControlledModel.extend({
         let xhr = false;
         if (!this.isNew()) {
             if (getCurrentUser()) {
-                this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+                this.attributes.updated = (new Date()).toISOString(); // eslint-disable-line backbone/no-model-attributes
                 this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
             }
             xhr = restRequest({
