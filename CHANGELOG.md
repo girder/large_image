@@ -24,6 +24,7 @@
 - Fix annotation caching with different users ([#1999](../../pull/1999))
 - Work around how bioformats handles DICOMs in Monochrome1 ([#1834](../../pull/1834))
 - Guard a missing data field in pixelmap annotation actions ([#2010](../../pull/2010), [#2011](../../pull/2011))
+- Fixed an issue emitting geojson annotations with rotated rectangles and ellipses ([#2015](../../pull/2015))
 
 ## 1.33.3
 

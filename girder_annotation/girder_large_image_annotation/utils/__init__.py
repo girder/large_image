@@ -149,7 +149,7 @@ class AnnotationGeoJSON:
         sinr = math.sin(r)
         x -= cx
         y -= cy
-        return [x * cosr - y * sinr + cx, x * sinr + y * sinr + cy, z]
+        return [x * cosr - y * sinr + cx, x * sinr + y * cosr + cy, z]
 
     def circleType(self, element, geom, prop):
         x, y, z = element['center']
