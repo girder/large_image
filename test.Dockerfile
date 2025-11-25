@@ -109,6 +109,7 @@ RUN . ~/.bashrc && \
     nvm alias default 14 && \
     nvm use default && \
     cd /root/.nvm/versions/node/v14.21.3/lib && \
+    # upgrade packages to avoid security issues \
     npm install 'form-data@^2.5.5' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
     npm install 'cross-spawn@^6.0.6' && \
@@ -116,7 +117,7 @@ RUN . ~/.bashrc && \
     npm install 'http-cache-semantics@^4.1.1' && \
     npm install 'semver@^5.7.2' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
-    # ip package has an unaddressed HIGH CVE, ip-address is a direct sustitute \
+    # ip package has an unaddressed HIGH CVE, ip-address is a direct substitute \
     npm install --no-save ip-address && \
     rm -rf node_modules/ip && \
     mv node_modules/ip-address node_modules/ip && \
