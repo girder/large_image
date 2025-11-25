@@ -628,6 +628,7 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             if style:
                 manager.tile_source.style = json.loads(style)  # type: ignore[attr-defined]
             encoding = self.get_argument('encoding', 'PNG')
+            manager.tile_source.edge = '#00000000'
             try:
                 tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
                     x, y, z, encoding=encoding, frame=frame)
