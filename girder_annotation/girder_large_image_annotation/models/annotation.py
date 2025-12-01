@@ -100,6 +100,14 @@ class AnnotationSchema:
                    r'rgba\(\d+,\s*\d+,\s*\d+,\s*(\d?\.|)\d+\))$',
     }
 
+    patternSchema = {
+        'type': 'string',
+        'description':
+            'If one of "circle", "triangle", "diamond", "flower(number)", '
+            '"star(number)", "jack(number)" where number is from 1 to 16, '
+            'fill closed polylines with a pattern in their strokeColor.',
+    }
+
     colorRangeSchema = {
         'type': 'array',
         'items': colorSchema,
@@ -208,6 +216,7 @@ class AnnotationSchema:
                 'minimum': 0,
             },
             'fillColor': colorSchema,
+            'pattern': patternSchema,
         },
         'required': ['type', 'center', 'radius'],
         'additionalProperties': False,
@@ -243,6 +252,7 @@ class AnnotationSchema:
                     'minItems': 3,
                 },
             },
+            'pattern': patternSchema,
         },
         'required': ['type', 'points'],
         'additionalProperties': False,
@@ -266,6 +276,7 @@ class AnnotationSchema:
             },
             'normal': coordSchema,
             'fillColor': colorSchema,
+            'pattern': patternSchema,
         },
         'decription': 'normal is the positive z-axis unless otherwise '
                       'specified',

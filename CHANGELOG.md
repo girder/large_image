@@ -2,6 +2,10 @@
 
 ## 1.33.5
 
+### Improvements
+
+- Added a "pattern" property for polygon annotations ([#2020](../../pull/2020))
+
 ### Changes
 
 - Change delattr to del when it doesn't matter ([#2021](../../pull/2021))
