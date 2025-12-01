@@ -204,7 +204,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                     except Exception:
                         pass
                 if len(self._frames) <= 1:
-                    delattr(self, '_frames')
+                    del self._frames
         self._unitsPerPixel = unitsPerPixel
         if self.projection:
             self._initWithProjection(unitsPerPixel)
