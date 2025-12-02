@@ -122,12 +122,13 @@ const AnnotationModel = AccessControlledModel.extend({
             fillColor: element.get('fillColor'),
             lineColor: element.get('lineColor'),
             lineWidth: element.get('lineWidth'),
-            closed: element.get('closed')
+            closed: element.get('closed'),
+            pattern: element.get('pattern')
         };
         let propidx;
         for (propidx = 0; propidx < this._centroids.props.length; propidx += 1) {
             const p = this._centroids.props[propidx];
-            if (p.type === props.type && p.fillColor === props.fillColor && p.lineColor === props.lineColor && p.lineWidth === props.lineWidth && p.closed === props.closed) {
+            if (p.type === props.type && p.fillColor === props.fillColor && p.lineColor === props.lineColor && p.lineWidth === props.lineWidth && p.closed === props.closed && p.pattern === props.pattern) {
                 break;
             }
         }
@@ -544,7 +545,11 @@ const AnnotationModel = AccessControlledModel.extend({
     geojson() {
         const json = this.get('annotation') || {};
         const elements = json.elements || [];
-        return convert(elements, {annotation: this.id});
+        let levels;
+        try {
+            levels = this.collection._viewer.metadata.levels;
+        } catch (err) {}
+        return convert(elements, {annotation: this.id}, levels);
     },
 
     /**
