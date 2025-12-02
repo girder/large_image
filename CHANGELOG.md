@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.33.5
+
+### Changes
+
+- Change delattr to del when it doesn't matter ([#2021](../../pull/2021))
+
 ## 1.33.4
 
 ### Improvements

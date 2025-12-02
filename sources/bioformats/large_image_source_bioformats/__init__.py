@@ -336,7 +336,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         try:
             self._lastGetTileException = 'raise'
             self.getTile(0, 0, self.levels - 1)
-            delattr(self, '_lastGetTileException')
+            del self._lastGetTileException
         except Exception as exc:
             raise TileSourceError('Bioformats cannot read a tile: %r' % exc)
         self._checkForOffset()
