@@ -576,7 +576,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             this._hideElement = element;
             _.each(this._annotations, (layer, annotationId) => {
                 const features = layer.features;
-                console.log(features); // DWM::
                 this._mutateFeaturePropertiesForHighlight(annotationId, features);
             });
             this.viewer.scheduleAnimationFrame(this.viewer.draw);

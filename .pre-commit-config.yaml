@@ -61,21 +61,21 @@ repos:
     hooks:
       - id: circleci-config-validate
   - repo: https://github.com/ThisIsManta/stylus-supremacy
-    rev: v4.0.0
+    rev: v5.0.0
     hooks:
       - id: stylus-supremacy
         args:
           - '--options'
           - './girder/girder_large_image/web_client/package.json'
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args:
           - --py39-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.14.6
     hooks:
       - id: ruff
         args:
@@ -94,7 +94,7 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/pycqa/isort
-    rev: 6.1.0
+    rev: 7.0.0
     hooks:
       - id: isort
         name: isort (python)
@@ -103,7 +103,7 @@ repos:
     hooks:
       - id: yesqa
   - repo: https://github.com/lyz-code/yamlfix
-    rev: 1.18.0
+    rev: 1.19.0
     hooks:
       - id: yamlfix
         args:
