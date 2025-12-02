@@ -4,7 +4,7 @@ import * as geometry from './geometry';
 import * as defaults from './defaults';
 import style from './style';
 
-function convertOne(properties) {
+function convertOne(properties, levels) {
     return function (annotation, key) {
         if (('' + key).startsWith('_')) {
             return;
@@ -19,14 +19,14 @@ function convertOne(properties) {
             type: 'Feature',
             id: annotation.id,
             geometry: {type: geom.type, coordinates: geom.coordinates},
-            properties: _.extend({element: annotation, annotationType: geom.annotationType}, properties, style(annotation))
+            properties: _.extend({element: annotation, annotationType: geom.annotationType}, properties, style(annotation, levels))
         };
     };
 }
 
-export default function convert(json, properties = {}) {
+export default function convert(json, properties = {}, levels) {
     const features = _.chain(json)
-        .mapObject(convertOne(properties))
+        .mapObject(convertOne(properties, levels))
         .compact()
         .value();
 

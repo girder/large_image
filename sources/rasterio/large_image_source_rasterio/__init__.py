@@ -204,7 +204,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                         except Exception:
                             pass
                     if len(self._frames) <= 1:
-                        delattr(self, '_frames')
+                        del self._frames
             self._unitsPerPixel = unitsPerPixel
             self.projection is None or self._initWithProjection(unitsPerPixel)
             self._getPopulatedLevels()
