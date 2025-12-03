@@ -30,6 +30,7 @@ setup(
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
     ],
     python_requires='>=3.9',
     install_requires=[
@@ -37,13 +38,13 @@ setup(
     ],
     extras_require={
         'all': [
-            'rawpy',
+            'rawpy ; python_version < "3.14"',
             'pillow-heif',
             'pillow-jxl-plugin',
             'pillow-jpls ; python_version < "3.13"',
         ],
         'common': [
-            'rawpy',
+            'rawpy ; python_version < "3.14"',
             'pillow-heif',
             'pillow-jxl-plugin',
         ],
