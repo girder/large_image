@@ -258,6 +258,21 @@ jobs:
       - coverage
       - store_artifacts:
           path: build/test/artifacts
+  py314:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large
+    steps:
+      - checkout
+      - allservices:
+          version: "3.14"
+          node: v14
+      - tox:
+          toxenv: test-py314
+          # environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
+      - coverage
+      - store_artifacts:
+          path: build/test/artifacts
   lint_and_docs:
     executor: toxandnode
     steps:
@@ -451,6 +466,13 @@ workflows:
             branches:
               ignore:
                 - gh-pages
+      - py314:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
       - lint_and_docs:
           filters:
             tags:
@@ -487,6 +509,7 @@ workflows:
             - py311
             - py312
             - py313
+            - py314
             - lint_and_docs
             - type
           filters:
@@ -503,6 +526,7 @@ workflows:
             - py311
             - py312
             - py313
+            - py314
             - lint_and_docs
             - type
             - check_release
@@ -528,6 +552,7 @@ workflows:
       - py311
       - py312
       - py313
+      - py314
       - lint_and_docs
       - type
       - compare

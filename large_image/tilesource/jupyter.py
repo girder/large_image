@@ -560,31 +560,32 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+class RequestManager:
+    def __init__(self, tile_source: IPyLeafletMixin) -> None:
+        self._tile_source_ = weakref.ref(tile_source)
+        self._ports = ()
+
+    @property
+    def tile_source(self) -> IPyLeafletMixin:
+        return cast(IPyLeafletMixin, self._tile_source_())
+
+    @tile_source.setter
+    def tile_source(self, source: IPyLeafletMixin) -> None:
+        self._tile_source_ = weakref.ref(source)
+
+    @property
+    def ports(self) -> tuple[int, ...]:
+        return self._ports
+
+    @property
+    def port(self) -> int:
+        return self.ports[0]
+
+
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
     import tornado.httpserver
     import tornado.netutil
     import tornado.web
-
-    class RequestManager:
-        def __init__(self, tile_source: IPyLeafletMixin) -> None:
-            self._tile_source_ = weakref.ref(tile_source)
-            self._ports = ()
-
-        @property
-        def tile_source(self) -> IPyLeafletMixin:
-            return cast(IPyLeafletMixin, self._tile_source_())
-
-        @tile_source.setter
-        def tile_source(self, source: IPyLeafletMixin) -> None:
-            self._tile_source_ = weakref.ref(source)
-
-        @property
-        def ports(self) -> tuple[int, ...]:
-            return self._ports
-
-        @property
-        def port(self) -> int:
-            return self.ports[0]
 
     manager = RequestManager(tile_source)
     # NOTE: set `ports` manually after launching server
@@ -628,6 +629,8 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             if style:
                 manager.tile_source.style = json.loads(style)  # type: ignore[attr-defined]
             encoding = self.get_argument('encoding', 'PNG')
+            if getattr(manager.tile_source, '_noCache', False):
+                manager.tile_source.edge = '#00000000'  # type: ignore[attr-defined]
             try:
                 tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
                     x, y, z, encoding=encoding, frame=frame)
