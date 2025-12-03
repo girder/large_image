@@ -17,8 +17,7 @@ class Fib:
     def num(self, k):
         if k > 2:
             return self.num(k - 1) + self.num(k - 2)
-        else:
-            return 1
+        return 1
 
 
 def cache_test(specific_cache, maxNum=100):

@@ -16,6 +16,7 @@
 
 import io
 import json
+import os
 import pickle
 import threading
 
@@ -39,6 +40,9 @@ from .. import constants, girder_tilesource
 
 
 class ImageItem(Item):
+    _cacheSaveDataLock = threading.RLock()
+    _cacheSaveDataThreads = []
+
     # We try these sources in this order.  The first entry is the fallback for
     # items that antedate there being multiple options.
     def initialize(self):
@@ -46,16 +50,56 @@ class ImageItem(Item):
         self.ensureIndices(['largeImage.fileId'])
         File().ensureIndices([
             ([
-                ('isLargeImageThumbnail', pymongo.ASCENDING),
-                ('attachedToType', pymongo.ASCENDING),
                 ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageThumbnail', pymongo.ASCENDING),
+                ('thumbnailKey', pymongo.ASCENDING),
             ], {}),
             ([
-                ('isLargeImageData', pymongo.ASCENDING),
-                ('attachedToType', pymongo.ASCENDING),
                 ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageData', pymongo.ASCENDING),
+                ('thumbnailKey', pymongo.ASCENDING),
+            ], {}),
+            ([
+                ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageThumbnail', pymongo.ASCENDING),
+                ('_id', pymongo.DESCENDING),
+            ], {}),
+            ([
+                ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageData', pymongo.ASCENDING),
+                ('_id', pymongo.DESCENDING),
             ], {}),
         ])
+
+    def checkForDocumentDB(self):
+        if not hasattr(self, '_likelyDocumentDB'):
+            if os.environ.get('LARGE_IMAGE_DOCUMENTDB'):
+                self._likelyDocumentDB = os.environ.get(
+                    'LARGE_IMAGE_DOCUMENTDB').lower() != 'false'
+                logger.info('Using flag to determine DocumentDB '
+                            f'compatibility: {self._likelyDocumentDB}')
+            else:
+                try:
+                    self.database['__nowhere__'].aggregate([
+                        {'$graphLookup': {
+                            'from': '__nowhere__',
+                            'startWith': '$noSuchParentId',
+                            'connectFromField': '_id',
+                            'connectToField': 'noSuchParentId',
+                            'as': 'descendants',
+                        }},
+                    ])
+                    self._likelyDocumentDB = False
+                except Exception:
+                    logger.warning(
+                        'Running on a database that does not support '
+                        '$graphLookup; this is probably DocumentDB')
+                    self._likelyDocumentDB = True
+        return self._likelyDocumentDB
 
     def createImageItem(self, item, fileObj, user=None, token=None,
                         createJob=True, notify=False, localJob=None, **kwargs):
@@ -237,7 +281,9 @@ class ImageItem(Item):
             # tileSource = girder_tilesource.getGirderTileSource(item, **kwargs)
             # but, instead, log that the original source no longer works are
             # reraise the exception
-            logger.warning('The original tile source for item %s is not working' % item['_id'])
+            logger.warning(
+                'The original tile source (%s) for item %s is not working',
+                sourceName, item['_id'])
             try:
                 file = File().load(item['largeImage']['fileId'], force=True)
                 localPath = File().getLocalFilePath(file)
@@ -364,7 +410,7 @@ class ImageItem(Item):
         :param pickleCache: if True, the results of the function are pickled to
             preserve them.  If False, the results can be saved as a file
             directly.
-        :params **kwargs: passed to the tile source and to the imageFunc.  May
+        :param **kwargs: passed to the tile source and to the imageFunc.  May
             contain contentDisposition to determine how results are returned.
         :returns:
         """
@@ -417,6 +463,58 @@ class ImageItem(Item):
         return self.getAndCacheImageOrDataRun(
             checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs)
 
+    def _saveDataFile(self, item, imageMime, dataStored, key, pickleCache, keylock, lockkey):
+        with keylock:
+            # Save the data as a file
+            try:
+                datafile = Upload().uploadFromFile(
+                    io.BytesIO(dataStored), size=len(dataStored),
+                    name='_largeImageThumbnail', parentType='item', parent=item,
+                    user=None, mimeType=imageMime, attachParent=True)
+                if not len(dataStored) and 'received' in datafile:
+                    datafile = Upload().finalizeUpload(
+                        datafile, Assetstore().load(datafile['assetstoreId']))
+                datafile.update({
+                    'isLargeImageThumbnail' if not pickleCache else
+                    'isLargeImageData': True,
+                    'thumbnailKey': key,
+                })
+                # Ideally, we would check that the file is still wanted before
+                # we save it.  This is probably impossible without true
+                # transactions in Mongo.
+                File().save(datafile)
+            except (GirderException, PermissionError, FileNotFoundError):
+                logger.warning('Could not cache data for large image')
+            finally:
+                with self._getAndCacheImageOrDataLock['lock']:
+                    self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
+
+    def cacheSaveDataManagement(self, timeout=0.0):
+        """
+        Check any of the threads used for caching data from slow functions and
+        join those that are finished.
+
+        :param timeout: 0 to return without blocking, just harvesting the
+            finished threads.  None to block until all are finished.  Since all
+            threads will be checked, specifying a positive timeout will
+            possibly take that long times the number of threads.
+        :returns: the number of active threads
+        """
+        with self._cacheSaveDataLock:
+            numthreads = len(self._cacheSaveDataThreads)
+        for idx in range(numthreads - 1, -1, -1):
+            with self._cacheSaveDataLock:
+                if idx >= len(self._cacheSaveDataThreads):
+                    continue
+                t = self._cacheSaveDataThreads[idx]
+            t.join(timeout)
+            if not t.is_alive():
+                with self._cacheSaveDataLock:
+                    self._cacheSaveDataThreads.remove(t)
+        with self._cacheSaveDataLock:
+            numthreads = len(self._cacheSaveDataThreads)
+        return numthreads
+
     def getAndCacheImageOrDataRun(
             self, checkAndCreate, imageFunc, item, key, keydict, pickleCache, lockkey, **kwargs):
         """
@@ -426,6 +524,7 @@ class ImageItem(Item):
             if lockkey not in self._getAndCacheImageOrDataLock['keys']:
                 self._getAndCacheImageOrDataLock['keys'][lockkey] = threading.Lock()
             keylock = self._getAndCacheImageOrDataLock['keys'][lockkey]
+        nounlock = False
         with keylock:
             logger.debug('Computing %r', (lockkey, ))
             try:
@@ -450,30 +549,20 @@ class ImageItem(Item):
                         pickleCache or isinstance(imageData, bytes))):
                     dataStored = imageData if not pickleCache else pickle.dumps(
                         imageData, protocol=4)
-                    # Save the data as a file
-                    try:
-                        datafile = Upload().uploadFromFile(
-                            io.BytesIO(dataStored), size=len(dataStored),
-                            name='_largeImageThumbnail', parentType='item', parent=item,
-                            user=None, mimeType=imageMime, attachParent=True)
-                        if not len(dataStored) and 'received' in datafile:
-                            datafile = Upload().finalizeUpload(
-                                datafile, Assetstore().load(datafile['assetstoreId']))
-                        datafile.update({
-                            'isLargeImageThumbnail' if not pickleCache else
-                            'isLargeImageData': True,
-                            'thumbnailKey': key,
-                        })
-                        # Ideally, we would check that the file is still wanted before
-                        # we save it.  This is probably impossible without true
-                        # transactions in Mongo.
-                        File().save(datafile)
-                    except (GirderException, PermissionError):
-                        logger.warning('Could not cache data for large image')
+                    self.cacheSaveDataManagement()
+                    with self._cacheSaveDataLock:
+                        t = threading.Thread(
+                            target=self._saveDataFile,
+                            args=(item, imageMime, dataStored, key, pickleCache, keylock, lockkey),
+                            daemon=True)
+                        t.start()
+                        self._cacheSaveDataThreads.append(t)
+                    nounlock = True
                 return imageData, imageMime
             finally:
-                with self._getAndCacheImageOrDataLock['lock']:
-                    self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
+                if not nounlock:
+                    with self._getAndCacheImageOrDataLock['lock']:
+                        self._getAndCacheImageOrDataLock['keys'].pop(lockkey, None)
 
     def removeThumbnailFiles(self, item, keep=0, sort=None, imageKey=None,
                              onlyList=False, **kwargs):
@@ -695,3 +784,43 @@ class ImageItem(Item):
         )
         Job().scheduleJob(job)
         return job
+
+    def mayHaveAdjacentFiles(self, item, imageFile=None):
+        """
+        Check if an item may have adajent files.
+
+        :param item: the item to check.
+        :param imageFile: the largeImage file; if not passed, it is looked up,
+            passing it just saves a database lookup.
+        :returns: None if this isn't a largeImage, False if we think it can't
+            have adjacent files, 'local' if we think the adjacent files are
+            local to the item, True if there could be adjacent files in other
+            items.
+        """
+        if 'largeImage' not in item:
+            return None
+        if item['largeImage'].get('expected'):
+            return None
+        imageFileId = item['largeImage']['fileId']
+        if imageFile is None:
+            imageFile = File().load(imageFileId, force=True)
+        if imageFile.get('linkUrl'):
+            return True
+        # The item has adjacent files if there are any files that are not the
+        # large image file or an original file it was derived from.  This is
+        # always the case if there are 3 or more files.
+        fileIds = [str(file['_id']) for file in Item().childFiles(item, limit=3)]
+        knownIds = [str(imageFileId)]
+        if 'originalId' in item['largeImage']:
+            knownIds.append(str(item['largeImage']['originalId']))
+        mayHave = (len(fileIds) >= 3 or
+                   fileIds[0] not in knownIds or fileIds[-1] not in knownIds)
+        if (any(ext in girder_tilesource.KnownExtensionsWithAdjacentFiles
+                for ext in imageFile['exts']) or
+                imageFile.get('mimeType') in girder_tilesource.KnownMimeTypesWithAdjacentFiles):
+            mayHave = True
+            if 'originalId' not in item['largeImage'] and File().find({
+                    'itemId': item['_id'],
+                    'mimeType': imageFile.get('mimeType')}).count() > 1:
+                mayHave = 'local'
+        return mayHave

@@ -102,7 +102,10 @@ def createThumbnailsJobLog(job, info, prefix='', status=None):
         msg += 'Failed on %d thumbnail file%s (last failure on item %s)\n' % (
             info['failed'],
             's' if info['failed'] != 1 else '', info['lastFailed'])
-    job = Job().updateJob(job, log=msg, status=status)
+    try:
+        job = Job().updateJob(job, log=msg, status=status)
+    except TypeError:
+        pass
     return job, msg
 
 
@@ -115,7 +118,7 @@ def cursorNextOrNone(cursor):
     :returns: the next value or None.
     """
     try:
-        return cursor.next()
+        return cursor.next()  # B305
     except StopIteration:
         return None
 
@@ -498,7 +501,7 @@ class LargeImageResource(Resource):
         if recurse:
             for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
                 result['childFoldersRecursed'] += 1
-                self.createLargeImagesRecurse(
+                self._createLargeImagesRecurse(
                     childFolder, user, recurse, createJobs, localJobs,
                     cancelJobs, redo, result)
         for item in Folder().childItems(folder=folder):
@@ -632,7 +635,7 @@ class LargeImageResource(Resource):
                 matches = re.search(r'\[line[ ]*(\d+)\]', msg)
             if matches:
                 line = int(matches.groups()[0])
-                msg = msg.split('\n')[0].strip() or 'General error'
+                msg = msg.split('\n', 1)[0].strip() or 'General error'
                 msg = msg.rsplit(": '<string>'", 1)[0].rsplit("'<string>'", 1)[-1].strip()
                 return [{'line': line - 1, 'message': msg}]
         except Exception:
@@ -759,9 +762,9 @@ class LargeImageResource(Resource):
                 return {'status': 'no change'}
             newpath = path + '.' + time.strftime(
                 '%Y%m%d-%H%M%S', time.localtime(os.stat(path).st_mtime))
-            logger.info('Copying existing config file from %s to %s' % (path, newpath))
+            logger.info('Copying existing config file from %s to %s', path, newpath)
             shutil.copy2(path, newpath)
-        logger.warning('Replacing config file %s' % (path))
+        logger.warning('Replacing config file %s', path)
         open(path, 'w').write(config)
 
         class Restart(cherrypy.process.plugins.Monitor):

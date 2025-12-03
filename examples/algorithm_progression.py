@@ -42,7 +42,7 @@ class SweepAlgorithm:
 
         self.combos = list(itertools.product(*[p['range'] for p in input_params.values()]))
 
-    def getOverallSink(self):
+    def getOverallSink(self, maxValues=None):
         msg = 'Not implemented'
         raise Exception(msg)
 
@@ -86,12 +86,15 @@ class SweepAlgorithm:
             **tiparams,
         ):
             scaled = tile.get('scaled', 1)
+            axisparams = {
+                p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())}
+            axisparams.update({
+                p['axis'] + '_value': params[i] for i, p in enumerate(self.param_order.values())})
             if self.overlay:
                 self.addTile(
                     tilesink,
                     tile['tile'], int(tile['x'] * scaled), int(tile['y'] * scaled),
-                    **{p['axis']: iteration_id[i] for i, p in enumerate(
-                        self.param_order.values())})
+                    **axisparams)
             altered_data = self.algorithm(tile['tile'], *params)
             mask = None
             if self.overlay:
@@ -104,7 +107,7 @@ class SweepAlgorithm:
             self.addTile(
                 tilesink,
                 altered_data, int(tile['x'] * scaled), int(tile['y'] * scaled), mask=mask,
-                **{p['axis']: iteration_id[i] for i, p in enumerate(self.param_order.values())})
+                **axisparams)
             if time.time() - lastlogtime > 10:
                 sys.stdout.write(
                     f'Processed {tile["tile_position"]["position"] + 1} of '
@@ -115,7 +118,10 @@ class SweepAlgorithm:
 
     def run(self):
         starttime = time.time()
-        sink = self.getOverallSink()
+        source = large_image.open(self.input_filename)
+        maxValues = {'x': source.sizeX, 'y': source.sizeY, 's': source.metadata['bandCount']}
+        maxValues.update({p['axis']: len(p['range']) for p in self.param_order.values()})
+        sink = self.getOverallSink(maxValues)
 
         print(f'Beginning {len(self.combos)} runs on {self.max_workers} workers...')
         num_done = 0
@@ -146,7 +152,7 @@ class SweepAlgorithm:
 
 
 class SweepAlgorithmMulti(SweepAlgorithm):
-    def getOverallSink(self):
+    def getOverallSink(self, maxValues=None):
         os.makedirs(os.path.splitext(self.output_filename)[0], exist_ok=True)
         algorithm_name = self.algorithm.__name__.replace('_', ' ').title()
         self.yaml_dict = {
@@ -267,10 +273,20 @@ class SweepAlgorithmMultiZarr(SweepAlgorithmMulti):
 
 
 class SweepAlgorithmZarr(SweepAlgorithm):
-    def getOverallSink(self):
+    def getOverallSink(self, maxValues=None):
+        """
+        Return the main sink for the entire image.  If maxValues is specified,
+        add a single black pixel at the maximum location for all axes.  This
+        causes the array of axes values in the zarr sink to be allocated and
+        tracked, whereas, otherwise, they could be ignored.
+        """
         import large_image_source_zarr
 
-        return large_image_source_zarr.new()
+        sink = large_image_source_zarr.new()
+        if maxValues:
+            sink.addTile(np.zeros((1, 1, maxValues.get('s', 1))),
+                         **{k: v - 1 for k, v in maxValues.items() if k != 's'})
+        return sink
 
     def writeOverallSink(self, sink):
         sink.write(self.output_filename, lossy=self.lossy)
@@ -392,8 +408,8 @@ def main(argv):
                 (defaultAxes[0] if len(defaultAxes) else parts[0])
                 if parts[1].isdigit() else parts[1]),
             'range': np.linspace(
-                float(rangevals[0]), float(rangevals[1]),
-                int(rangevals[2]), endpoint=bool(rangevals[3])),
+                float(rangevals[0]), float(rangevals[1]), int(rangevals[2]),
+                endpoint=rangevals[3].lower() not in {'open', 'true', 'on', 'yes', 't'}),
         }
         axesUsed.add(input_params[parts[0]]['axis'].lower())
         if input_params[parts[0]]['axis'].lower() in defaultAxes:

@@ -149,7 +149,7 @@ class AnnotationGeoJSON:
         sinr = math.sin(r)
         x -= cx
         y -= cy
-        return [x * cosr - y * sinr + cx, x * sinr + y * sinr + cy, z]
+        return [x * cosr - y * sinr + cx, x * sinr + y * cosr + cy, z]
 
     def circleType(self, element, geom, prop):
         x, y, z = element['center']
@@ -171,7 +171,7 @@ class AnnotationGeoJSON:
         geom['coordinates'] = element['center']
 
     def polylineType(self, element, geom, prop):
-        if element['closed']:
+        if element.get('closed'):
             geom['type'] = 'Polygon'
             geom['coordinates'] = [element['points'][:]]
             geom['coordinates'][0].append(geom['coordinates'][0][0])
@@ -244,18 +244,18 @@ class GeoJSONAnnotation:
         self._annotation = {'elements': self._elements}
         self._parseFeature(geojson)
 
-    def _parseFeature(self, geoelem):
+    def _parseFeature(self, geoelem):  # noqa
         if isinstance(geoelem, (list, tuple)):
             for entry in geoelem:
                 self._parseFeature(entry)
         if not isinstance(geoelem, dict) or 'type' not in geoelem:
-            return
+            return None
         if geoelem['type'] == 'FeatureCollection':
             return self._parseFeature(geoelem.get('features', []))
         if geoelem['type'] == 'GeometryCollection' and isinstance(geoelem.get('geometries'), list):
             for entry in geoelem['geometry']:
                 self._parseFeature({'type': 'Feature', 'geometry': entry})
-            return
+            return None
         if geoelem['type'] in {'Point', 'LineString', 'Polygon', 'MultiPoint',
                                'MultiLineString', 'MultiPolygon'}:
             geoelem = {'type': 'Feature', 'geometry': geoelem}
@@ -264,8 +264,15 @@ class GeoJSONAnnotation:
             'fillColor', 'radius', 'width', 'height', 'rotation',
             'normal',
         }}
-        if 'annotation' in geoelem.get('properties', {}):
-            self._annotation.update(geoelem['properties']['annotation'])
+        if 'label' in element:
+            if not isinstance(element['label'], dict):
+                element['label'] = {'value': element['label']}
+            element['label']['value'] = str(element['label']['value'])
+        if geoelem.get('properties', {}).get('annotation'):
+            try:
+                self._annotation.update(geoelem['properties']['annotation'])
+            except Exception:
+                pass
             self._annotation['elements'] = self._elements
         elemtype = geoelem.get('properties', {}).get('type', '') or geoelem['geometry']['type']
         func = getattr(self, elemtype.lower() + 'Type', None)
@@ -426,7 +433,7 @@ def _cancelPlottableItemData(uuid, newRecord):
 
 class PlottableItemData:
     maxItems = 1000
-    maxAnnotationElements = 5000
+    maxAnnotationElements = 25000
     maxDistinct = 20
     allowedTypes = (str, bool, int, float)
 
@@ -491,7 +498,7 @@ class PlottableItemData:
         is stored in self._moreItems.  The items are listed in self.items.
 
         :param item: the item to use as the base.  If adjacentItems is false,
-            this is the entire self.items data set.
+            this is the entirety of the self.items data set.
         :param adjacentItems: if truthy, find adjacent items.
         """
         self._columns = None
@@ -1157,13 +1164,19 @@ class PlottableItemData:
                 if not self._sources or 'annotation' in self._sources:
                     count += self._collectColumns(columns, [annot], 'annotation', iid=iid)
                 # add annotation elements
-                if ((not self._sources or 'annotationelement' in self._sources) and
-                        Annotationelement().countElements(annot) <= self.maxAnnotationElements):
-                    for element in Annotationelement().yieldElements(annot, bbox=True):
-                        element['_aid'] = annot['_id']
-                        element['_aname'] = annot['annotation']['name']
-                        count += self._collectColumns(
-                            columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
+                if not self._sources or 'annotationelement' in self._sources:
+                    if Annotationelement().countElements(annot) <= self.maxAnnotationElements:
+                        for element in Annotationelement().yieldElements(annot, bbox=True):
+                            element['_aid'] = annot['_id']
+                            element['_aname'] = annot['annotation']['name']
+                            count += self._collectColumns(
+                                columns, [element], 'annotationelement',
+                                iid=iid, aid=str(annot['_id']))
+                    else:
+                        msg = ('Skipping annotation; too many elements '
+                               f'({Annotationelement().countElements(annot)} > '
+                               f'{self.maxAnnotationElements}')
+                        logger.info(msg)
                 if not iidx:
                     countsPerAnnotation[anidx] = count - startcount
         return count
@@ -1415,7 +1428,7 @@ class PlottableItemData:
             # collects data as a side effect
             collist = self._getColumns()
             if self.cancel:
-                return
+                return None
             for coldata in self._datacolumns.values():
                 rows |= set(coldata.keys())
             rows = sorted(rows)
@@ -1447,7 +1460,7 @@ class PlottableItemData:
         if len(subdata) and len(subdata) < len(data):
             data = subdata
         if self.cancel:
-            return
+            return None
         # Refresh our count, distinct, distinctcount, min, max for each column
         for cidx, col in enumerate(colsout):
             col['count'] = len([row[cidx] for row in data if row[cidx] is not None])

@@ -9,7 +9,8 @@ import threading
 import time
 import types
 import uuid
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, cast
+from collections.abc import Iterator
+from typing import Any, Optional, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -22,7 +23,8 @@ import PIL.ImageDraw
 from .. import config, exceptions
 from ..cache_util import getTileCache, methodcache, strhash
 from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
-                         SourcePriority, TileInputUnits, TileOutputMimeTypes,
+                         ExtraExtensionsToMimetypes, SourcePriority,
+                         TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat)
 from . import utilities
 from .jupyter import IPyLeafletMixin
@@ -40,21 +42,21 @@ class TileSource(IPyLeafletMixin):
     # A dictionary of known file extensions and the ``SourcePriority`` given
     # to each.  It must contain a None key with a priority for the tile source
     # when the extension does not match.
-    extensions: Dict[Optional[str], SourcePriority] = {
+    extensions: dict[Optional[str], SourcePriority] = {
         None: SourcePriority.FALLBACK,
     }
 
     # A dictionary of common mime-types handled by the source and the
     # ``SourcePriority`` given to each.  This are used in place of or in
     # additional to extensions.
-    mimeTypes: Dict[Optional[str], SourcePriority] = {
+    mimeTypes: dict[Optional[str], SourcePriority] = {
         None: SourcePriority.FALLBACK,
     }
 
     # A dictionary with regex strings as the keys and the ``SourcePriority``
     # given to names that match that expression.  This is used in addition to
     # extensions and mimeTypes, with the highest priority match taken.
-    nameMatches: Dict[str, SourcePriority] = {
+    nameMatches: dict[str, SourcePriority] = {
     }
 
     # If a source supports creating new tiled images, specify its basic
@@ -69,13 +71,13 @@ class TileSource(IPyLeafletMixin):
     # _maxSkippedLevels, such large gaps are composited in stages.
     _maxSkippedLevels = 3
 
-    _initValues: Tuple[Tuple[Any, ...], Dict[str, Any]]
-    _iccprofilesObjects: List[Any]
+    _initValues: tuple[tuple[Any, ...], dict[str, Any]]
+    _iccprofilesObjects: list[Any]
 
-    def __init__(self, encoding: str = 'JPEG', jpegQuality: int = 95,
+    def __init__(self, encoding: Optional[str] = None, jpegQuality: int = 95,
                  jpegSubsampling: int = 0, tiffCompression: str = 'raw',
                  edge: Union[bool, str] = False,
-                 style: Optional[Union[str, Dict[str, int]]] = None,
+                 style: Optional[Union[str, dict[str, int]]] = None,
                  noCache: Optional[bool] = None,
                  *args, **kwargs) -> None:
         """
@@ -166,6 +168,7 @@ class TileSource(IPyLeafletMixin):
         self._dtype: Optional[Union[npt.DTypeLike, str]] = None
         self._bandCount: Optional[int] = None
 
+        encoding = encoding or config.getConfig('default_encoding')
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
 
@@ -176,23 +179,22 @@ class TileSource(IPyLeafletMixin):
         self.edge = edge
         self._setStyle(style)
 
-    def __getstate__(self):
+    def __getstate__(self) -> None:
         """
         Allow pickling.
 
         We reconstruct our state via the creation caused by the inverse of
         reduce, so we don't report state here.
         """
-        return None
+        return
 
-    def __reduce__(self) -> Tuple[functools.partial, Tuple[str]]:
+    def __reduce__(self) -> tuple[functools.partial, tuple[str]]:
         """
         Allow pickling.
 
         Reduce can pass the args but not the kwargs, so use a partial class
         call to reconstruct kwargs.
         """
-        import functools
         import pickle
 
         if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
@@ -201,14 +203,37 @@ class TileSource(IPyLeafletMixin):
         return functools.partial(type(self), **self._initValues[1]), self._initValues[0]
 
     def __repr__(self) -> str:
-        return self.getState()
+        if hasattr(self, '_initValues') and not hasattr(self, '_unpickleable'):
+            param = [
+                f'{k}={v!r}' if k != 'style' or not isinstance(v, dict) or
+                not getattr(self, '_jsonstyle', None) else
+                f'style={json.loads(self._jsonstyle)}'
+                for k, v in self._initValues[1].items()]
+            return (
+                f'{self.__class__.__name__}('
+                f'{", ".join(repr(val) for val in self._initValues[0])}'
+                f'{", " if len(self._initValues[1]) else ""}'
+                f'{", ".join(param)}'
+                ')')
+        return '<' + self.getState() + '>'
 
-    def _repr_png_(self):
+    def _repr_png_(self) -> bytes:
         return self.getThumbnail(encoding='PNG')[0]
+
+    def __rich_repr__(self) -> Iterator[Any]:
+        if not hasattr(self, '_initValues') or hasattr(self, '_unpickleable'):
+            yield self.getState()
+        else:
+            yield from self._initValues[0]
+            yield from self._initValues[1].items()
 
     @property
     def geospatial(self) -> bool:
         return False
+
+    @property
+    def _unstyled(self) -> 'TileSource':
+        return getattr(self, '_unstyledInstance', self)
 
     def _setStyle(self, style: Any) -> None:
         """
@@ -222,7 +247,7 @@ class TileSource(IPyLeafletMixin):
             except Exception:
                 pass
         if not hasattr(self, '_bandRanges'):
-            self._bandRanges: Dict[Optional[int], Any] = {}
+            self._bandRanges: dict[Optional[int], Any] = {}
         self._jsonstyle = style
         if style is not None:
             if isinstance(style, dict):
@@ -239,13 +264,13 @@ class TileSource(IPyLeafletMixin):
                     msg = 'Style is not a valid json object.'
                     raise exceptions.TileSourceError(msg)
 
-    def getBounds(self, *args, **kwargs) -> Dict[str, Any]:
+    def getBounds(self, *args, **kwargs) -> dict[str, Any]:
         return {
             'sizeX': self.sizeX,
             'sizeY': self.sizeY,
         }
 
-    def getCenter(self, *args, **kwargs) -> Tuple[float, float]:
+    def getCenter(self, *args, **kwargs) -> tuple[float, float]:
         """Returns (Y, X) center location."""
         if self.geospatial:
             bounds = self.getBounds(*args, **kwargs)
@@ -257,12 +282,12 @@ class TileSource(IPyLeafletMixin):
         return (bounds['sizeY'] / 2, bounds['sizeX'] / 2)
 
     @property
-    def style(self):
+    def style(self) -> Optional[JSONDict]:
         return self._style
 
     @style.setter
-    def style(self, value):
-        if not hasattr(self, '_unstyledStyle') and value == getattr(self, '_unstyledStyle', None):
+    def style(self, value: Any) -> None:
+        if value is None and not hasattr(self, '_unstyledStyle'):
             return
         if not getattr(self, '_noCache', False):
             msg = 'Cannot set the style of a cached source'
@@ -286,13 +311,11 @@ class TileSource(IPyLeafletMixin):
         with self._sourceLock:
             if not self._dtype:
                 self._dtype = 'check'
-                sample, _ = cast(Tuple[np.ndarray, Any], getattr(
-                    self, '_unstyledInstance', self).getRegion(
-                        region=dict(left=0, top=0, width=1, height=1),
-                        format=TILE_FORMAT_NUMPY))
-                self._dtype = sample.dtype
-                self._bandCount = len(
-                    getattr(getattr(self, '_unstyledInstance', self), '_bandInfo', []))
+                sample, _ = cast(tuple[np.ndarray, Any], self._unstyled.getRegion(
+                    region=dict(left=0, top=0, width=1, height=1),
+                    format=TILE_FORMAT_NUMPY))
+                self._dtype = np.dtype(sample.dtype)
+                self._bandCount = len(getattr(self._unstyled, '_bandInfo', []))
                 if not self._bandCount:
                     self._bandCount = sample.shape[-1] if len(sample.shape) == 3 else 1
         return cast(np.dtype, self._dtype)
@@ -304,6 +327,15 @@ class TileSource(IPyLeafletMixin):
                 return None
         return self._bandCount
 
+    @property
+    def channelNames(self) -> Optional[list[str]]:
+        """
+        If known, return a list of channel names.
+
+        :returns: either None or a list of channel names as strings.
+        """
+        return self.metadata.get('channels')
+
     @staticmethod
     def getLRUHash(*args, **kwargs) -> str:
         """
@@ -313,10 +345,11 @@ class TileSource(IPyLeafletMixin):
         :returns: a string hash value.
         """
         return strhash(
-            kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            kwargs.get('encoding') or config.getConfig('default_encoding'),
+            kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
-            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
+            '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
 
     def getState(self) -> str:
         """
@@ -348,8 +381,8 @@ class TileSource(IPyLeafletMixin):
 
     def _scaleFromUnits(
             self, metadata: JSONDict, units: Optional[str],
-            desiredMagnification: Optional[Dict[str, Any]],
-            **kwargs) -> Tuple[float, float]:
+            desiredMagnification: Optional[dict[str, Any]],
+            **kwargs) -> tuple[float, float]:
         """
         Get scaling parameters based on the source metadata and specified
         units.
@@ -363,6 +396,7 @@ class TileSource(IPyLeafletMixin):
             vertical directions.
         """
         scaleX = scaleY = 1.0
+        mmConversionDict = dict(nm=1000000, um=1000, mm=1, m=0.001, km=0.000001)
         if units == 'fraction':
             scaleX = metadata['sizeX']
             scaleY = metadata['sizeY']
@@ -370,13 +404,13 @@ class TileSource(IPyLeafletMixin):
             if not (desiredMagnification or {}).get('scale'):
                 msg = 'No magnification to use for units'
                 raise ValueError(msg)
-            scaleX = scaleY = cast(Dict[str, float], desiredMagnification)['scale']
-        elif units == 'mm':
+            scaleX = scaleY = cast(dict[str, float], desiredMagnification)['scale']
+        elif units in mmConversionDict:
             if (not (desiredMagnification or {}).get('scale') or
                     not (desiredMagnification or {}).get('mm_x') or
                     not (desiredMagnification or {}).get('mm_y')):
                 desiredMagnification = self.getNativeMagnification().copy()
-                cast(Dict[str, float], desiredMagnification)['scale'] = 1.0
+                cast(dict[str, float], desiredMagnification)['scale'] = 1.0
             if (not desiredMagnification or
                     not desiredMagnification.get('scale') or
                     not desiredMagnification.get('mm_x') or
@@ -387,6 +421,8 @@ class TileSource(IPyLeafletMixin):
                       desiredMagnification['mm_x'])
             scaleY = (desiredMagnification['scale'] /
                       desiredMagnification['mm_y'])
+            scaleX /= mmConversionDict[units]
+            scaleY /= mmConversionDict[units]
         elif units in ('base_pixels', None):
             pass
         else:
@@ -403,8 +439,8 @@ class TileSource(IPyLeafletMixin):
             width: Optional[float] = None,
             height: Optional[float] = None,
             units: Optional[str] = None,
-            desiredMagnification: Optional[Dict[str, Optional[float]]] = None,
-            cropToImage: bool = True, **kwargs) -> Tuple[float, float, float, float]:
+            desiredMagnification: Optional[dict[str, Optional[float]]] = None,
+            cropToImage: bool = True, **kwargs) -> tuple[float, float, float, float]:
         """
         Given a set of arguments that can include left, right, top, bottom,
         width, height, and units, generate actual pixel values for left, top,
@@ -455,7 +491,7 @@ class TileSource(IPyLeafletMixin):
             scaleW, scaleH = scaleX, scaleY
         aggregion = {'left': left, 'top': top, 'right': right,
                      'bottom': bottom, 'width': width, 'height': height}
-        region: Dict[str, float] = {key: cast(float, aggregion[key])
+        region: dict[str, float] = {key: cast(float, aggregion[key])
                                     for key in aggregion if aggregion[key] is not None}
         for key, scale in (
                 ('left', scaleX), ('right', scaleX), ('width', scaleW),
@@ -533,7 +569,7 @@ class TileSource(IPyLeafletMixin):
     def histogram(  # noqa
             self, dtype: npt.DTypeLike = None, onlyMinMax: bool = False,
             bins: int = 256, density: bool = False, format: Any = None,
-            *args, **kwargs) -> Dict[str, Union[np.ndarray, List[Dict[str, Any]]]]:
+            *args, **kwargs) -> dict[str, Union[np.ndarray, list[dict[str, Any]]]]:
         """
         Get a histogram for a region.
 
@@ -568,11 +604,12 @@ class TileSource(IPyLeafletMixin):
         lastlog = time.time()
         kwargs = kwargs.copy()
         histRange = kwargs.pop('range', None)
-        results: Optional[Dict[str, Any]] = None
+        results: Optional[dict[str, Any]] = None
         for itile in self.tileIterator(format=TILE_FORMAT_NUMPY, **kwargs):
             if time.time() - lastlog > 10:
                 self.logger.info(
-                    'Calculating histogram min/max %d/%d',
+                    'Calculating histogram min/max for frame %d, tile %d/%d',
+                    kwargs.get('frame', 0),
                     itile['tile_position']['position'], itile['iterator_range']['position'])
                 lastlog = time.time()
             tile = itile['tile']
@@ -617,11 +654,11 @@ class TileSource(IPyLeafletMixin):
         if results is None or onlyMinMax:
             return results
         results['histogram'] = [{
-            'min': results['min'][idx],
-            'max': results['max'][idx],
-            'mean': results['mean'][idx],
-            'stdev': results['stdev'][idx],
-            'range': ((results['min'][idx], results['max'][idx] + 1)
+            'min': float(results['min'][idx]),
+            'max': float(results['max'][idx]),
+            'mean': float(results['mean'][idx]),
+            'stdev': float(results['stdev'][idx]),
+            'range': ((float(results['min'][idx]), float(results['max'][idx]) + 1)
                       if histRange is None or histRange == 'round' else histRange),
             'hist': None,
             'bin_edges': None,
@@ -650,7 +687,8 @@ class TileSource(IPyLeafletMixin):
             for idx in range(min(len(results['min']), tile.shape[-1])):
                 entry = results['histogram'][idx]
                 hist, bin_edges = np.histogram(
-                    tile[:, :, idx], entry['bins'], entry['range'], density=False)
+                    tile[:, :, idx], entry['bins'],
+                    (float(entry['range'][0]), float(entry['range'][1])), density=False)
                 if entry['hist'] is None:
                     entry['hist'] = hist
                     entry['bin_edges'] = bin_edges
@@ -677,7 +715,7 @@ class TileSource(IPyLeafletMixin):
         :param onlyMinMax: if True, only find the min and max.  If False, get
             the entire histogram.
         """
-        self._bandRanges[frame] = getattr(self, '_unstyledInstance', self).histogram(
+        self._bandRanges[frame] = self._unstyled.histogram(
             dtype=dtype,
             onlyMinMax=onlyMinMax,
             output={'maxWidth': min(self.sizeX, analysisSize),
@@ -691,7 +729,7 @@ class TileSource(IPyLeafletMixin):
 
     def _validateMinMaxValue(
         self, value: Union[str, float], frame: int, dtype: npt.DTypeLike,
-    ) -> Tuple[Union[str, int, float], Union[float, int]]:
+    ) -> tuple[Union[str, int, float], Union[float, int]]:
         """
         Validate the min/max setting and return a specific string or float
         value and with any threshold.
@@ -788,7 +826,7 @@ class TileSource(IPyLeafletMixin):
 
     def _applyStyleFunction(
             self, image: np.ndarray, sc: types.SimpleNamespace, stage: str,
-            function: Optional[Dict[str, Any]] = None) -> np.ndarray:
+            function: Optional[dict[str, Any]] = None) -> np.ndarray:
         """
         Check if a style ahs a style function for the current stage.  If so,
         apply it.
@@ -825,7 +863,7 @@ class TileSource(IPyLeafletMixin):
             if function is None:
                 return image
         if isinstance(function, (list, tuple)):
-            for func in cast(Union[List, Tuple], function):
+            for func in function:
                 image = self._applyStyleFunction(image, sc, stage, func)
             return image
         if isinstance(function, str):
@@ -860,7 +898,7 @@ class TileSource(IPyLeafletMixin):
 
     def getICCProfiles(
             self, idx: Optional[int] = None, onlyInfo: bool = False) -> Optional[
-                Union[PIL.ImageCms.ImageCmsProfile, List[Optional[PIL.ImageCms.ImageCmsProfile]]]]:
+                Union[PIL.ImageCms.ImageCmsProfile, list[Optional[PIL.ImageCms.ImageCmsProfile]]]]:
         """
         Get a list of all ICC profiles that are available for the source, or
         get a specific profile.
@@ -1005,7 +1043,7 @@ class TileSource(IPyLeafletMixin):
                 elif sc.mainImage.dtype.kind == 'f':
                     sc.dtype = 'float'
             sc.axis = sc.axis if sc.axis is not None else entry.get('axis')
-            sc.bandidx = 0 if image.shape[2] <= 2 else 1  # type: ignore[misc]
+            sc.bandidx = 0 if image.shape[2] <= 2 else 1
             sc.band = None
             if ((entry.get('frame') is None and not entry.get('framedelta')) or
                     entry.get('frame') == sc.mainFrame):
@@ -1014,35 +1052,34 @@ class TileSource(IPyLeafletMixin):
             else:
                 frame = entry['frame'] if entry.get('frame') is not None else (
                     sc.mainFrame + entry['framedelta'])
-                image = getattr(self, '_unstyledInstance', self).getTile(
-                    x, y, z, frame=frame, numpyAllowed=True)
+                image = self._unstyled.getTile(x, y, z, frame=frame, numpyAllowed=True)
                 image = image[:sc.mainImage.shape[0],
                               :sc.mainImage.shape[1],
                               :sc.mainImage.shape[2]]
             if (isinstance(entry.get('band'), int) and
-                    entry['band'] >= 1 and entry['band'] <= image.shape[2]):  # type: ignore[misc]
+                    entry['band'] >= 1 and entry['band'] <= image.shape[2]):
                 sc.bandidx = entry['band'] - 1
             sc.composite = entry.get('composite', 'lighten')
             if (hasattr(self, '_bandnames') and entry.get('band') and
                     str(entry['band']).lower() in self._bandnames and
-                    image.shape[2] > self._bandnames[  # type: ignore[misc]
+                    image.shape[2] > self._bandnames[
                         str(entry['band']).lower()]):
                 sc.bandidx = self._bandnames[str(entry['band']).lower()]
-            if entry.get('band') == 'red' and image.shape[2] > 2:  # type: ignore[misc]
+            if entry.get('band') == 'red' and image.shape[2] > 2:
                 sc.bandidx = 0
-            elif entry.get('band') == 'blue' and image.shape[2] > 2:  # type: ignore[misc]
+            elif entry.get('band') == 'blue' and image.shape[2] > 2:
                 sc.bandidx = 2
                 sc.band = image[:, :, 2]
             elif entry.get('band') == 'alpha':
-                sc.bandidx = (image.shape[2] - 1 if image.shape[2] in (2, 4)  # type: ignore[misc]
+                sc.bandidx = (image.shape[2] - 1 if image.shape[2] in (2, 4)
                               else None)
-                sc.band = (image[:, :, -1] if image.shape[2] in (2, 4) else  # type: ignore[misc]
+                sc.band = (image[:, :, -1] if image.shape[2] in (2, 4) else
                            np.full(image.shape[:2], 255, np.uint8))
                 sc.composite = entry.get('composite', 'multiply')
             if sc.band is None:
                 sc.band = image[
-                    :, :, sc.bandidx  # type: ignore[index]
-                    if sc.bandidx is not None and sc.bandidx < image.shape[2]  # type: ignore[misc]
+                    :, :, sc.bandidx
+                    if sc.bandidx is not None and sc.bandidx < image.shape[2]
                     else 0]
             sc.band = self._applyStyleFunction(sc.band, sc, 'preband')
             sc.palette = getPaletteColors(entry.get(
@@ -1060,9 +1097,11 @@ class TileSource(IPyLeafletMixin):
             if sc.nodata is not None:
                 sc.mask = sc.band != float(sc.nodata)
             else:
-                sc.mask = np.full(image.shape[:2], True)
+                sc.mask = None
             sc.band = (sc.band - sc.min) / delta
             if not sc.clamp:
+                if sc.mask is None:
+                    sc.mask = np.full(image.shape[:2], True)
                 sc.mask = sc.mask & (sc.band >= 0) & (sc.band <= 1)
             sc.band = self._applyStyleFunction(sc.band, sc, 'band')
             # To implement anything other multiply or lighten, we should mimic
@@ -1075,7 +1114,7 @@ class TileSource(IPyLeafletMixin):
             # divide.
             # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html for
             # some details.
-            for channel in range(sc.output.shape[2]):  # type: ignore[misc]
+            for channel in range(sc.output.shape[2]):
                 if np.all(sc.palette[:, channel] == sc.palette[0, channel]):
                     if ((sc.palette[0, channel] == 0 and sc.composite != 'multiply') or
                             (sc.palette[0, channel] == 255 and sc.composite == 'multiply')):
@@ -1087,25 +1126,27 @@ class TileSource(IPyLeafletMixin):
                     if not channel or np.any(
                             sc.palette[:, channel] != sc.palette[:, channel - 1]):
                         if not sc.discrete:
-                            clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
+                            if len(sc.palette) == 2 and sc.palette[0, channel] == 0:
+                                clrs = sc.band * sc.palette[1, channel]
+                            else:
+                                clrs = np.interp(sc.band, sc.palettebase, sc.palette[:, channel])
                         else:
                             clrs = sc.palette[
                                 np.floor(sc.band * len(sc.palette)).astype(int).clip(
                                     0, len(sc.palette) - 1), channel]
                 if sc.composite == 'multiply':
                     if eidx:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.multiply(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs / 255, 1))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.multiply(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            (clrs / 255) if sc.mask is None else np.where(sc.mask, clrs / 255, 1))
                 else:
                     if not eidx:
-                        sc.output[:sc.mask.shape[0],
-                                  :sc.mask.shape[1],
-                                  channel] = np.where(sc.mask, clrs, 0)
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = (
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
                     else:
-                        sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel] = np.maximum(
-                            sc.output[:sc.mask.shape[0], :sc.mask.shape[1], channel],
-                            np.where(sc.mask, clrs, 0))
+                        sc.output[:clrs.shape[0], :clrs.shape[1], channel] = np.maximum(
+                            sc.output[:clrs.shape[0], :clrs.shape[1], channel],
+                            clrs if sc.mask is None else np.where(sc.mask, clrs, 0))
             sc.output = self._applyStyleFunction(sc.output, sc, 'postband')
         if hasattr(sc, 'styleIndex'):
             del sc.styleIndex
@@ -1116,14 +1157,14 @@ class TileSource(IPyLeafletMixin):
             sc.output = (sc.output * 65535 / 255).astype(np.uint16)
         elif sc.dtype == 'float':
             sc.output /= 255
-        if sc.axis is not None and 0 <= int(sc.axis) < sc.output.shape[2]:  # type: ignore[misc]
+        if sc.axis is not None and 0 <= int(sc.axis) < sc.output.shape[2]:
             sc.output = sc.output[:, :, sc.axis:sc.axis + 1]
         sc.output = self._applyStyleFunction(sc.output, sc, 'post')
         return sc.output
 
     def _outputTileNumpyStyle(
             self, intile: Any, applyStyle: bool, x: int, y: int, z: int,
-            frame: Optional[int] = None) -> Tuple[np.ndarray, str]:
+            frame: Optional[int] = None) -> tuple[np.ndarray, str]:
         """
         Convert a tile to a numpy array.  Optionally apply the style to a tile.
         Always returns a numpy tile.
@@ -1138,15 +1179,17 @@ class TileSource(IPyLeafletMixin):
         """
         tile, mode = _imageToNumpy(intile)
         if (applyStyle and (getattr(self, 'style', None) or hasattr(self, '_iccprofiles')) and
-                (not getattr(self, 'style', None) or len(self.style) != 1 or
-                 self.style.get('icc') is not False)):
+                (not getattr(self, 'style', None) or
+                 len(cast(JSONDict, self.style)) != 1 or
+                 cast(JSONDict, self.style).get('icc') is not False)):
             tile = self._applyStyle(tile, getattr(self, 'style', None), x, y, z, frame)
         if tile.shape[0] != self.tileHeight or tile.shape[1] != self.tileWidth:
             extend = np.zeros(
-                (self.tileHeight, self.tileWidth, tile.shape[2]),  # type: ignore[misc]
+                (self.tileHeight, self.tileWidth, tile.shape[2]),
                 dtype=tile.dtype)
             extend[:min(self.tileHeight, tile.shape[0]),
-                   :min(self.tileWidth, tile.shape[1])] = tile
+                   :min(self.tileWidth, tile.shape[1])] = tile[:min(self.tileHeight, tile.shape[0]),
+                                                               :min(self.tileWidth, tile.shape[1])]
             tile = extend
         return tile, mode
 
@@ -1189,14 +1232,14 @@ class TileSource(IPyLeafletMixin):
 
         if self._dtype is None or (isinstance(self._dtype, str) and self._dtype == 'check'):
             if isinstance(tile, np.ndarray):
-                self._dtype = tile.dtype
+                self._dtype = np.dtype(tile.dtype)
                 self._bandCount = tile.shape[-1] if len(tile.shape) == 3 else 1
             elif isinstance(tile, PIL.Image.Image):
                 self._dtype = np.uint8 if ';16' not in tile.mode else np.uint16
                 self._bandCount = len(tile.mode)
             else:
                 _img = _imageToNumpy(tile)[0]
-                self._dtype = _img.dtype
+                self._dtype = np.dtype(_img.dtype)
                 self._bandCount = _img.shape[-1] if len(_img.shape) == 3 else 1
 
         mode = None
@@ -1215,8 +1258,8 @@ class TileSource(IPyLeafletMixin):
             else:
                 color = PIL.ImageColor.getcolor(self.edge, mode)
                 tile = tile.copy()
-                tile[:, contentWidth:] = color
-                tile[contentHeight:] = color
+                cast(np.ndarray, tile)[:, contentWidth:] = color
+                cast(np.ndarray, tile)[contentHeight:] = color
         if isinstance(tile, np.ndarray) and numpyAllowed:
             return tile
         tile = _imageToPIL(tile)
@@ -1241,7 +1284,7 @@ class TileSource(IPyLeafletMixin):
         return None
 
     @classmethod
-    def canRead(cls, *args, **kwargs):
+    def canRead(cls, *args, **kwargs) -> bool:
         """
         Check if we can read the input.  This takes the same parameters as
         __init__.
@@ -1314,8 +1357,55 @@ class TileSource(IPyLeafletMixin):
     def metadata(self) -> JSONDict:
         return self.getMetadata()
 
+    def _getFrameValueInformation(self, frames: list[dict]) -> dict[str, Any]:
+        """
+        Given a `frames` list from a metadata response, return a dictionary describing
+        the value info for any frame axes. Keys in this dictionary follow the pattern "Value[AXIS]"
+        and each maps to a dictionary describing the axis, including a list of values, whether the
+        axis is uniform, the units, minimum value, maximum value, and data type.
+
+        :param frames: A list of dictionaries describing each frame in the image
+        :returns: A dictionary describing the values of frame axes
+        """
+        refvalues: dict[str, dict[str, list]] = {}
+        for frame in frames:
+            for key, value in frame.items():
+                if 'Value' in key:
+                    if key not in refvalues:
+                        refvalues[key] = {}
+                    value_index = str(frame.get(key.replace('Value', 'Index')))
+                    if value_index not in refvalues[key]:
+                        refvalues[key][value_index] = [value]
+                    else:
+                        refvalues[key][value_index].append(value)
+        frame_value_info = {}
+        for key, value_mapping in refvalues.items():
+            axis_name = key.replace('Value', '').lower()
+            units = None
+            if hasattr(self, 'frameUnits') and self.frameUnits is not None:
+                units = self.frameUnits.get(axis_name)
+            uniform = all(len(set(value_list)) <= 1 for value_list in value_mapping.values())
+            values = [
+                value_list[0] for value_list in value_mapping.values() if len(value_list)
+            ]
+            try:
+                min_val = min(values)
+                max_val = max(values)
+            except TypeError:
+                min_val = None
+                max_val = None
+            frame_value_info[key] = dict(
+                values=values,
+                uniform=uniform,
+                units=units,
+                min=min_val,
+                max=max_val,
+                datatype=np.array(values).dtype.name,
+            )
+        return frame_value_info
+
     def _addMetadataFrameInformation(
-            self, metadata: JSONDict, channels: Optional[List[str]] = None) -> None:
+            self, metadata: JSONDict, channels: Optional[list[str]] = None) -> None:
         """
         Given a metadata response that has a `frames` list, where each frame
         has some of `Index(XY|Z|C|T)`, populate the `Frame`, `Index` and
@@ -1329,7 +1419,7 @@ class TileSource(IPyLeafletMixin):
         """
         if 'frames' not in metadata:
             return
-        maxref: Dict[str, int] = {}
+        maxref: dict[str, int] = {}
         refkeys = {'IndexC'}
         index = 0
         for idx, frame in enumerate(metadata['frames']):
@@ -1345,6 +1435,7 @@ class TileSource(IPyLeafletMixin):
                     metadata['frames'][idx].get(key) for key in refkeys)):
                 index += 1
             frame['Index'] = index
+        metadata.update(self._getFrameValueInformation(metadata['frames']))
         if any(val > 1 for val in maxref.values()):
             metadata['IndexRange'] = {key: value for key, value in maxref.items() if value > 1}
             metadata['IndexStride'] = {
@@ -1358,7 +1449,7 @@ class TileSource(IPyLeafletMixin):
             for frame in metadata['frames']:
                 frame['Channel'] = channels[frame.get('IndexC', 0)]
 
-    def getInternalMetadata(self, **kwargs):
+    def getInternalMetadata(self, **kwargs) -> Optional[dict[Any, Any]]:
         """
         Return additional known metadata about the tile source.  Data returned
         from this method is not guaranteed to be in any particular format or
@@ -1368,7 +1459,7 @@ class TileSource(IPyLeafletMixin):
         """
         return None
 
-    def getOneBandInformation(self, band: int) -> Dict[str, Any]:
+    def getOneBandInformation(self, band: int) -> dict[str, Any]:
         """
         Get band information for a single band.
 
@@ -1377,7 +1468,7 @@ class TileSource(IPyLeafletMixin):
         """
         return self.getBandInformation()[band]
 
-    def getBandInformation(self, statistics: bool = False, **kwargs) -> Dict[int, Any]:
+    def getBandInformation(self, statistics: bool = False, **kwargs) -> dict[int, Any]:
         """
         Get information about each band in the image.
 
@@ -1431,10 +1522,12 @@ class TileSource(IPyLeafletMixin):
         :returns: an integer frame number.
         """
         frame = int(frame or 0)
-        if (hasattr(self, '_style') and 'bands' in self.style and
-                len(self.style['bands']) and
-                all(entry.get('frame') is not None for entry in self.style['bands'])):
-            frame = int(self.style['bands'][0]['frame'])
+        if (hasattr(self, '_style') and
+                'bands' in cast(JSONDict, self.style) and
+                len(cast(JSONDict, self.style)['bands']) and
+                all(entry.get('frame') is not None
+                    for entry in cast(JSONDict, self.style)['bands'])):
+            frame = int(cast(JSONDict, self.style)['bands'][0]['frame'])
         return frame
 
     def _xyzInRange(
@@ -1462,7 +1555,7 @@ class TileSource(IPyLeafletMixin):
                 msg = 'Frame does not exist'
                 raise exceptions.TileSourceXYZRangeError(msg)
 
-    def _xyzToCorners(self, x: int, y: int, z: int) -> Tuple[int, int, int, int, int]:
+    def _xyzToCorners(self, x: int, y: int, z: int) -> tuple[int, int, int, int, int]:
         """
         Convert a tile in x, y, z to corners and scale factor.   The corners
         are in full resolution image coordinates.  The scale is always a power
@@ -1481,7 +1574,7 @@ class TileSource(IPyLeafletMixin):
         y1 = min((y + 1) * step * self.tileHeight, self.sizeY)
         return x0, y0, x1, y1, step
 
-    def _nonemptyLevelsList(self, frame: Optional[int] = 0) -> List[bool]:
+    def _nonemptyLevelsList(self, frame: Optional[int] = 0) -> list[bool]:
         """
         Return a list of one value per level where the value is None if the
         level does not exist in the file and any other value if it does.
@@ -1491,7 +1584,7 @@ class TileSource(IPyLeafletMixin):
         """
         return [True] * self.levels
 
-    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> Tuple[
+    def _getTileFromEmptyLevel(self, x: int, y: int, z: int, **kwargs) -> tuple[
             Union[PIL.Image.Image, np.ndarray], str]:
         """
         Given the x, y, z tile location in an unpopulated level, get tiles from
@@ -1515,7 +1608,8 @@ class TileSource(IPyLeafletMixin):
         if (scale >= max(self.tileWidth, self.tileHeight) or
                 (self.dtype and self.dtype != np.uint8) or
                 (self.bandCount and self.bandCount > 4)):
-            nptile = np.zeros((self.tileHeight, self.tileWidth, cast(int, self.bandCount)))
+            nptile = np.zeros((self.tileHeight, self.tileWidth, cast(int, self.bandCount)),
+                              dtype=self.dtype)
             maxX = 2.0 ** (z + 1 - self.levels) * self.sizeX / self.tileWidth
             maxY = 2.0 ** (z + 1 - self.levels) * self.sizeY / self.tileHeight
             for newY in range(scale):
@@ -1535,7 +1629,7 @@ class TileSource(IPyLeafletMixin):
                             'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                             x * scale + newX, y * scale + newY, z)
                         lastlog = time.time()
-                    subtile = getattr(self, '_unstyledInstance', self).getTile(
+                    subtile = self._unstyled.getTile(
                         x * scale + newX, y * scale + newY, z,
                         pilImageAllowed=False, numpyAllowed='always',
                         sparseFallback=True, edge=False, frame=kwargs.get('frame'))
@@ -1559,7 +1653,7 @@ class TileSource(IPyLeafletMixin):
                         'Compositing tile from higher resolution tiles x=%d y=%d z=%d',
                         x * scale + newX, y * scale + newY, z)
                     lastlog = time.time()
-                subtile = getattr(self, '_unstyledInstance', self).getTile(
+                subtile = self._unstyled.getTile(
                     x * scale + newX, y * scale + newY, z,
                     pilImageAllowed=True, numpyAllowed=False,
                     sparseFallback=True, edge=False, frame=kwargs.get('frame'))
@@ -1567,13 +1661,22 @@ class TileSource(IPyLeafletMixin):
                 mode = subtile.mode
                 tile.paste(subtile, (newX * self.tileWidth,
                                      newY * self.tileHeight))
-        return tile.resize(
-            (self.tileWidth, self.tileHeight),
-            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS).convert(mode), TILE_FORMAT_PIL
+        tile = tile.resize(
+            (min(self.tileWidth, (tile.width + scale - 1) // scale),
+             min(self.tileHeight, (tile.height + scale - 1) // scale)),
+            getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
+        if tile.width != self.tileWidth or tile.height != self.tileHeight:
+            fulltile = PIL.Image.new('RGBA', (self.tileWidth, self.tileHeight))
+            fulltile.paste(tile, (0, 0))
+            tile = fulltile
+        tile = tile.convert(mode)
+        return (tile, TILE_FORMAT_PIL)
 
     @methodcache()
-    def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False,
-                sparseFallback=False, frame=None):
+    def getTile(self, x: int, y: int, z: int, pilImageAllowed: bool = False,
+                numpyAllowed: Union[bool, str] = False,
+                sparseFallback: bool = False, frame: Optional[int] = None) -> Union[
+                    ImageBytes, PIL.Image.Image, bytes, np.ndarray]:
         """
         Get a tile from a tile source, returning it as an binary image, a PIL
         image, or a numpy array.
@@ -1608,7 +1711,7 @@ class TileSource(IPyLeafletMixin):
     @methodcache()
     def getThumbnail(
             self, width: Optional[Union[str, int]] = None,
-            height: Optional[Union[str, int]] = None, **kwargs) -> Tuple[
+            height: Optional[Union[str, int]] = None, **kwargs) -> tuple[
                 Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         Get a basic thumbnail from the current tile source.  Aspect ratio is
@@ -1655,11 +1758,11 @@ class TileSource(IPyLeafletMixin):
         return level
 
     def convertRegionScale(
-            self, sourceRegion: Dict[str, Any],
-            sourceScale: Optional[Dict[str, float]] = None,
-            targetScale: Optional[Dict[str, float]] = None,
+            self, sourceRegion: dict[str, Any],
+            sourceScale: Optional[dict[str, float]] = None,
+            targetScale: Optional[dict[str, float]] = None,
             targetUnits: Optional[str] = None,
-            cropToImage: bool = True) -> Dict[str, Any]:
+            cropToImage: bool = True) -> dict[str, Any]:
         """
         Convert a region from one scale to another.
 
@@ -1713,7 +1816,7 @@ class TileSource(IPyLeafletMixin):
         if (units != 'mag_pixels' and (
                 targetUnits is None or targetUnits == units)):
             return sourceRegion
-        magArgs: Dict[str, Any] = (sourceScale or {}).copy()
+        magArgs: dict[str, Any] = (sourceScale or {}).copy()
         magArgs['rounding'] = None
         magLevel = self.getLevelForMagnification(**magArgs)
         mag = self.getMagnificationForLevel(magLevel)
@@ -1723,7 +1826,7 @@ class TileSource(IPyLeafletMixin):
             metadata, desiredMagnification=mag, cropToImage=cropToImage,
             **sourceRegion)
         # If requested, convert region to targetUnits
-        desMagArgs: Dict[str, Any] = (targetScale or {}).copy()
+        desMagArgs: dict[str, Any] = (targetScale or {}).copy()
         desMagArgs['rounding'] = None
         desMagLevel = self.getLevelForMagnification(**desMagArgs)
         desiredMagnification = self.getMagnificationForLevel(desMagLevel)
@@ -1747,7 +1850,7 @@ class TileSource(IPyLeafletMixin):
                 del targetRegion[key]
         return targetRegion
 
-    def getRegion(self, format: Union[str, Tuple[str]] = (TILE_FORMAT_IMAGE, ), **kwargs) -> Tuple[
+    def getRegion(self, format: Union[str, tuple[str]] = (TILE_FORMAT_IMAGE, ), **kwargs) -> tuple[
             Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         Get a rectangular region from the current tile source.  Aspect ratio is
@@ -1812,7 +1915,7 @@ class TileSource(IPyLeafletMixin):
         outHeight = int(math.floor(outHeight))
         if tiled:
             return self._encodeTiledImage(
-                cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
+                cast(dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         if outWidth != regionWidth or outHeight != regionHeight:
             dtype = cast(np.ndarray, image).dtype
             if dtype == np.uint8 or (resample is not None and (
@@ -1838,8 +1941,8 @@ class TileSource(IPyLeafletMixin):
         return utilities._encodeImage(cast(np.ndarray, image), format=format, **kwargs)
 
     def _encodeTiledImage(
-            self, image: Dict[str, Any], outWidth: int, outHeight: int,
-            iterInfo: Dict[str, Any], **kwargs) -> Tuple[pathlib.Path, str]:
+            self, image: dict[str, Any], outWidth: int, outHeight: int,
+            iterInfo: dict[str, Any], **kwargs) -> tuple[pathlib.Path, str]:
         """
         Given an image record of a set of vips image strips, generate a tiled
         tiff file at the specified output size.
@@ -1885,8 +1988,8 @@ class TileSource(IPyLeafletMixin):
         return self._encodeTiledImageFromVips(vimg, iterInfo, image, **kwargs)
 
     def _encodeTiledImageFromVips(
-            self, vimg: Any, iterInfo: Dict[str, Any], image: Dict[str, Any],
-            **kwargs) -> Tuple[pathlib.Path, str]:
+            self, vimg: Any, iterInfo: dict[str, Any], image: dict[str, Any],
+            **kwargs) -> tuple[pathlib.Path, str]:
         """
         Save a vips image as a tiled tiff.
 
@@ -1931,8 +2034,15 @@ class TileSource(IPyLeafletMixin):
                 (maxHeight - image['height']) // 2 if not corner else 0)
         if image['mm_x'] and image['mm_y']:
             vimg = vimg.copy(xres=1 / image['mm_x'], yres=1 / image['mm_y'])
-        fd, outputPath = tempfile.mkstemp('.tiff', 'tiledRegion_')
-        os.close(fd)
+
+        outputPath = kwargs.get('output', {}).get('path')
+        if outputPath is not None:
+            outputPath = pathlib.Path(outputPath)
+            outputPath.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            fd, outputPath = tempfile.mkstemp('.tiff', 'tiledRegion_')
+            os.close(fd)
+
         try:
             vimg.write_to_file(outputPath, **convertParams)
             return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
@@ -1944,10 +2054,10 @@ class TileSource(IPyLeafletMixin):
             raise exc
 
     def tileFrames(
-            self, format: Union[str, Tuple[str]] = (TILE_FORMAT_IMAGE, ),
-            frameList: Optional[List[int]] = None,
+            self, format: Union[str, tuple[str]] = (TILE_FORMAT_IMAGE, ),
+            frameList: Optional[list[int]] = None,
             framesAcross: Optional[int] = None,
-            max_workers: Optional[int] = -4, **kwargs) -> Tuple[
+            max_workers: Optional[int] = -4, **kwargs) -> tuple[
                 Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         Given the parameters for getRegion, plus a list of frames and the
@@ -2037,14 +2147,104 @@ class TileSource(IPyLeafletMixin):
                         outWidth, outHeight)
         if tiled:
             return self._encodeTiledImage(
-                cast(Dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
+                cast(dict[str, Any], tiledimage), outWidth, outHeight, tileIter.info, **kwargs)
         return utilities._encodeImage(cast(np.ndarray, image), format=format, **kwargs)
 
+    def getGeospatialRegion(
+        self,
+        src_projection: str,
+        src_gcps: list[Union[tuple[float], list[float]]],
+        dest_projection: str,
+        dest_region: dict[str, float],
+        **kwargs,
+    ) -> tuple[Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
+        """
+        This function requires pyproj and either rasterio or gdal; it allows
+        specifying georeferencing (even for non-geospatial images) and
+        retrieving a region from geospatial coordinates.  In addition to the
+        required georeferencing parameters described below, this takes the same
+        parameters as getRegion.
+
+        :param src_projection: A string describing the coordinate reference
+            system used for src_gcps. This string can be an EPSG code or other
+            format accepted by pyproj.CRS.from_string.
+        :param src_gcps: A list of ground control points describing projected
+            coordinates for certain pixel coordinates in the image. Each GCP
+            can be a list or tuple with the following format: (cx, cy, px, py)
+            where (cx, cy) is a projected coordinate in the coordinate
+            reference system described by src_projection and (px, py) is a
+            pixel coordinate within the extents of the image.
+        :param dest_projection: A string describing the coordinate reference
+            system used for dest_region. This string can be an EPSG code or
+            other format accepted by pyproj.CRS.from_string.
+        :param dest_region: A dictionary describing the desired region to
+            retrieve from the image.  Must specify values for "top", "bottom",
+            "left", and "right" in the projected coordinate system specified by
+            dest_projection.
+        :param kwargs: Optional arguments passed to getRegion.
+        :returns: regionData, formatOrRegionMime: the image data and either the
+            mime type, if the format is TILE_FORMAT_IMAGE, or the format.
+        """
+        import pyproj
+        use_rio = True
+        try:
+            import rasterio
+        except ImportError:
+            from osgeo import gdal
+            use_rio = False
+
+        if any(len(gcp) != 4 for gcp in src_gcps):
+            msg = 'Ground control points must contain four values in the form (cx, cy, px, py).'
+            raise ValueError(msg)
+
+        # convert gcps to dest_projection
+        crs_transform = pyproj.Transformer.from_crs(src_projection, dest_projection, always_xy=True)
+        converted_gcps = [
+            [
+                *crs_transform.transform(gcp[0], gcp[1]),
+                gcp[2], gcp[3],
+            ] for gcp in src_gcps if len(gcp) == 4
+        ]
+        drLeft = dest_region.get('left', 0)
+        drRight = dest_region.get('right', 0)
+        drTop = dest_region.get('top', 0)
+        drBottom = dest_region.get('bottom', 0)
+        if use_rio:
+            gcps = [rasterio.control.GroundControlPoint(
+                x=gcp[0], y=gcp[1], col=gcp[2], row=gcp[3],
+            ) for gcp in converted_gcps]
+            # transform dest_region to pixel coords
+            transformer = rasterio.transform.GCPTransformer(gcps)
+            py1, px1 = transformer.rowcol(drLeft, drTop)
+            py2, px2 = transformer.rowcol(drLeft, drBottom)
+            py3, px3 = transformer.rowcol(drRight, drTop)
+            py4, px4 = transformer.rowcol(drRight, drBottom)
+        else:
+            gcps = [gdal.GCP(
+                gcp[0], gcp[1], 0, gcp[2], gcp[3],
+            ) for gcp in converted_gcps]
+            driver = gdal.GetDriverByName('MEM')
+            dataset = driver.Create('', 1, 1, 1)
+            dataset.SetGCPs(gcps, '')
+            transformer = gdal.Transformer(dataset, None, [])
+            _, (px1, py1, _) = transformer.TransformPoint(True, drLeft, drTop)
+            _, (px2, py2, _) = transformer.TransformPoint(True, drLeft, drBottom)
+            _, (px3, py3, _) = transformer.TransformPoint(True, drRight, drTop)
+            _, (px4, py4, _) = transformer.TransformPoint(True, drRight, drBottom)
+        left = int(max(0, min(px1, px2, px3, px4)))
+        top = int(max(0, min(py1, py2, py3, py4)))
+        right = int(min(self.sizeX, max(px1, px2, px3, px4)))
+        bottom = int(min(self.sizeY, max(py1, py2, py3, py4)))
+        pixel_region = dict(left=left, top=top, right=right, bottom=bottom)
+
+        # send pixel_region into getRegion
+        return self.getRegion(region=pixel_region, **kwargs)
+
     def getRegionAtAnotherScale(
-            self, sourceRegion: Dict[str, Any],
-            sourceScale: Optional[Dict[str, float]] = None,
-            targetScale: Optional[Dict[str, float]] = None,
-            targetUnits: Optional[str] = None, **kwargs) -> Tuple[
+            self, sourceRegion: dict[str, Any],
+            sourceScale: Optional[dict[str, float]] = None,
+            targetScale: Optional[dict[str, float]] = None,
+            targetUnits: Optional[str] = None, **kwargs) -> tuple[
                 Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
         This takes the same parameters and returns the same results as
@@ -2062,11 +2262,11 @@ class TileSource(IPyLeafletMixin):
         return self.getRegion(region=region, scale=targetScale, **kwargs)
 
     def getPointAtAnotherScale(
-            self, point: Tuple[float, float],
-            sourceScale: Optional[Dict[str, float]] = None,
+            self, point: tuple[float, float],
+            sourceScale: Optional[dict[str, float]] = None,
             sourceUnits: Optional[str] = None,
-            targetScale: Optional[Dict[str, float]] = None,
-            targetUnits: Optional[str] = None, **kwargs) -> Tuple[float, float]:
+            targetScale: Optional[dict[str, float]] = None,
+            targetUnits: Optional[str] = None, **kwargs) -> tuple[float, float]:
         """
         Given a point as a (x, y) tuple, convert it from one scale to another.
         The sourceScale, sourceUnits, targetScale, and targetUnits parameters
@@ -2085,7 +2285,7 @@ class TileSource(IPyLeafletMixin):
             cropToImage=False)
         return (region['left'], region['top'])
 
-    def getNativeMagnification(self) -> Dict[str, Optional[float]]:
+    def getNativeMagnification(self) -> dict[str, Optional[float]]:
         """
         Get the magnification for the highest-resolution level.
 
@@ -2097,7 +2297,7 @@ class TileSource(IPyLeafletMixin):
             'mm_y': None,
         }
 
-    def getMagnificationForLevel(self, level: Optional[float] = None) -> Dict[str, Optional[float]]:
+    def getMagnificationForLevel(self, level: Optional[float] = None) -> dict[str, Optional[float]]:
         """
         Get the magnification at a particular level.
 
@@ -2176,7 +2376,7 @@ class TileSource(IPyLeafletMixin):
         return level
 
     def tileIterator(
-            self, format: Union[str, Tuple[str]] = (TILE_FORMAT_NUMPY, ),
+            self, format: Union[str, tuple[str]] = (TILE_FORMAT_NUMPY, ),
             resample: bool = True, **kwargs) -> Iterator[LazyTileDict]:
         """
         Iterate on all tiles in the specified region at the specified scale.
@@ -2260,7 +2460,13 @@ class TileSource(IPyLeafletMixin):
                 pixels is in the specified magnification pixels.  mm is in the
                 specified magnification scale.  fraction is a scale of 0 to 1.
                 pixels and mm are only available if the magnification and mm
-                per pixel are defined for the image.
+                per pixel are defined for the image.  For geospatial sources,
+                this can also be 'projection', or a case-insensitive string
+                starting with 'proj4:', 'epsg:' or a enumerated value like
+                'wgs84'.
+            :unitsWH: if not specified, this is the same as `units`.
+                Otherwise, these units will be used for the width and height if
+                specified.  If can take the same values as `units`.
 
         :param output: a dictionary of optional values which specify the size
             of the output.
@@ -2344,9 +2550,9 @@ class TileSource(IPyLeafletMixin):
         return TileIterator(self, format=format, resample=resample, **kwargs)
 
     def tileIteratorAtAnotherScale(
-            self, sourceRegion: Dict[str, Any],
-            sourceScale: Optional[Dict[str, float]] = None,
-            targetScale: Optional[Dict[str, float]] = None,
+            self, sourceRegion: dict[str, Any],
+            sourceScale: Optional[dict[str, float]] = None,
+            targetScale: Optional[dict[str, float]] = None,
             targetUnits: Optional[str] = None, **kwargs) -> Iterator[LazyTileDict]:
         """
         This takes the same parameters and returns the same results as
@@ -2395,7 +2601,7 @@ class TileSource(IPyLeafletMixin):
             return tile['iterator_range']['position']
         return 0
 
-    def getAssociatedImagesList(self) -> List[str]:
+    def getAssociatedImagesList(self) -> list[str]:
         """
         Return a list of associated images.
 
@@ -2404,7 +2610,7 @@ class TileSource(IPyLeafletMixin):
         return []
 
     def getAssociatedImage(
-            self, imageKey: str, *args, **kwargs) -> Optional[Tuple[ImageBytes, str]]:
+            self, imageKey: str, *args, **kwargs) -> Optional[tuple[ImageBytes, str]]:
         """
         Return an associated image.
 
@@ -2421,14 +2627,14 @@ class TileSource(IPyLeafletMixin):
         width = kwargs.get('width')
         height = kwargs.get('height')
         if width or height:
-            width, height, calcScale = utilities._calculateWidthHeight(
+            width, height, _ = utilities._calculateWidthHeight(
                 width, height, imageWidth, imageHeight)
             image = image.resize(
                 (width, height),
                 getattr(PIL.Image, 'Resampling', PIL.Image).BICUBIC
                 if width > imageWidth else
                 getattr(PIL.Image, 'Resampling', PIL.Image).LANCZOS)
-        return cast(Tuple[ImageBytes, str], utilities._encodeImage(image, **kwargs))
+        return cast(tuple[ImageBytes, str], utilities._encodeImage(image, **kwargs))
 
     def getPixel(self, includeTileRecord: bool = False, **kwargs) -> JSONDict:
         """
@@ -2447,7 +2653,7 @@ class TileSource(IPyLeafletMixin):
         regionArgs['region'] = regionArgs.get('region', {}).copy()
         regionArgs['region']['width'] = regionArgs['region']['height'] = 1
         regionArgs['region']['unitsWH'] = 'base_pixels'
-        pixel: Dict[str, Any] = {}
+        pixel: dict[str, Any] = {}
         # This could be
         #  img, format = self.getRegion(format=TILE_FORMAT_PIL, **regionArgs)
         # where img is the PIL image (rather than tile['tile'], but using
@@ -2473,11 +2679,57 @@ class TileSource(IPyLeafletMixin):
             self._frameCount = len(self.getMetadata().get('frames', [])) or 1
         return self._frameCount
 
+    def frameToAxes(self, frame: int) -> dict[str, int]:
+        """
+        Given a frame number, return a dictionary of axes values.  If unknown,
+        this is just 'frame': frame.
+
+        :param frame: a frame number.
+        :returns: a dictionary of axes that specify the frame.
+        """
+        if frame >= self.frames:
+            msg = 'frame is outside of range'
+            raise exceptions.TileSourceRangeError(msg)
+        meta = self.metadata
+        if self.frames == 1 or 'IndexStride' not in meta:
+            return {'frame': frame}
+        axes = {
+            key[5:].lower(): (frame // stride) % meta['IndexRange'][key]
+            for key, stride in meta['IndexStride'].items()}
+        return axes
+
+    def axesToFrame(self, **kwargs: int) -> int:
+        """
+        Given values on some or all of the axes, return the corresponding frame
+        number.  Any unspecified axis is 0.  If one of the specified axes is
+        'frame', this is just returned and the other values are ignored.
+
+        :param kwargs: axes with position values.
+        :returns: a frame number.
+        """
+        meta = self.metadata
+        frame = 0
+        for key, value in kwargs.items():
+            if key.lower() == 'frame':
+                if value < 0 or value >= self.frames:
+                    msg = f'{value} is out of range for frame'
+                    raise exceptions.TileSourceRangeError(msg)
+                return value
+            ikey = 'Index' + key.upper()
+            if ikey not in meta.get('IndexStride', {}):
+                msg = f'{key} is not a known axis'
+                raise exceptions.TileSourceRangeError(msg)
+            if value < 0 or value >= meta['IndexRange'][ikey]:
+                msg = f'{value} is out of range for axis {key}'
+                raise exceptions.TileSourceRangeError(msg)
+            frame += value * meta['IndexStride'][ikey]
+        return frame
+
 
 class FileTileSource(TileSource):
 
     def __init__(
-            self, path: Union[str, pathlib.Path, Dict[Any, Any]], *args, **kwargs) -> None:
+            self, path: Union[str, pathlib.Path, dict[Any, Any]], *args, **kwargs) -> None:
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -2498,10 +2750,12 @@ class FileTileSource(TileSource):
     @staticmethod
     def getLRUHash(*args, **kwargs) -> str:
         return strhash(
-            args[0], kwargs.get('encoding', 'JPEG'), kwargs.get('jpegQuality', 95),
+            args[0],
+            kwargs.get('encoding') or config.getConfig('default_encoding'),
+            kwargs.get('jpegQuality', 95),
             kwargs.get('jpegSubsampling', 0), kwargs.get('tiffCompression', 'raw'),
             kwargs.get('edge', False),
-            '__STYLESTART__', kwargs.get('style', None), '__STYLEEND__')
+            '__STYLESTART__', kwargs.get('style'), '__STYLEEND__')
 
     def getState(self) -> str:
         if hasattr(self, '_classkey'):
@@ -2515,11 +2769,11 @@ class FileTileSource(TileSource):
             self.edge,
             self._jsonstyle)
 
-    def _getLargeImagePath(self) -> Union[str, pathlib.Path, Dict[Any, Any]]:
+    def _getLargeImagePath(self) -> Union[str, pathlib.Path, dict[Any, Any]]:
         return self.largeImagePath
 
     @classmethod
-    def canRead(cls, path: Union[str, pathlib.Path, Dict[Any, Any]], *args, **kwargs) -> bool:
+    def canRead(cls, path: Union[str, pathlib.Path, dict[Any, Any]], *args, **kwargs) -> bool:
         """
         Check if we can read the input.  This takes the same parameters as
         __init__.
@@ -2532,3 +2786,13 @@ class FileTileSource(TileSource):
             return True
         except exceptions.TileSourceError:
             return False
+
+    @classmethod
+    def addKnownMimetypes(cls):
+        """
+        Based on already listed extensions and a set of common extension-
+        mimetype list, add mimetypes if they do not already exist.
+        """
+        for ext, mimetype in ExtraExtensionsToMimetypes.items():
+            if ext in cls.extensions and mimetype not in cls.mimeTypes:
+                cls.mimeTypes[mimetype] = SourcePriority.IMPLICIT_LOW

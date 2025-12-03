@@ -19,7 +19,7 @@ function colorAlpha(color) {
     return value;
 }
 
-export default function style(json) {
+export default function style(json, levels) {
     var color;
     const style = {};
 
@@ -38,6 +38,31 @@ export default function style(json) {
     }
     if (json.lineWidth) {
         style.strokeWidth = json.lineWidth;
+    }
+    if (json.pattern) {
+        const pattern = '' + json.pattern;
+        if (window.geo.markerFeature.symbols[pattern] !== undefined) {
+            let symbolValue = 1;
+            if (pattern.startsWith('flower') || pattern.startsWith('jack')) {
+                symbolValue = 0.3;
+            } else if (pattern.startsWith('star')) {
+                symbolValue = 0.6;
+            }
+            // scaling with zoom often makes the zoomed out view appear
+            // unpatterned.  disable scale with zoom by settings levels to
+            // undefined -- though this is somewhat distracting while zooming
+            levels = undefined;
+            const rad = 48 / (levels !== undefined ? 2 ** levels : 4);
+            style.pattern = {
+                symbol: window.geo.markerFeature.symbols[pattern],
+                symbolValue: symbolValue,
+                strokeWidth: 0,
+                radius: rad,
+                rotation: -Math.PI / 2,
+                scaleWithZoom: levels !== undefined ? window.geo.markerFeature.scaleMode.all : window.geo.markerFeature.scaleMode.none,
+                spacing: -2.2 * rad
+            };
+        }
     }
     return style;
 }
