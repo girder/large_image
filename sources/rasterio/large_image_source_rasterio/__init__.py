@@ -17,6 +17,7 @@
 import math
 import os
 import pathlib
+import sys
 import tempfile
 import threading
 import warnings
@@ -1168,6 +1169,15 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
                     'tif.grd', 'til', 'vic', 'xlb'}:
                 if ext.lower() not in cls.extensions:
                     cls.extensions[ext.lower()] = SourcePriority.IMPLICIT_LOW
+
+
+if sys.version_info >= (3, 14):
+    try:
+        _lazyImport()
+    except Exception:
+        RasterioFileTileSource.extensions = {None: SourcePriority.FALLBACK}
+        RasterioFileTileSource.mimeTypes = {None: SourcePriority.FALLBACK}
+        del RasterioFileTileSource.addKnownExtensions
 
 
 def open(*args, **kwargs):

@@ -2159,29 +2159,39 @@ class TileSource(IPyLeafletMixin):
         **kwargs,
     ) -> tuple[Union[np.ndarray, PIL.Image.Image, ImageBytes, bytes, pathlib.Path], str]:
         """
-        This function requires pyproj and rasterio; it allows specifying georeferencing
-        (even for non-geospatial images) and retrieving a region from geospatial coordinates.
-        In addition to the required georeferencing parameters described below, this takes
-        the same parameters as getRegion.
+        This function requires pyproj and either rasterio or gdal; it allows
+        specifying georeferencing (even for non-geospatial images) and
+        retrieving a region from geospatial coordinates.  In addition to the
+        required georeferencing parameters described below, this takes the same
+        parameters as getRegion.
 
-        :param src_projection: A string describing the coordinate reference system used for
-            src_gcps. This string can be an EPSG code or other format accepted
-            by pyproj.CRS.from_string.
-        :param src_gcps: A list of ground control points describing projected coordinates for
-            certain pixel coordinates in the image. Each GCP can be a list or tuple with the
-            following format: (cx, cy, px, py) where (cx, cy) is a projected coordinate in the
-            coordinate reference system described by src_projection and (px, py) is a pixel
-            coordinate within the extents of the image.
-        :param dest_projection: A string describing the coordinate reference system used for
-            dest_region. This string can be an EPSG code or other format accepted
-            by pyproj.CRS.from_string.
-        :param dest_region: A dictionary describing the desired region to retrieve from the image.
-            Must specify values for "top", "bottom", "left", and "right" in the projected
-            coordinate system specified by dest_projection.
+        :param src_projection: A string describing the coordinate reference
+            system used for src_gcps. This string can be an EPSG code or other
+            format accepted by pyproj.CRS.from_string.
+        :param src_gcps: A list of ground control points describing projected
+            coordinates for certain pixel coordinates in the image. Each GCP
+            can be a list or tuple with the following format: (cx, cy, px, py)
+            where (cx, cy) is a projected coordinate in the coordinate
+            reference system described by src_projection and (px, py) is a
+            pixel coordinate within the extents of the image.
+        :param dest_projection: A string describing the coordinate reference
+            system used for dest_region. This string can be an EPSG code or
+            other format accepted by pyproj.CRS.from_string.
+        :param dest_region: A dictionary describing the desired region to
+            retrieve from the image.  Must specify values for "top", "bottom",
+            "left", and "right" in the projected coordinate system specified by
+            dest_projection.
         :param kwargs: Optional arguments passed to getRegion.
+        :returns: regionData, formatOrRegionMime: the image data and either the
+            mime type, if the format is TILE_FORMAT_IMAGE, or the format.
         """
         import pyproj
-        import rasterio
+        use_rio = True
+        try:
+            import rasterio
+        except ImportError:
+            from osgeo import gdal
+            use_rio = False
 
         if any(len(gcp) != 4 for gcp in src_gcps):
             msg = 'Ground control points must contain four values in the form (cx, cy, px, py).'
@@ -2195,24 +2205,36 @@ class TileSource(IPyLeafletMixin):
                 gcp[2], gcp[3],
             ] for gcp in src_gcps if len(gcp) == 4
         ]
-
-        gcps = [rasterio.control.GroundControlPoint(
-            x=gcp[0],
-            y=gcp[1],
-            col=gcp[2],
-            row=gcp[3],
-        ) for gcp in converted_gcps]
-
-        # transform dest_region to pixel coords
-        transformer = rasterio.transform.GCPTransformer(gcps)
-        py1, px1 = transformer.rowcol(dest_region.get('left', 0), dest_region.get('top', 0))
-        py2, px2 = transformer.rowcol(dest_region.get('left', 0), dest_region.get('bottom', 0))
-        py3, px3 = transformer.rowcol(dest_region.get('right', 0), dest_region.get('top', 0))
-        py4, px4 = transformer.rowcol(dest_region.get('right', 0), dest_region.get('bottom', 0))
-        left = max(0, min(px1, px2, px3, px4))
-        top = max(0, min(py1, py2, py3, py4))
-        right = min(self.sizeX, max(px1, px2, px3, px4))
-        bottom = min(self.sizeY, max(py1, py2, py3, py4))
+        drLeft = dest_region.get('left', 0)
+        drRight = dest_region.get('right', 0)
+        drTop = dest_region.get('top', 0)
+        drBottom = dest_region.get('bottom', 0)
+        if use_rio:
+            gcps = [rasterio.control.GroundControlPoint(
+                x=gcp[0], y=gcp[1], col=gcp[2], row=gcp[3],
+            ) for gcp in converted_gcps]
+            # transform dest_region to pixel coords
+            transformer = rasterio.transform.GCPTransformer(gcps)
+            py1, px1 = transformer.rowcol(drLeft, drTop)
+            py2, px2 = transformer.rowcol(drLeft, drBottom)
+            py3, px3 = transformer.rowcol(drRight, drTop)
+            py4, px4 = transformer.rowcol(drRight, drBottom)
+        else:
+            gcps = [gdal.GCP(
+                gcp[0], gcp[1], 0, gcp[2], gcp[3],
+            ) for gcp in converted_gcps]
+            driver = gdal.GetDriverByName('MEM')
+            dataset = driver.Create('', 1, 1, 1)
+            dataset.SetGCPs(gcps, '')
+            transformer = gdal.Transformer(dataset, None, [])
+            _, (px1, py1, _) = transformer.TransformPoint(True, drLeft, drTop)
+            _, (px2, py2, _) = transformer.TransformPoint(True, drLeft, drBottom)
+            _, (px3, py3, _) = transformer.TransformPoint(True, drRight, drTop)
+            _, (px4, py4, _) = transformer.TransformPoint(True, drRight, drBottom)
+        left = int(max(0, min(px1, px2, px3, px4)))
+        top = int(max(0, min(py1, py2, py3, py4)))
+        right = int(min(self.sizeX, max(px1, px2, px3, px4)))
+        bottom = int(min(self.sizeY, max(py1, py2, py3, py4)))
         pixel_region = dict(left=left, top=top, right=right, bottom=bottom)
 
         # send pixel_region into getRegion

@@ -30,17 +30,18 @@ setup(
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
     ],
     python_requires='>=3.9',
     install_requires=[
         f'large-image{limit_version}',
-        'rasterio>=1.3',
+        'rasterio>=1.3 ; python_version < "3.14"',
         'packaging',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
         'all': [
-            'rio-cogeo',
+            'rio-cogeo ; python_version < "3.14"',
         ],
     },
     keywords='large_image, tile source',
