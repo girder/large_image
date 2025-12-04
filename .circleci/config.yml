@@ -266,7 +266,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.14"
-          node: v14
       - tox:
           toxenv: test-py314
           # environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
