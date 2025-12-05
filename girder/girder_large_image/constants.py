@@ -24,7 +24,6 @@ class PluginSettings:
     LARGE_IMAGE_MAX_SMALL_IMAGE_SIZE = 'large_image.max_small_image_size'
     LARGE_IMAGE_MAX_THUMBNAIL_FILES = 'large_image.max_thumbnail_files'
     LARGE_IMAGE_MERGE_DICOM = 'large_image.merge_dicom'
-    LARGE_IMAGE_NOTIFICATION_STREAM_FALLBACK = 'large_image.notification_stream_fallback'
     LARGE_IMAGE_SHOW_EXTRA = 'large_image.show_extra'
     LARGE_IMAGE_SHOW_EXTRA_ADMIN = 'large_image.show_extra_admin'
     LARGE_IMAGE_SHOW_EXTRA_PUBLIC = 'large_image.show_extra_public'
