@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- Add support for Python 3.14 ([#2022](../../pull/2022))
+- Add support for Python 3.14 ([#2022](../../pull/2022), [#2026](../../pull/2026))
 - In Jupyter, set edge value of tilesource to transparent ([#2019](../../pull/2019))
 
 ## 1.33.5

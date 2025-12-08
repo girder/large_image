@@ -1,4 +1,3 @@
-import sys
 from test.datastore import datastore
 
 import pytest
@@ -64,7 +63,6 @@ def testGDALDefaultNoProjection():
     assert src.projection is None
 
 
-@pytest.mark.skipif(sys.version_info > (3, 14), reason='cannot yet be tested in 3.14')
 def testRasterioDefaultProjection(default_projection):
     import large_image_source_rasterio
     import rasterio
@@ -74,7 +72,6 @@ def testRasterioDefaultProjection(default_projection):
     assert src.projection == rasterio.CRS.from_string(default_projection)
 
 
-@pytest.mark.skipif(sys.version_info > (3, 14), reason='cannot yet be tested in 3.14')
 def testRasterioDefaultNoProjection():
     import large_image_source_rasterio
 
