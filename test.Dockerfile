@@ -84,7 +84,7 @@ RUN pyenv update && \
     echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/* /root/.cache/* && \
-    find /.pyenv -name '*.so' -o -name '*.a' -o -name '*.so.*' -exec strip --strip-unneeded -p -D {} \; && \
+    find /.pyenv '(' -name '*.so' -o -name '*.a' -o -name '*.so.*' ')' -exec strip --strip-unneeded -p -D {} \; && \
     find /.pyenv -name 'libpython*.a' -delete && \
     # This makes duplicate python library files hardlinks of each other \
     rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /.pyenv
