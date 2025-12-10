@@ -1,5 +1,6 @@
 import math, os, random, time
 from typing import Optional, Tuple, Union, Callable, Dict, Any
+import logging
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
 from .eager_utils.eager_shared_array import SharedArray
@@ -114,6 +115,8 @@ class EagerIterator:
         # Import eager_utils here to avoid attempting to load pykdtree when not needed
         from .eager_utils.eager_read_args import gen_read_args_for_tiles, gen_read_args_for_regions
         from .eager_utils.eager_wsi_operations import calculate_slide_dimensions, return_relevant_tile_indexes_for_slide_dim, return_tile_slides_meeting_area_threshold
+
+        logging.getLogger("tifftools").setLevel(logging.WARNING)
     
         # Tile source becomes the source for the iterator allowing its options to be used
         self.source = source
