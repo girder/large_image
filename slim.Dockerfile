@@ -1,5 +1,5 @@
 # Build wheels
-FROM python:3.13-slim AS build
+FROM python:3.14-slim AS build
 
 # Need git for setuptools_scm
 RUN apt-get update \
