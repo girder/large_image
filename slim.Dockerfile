@@ -19,7 +19,7 @@ RUN echo "pylibmc>=1.5.1\nmatplotlib\npyvips\nsimplejpeg\n" \
 
 
 # Geospatial Sources
-FROM python:3.13-slim AS geo
+FROM python:3.14-slim AS geo
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
@@ -38,10 +38,12 @@ RUN pip install \
 
 
 # All Sources
-FROM python:3.13-slim AS all
+FROM python:3.14-slim AS all
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
+# Needs for 3.14 to install older zarr and numcodecs
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc
 # NOTE: this does not install any girder3 packages
 RUN pip install \
     --no-cache-dir \
@@ -54,7 +56,7 @@ RUN pip install \
 
 
 # All Sources and Girder Packages
-FROM python:3.13-slim AS girder
+FROM python:3.14-slim AS girder
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
