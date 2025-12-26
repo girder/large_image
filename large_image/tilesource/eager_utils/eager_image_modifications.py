@@ -142,16 +142,16 @@ def return_needed_padding_equal(image: np.ndarray, w: int, h: int):
     return top, bottom, left, right
 
 
-def pad_chunk_if_necessary(base_size_x: int,  base_size_y: int, chunk: np.ndarray, xlt: list, xrt: list, ytt: list, ybt: list, w: int, h: int, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):
+def pad_chunk_if_necessary(base_size_x: int,  base_size_y: int, chunk: np.ndarray, xlt: np.ndarray, xrt: np.ndarray, ytt: np.ndarray, ybt: np.ndarray, w: int, h: int, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):
     if chunk.shape[0] != h or chunk.shape[1] != w:
         out = chunk.copy()
 
         constant_color = return_constant_color(chunk, pad_fill_mode)
 
-        l_dist = abs(min(xlt))
-        t_dist = abs(min(ytt))
-        r_dist = abs(base_size_x - max(xrt))
-        b_dist = abs(base_size_y - max(ybt))
+        l_dist = np.abs(np.min(xlt))
+        t_dist = np.abs(np.min(ytt))
+        r_dist = np.abs(base_size_x - np.max(xrt))
+        b_dist = np.abs(base_size_y - np.max(ybt))
 
         # Based on pad mode choose how padding will be applied to image top, bottom, left and right
         if pad_mode == 'wsi_edge':
