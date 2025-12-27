@@ -18,6 +18,7 @@ import numpy as np
 import torch
 from torch.nn.functional import pad
 from torchvision.transforms import v2
+from torchvision.io import ImageReadMode
 
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb, padding
@@ -41,9 +42,12 @@ def make_pytorch_dataset(input_image_dir: str, transform: Optional[Callable] = N
 
         def __getitem__(self, idx):
             image_path = self.image_paths[idx]
-            image = read_image(image_path)
+            image = read_image(image_path, mode=ImageReadMode.RGB)
             if self.transform is not None:
-                image = self.transform(image)
+                if isinstance(self.transform, A.Compose):
+                    image = self.transform(image=image)
+                elif isinstance(self.transform, Callable):
+                    image = self.transform(image)
             return image
 
     dataset = ImageDataset(input_image_dir, transform)
@@ -103,23 +107,22 @@ def calculate_batch_retreival_time(start_iterator_retreival_time: float, end_bat
 
 def perform_pytorch_dataset_inference(dataset: torch.utils.data.Dataset, model: torch.nn.Module, cuda_device: str = 'cuda:0', **kwargs):
     from torch.utils.data import DataLoader
-    dataloader = DataLoader(dataset, batch_size=kwargs['batch'], shuffle=True, transform=kwargs['transform'])
+    dataloader = DataLoader(dataset, batch_size=kwargs['batch'], shuffle=False)
 
     inference_times = []
-    end_inference_times = []
     batch_retreival_times = []
-    start_iterator_retreival_time = time.time()
-    for batch in dataloader:
-        end_batch_retreival_time = time.time()
-        batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, end_inference_times)
-        batch_retreival_times.append(batch_retreival_time)
-        batch_images = batch.to(cuda_device)
-        start_inference_time = time.time()
-        output = model(batch_images)
-        del batch_images
-        end_inference_time = time.time()
-        inference_times.append(end_inference_time - start_inference_time)
-        end_inference_times.append(end_inference_time)
+
+    with torch.inference_mode() and torch.no_grad():
+        start_iterator_retreival_time = time.time()
+        for batch in dataloader:
+            batch_images = batch.to(cuda_device)
+            start_inference_time = time.time()
+            batch_retreival_times.append(start_inference_time - start_iterator_retreival_time)
+            output = model(batch_images)
+            del batch_images
+            end_inference_time = time.time()
+            inference_times.append(end_inference_time - start_inference_time)
+    
     return batch_retreival_times, inference_times
 
 def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_iterator: Iterable, cuda_device: str = 'cuda:0', **kwargs):
@@ -141,10 +144,10 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
         return transformed_image
     
     inference_times = []
-    end_inference_times = []
     batch_retreival_times = []
-    start_iterator_retreival_time = time.time()
-    with torch.inference_mode():
+    
+    with torch.inference_mode() and torch.no_grad():
+        start_iterator_retreival_time = time.time()
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
             if image_shape is None:
@@ -152,23 +155,25 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
             transformed_image = preprocess_image(image, image_shape)
             batch_images.append(transformed_image)
             if len(batch_images) == batch_size:
-                end_batch_retreival_time = time.time()
-                batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, end_inference_times)
-                batch_retreival_times.append(batch_retreival_time)
                 batch_images = torch.stack(batch_images)
                 batch_images = batch_images.to(cuda_device)
                 start_inference_time = time.time()
+                batch_retreival_times.append(start_inference_time - start_iterator_retreival_time)
                 output = model(batch_images)
                 end_inference_time = time.time()
                 inference_times.append(end_inference_time - start_inference_time)
                 del batch_images
                 batch_images = []
-                end_inference_times.append(end_inference_time)
+                start_iterator_retreival_time = time.time()
 
         if len(batch_images) > 0:
             batch_images = torch.stack(batch_images)
             batch_images = batch_images.to(cuda_device)
+            start_inference_time = time.time()
+            batch_retreival_times.append(start_inference_time - start_iterator_retreival_time)
             output = model(batch_images)
+            end_inference_time = time.time()
+            inference_times.append(end_inference_time - start_inference_time)
             del batch_images
             batch_images = []
     
@@ -189,23 +194,21 @@ def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = F
 
 def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_iter: Iterable, cuda_device: str = 'cuda:0'):
     inference_times = []
-    end_inference_times = []
     batch_retreival_times = []
-    start_iterator_retreival_time = time.time()
-    with torch.inference_mode():
+    
+    with torch.inference_mode() and torch.no_grad():
+        start_iterator_retreival_time = time.time()
         for batch in eager_iter:
-            end_batch_retreival_time = time.time()
-            batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, end_inference_times)
-            batch_retreival_times.append(batch_retreival_time)
             batch_images = batch['tile'].view()
-            start_inference_time = time.time()
             batch_images = torch.tensor(batch_images)
             batch_images = batch_images.to(cuda_device)
+            start_inference_time = time.time()
+            batch_retreival_times.append(start_inference_time - start_iterator_retreival_time)
             output = model(batch_images)
             end_inference_time = time.time()
             inference_times.append(end_inference_time - start_inference_time)
-            end_inference_times.append(end_inference_time)
             del batch_images
+            start_iterator_retreival_time = time.time()
 
         return batch_retreival_times, inference_times
 
@@ -320,7 +323,7 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
     
     return setup_time, process_time, batch_retreival_times, inference_times, write_times
 
-def run_dataset_performance_evaluation(file_dir: str, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
+def run_dataset_task_performance_evaluation(file_path: str, file_dir: str, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
     clear_cache()
 
     batch_retreival_times = []
@@ -332,34 +335,49 @@ def run_dataset_performance_evaluation(file_dir: str, performance_type: str = 'r
     from torch.utils.data import DataLoader
     start_time = time.time()
 
-    dataset = make_pytorch_dataset(file_dir, kwargs.get('transform', None))
-    dataloader = DataLoader(dataset, batch_size=kwargs['batch'], shuffle=False)
+    dataset = make_pytorch_dataset(file_dir, transform=kwargs.get('transform', None))
+    dataloader = DataLoader(dataset, batch_size=kwargs.get('batch', 64), shuffle=False, num_workers=kwargs.get('workers', 16), prefetch_factor=kwargs.get('prefetch', 16))
     setup_time = time.time() - start_time
 
     if performance_type == 'read':
+        start_batch_retreival_time = time.time()
         for batch in dataloader:
-            pass
+            if len(batch_retreival_times) == 0:
+                batch_retreival_times.append(time.time() - start_batch_retreival_time)
+            else:
+                batch_retreival_times.append(time.time() - start_batch_retreival_time)
+                start_batch_retreival_time = time.time()
     elif performance_type == 'write':
+        start_batch_retreival_time = time.time()
         for batch in dataloader:
-            start_write_time = time.time()
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
             for image in batch:
                 plt.imsave(f"./image_{image.shape[0]}_{image.shape[1]}.png", image)
-            write_times.append(time.time() - start_write_time)
+            write_times.append(time.time() - end_batch_retreival_time)
     elif performance_type == 'write_multiprocessing':
+        start_batch_retreival_time = time.time()
         for batch in dataloader:
+            end_batch_retreival_time = time.time()
             images_to_save = []
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
             for image in batch:
                 images_to_save.append([f"./image_{image.shape[0]}_{image.shape[1]}.png", image])
             with multiprocessing.Pool(processes=10) as pool:
                 pool.starmap(plt.imsave, images_to_save)
                 pool.close()
                 pool.join()
+            write_times.append(time.time() - end_batch_retreival_time)
     elif performance_type == 'pytorch_transform':
+        start_batch_retreival_time = time.time()
         for batch in dataloader:
-            pass
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
     elif performance_type == 'albumentations_transform':
+        start_batch_retreival_time = time.time()
         for batch in dataloader:
-            transformed_batch = kwargs['transform'](image=batch)
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
     elif performance_type == 'inference_sobel':
         batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataset, model, **kwargs)
     elif performance_type == 'inference_efficientnetb0':
@@ -471,6 +489,16 @@ def run_eager_performance_evaluation(file_path: str, without_cache: bool = False
 
     return performance_data
 
+def run_dataset_performance_evaluation(file_path: str, file_dir: str, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
+    performance_data = {}
+    add_default_wsi_dimensions(performance_data, file_path)
+
+    # Test performance with default resolution without caching
+    setup_time, process_time, batch_retreival_times, inference_times, write_times = run_dataset_task_performance_evaluation(file_path, file_dir, performance_type, compile_model, **kwargs)
+    add_performance_data(performance_data, performance_data['file_dimensions'], 'pytorch_dataset', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+
+    return performance_data
+
 
 def add_default_wsi_dimensions(performance_data: dict, file_path: str):
     # Get the size of the image
@@ -500,15 +528,20 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
     with h5py.File(output_file_path, 'w') as f:
         setup_times_with_cache = []
         setup_times_without_cache = []
+        setup_times_pytorch_dataset = []
         process_times_with_cache = []
         process_times_without_cache = []
+        process_times_pytorch_dataset = []
 
         run_inference_times_with_cache = []
         run_inference_times_without_cache = []
+        run_pytorch_dataset_inference_times = []
         run_batch_retreival_times_with_cache = []
         run_batch_retreival_times_without_cache = []
+        run_pytorch_dataset_batch_retreival_times = []
         run_write_times_with_cache = []
         run_write_times_without_cache = []
+        run_pytorch_dataset_write_times = []
 
         aggregated_inference_times_with_cache = np.array([])
         aggregated_inference_times_without_cache = np.array([])
@@ -516,6 +549,9 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         aggregated_batch_retreival_times_without_cache = np.array([])
         aggregated_write_times_with_cache = np.array([])
         aggregated_write_times_without_cache = np.array([])
+        aggregated_pytorch_dataset_inference_times = np.array([])
+        aggregated_pytorch_dataset_batch_retreival_times = np.array([])
+        aggregated_pytorch_dataset_write_times = np.array([])
 
         f.attrs['tile_width'] = runs[0]['file_dimensions']['tile_width']
         f.attrs['tile_height'] = runs[0]['file_dimensions']['tile_height']
@@ -529,6 +565,20 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
 
         # aggregate runs
         for run in runs:
+            if 'pytorch_dataset' in run:
+                setup_times_pytorch_dataset.append(run['pytorch_dataset']['setup_time'])
+                process_times_pytorch_dataset.append(run['pytorch_dataset']['process_time'])
+
+                if 'inference_times' in run['pytorch_dataset']:
+                    run_pytorch_dataset_inference_times.append(run['pytorch_dataset']['inference_times'])
+                    aggregated_inference_times_with_cache = np.concatenate([aggregated_inference_times_with_cache, run['pytorch_dataset']['inference_times']])
+                if 'batch_retreival_times' in run['pytorch_dataset']:
+                    run_pytorch_dataset_batch_retreival_times.append(run['pytorch_dataset']['batch_retreival_times'])
+                    aggregated_batch_retreival_times_with_cache = np.concatenate([aggregated_batch_retreival_times_with_cache, run['pytorch_dataset']['batch_retreival_times']])
+                if 'write_times' in run['pytorch_dataset']:
+                    run_pytorch_dataset_write_times.append(run['pytorch_dataset']['write_times'])
+                    aggregated_write_times_with_cache = np.concatenate([aggregated_write_times_with_cache, run['pytorch_dataset']['write_times']])
+
             if 'with_cache' in run:
                 setup_times_with_cache.append(run['with_cache']['setup_time'])
                 process_times_with_cache.append(run['with_cache']['process_time'])
@@ -569,6 +619,12 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         if len(process_times_without_cache) > 0:
             process_times_without_cache = np.array(process_times_without_cache)
             output_data['process_times_without_cache'] = process_times_without_cache
+        if len(setup_times_pytorch_dataset) > 0:
+            setup_times_pytorch_dataset = np.array(setup_times_pytorch_dataset)
+            output_data['setup_times_pytorch_dataset'] = setup_times_pytorch_dataset
+        if len(process_times_pytorch_dataset) > 0:
+            process_times_pytorch_dataset = np.array(process_times_pytorch_dataset)
+            output_data['process_times_pytorch_dataset'] = process_times_pytorch_dataset
 
         if len(run_inference_times_with_cache) > 0:
             output_data['run_inference_times_with_cache'] = run_inference_times_with_cache
@@ -589,6 +645,16 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         if len(run_write_times_without_cache) > 0:
             output_data['run_write_times_without_cache'] = run_write_times_without_cache
             output_data['aggregated_write_times_without_cache'] = aggregated_write_times_without_cache
+
+        if len(run_pytorch_dataset_inference_times) > 0:
+            output_data['run_pytorch_dataset_inference_times'] = run_pytorch_dataset_inference_times
+            output_data['aggregated_pytorch_dataset_inference_times'] = aggregated_pytorch_dataset_inference_times
+        if len(run_pytorch_dataset_batch_retreival_times) > 0:
+            output_data['run_pytorch_dataset_batch_retreival_times'] = run_pytorch_dataset_batch_retreival_times
+            output_data['aggregated_pytorch_dataset_batch_retreival_times'] = aggregated_pytorch_dataset_batch_retreival_times
+        if len(run_pytorch_dataset_write_times) > 0:
+            output_data['run_pytorch_dataset_write_times'] = run_pytorch_dataset_write_times
+            output_data['aggregated_pytorch_dataset_write_times'] = aggregated_pytorch_dataset_write_times
 
         for key in output_data:
             split_key = key.split('_')
@@ -642,24 +708,38 @@ def add_performance_data(performance_data: dict, target_dimensions: dict, perfor
 
     performance_data[performance_type] = performance_entry
 
-def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, output_dir: str = "./performance", without_cache: bool = False, only_eager: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, **kwargs):
+def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, file_dir: Optional[str] = None, output_dir: str = "./performance", without_cache: bool = False, run_eager: bool = False, run_non_eager: bool = False, run_dataset: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, **kwargs):
     print("Running reproducible performance evaluation with output directory: ", output_dir)
     eager_runs = []
     non_eager_runs = []
+    dataset_runs = []
+
+    os.makedirs(output_dir, exist_ok=True)
 
     eager_output_filename = "eager_performance_evaluation.h5"
     eager_output_file_path = os.path.join(output_dir, eager_output_filename)
 
     non_eager_output_filename = "non_eager_performance_evaluation.h5"
     non_eager_output_file_path = os.path.join(output_dir, non_eager_output_filename)
-    os.makedirs(output_dir, exist_ok=True)
-    
-    for i in range(n_runs):
-        print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-        performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
-        eager_runs.append(performance_data)
 
-    if not only_eager:
+    dataset_output_filename = "dataset_performance_evaluation.h5"
+    dataset_output_file_path = os.path.join(output_dir, dataset_output_filename)
+
+    if run_dataset:
+        if file_dir is None:
+            raise ValueError("file_dir is required when running dataset performance evaluation")
+        for i in range(n_runs):
+            print(f"Running dataset performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
+            performance_data = run_dataset_performance_evaluation(file_path, file_dir, performance_type, compile_model, **kwargs)
+            dataset_runs.append(performance_data)
+
+    if run_eager:
+        for i in range(n_runs):
+            print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
+            performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
+            eager_runs.append(performance_data)
+
+    if run_non_eager:
         for i in range(n_runs):
             print(f"Running non-eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
             performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
@@ -667,8 +747,9 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, out
     
     eager_runs = aggregate_runs(eager_runs, eager_output_file_path)
     non_eager_runs = aggregate_runs(non_eager_runs, non_eager_output_file_path)
-    
-    return eager_runs, non_eager_runs
+    dataset_runs = aggregate_runs(dataset_runs, dataset_output_file_path)
+
+    return eager_runs, non_eager_runs, dataset_runs
 
 def run_multi_slide_performance_evaluation():
     mrxs_dir = os.path.join("/scr/arosado/")
