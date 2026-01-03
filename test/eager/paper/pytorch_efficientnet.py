@@ -23,7 +23,7 @@ def make_efficientnet_model(model_name: str = "efficientnetb0", compile_model: b
     
     # Compile model if needed
     if compile_model:
-        model = torch.compile(model)
+        model.compile()
     
     # Set model to evaluation mode
     model.eval()

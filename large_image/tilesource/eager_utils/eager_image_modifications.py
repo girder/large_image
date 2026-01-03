@@ -148,10 +148,10 @@ def pad_chunk_if_necessary(base_size_x: int,  base_size_y: int, chunk: np.ndarra
 
         constant_color = return_constant_color(chunk, pad_fill_mode)
 
-        l_dist = np.abs(np.min(xlt))
-        t_dist = np.abs(np.min(ytt))
-        r_dist = np.abs(base_size_x - np.max(xrt))
-        b_dist = np.abs(base_size_y - np.max(ybt))
+        l_dist = np.abs(np.min(xlt).astype(np.int64))
+        t_dist = np.abs(np.min(ytt).astype(np.int64))
+        r_dist = np.abs(base_size_x - np.max(xrt).astype(np.int64))
+        b_dist = np.abs(base_size_y - np.max(ybt).astype(np.int64))
 
         # Based on pad mode choose how padding will be applied to image top, bottom, left and right
         if pad_mode == 'wsi_edge':

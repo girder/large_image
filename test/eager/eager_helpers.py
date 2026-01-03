@@ -23,7 +23,7 @@ from torchvision.io import ImageReadMode
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb, padding
 
-from test.eager.paper.keras_efficientnet import make_efficientnet_model
+from test.eager.paper.pytorch_efficientnet import make_efficientnet_model
 from test.eager.paper.huggingface_uni2_model import make_huggingface_uni2_model
 from test.eager.paper.pytorch_sobel_model import make_sobel_model
 
@@ -179,7 +179,7 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
     
     return batch_retreival_times, inference_times
 
-def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
+def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 

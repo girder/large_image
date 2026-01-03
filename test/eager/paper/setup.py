@@ -38,15 +38,22 @@ def copy_random_files_from_file_directory(file_dir: str, n_files: int = 10, file
         filename = os.path.basename(copy_path)
         source = large_image.open(copy_path)
 
+        acceptable_metadata = {}
+
         # Compare metadata if needed
         if large_image_meta_match is not None:
             metadata = source.getMetadata()
 
             for key, value in large_image_meta_match.items():
-                if metadata[key] != value:
-                    continue
+                if metadata[key] == value:
+                    acceptable_metadata[key] = True
+                else:
+                    acceptable_metadata[key] = False
+                    break
+        else:
+            acceptable_metadata['none_needed'] = True
 
-        if copy_path.endswith(".mrxs"):
+        if all(acceptable_metadata.values()) and copy_path.endswith(".mrxs"):
             split_ext = os.path.splitext(filename)
             mrxs_dir = os.path.join(file_dir, split_ext[0])
             if not os.path.exists(mrxs_dir):
@@ -60,11 +67,15 @@ def copy_random_files_from_file_directory(file_dir: str, n_files: int = 10, file
             shutil.copytree(mrxs_dir, os.path.join(destination_dir, split_ext[0]))
             shutil.copy(copy_path, destination_path)
 
+            print(f"Copied {copy_path} to {destination_path}")
+
             count += 1
             if count >= n_files:
                 break
+
             
-        else:
+            
+        elif all(acceptable_metadata.values()):
             destination_path = os.path.join(destination_dir, filename)
 
             if os.path.exists(destination_path):
@@ -73,18 +84,23 @@ def copy_random_files_from_file_directory(file_dir: str, n_files: int = 10, file
             
             shutil.copy(copy_path, destination_path)
 
+            print(f"Copied {copy_path} to {destination_path}")
+
             count += 1
             if count >= n_files:
                 break
 
-        print(f"Copied {copy_path} to {destination_path}")
-
 if __name__ == "__main__":
     # copy_random_files_from_file_directory(file_dir="/wsi_archive/public/cancer_imaging_archive", destination_dir="/scr/arosado/large_image/ndpi")
-    # copy_random_files_from_file_directory(file_dir="/wsi_archive/public/HEROHEGC/Training", destination_dir="/scr/arosado/large_image/mrxs")
-    copy_random_files_from_file_directory(file_dir="/scr/arosado/tcga", destination_dir="/scr/arosado/large_image/svs", n_files=2, large_image_meta_match={'magnification': 40.0, 'levels': 10, 'tileWidth': 256, 'tileHeight': 256})
+    copy_random_files_from_file_directory(
+        file_dir="/wsi_archive/public/HEROHEGC/Training", 
+        destination_dir="/scr/arosado/large_image/mrxs_new",
+         n_files=10, 
+         large_image_meta_match={'magnification': 20.0, 'levels': 10, 'tileWidth': 256, 'tileHeight': 256}
+    )
+    # copy_random_files_from_file_directory(file_dir="/scr/arosado/tcga", destination_dir="/scr/arosado/large_image/svs", n_files=2, large_image_meta_match={'magnification': 40.0, 'levels': 10, 'tileWidth': 256, 'tileHeight': 256})
     # copy_random_files_from_file_directory(file_dir="/wsi_archive/public/HEROHEGC/Training", destination_dir="/scr/arosado/large_image/mrxs", n_files=1, large_image_meta_match={'magnification': 20.0})
-    # print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/mrxs", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
-    print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/svs", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
-    print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/ndpi", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
+    print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/mrxs_new", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
+    # print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/svs", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
+    # print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/ndpi", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
     pass

@@ -19,13 +19,13 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
                 'mlp_layer': timm.layers.SwiGLUPacked, 
                 'act_layer': torch.nn.SiLU, 
                 'reg_tokens': 8, 
-                'dynamic_img_size': True
+                'dynamic_img_size': False
             }
     model = timm.create_model("hf-hub:MahmoodLab/UNI2-h", pretrained=True, **timm_kwargs)
 
     # Compile model if needed
     if compile_model:
-        model = torch.compile(model)
+        model.compile()
     
     model.eval()
 
