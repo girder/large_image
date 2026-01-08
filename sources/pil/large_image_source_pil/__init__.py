@@ -15,6 +15,7 @@
 #############################################################################
 
 import contextlib
+import importlib.metadata
 import json
 import math
 import os
@@ -39,23 +40,13 @@ try:
     register_avif_opener()
 except Exception:
     pass
-try:
+with contextlib.suppress(Exception):
     import pillow_jxl  # noqa
-except Exception:
-    pass
-try:
+with contextlib.suppress(Exception):
     import pillow_jpls  # noqa
-except Exception:
-    pass
 
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
-
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 warnings.filterwarnings('ignore', category=UserWarning, module='.*PIL.*')
 
@@ -293,10 +284,8 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         results = {'pil': {}}
         for key in ('format', 'mode', 'size', 'width', 'height', 'palette', 'info'):
-            try:
+            with contextlib.suppress(Exception):
                 results['pil'][key] = getattr(self._pilImage, key)
-            except Exception:
-                pass
         return results
 
     @methodcache()
@@ -307,10 +296,8 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if frame != 0:
             with self._tileLock:
                 self._frameImage.seek(self._frames[frame])
-                try:
+                with contextlib.suppress(Exception):
                     img = self._frameImage.copy()
-                except Exception:
-                    pass
                 self._frameImage.seek(0)
             img.load()
             if self._factor:

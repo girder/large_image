@@ -3,17 +3,13 @@
 __author__ = """Kitware Inc"""
 __email__ = 'kitware@kitware.com'
 
-
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
+import contextlib
+import importlib.metadata
 
 from girder_worker import GirderWorkerPluginABC
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 class LargeImageTasks(GirderWorkerPluginABC):

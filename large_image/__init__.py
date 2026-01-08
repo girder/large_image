@@ -14,15 +14,12 @@
 #  limitations under the License.
 #############################################################################
 
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
+import contextlib
+import importlib.metadata
 
 from . import tilesource  # noqa
 from .tilesource import (canRead, canReadList, getTileSource,  # noqa
                          listExtensions, listMimeTypes, listSources, new, open)
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)

@@ -13,6 +13,8 @@ try:
 except ImportError:
     HAS_RESOURCE = False
 
+import contextlib
+
 from .. import config
 from .cachefactory import CacheFactory, pickAvailableCache
 
@@ -176,7 +178,7 @@ class LruCacheMetaclass(type):
 
         return cls
 
-    def __call__(cls, *args, **kwargs) -> Any:  # noqa - N805
+    def __call__(cls, *args, **kwargs) -> Any:  # - N805
         if kwargs.get('noCache') or (
                 kwargs.get('noCache') is None and config.getConfig('cache_sources') is False):
             instance = super().__call__(*args, **kwargs)
@@ -243,11 +245,8 @@ class LruCacheMetaclass(type):
                 # for pickling
                 instance._initValues = (args, kwargs.copy())
             except Exception as exc:
-                with cacheLock:
-                    try:
-                        del cache[key]
-                    except Exception:
-                        pass
+                with cacheLock, contextlib.suppress(Exception):
+                    del cache[key]
                 raise exc
             instance._classkey = key
             if kwargs.get('style') != getattr(cls, '_unstyledStyle', None):
