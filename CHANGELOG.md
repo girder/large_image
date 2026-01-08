@@ -9,12 +9,13 @@
 
 ### Changes
 
-- Refactored internal code to use contextlib.suppress where appropriate ([#2030](../../pull/2030))
-- Drop support for Python 3.9 ([#2031](../../pull/2031))
+- Refactored internal code to use contextlib.suppress where appropriate ([#2031](../../pull/2031))
+- Drop support for Python 3.9 ([#2032](../../pull/2032))
 
 ### Bug Fixes
 
-- When reading raw files via the PIL source, fix handling uint16 data ([#2029](../../pull/2029))
+- When reading raw files via the PIL source, fix handling uint16 data ([#2030](../../pull/2030))
+- When copying an item via girder, ensure permissions on annotations are granted to the owner of the destination folder ([#2033](../../pull/2033))
 
 ## 1.33.5
 
