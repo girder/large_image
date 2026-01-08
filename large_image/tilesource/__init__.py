@@ -5,7 +5,7 @@ import sys
 import uuid
 from importlib.metadata import entry_points
 from pathlib import PosixPath
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 from .. import config
 from ..constants import NEW_IMAGE_PATH_FLAG, SourcePriority
@@ -21,8 +21,8 @@ AvailableTileSources: dict[str, type[FileTileSource]] = {}
 
 
 def isGeospatial(
-        path: Union[str, PosixPath],
-        availableSources: Optional[dict[str, type[FileTileSource]]] = None) -> bool:
+        path: str | PosixPath,
+        availableSources: dict[str, type[FileTileSource]] | None = None) -> bool:
     """
     Check if a path is likely to be a geospatial file.
 
@@ -56,9 +56,7 @@ def loadTileSources(entryPointName: str = 'large_image.source',
     :param sourceDict: a dictionary to populate with the loaded sources.
     """
     epoints = entry_points()
-    # Python 3.10 uses select and deprecates dictionary interface
-    epointList = epoints.select(group=entryPointName) if hasattr(
-        epoints, 'select') else epoints.get(entryPointName, [])
+    epointList = epoints.select(group=entryPointName)
     for entryPoint in epointList:
         try:
             sourceClass = entryPoint.load()
@@ -71,8 +69,8 @@ def loadTileSources(entryPointName: str = 'large_image.source',
 
 
 def getSortedSourceList(
-    availableSources: dict[str, type[FileTileSource]], pathOrUri: Union[str, PosixPath],
-    mimeType: Optional[str] = None, *args, **kwargs,
+    availableSources: dict[str, type[FileTileSource]], pathOrUri: str | PosixPath,
+    mimeType: str | None = None, *args, **kwargs,
 ) -> list[tuple[bool, bool, SourcePriority, str]]:
     """
     Get an ordered list of sources where earlier sources are more likely to
@@ -127,8 +125,8 @@ def getSortedSourceList(
 
 
 def getSourceNameFromDict(
-        availableSources: dict[str, type[FileTileSource]], pathOrUri: Union[str, PosixPath],
-        mimeType: Optional[str] = None, *args, **kwargs) -> Optional[str]:
+        availableSources: dict[str, type[FileTileSource]], pathOrUri: str | PosixPath,
+        mimeType: str | None = None, *args, **kwargs) -> str | None:
     """
     Get a tile source based on a ordered dictionary of known sources and a path
     name or URI.  Additional parameters are passed to the tile source and can
@@ -150,7 +148,7 @@ def getSourceNameFromDict(
 
 
 def getTileSourceFromDict(
-        availableSources: dict[str, type[FileTileSource]], pathOrUri: Union[str, PosixPath],
+        availableSources: dict[str, type[FileTileSource]], pathOrUri: str | PosixPath,
         *args, **kwargs) -> FileTileSource:
     """
     Get a tile source based on a ordered dictionary of known sources and a path
@@ -212,8 +210,8 @@ def canRead(*args, **kwargs) -> bool:
 
 
 def canReadList(
-        pathOrUri: Union[str, PosixPath], mimeType: Optional[str] = None,
-        availableSources: Optional[dict[str, type[FileTileSource]]] = None,
+        pathOrUri: str | PosixPath, mimeType: str | None = None,
+        availableSources: dict[str, type[FileTileSource]] | None = None,
         *args, **kwargs) -> list[tuple[str, bool]]:
     """
     Check if large_image can read a path or uri via each source.
@@ -250,7 +248,7 @@ def new(*args, **kwargs) -> TileSource:
 
 
 def listSources(
-    availableSources: Optional[dict[str, type[FileTileSource]]] = None,
+    availableSources: dict[str, type[FileTileSource]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """
     Get a dictionary with all sources, all known extensions, and all known
@@ -299,7 +297,7 @@ def listSources(
 
 
 def listExtensions(
-        availableSources: Optional[dict[str, type[FileTileSource]]] = None) -> list[str]:
+        availableSources: dict[str, type[FileTileSource]] | None = None) -> list[str]:
     """
     Get a list of all known extensions.
 
@@ -310,7 +308,7 @@ def listExtensions(
 
 
 def listMimeTypes(
-        availableSources: Optional[dict[str, type[FileTileSource]]] = None) -> list[str]:
+        availableSources: dict[str, type[FileTileSource]] | None = None) -> list[str]:
     """
     Get a list of all known mime types.
 

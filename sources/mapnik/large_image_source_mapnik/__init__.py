@@ -249,7 +249,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 msg = 'A palette must have at least 2 colors.'
                 raise TileSourceError(msg)
             values = self.interpolateMinMax(minimum, maximum, len(colors))
-            for value, color in sorted(zip(values, colors)):
+            for value, color in sorted(zip(values, colors, strict=True)):
                 colorizer.add_stop(value, mapnik.Color(color))
 
         return colorizer
