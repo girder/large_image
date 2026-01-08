@@ -1,14 +1,13 @@
+import contextlib
 import os
 
 import pytest
 
 pytestmark = [pytest.mark.girder, pytest.mark.girder_client]
 
-try:
+# This makes it easier to test without girder
+with contextlib.suppress(ImportError):
     from pytest_girder.web_client import runWebClientTest
-except ImportError:
-    # Make it easier to test without girder
-    pass
 
 
 @pytest.mark.singular

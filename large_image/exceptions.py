@@ -1,3 +1,4 @@
+import contextlib
 import errno
 from typing import Any
 
@@ -54,10 +55,8 @@ def _improveJsonschemaValidationError(exp):
         min_error = min(error_freq.values(), key=lambda k: (len(k), k[0].schema_path))[0]
         for key in dir(min_error):
             if not key.startswith('_'):
-                try:
+                with contextlib.suppress(Exception):
                     setattr(exp, key, getattr(min_error, key))
-                except Exception:
-                    pass
     except Exception:
         pass
 

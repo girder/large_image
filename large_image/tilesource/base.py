@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import io
 import json
@@ -242,10 +243,8 @@ class TileSource(IPyLeafletMixin):
         :param style: The new style.
         """
         for key in {'_unlocked_classkey', '_classkeyLock'}:
-            try:
+            with contextlib.suppress(Exception):
                 delattr(self, key)
-            except Exception:
-                pass
         if not hasattr(self, '_bandRanges'):
             self._bandRanges: dict[Optional[int], Any] = {}
         self._jsonstyle = style
@@ -2047,10 +2046,8 @@ class TileSource(IPyLeafletMixin):
             vimg.write_to_file(outputPath, **convertParams)
             return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
         except Exception as exc:
-            try:
+            with contextlib.suppress(Exception):
                 pathlib.Path(outputPath).unlink()
-            except Exception:
-                pass
             raise exc
 
     def tileFrames(
@@ -2738,13 +2735,11 @@ class FileTileSource(TileSource):
         """
         super().__init__(*args, **kwargs)
         # Expand the user without converting datatype of path.
-        try:
+        with contextlib.suppress(TypeError):
+            # Don't fail if the path is unusual -- maybe a source can handle it
             path = (cast(pathlib.Path, path).expanduser()
                     if callable(getattr(path, 'expanduser', None)) else
                     os.path.expanduser(cast(str, path)))
-        except TypeError:
-            # Don't fail if the path is unusual -- maybe a source can handle it
-            pass
         self.largeImagePath = path
 
     @staticmethod

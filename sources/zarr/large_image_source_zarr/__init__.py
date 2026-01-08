@@ -1,3 +1,5 @@
+import contextlib
+import importlib.metadata
 import json
 import math
 import multiprocessing
@@ -7,8 +9,6 @@ import tempfile
 import threading
 import uuid
 import warnings
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 from pathlib import Path
 
 import numpy as np
@@ -22,11 +22,8 @@ from large_image.tilesource import FileTileSource
 from large_image.tilesource.resample import ResampleMethod, downsampleTileHalfRes
 from large_image.tilesource.utilities import _imageToNumpy, nearPowerOfTwo
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 zarr = None
@@ -115,10 +112,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._zarr = zarr.open(self._largeImagePath, mode='r')
             except Exception:
                 if os.path.basename(self._largeImagePath) in {'.zgroup', '.zattrs', '.zarray'}:
-                    try:
+                    with contextlib.suppress(Exception):
                         self._zarr = zarr.open(os.path.dirname(self._largeImagePath), mode='r')
-                    except Exception:
-                        pass
         if self._zarr is None:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
@@ -168,17 +163,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._projection = None
         self._gcps = None
         if not self._created:
-            try:
+            with contextlib.suppress(Exception):
                 self._validateZarr()
-            except Exception:
-                pass
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):
-            try:
+            with contextlib.suppress(Exception):
                 self._zarr.close()
-            except Exception:
-                pass
             try:
                 if self._created:
                     shutil.rmtree(self._tempdir)
@@ -560,10 +551,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         result['zarr'] = {
             'base': self._zarr.attrs.asdict(),
         }
-        try:
+        with contextlib.suppress(Exception):
             result['zarr']['main'] = self._series[0][0].attrs.asdict()
-        except Exception:
-            pass
         return result
 
     def getAssociatedImagesList(self):
@@ -734,11 +723,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ``level`` is a reserved word and not permitted for an axis name.
         """
         self._checkEditable()
-        try:
+        with contextlib.suppress(TileSourceError):
             # read any info written by other processes
             self._validateZarr()
-        except TileSourceError:
-            pass
         updateMetadata = False
         store_path = str(kwargs.pop('level', 0))
         placement = {
@@ -1165,7 +1152,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             err = 'frameAxes must be set first with a list of frame axis names.'
             raise ValueError(err)
         if not isinstance(units, dict) or not all(
-            k in self.frameAxes for k in units.keys()
+            k in self.frameAxes for k in units
         ):
             err = 'frameUnits must be a dictionary with keys that exist in frameAxes.'
             raise ValueError(err)
@@ -1213,7 +1200,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._checkEditable()
         if isinstance(gcps, str):
             gcps = list(zip(*[iter(gcps.split())] * 4))
-        if (isinstance(gcps, list) or isinstance(gcps, tuple)):
+        if (isinstance(gcps, (list, tuple))):
             gcps = [
                 [float(v) for v in gcp.split()]
                 if isinstance(gcp, str) else gcp

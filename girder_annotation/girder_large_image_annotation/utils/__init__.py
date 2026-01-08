@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import json
 import math
@@ -244,7 +245,7 @@ class GeoJSONAnnotation:
         self._annotation = {'elements': self._elements}
         self._parseFeature(geojson)
 
-    def _parseFeature(self, geoelem):  # noqa
+    def _parseFeature(self, geoelem):
         if isinstance(geoelem, (list, tuple)):
             for entry in geoelem:
                 self._parseFeature(entry)
@@ -269,10 +270,8 @@ class GeoJSONAnnotation:
                 element['label'] = {'value': element['label']}
             element['label']['value'] = str(element['label']['value'])
         if geoelem.get('properties', {}).get('annotation'):
-            try:
+            with contextlib.suppress(Exception):
                 self._annotation.update(geoelem['properties']['annotation'])
-            except Exception:
-                pass
             self._annotation['elements'] = self._elements
         elemtype = geoelem.get('properties', {}).get('type', '') or geoelem['geometry']['type']
         func = getattr(self, elemtype.lower() + 'Type', None)
@@ -422,10 +421,8 @@ def _cancelPlottableItemData(uuid, newRecord):
     with _recentPlottableItemDataLock:
         if uuid in _recentPlottableItemData:
             old = _recentPlottableItemData.pop(uuid)
-            try:
+            with contextlib.suppress(Exception):
                 old().cancel = True
-            except Exception:
-                pass
         if len(_recentPlottableItemData) > 7:
             _recentPlottableItemData.pop(next(iter(_recentPlottableItemData)))
         _recentPlottableItemData[uuid] = weakref.ref(newRecord)

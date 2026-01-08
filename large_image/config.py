@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import json
 import logging
@@ -103,10 +104,8 @@ def getConfig(key: Optional[str] = None,
         value = os.environ[envKey]
         if value == '__default__':
             return default
-        try:
+        with contextlib.suppress(ValueError):
             value = json.loads(value)
-        except ValueError:
-            pass
         return value
     return ConfigValues.get(key, default)
 
@@ -170,10 +169,8 @@ def cpu_count(logical: bool = True) -> int:
     :returns: the number of usable CPUs.
     """
     count = os.cpu_count() or 2
-    try:
+    with contextlib.suppress(AttributeError):
         count = min(count, len(os.sched_getaffinity(0)))
-    except AttributeError:
-        pass
     if HAS_PSUTIL:
         count = min(count, psutil.cpu_count(logical) or count)
     return max(1, count)

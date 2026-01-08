@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 import sys
@@ -38,10 +39,8 @@ def isGeospatial(
         source = availableSources[sourceName]
         if hasattr(source, 'isGeospatial'):
             result = None
-            try:
+            with contextlib.suppress(Exception):
                 result = source.isGeospatial(path)
-            except Exception:
-                pass
             if result in (True, False):
                 return result
     return False

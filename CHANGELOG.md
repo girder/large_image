@@ -7,6 +7,10 @@
 - Add support for Python 3.14 ([#2022](../../pull/2022), [#2026](../../pull/2026))
 - In Jupyter, set edge value of tilesource to transparent ([#2019](../../pull/2019))
 
+### Changes
+
+- Refactored internal code to use contextlib.suppress where appropriate ([#2030](../../pull/2030))
+
 ### Bug Fixes
 
 - When reading raw files via the PIL source, fix handling uint16 data ([#2029](../../pull/2029))

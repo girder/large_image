@@ -1,10 +1,10 @@
+import contextlib
 import functools
+import importlib.metadata
 import math
 import os
 import re
 import warnings
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 from large_image_source_dicom.dicom_metadata import extract_dicom_metadata
@@ -20,11 +20,8 @@ dicomweb_client = None
 pydicom = None
 wsidicom = None
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 def _lazyImport():
@@ -73,10 +70,8 @@ def dicom_to_dict(ds, base=None):
     info = {}
     for k, v in base.items():
         key = k
-        try:
+        with contextlib.suppress(Exception):
             key = pydicom.datadict.keyword_for_tag(k)
-        except Exception:
-            pass
         if isinstance(v, str):
             val = v
         else:

@@ -16,6 +16,7 @@ likely lead to crashes. This is only for use in JupyterLab.
 """
 import ast
 import asyncio
+import contextlib
 import importlib.util
 import json
 import os
@@ -196,10 +197,8 @@ class Map:
                         fileId = entry['_id']
                     id = entry['itemId'] if entry.get('_modelType') == 'file' else entry['_id']
             if id:
-                try:
+                with contextlib.suppress(Exception):
                     metadata = gc.get(f'item/{id}/tiles')
-                except Exception:
-                    pass
                 if metadata:
                     url = gc.urlBase + f'item/{id}/tiles' + '/zxy/{z}/{x}/{y}'
                     if metadata.get('geospatial'):
@@ -535,13 +534,12 @@ class Map:
             async def fetch(url):
                 async with aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=900),
-                ) as session:
-                    async with session.get(url) as response:
-                        self._frame_histograms[frame] = await response.json()  # type: ignore
-                        # rewrite whole object for watcher
-                        self.frame_selector.frameHistograms = (
-                            self._frame_histograms.copy()  # type: ignore
-                        )
+                ) as session, session.get(url) as response:
+                    self._frame_histograms[frame] = await response.json()  # type: ignore
+                    # rewrite whole object for watcher
+                    self.frame_selector.frameHistograms = (
+                        self._frame_histograms.copy()  # type: ignore
+                    )
 
             asyncio.ensure_future(fetch(histogram_url))
 

@@ -1,3 +1,4 @@
+import contextlib
 import io
 import math
 import threading
@@ -259,11 +260,9 @@ def _imageToNumpy(
             b'\xff\xc0' in image[:1024]):
         idx = image.index(b'\xff\xc0')
         if image[idx + 9:idx + 10] in {b'\x01', b'\x03'}:
-            try:
+            with contextlib.suppress(Exception):
                 image = simplejpeg.decode_jpeg(
                     image, colorspace='GRAY' if image[idx + 9:idx + 10] == b'\x01' else 'RGB')
-            except Exception:
-                pass
     if not isinstance(image, np.ndarray):
         if not isinstance(image, PIL.Image.Image):
             image = PIL.Image.open(io.BytesIO(image))
@@ -686,17 +685,13 @@ def getPaletteColors(value: Union[str, list[Union[str, float, tuple[float, ...]]
     if palette is None:
         import palettable
 
-        try:
+        with contextlib.suppress(AttributeError):
             palette = attrgetter(str(value))(palettable).hex_colors
-        except AttributeError:
-            pass
     if palette is None:
-        try:
+        with contextlib.suppress(ImportError, TypeError):
             # Add to matplotlib if available
             import tol_colors  # noqa F401
-        except (ImportError, TypeError):
-            pass
-        try:
+        with contextlib.suppress(ImportError, ValueError, AttributeError):
             import matplotlib as mpl
 
             if value in mpl.colors.get_named_colors_mapping():
@@ -706,8 +701,6 @@ def getPaletteColors(value: Union[str, list[Union[str, float, tuple[float, ...]]
                     mpl, 'colormaps', None), 'get_cmap') else
                     mpl.cm.get_cmap(str(value)))
                 palette = _mpl_lsc_to_palette(cmap)  # type: ignore
-        except (ImportError, ValueError, AttributeError):
-            pass
     if palette is None:
         raise ValueError('cannot be used as a color palette.: %r.' % value)
     return _arrayToPalette(palette)
@@ -767,11 +760,9 @@ def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False)
         palettes |= set(PIL.ImageColor.colormap.keys())
         palettes |= set(colormap.keys())
     _recursePalettablePalettes(palettable, palettes)
-    try:
+    with contextlib.suppress(ImportError, TypeError):
         # Add to matplotlib if available
         import tol_colors  # noqa F401
-    except (ImportError, TypeError):
-        pass
     try:
         import matplotlib as mpl
 

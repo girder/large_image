@@ -1,6 +1,8 @@
 import concurrent.futures
+import contextlib
 import datetime
 import fractions
+import importlib.metadata
 import json
 import logging
 import math
@@ -9,8 +11,6 @@ import re
 import struct
 import threading
 import time
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 from tempfile import TemporaryDirectory
 
 import numpy as np
@@ -25,11 +25,8 @@ from . import format_aperio
 
 pyvips = None
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 logger = logging.getLogger('large-image-converter')

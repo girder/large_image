@@ -133,8 +133,8 @@ def get_extensions_mimetypes_table():
         '',
     ]
     for name, info in large_image.tilesource.listSources().get('sources', {}).items():
-        extensions = [k for k in info.get('extensions', {}).keys() if k != 'default']
-        mimetypes = [k for k in info.get('mimeTypes', {}).keys() if k != 'default']
+        extensions = [k for k in info.get('extensions', {}) if k != 'default']
+        mimetypes = [k for k in info.get('mimeTypes', {}) if k != 'default']
         if len(extensions):
             extensions_string = ', '.join([
                 f'``{e}``' for e in extensions
