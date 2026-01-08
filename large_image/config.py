@@ -5,7 +5,7 @@ import logging
 import os
 import pathlib
 import re
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 from . import exceptions
 
@@ -87,8 +87,8 @@ ConfigValues = {
 
 # We use lru_cache over cache because it can be cleared
 @functools.lru_cache(maxsize=1000)
-def getConfig(key: Optional[str] = None,
-              default: Optional[Union[str, bool, int, logging.Logger]] = None) -> Any:
+def getConfig(key: str | None = None,
+              default: str | bool | int | logging.Logger | None = None) -> Any:
     """
     Get the config dictionary or a value from the cache config settings.
 
@@ -110,8 +110,8 @@ def getConfig(key: Optional[str] = None,
     return ConfigValues.get(key, default)
 
 
-def getLogger(key: Optional[str] = None,
-              default: Optional[logging.Logger] = None) -> logging.Logger:
+def getLogger(key: str | None = None,
+              default: logging.Logger | None = None) -> logging.Logger:
     """
     Get a logger from the config.  Ensure that it is a valid logger.
 
@@ -125,7 +125,7 @@ def getLogger(key: Optional[str] = None,
     return logger
 
 
-def setConfig(key: str, value: Optional[Union[str, bool, int, logging.Logger]]) -> None:
+def setConfig(key: str, value: str | bool | int | logging.Logger | None) -> None:
     """
     Set a value in the config settings.
 
@@ -139,7 +139,7 @@ def setConfig(key: str, value: Optional[Union[str, bool, int, logging.Logger]]) 
 
 
 def _ignoreSourceNames(
-        configKey: str, path: Union[str, pathlib.Path], default: Optional[str] = None) -> None:
+        configKey: str, path: str | pathlib.Path, default: str | None = None) -> None:
     """
     Given a path, if it is an actual file and there is a setting
     "source_<configKey>_ignored_names", raise a TileSourceError if the path

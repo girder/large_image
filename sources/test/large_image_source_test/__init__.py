@@ -135,7 +135,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             elif '=' not in str(frames):
                 self._axes = [
                     (axis, f'Index{axis.upper()}', int(part))
-                    for axis, part in zip(['c', 'z', 't', 'xy'], frames.split(','))]
+                    for axis, part in zip(['c', 'z', 't', 'xy'], frames.split(','), strict=False)]
             else:
                 self._axes = [
                     (part.split('=', 1)[0],

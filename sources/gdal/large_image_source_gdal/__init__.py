@@ -646,7 +646,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                         stats = band.GetStatistics(True, True)
                         # The statistics provide a min and max, so we don't
                         # fetch those separately
-                        info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
+                        info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats, strict=True)))
                     except (RuntimeError, TypeError):
                         self.logger.info('Failed to get statistics for band %d', i + 1)
                     info['nodata'] = band.GetNoDataValue()

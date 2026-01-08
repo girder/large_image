@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import functools
 import pickle
 import threading
 import uuid
-from typing import Any, Callable, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import cachetools
 from typing_extensions import ParamSpec
@@ -21,8 +24,8 @@ from .cachefactory import CacheFactory, pickAvailableCache
 P = ParamSpec('P')
 T = TypeVar('T')
 
-_tileCache: Optional[cachetools.Cache] = None
-_tileLock: Optional[threading.Lock] = None
+_tileCache: cachetools.Cache | None = None
+_tileLock: threading.Lock | None = None
 
 _cacheLockKeyToken = '_cacheLock_key'
 
@@ -70,7 +73,7 @@ def strhash(*args, **kwargs) -> str:
     return repr(args)
 
 
-def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
+def methodcache(key: Callable | None = None) -> Callable:  # noqa
     """
     Decorator to wrap a function with a memoizing callable that saves results
     in self.cache.  This is largely taken from cachetools, but uses a cache
@@ -259,7 +262,7 @@ class LruCacheMetaclass(type):
         return instance
 
 
-def getTileCache() -> tuple[cachetools.Cache, Optional[threading.Lock]]:
+def getTileCache() -> tuple[cachetools.Cache, threading.Lock | None]:
     """
     Get the preferred tile cache and lock.
 

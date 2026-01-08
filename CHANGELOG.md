@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.33.6
+## 1.34.0
 
 ### Improvements
 
@@ -10,6 +10,7 @@
 ### Changes
 
 - Refactored internal code to use contextlib.suppress where appropriate ([#2030](../../pull/2030))
+- Drop support for Python 3.9 ([#2031](../../pull/2031))
 
 ### Bug Fixes
 

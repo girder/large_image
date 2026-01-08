@@ -1199,7 +1199,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
     def gcps(self, gcps):
         self._checkEditable()
         if isinstance(gcps, str):
-            gcps = list(zip(*[iter(gcps.split())] * 4))
+            gcps = list(zip(*[iter(gcps.split())] * 4, strict=False))
         if (isinstance(gcps, (list, tuple))):
             gcps = [
                 [float(v) for v in gcp.split()]
