@@ -43,7 +43,7 @@ setup(
             'openpyxl',
             'pandas>=2.2',
             'python-calamine',
-            'umap-learn ; python_version < "3.14"',
+            'umap-learn',
         ],
         'tasks': [
             f'girder-large-image[tasks]{limit_version}',
