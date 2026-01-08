@@ -245,8 +245,9 @@ class PILFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     rgb = rgb[:, :, :3]
                 self._pilImage = PIL.Image.fromarray(
                     rgb.astype(np.uint8) if rgb.dtype != np.uint16 else rgb,
-                    ('RGB' if rgb.dtype != np.uint16 else 'RGB;16') if rgb.shape[2] == 3 else
-                    ('L' if rgb.dtype != np.uint16 else 'L;16'))
+                    # There is no RGB;16 as of PIL 12.1
+                    ('RGB' if rgb.dtype != np.uint16 else 'RGB') if rgb.shape[2] == 3 else
+                    ('L' if rgb.dtype != np.uint16 else 'I;16'))
         except Exception:
             pass
 
