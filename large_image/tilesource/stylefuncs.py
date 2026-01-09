@@ -1,7 +1,6 @@
 # This module contains functions for use in styles
 
 from types import SimpleNamespace
-from typing import Optional, Union
 
 import numpy as np
 
@@ -10,8 +9,8 @@ from .utilities import _imageToNumpy, _imageToPIL
 
 def maskPixelValues(
         image: np.ndarray, context: SimpleNamespace,
-        values: list[Union[int, list[int], tuple[int, ...]]],
-        negative: Optional[int] = None, positive: Optional[int] = None) -> np.ndarray:
+        values: list[int | list[int] | tuple[int, ...]],
+        negative: int | None = None, positive: int | None = None) -> np.ndarray:
     """
     This is a style utility function that returns a black-and-white 8-bit image
     where the image is white if the pixel of the source image is in a list of
@@ -51,7 +50,7 @@ def maskPixelValues(
 
 
 def medianFilter(
-        image: np.ndarray, context: Optional[SimpleNamespace] = None,
+        image: np.ndarray, context: SimpleNamespace | None = None,
         kernel: int = 5, weight: float = 1.0) -> np.ndarray:
     """
     This is a style utility function that applies a median rank filter to the

@@ -70,10 +70,10 @@ repos:
     hooks:
       - id: pyupgrade
         args:
-          - --py39-plus
+          - --py310-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.6
+    rev: v0.14.10
     hooks:
       - id: ruff
         args:
@@ -101,9 +101,32 @@ repos:
     hooks:
       - id: yesqa
   - repo: https://github.com/lyz-code/yamlfix
-    rev: 1.19.0
+    rev: 1.19.1
     hooks:
       - id: yamlfix
         args:
           - -c
           - pyproject.toml
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker
+        args:
+          - --ignore
+          - DL3003
+          - --ignore
+          - DL3008
+          - --ignore
+          - DL3013
+          - --ignore
+          - DL3016
+          - --ignore
+          - DL3059
+          - --ignore
+          - DL4006
+          - --ignore
+          - SC2028
+          - --ignore
+          - SC2046
+          - --ignore
+          - SC2086

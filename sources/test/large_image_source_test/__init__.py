@@ -15,11 +15,11 @@
 ##############################################################################
 
 import colorsys
+import contextlib
+import importlib.metadata
 import itertools
 import math
 import re
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -30,11 +30,8 @@ from large_image.exceptions import TileSourceError
 from large_image.tilesource import TileSource
 from large_image.tilesource.utilities import _imageToNumpy, _imageToPIL
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 _counters = {
@@ -97,10 +94,8 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         # of 2 in size.
         self.fractal = (fractal and self.tileWidth == self.tileHeight and
                         not (self.tileWidth & (self.tileWidth - 1)))
-        self.sizeX = (((2 ** self.maxLevel) * self.tileWidth)
-                      if not sizeX else sizeX)
-        self.sizeY = (((2 ** self.maxLevel) * self.tileHeight)
-                      if not sizeY else sizeY)
+        self.sizeX = (sizeX or ((2 ** self.maxLevel) * self.tileWidth))
+        self.sizeY = (sizeY or ((2 ** self.maxLevel) * self.tileHeight))
         self.maxLevel = max(0, int(math.ceil(math.log2(max(
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)))))
         self.minLevel = min(self.minLevel, self.maxLevel)
@@ -140,7 +135,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             elif '=' not in str(frames):
                 self._axes = [
                     (axis, f'Index{axis.upper()}', int(part))
-                    for axis, part in zip(['c', 'z', 't', 'xy'], frames.split(','))]
+                    for axis, part in zip(['c', 'z', 't', 'xy'], frames.split(','), strict=False)]
             else:
                 self._axes = [
                     (part.split('=', 1)[0],

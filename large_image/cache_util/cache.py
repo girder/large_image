@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import functools
 import pickle
 import threading
 import uuid
-from typing import Any, Callable, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import cachetools
 from typing_extensions import ParamSpec
@@ -13,14 +16,16 @@ try:
 except ImportError:
     HAS_RESOURCE = False
 
+import contextlib
+
 from .. import config
 from .cachefactory import CacheFactory, pickAvailableCache
 
 P = ParamSpec('P')
 T = TypeVar('T')
 
-_tileCache: Optional[cachetools.Cache] = None
-_tileLock: Optional[threading.Lock] = None
+_tileCache: cachetools.Cache | None = None
+_tileLock: threading.Lock | None = None
 
 _cacheLockKeyToken = '_cacheLock_key'
 
@@ -68,7 +73,7 @@ def strhash(*args, **kwargs) -> str:
     return repr(args)
 
 
-def methodcache(key: Optional[Callable] = None) -> Callable:  # noqa
+def methodcache(key: Callable | None = None) -> Callable:  # noqa
     """
     Decorator to wrap a function with a memoizing callable that saves results
     in self.cache.  This is largely taken from cachetools, but uses a cache
@@ -176,7 +181,7 @@ class LruCacheMetaclass(type):
 
         return cls
 
-    def __call__(cls, *args, **kwargs) -> Any:  # noqa - N805
+    def __call__(cls, *args, **kwargs) -> Any:  # - N805
         if kwargs.get('noCache') or (
                 kwargs.get('noCache') is None and config.getConfig('cache_sources') is False):
             instance = super().__call__(*args, **kwargs)
@@ -243,11 +248,8 @@ class LruCacheMetaclass(type):
                 # for pickling
                 instance._initValues = (args, kwargs.copy())
             except Exception as exc:
-                with cacheLock:
-                    try:
-                        del cache[key]
-                    except Exception:
-                        pass
+                with cacheLock, contextlib.suppress(Exception):
+                    del cache[key]
                 raise exc
             instance._classkey = key
             if kwargs.get('style') != getattr(cls, '_unstyledStyle', None):
@@ -260,7 +262,7 @@ class LruCacheMetaclass(type):
         return instance
 
 
-def getTileCache() -> tuple[cachetools.Cache, Optional[threading.Lock]]:
+def getTileCache() -> tuple[cachetools.Cache, threading.Lock | None]:
     """
     Get the preferred tile cache and lock.
 

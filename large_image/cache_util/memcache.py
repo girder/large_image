@@ -17,7 +17,8 @@
 import copy
 import threading
 import time
-from typing import Any, Callable, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import Any, Optional, TypeVar
 
 from .. import config
 from .base import BaseCache
@@ -29,9 +30,9 @@ class MemCache(BaseCache):
     """Use memcached as the backing cache."""
 
     def __init__(
-            self, url: Union[str, list[str]] = '127.0.0.1',
-            username: Optional[str] = None, password: Optional[str] = None,
-            getsizeof: Optional[Callable[[_VT], float]] = None,
+            self, url: str | list[str] = '127.0.0.1',
+            username: str | None = None, password: str | None = None,
+            getsizeof: Callable[[_VT], float] | None = None,
             mustBeAvailable: bool = False) -> None:
         import pylibmc
 

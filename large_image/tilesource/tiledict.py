@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import numpy as np
 import PIL
@@ -60,7 +60,7 @@ class LazyTileDict(dict):
 
     def setFormat(
             self, format: tuple[str, ...], resample: bool = False,
-            imageKwargs: Optional[dict[str, Any]] = None) -> None:
+            imageKwargs: dict[str, Any] | None = None) -> None:
         """
         Set a more restrictive output format for a tile, possibly also resizing
         it via resampling.  If this is not called, the tile may either be
@@ -159,8 +159,8 @@ class LazyTileDict(dict):
                     :th, :tw, :retile.shape[2]]
         return cast(np.ndarray, retile)
 
-    def _resample(self, tileData: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray]) -> tuple[
-        Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray], Optional[PIL.Image.Image],
+    def _resample(self, tileData: ImageBytes | PIL.Image.Image | bytes | np.ndarray) -> tuple[
+        ImageBytes | PIL.Image.Image | bytes | np.ndarray, PIL.Image.Image | None,
     ]:
         """
         If we need to resample a tile, use PIL if it is uint8 or we are using

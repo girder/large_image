@@ -14,14 +14,14 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
+import importlib.metadata
 import math
 import os
 import pathlib
 import struct
 import tempfile
 import threading
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
@@ -40,11 +40,8 @@ from large_image.tilesource.geo import (GDALBaseFileTileSource,
                                         ProjUnitsAcrossLevel0_MaxSize)
 from large_image.tilesource.utilities import JSONDict, _gdalParameters, _vipsCast, _vipsParameters
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 gdal = None
 gdal_array = None
@@ -65,10 +62,8 @@ def _lazyImport():
         try:
             from osgeo import gdal, gdal_array, gdalconst, osr
 
-            try:
+            with contextlib.suppress(Exception):
                 gdal.UseExceptions()
-            except Exception:
-                pass
 
             # isort: off
 
@@ -651,7 +646,7 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                         stats = band.GetStatistics(True, True)
                         # The statistics provide a min and max, so we don't
                         # fetch those separately
-                        info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats)))
+                        info.update(dict(zip(('min', 'max', 'mean', 'stdev'), stats, strict=True)))
                     except (RuntimeError, TypeError):
                         self.logger.info('Failed to get statistics for band %d', i + 1)
                     info['nodata'] = band.GetNoDataValue()
@@ -797,11 +792,9 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
                 return (key, band)
         bands = self.getBandInformation()
         if not isinstance(band, int):
-            try:
+            with contextlib.suppress(StopIteration):
                 band = next(bandIdx for bandIdx in sorted(bands)
                             if band == bands[bandIdx]['interpretation'])
-            except StopIteration:
-                pass
         if hasattr(band, 'isdigit') and band.isdigit():
             band = int(band)
         if band != -1 and band not in bands:
@@ -980,14 +973,10 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             gdal.Translate(outputPath, ds, options=gdalParams)
             os.unlink(tempPath)
         except Exception as exc:
-            try:
+            with contextlib.suppress(Exception):
                 os.unlink(tempPath)
-            except Exception:
-                pass
-            try:
+            with contextlib.suppress(Exception):
                 os.unlink(outputPath)
-            except Exception:
-                pass
             raise exc
         return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
 
@@ -1051,10 +1040,8 @@ class GDALFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass):
             ds = gdal.Open(self._largeImagePath, gdalconst.GA_ReadOnly)
             gdal.Warp(outputPath, ds, options=gdalParams)
         except Exception as exc:
-            try:
+            with contextlib.suppress(Exception):
                 os.unlink(outputPath)
-            except Exception:
-                pass
             raise exc
         return pathlib.Path(outputPath), TileOutputMimeTypes['TILED']
 

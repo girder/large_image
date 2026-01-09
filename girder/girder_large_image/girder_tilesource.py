@@ -1,3 +1,4 @@
+import contextlib
 import inspect
 import os
 import re
@@ -85,14 +86,12 @@ class GirderTileSource(tilesource.FileTileSource):
                 except Exception:
                     pass
                 if not largeImagePath:
-                    try:
+                    with contextlib.suppress(FilePathException):
                         largeImagePath = File().getGirderMountFilePath(
                             largeImageFile,
                             **({'preferFlat': True} if mayHaveAdjacent != 'local' and
                                 'preferFlat' in inspect.signature(
                                     File.getGirderMountFilePath).parameters else {}))
-                    except FilePathException:
-                        pass
             if not largeImagePath:
                 try:
                     largeImagePath = File().getLocalFilePath(largeImageFile)

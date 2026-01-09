@@ -1,14 +1,13 @@
+import contextlib
 import os
 
 import pytest
 
 pytestmark = pytest.mark.girder
 
-try:
+# Make it easier to test without girder
+with contextlib.suppress(ImportError):
     from large_image_tasks import tasks
-except ImportError:
-    # Make it easier to test without girder
-    pass
 
 
 def test_conversion(tmp_path):

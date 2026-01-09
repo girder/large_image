@@ -1,7 +1,8 @@
-try:
+import contextlib
+
+with contextlib.suppress(ImportError):
     import large_image_source_nd2
-except ImportError:
-    pass
+
 import pytest
 
 from . import utilities
