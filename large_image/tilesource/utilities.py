@@ -1,3 +1,4 @@
+import contextlib
 import io
 import math
 import threading
@@ -5,7 +6,7 @@ import types
 import xml.etree.ElementTree
 from collections import defaultdict
 from operator import attrgetter
-from typing import Any, Optional, Union, cast
+from typing import Any, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -54,21 +55,21 @@ class ImageBytes(bytes):
     Display the number of bytes and, if known, the mimetype.
     """
 
-    def __new__(cls, source: bytes, mimetype: Optional[str] = None):
+    def __new__(cls, source: bytes, mimetype: str | None = None):
         self = super().__new__(cls, source)
         vars(self)['_mime_type'] = mimetype
         return self
 
     @property
-    def mimetype(self) -> Optional[str]:
+    def mimetype(self) -> str | None:
         return vars(self)['_mime_type']
 
-    def _repr_png_(self) -> Optional[bytes]:
+    def _repr_png_(self) -> bytes | None:
         if self.mimetype == 'image/png':
             return self
         return None
 
-    def _repr_jpeg_(self) -> Optional[bytes]:
+    def _repr_jpeg_(self) -> bytes | None:
         if self.mimetype == 'image/jpeg':
             return self
         return None
@@ -91,8 +92,8 @@ class JSONDict(dict):
 
 
 def _encodeImageBinary(
-        image: PIL.Image.Image, encoding: str, jpegQuality: Union[str, int],
-        jpegSubsampling: Union[str, int], tiffCompression: str) -> bytes:
+        image: PIL.Image.Image, encoding: str, jpegQuality: str | int,
+        jpegSubsampling: str | int, tiffCompression: str) -> bytes:
     """
     Encode a PIL Image to a binary representation of the image (a jpeg, png, or
     tif).
@@ -151,11 +152,11 @@ def _encodeImageBinary(
 
 
 def _encodeImage(
-    image: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray],
+    image: ImageBytes | PIL.Image.Image | bytes | np.ndarray,
     encoding: str = 'JPEG', jpegQuality: int = 95, jpegSubsampling: int = 0,
-    format: Union[str, tuple[str]] = (TILE_FORMAT_IMAGE, ),
+    format: str | tuple[str] = (TILE_FORMAT_IMAGE, ),
     tiffCompression: str = 'raw', **kwargs,
-) -> tuple[Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray], str]:
+) -> tuple[ImageBytes | PIL.Image.Image | bytes | np.ndarray, str]:
     """
     Convert a PIL or numpy image into raw output bytes, a numpy image, or a PIL
     Image, and a mime type.
@@ -195,8 +196,8 @@ def _encodeImage(
 
 
 def _imageToPIL(
-        image: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray],
-        setMode: Optional[str] = None) -> PIL.Image.Image:
+        image: ImageBytes | PIL.Image.Image | bytes | np.ndarray,
+        setMode: str | None = None) -> PIL.Image.Image:
     """
     Convert an image in PIL, numpy, or image file format to a PIL image.
 
@@ -213,27 +214,25 @@ def _imageToPIL(
             mode = modesBySize[image.shape[2] - 1]
         if len(image.shape) == 3 and image.shape[2] == 1:
             image = np.resize(image, image.shape[:2])
-        if cast(np.ndarray, image).dtype == np.uint32:
+        if image.dtype == np.uint32:
             image = np.floor_divide(image, 2 ** 24).astype(np.uint8)
-        elif cast(np.ndarray, image).dtype == np.uint16:
+        elif image.dtype == np.uint16:
             image = np.floor_divide(image, 256).astype(np.uint8)
-        elif cast(np.ndarray, image).dtype == np.int8:
-            image = (cast(np.ndarray, image).astype(float) + 128).astype(np.uint8)
-        elif cast(np.ndarray, image).dtype == np.int16:
-            image = np.floor_divide(
-                cast(np.ndarray, image).astype(float) + 2 ** 15, 256).astype(np.uint8)
-        elif cast(np.ndarray, image).dtype == np.int32:
-            image = np.floor_divide(
-                cast(np.ndarray, image).astype(float) + 2 ** 31, 2 ** 24).astype(np.uint8)
+        elif image.dtype == np.int8:
+            image = (image.astype(float) + 128).astype(np.uint8)
+        elif image.dtype == np.int16:
+            image = np.floor_divide(image.astype(float) + 2 ** 15, 256).astype(np.uint8)
+        elif image.dtype == np.int32:
+            image = np.floor_divide(image.astype(float) + 2 ** 31, 2 ** 24).astype(np.uint8)
         # TODO: The scaling of float data needs to be identical across all
         # tiles of an image.  This means that we need a reference to the parent
         # tile source or some other way of regulating it.
-        # elif cast(np.ndarray, image).dtype.kind == 'f':
+        # elif image.dtype.kind == 'f':
         #     if numpy.max(image) > 1:
         #         maxl2 = math.ceil(math.log(numpy.max(image) + 1) / math.log(2))
         #         image = image / ((2 ** maxl2) - 1)
         #     image = (image * 255).astype(numpy.uint8)
-        elif cast(np.ndarray, image).dtype != np.uint8:
+        elif image.dtype != np.uint8:
             image = np.clip(np.nan_to_num(np.where(
                 image is None, np.nan, image), nan=0), 0, 255).astype(np.uint8)
         image = PIL.Image.fromarray(cast(np.ndarray, image), mode)
@@ -245,7 +244,7 @@ def _imageToPIL(
 
 
 def _imageToNumpy(
-        image: Union[ImageBytes, PIL.Image.Image, bytes, np.ndarray]) -> tuple[np.ndarray, 'str']:
+        image: ImageBytes | PIL.Image.Image | bytes | np.ndarray) -> tuple[np.ndarray, 'str']:
     """
     Convert an image in PIL, numpy, or image file format to a numpy array.  The
     output numpy array always has three dimensions.
@@ -259,11 +258,9 @@ def _imageToNumpy(
             b'\xff\xc0' in image[:1024]):
         idx = image.index(b'\xff\xc0')
         if image[idx + 9:idx + 10] in {b'\x01', b'\x03'}:
-            try:
+            with contextlib.suppress(Exception):
                 image = simplejpeg.decode_jpeg(
                     image, colorspace='GRAY' if image[idx + 9:idx + 10] == b'\x01' else 'RGB')
-            except Exception:
-                pass
     if not isinstance(image, np.ndarray):
         if not isinstance(image, PIL.Image.Image):
             image = PIL.Image.open(io.BytesIO(image))
@@ -313,7 +310,7 @@ def _letterboxImage(image: PIL.Image.Image, width: int, height: int, fill: str) 
 
 
 def _vipsCast(image: Any, mustBe8Bit: bool = False,
-              preferredCast: Optional[tuple[Any, float, float]] = None) -> Any:
+              preferredCast: tuple[Any, float, float] | None = None) -> Any:
     """
     Cast a vips image to a format we want.
 
@@ -359,8 +356,8 @@ def _vipsCast(image: Any, mustBe8Bit: bool = False,
 
 
 def _rasterioParameters(
-        defaultCompression: Optional[str] = None,
-        eightbit: Optional[bool] = None, **kwargs) -> dict[str, Any]:
+        defaultCompression: str | None = None,
+        eightbit: bool | None = None, **kwargs) -> dict[str, Any]:
     """
     Return a dictionary of creation option for the rasterio driver
 
@@ -402,8 +399,8 @@ def _rasterioParameters(
 
 
 def _gdalParameters(
-        defaultCompression: Optional[str] = None,
-        eightbit: Optional[bool] = None, **kwargs) -> list[str]:
+        defaultCompression: str | None = None,
+        eightbit: bool | None = None, **kwargs) -> list[str]:
     """
     Return an array of gdal translation parameters.
 
@@ -442,7 +439,7 @@ def _gdalParameters(
 
 
 def _vipsParameters(
-        forTiled: bool = True, defaultCompression: Optional[str] = None,
+        forTiled: bool = True, defaultCompression: str | None = None,
         **kwargs) -> dict[str, Any]:
     """
     Return a dictionary of vips conversion parameters.
@@ -547,7 +544,7 @@ def etreeToDict(t: xml.etree.ElementTree.Element) -> dict[str, Any]:
 
 def dictToEtree(
         d: dict[str, Any],
-        root: Optional[xml.etree.ElementTree.Element] = None) -> xml.etree.ElementTree.Element:
+        root: xml.etree.ElementTree.Element | None = None) -> xml.etree.ElementTree.Element:
     """
     Convert a dictionary in the style produced by etreeToDict back to an etree.
     Make an xml string via xml.etree.ElementTree.tostring(dictToEtree(
@@ -602,14 +599,14 @@ def nearPowerOfTwo(val1: float, val2: float, tolerance: float = 0.02) -> bool:
     return abs(log2ratio - round(log2ratio)) < tolerance
 
 
-def _arrayToPalette(palette: list[Union[str, float, tuple[float, ...]]]) -> np.ndarray:
+def _arrayToPalette(palette: list[str | float | tuple[float, ...]]) -> np.ndarray:
     """
     Given an array of color strings, tuples, or lists, return a numpy array.
 
     :param palette: an array of color strings, tuples, or lists.
     :returns: a numpy array of RGBA value on the scale of [0-255].
     """
-    arr: list[Union[np.ndarray, tuple[float, ...]]] = []
+    arr: list[np.ndarray | tuple[float, ...]] = []
     for clr in palette:
         if isinstance(clr, (tuple, list)):
             arr.append(np.array((list(clr) + [1, 1, 1])[:4]) * 255)
@@ -659,7 +656,7 @@ def _mpl_lsc_to_palette(cmap: Any) -> list[str]:
     return [mpl.colors.to_hex(cmap(i)) for i in range(cmap.N)]
 
 
-def getPaletteColors(value: Union[str, list[Union[str, float, tuple[float, ...]]]]) -> np.ndarray:  # noqa
+def getPaletteColors(value: str | list[str | float | tuple[float, ...]]) -> np.ndarray:
     """
     Given a list or a name, return a list of colors in the form of a numpy
     array of RGBA.  If a list, each entry is a color name resolvable by either
@@ -686,17 +683,13 @@ def getPaletteColors(value: Union[str, list[Union[str, float, tuple[float, ...]]
     if palette is None:
         import palettable
 
-        try:
+        with contextlib.suppress(AttributeError):
             palette = attrgetter(str(value))(palettable).hex_colors
-        except AttributeError:
-            pass
     if palette is None:
-        try:
+        with contextlib.suppress(ImportError, TypeError):
             # Add to matplotlib if available
             import tol_colors  # noqa F401
-        except (ImportError, TypeError):
-            pass
-        try:
+        with contextlib.suppress(ImportError, ValueError, AttributeError):
             import matplotlib as mpl
 
             if value in mpl.colors.get_named_colors_mapping():
@@ -706,14 +699,12 @@ def getPaletteColors(value: Union[str, list[Union[str, float, tuple[float, ...]]
                     mpl, 'colormaps', None), 'get_cmap') else
                     mpl.cm.get_cmap(str(value)))
                 palette = _mpl_lsc_to_palette(cmap)  # type: ignore
-        except (ImportError, ValueError, AttributeError):
-            pass
     if palette is None:
         raise ValueError('cannot be used as a color palette.: %r.' % value)
     return _arrayToPalette(palette)
 
 
-def isValidPalette(value: Union[str, list[Union[str, float, tuple[float, ...]]]]) -> bool:
+def isValidPalette(value: str | list[str | float | tuple[float, ...]]) -> bool:
     """
     Check if a value can be used as a palette.
 
@@ -730,7 +721,7 @@ def isValidPalette(value: Union[str, list[Union[str, float, tuple[float, ...]]]]
 
 def _recursePalettablePalettes(
         module: types.ModuleType, palettes: set[str],
-        root: Optional[str] = None, depth: int = 0) -> None:
+        root: str | None = None, depth: int = 0) -> None:
     """
     Walk the modules in palettable to find all of the available palettes.
 
@@ -767,11 +758,9 @@ def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False)
         palettes |= set(PIL.ImageColor.colormap.keys())
         palettes |= set(colormap.keys())
     _recursePalettablePalettes(palettable, palettes)
-    try:
+    with contextlib.suppress(ImportError, TypeError):
         # Add to matplotlib if available
         import tol_colors  # noqa F401
-    except (ImportError, TypeError):
-        pass
     try:
         import matplotlib as mpl
 
@@ -796,7 +785,7 @@ def getAvailableNamedPalettes(includeColors: bool = True, reduced: bool = False)
     return sorted(palettes)
 
 
-def fullAlphaValue(arr: Union[np.ndarray, npt.DTypeLike]) -> int:
+def fullAlphaValue(arr: np.ndarray | npt.DTypeLike) -> int:
     """
     Given a numpy array, return the value that should be used for a fully
     opaque alpha channel.  For uint variants, this is the max value.
@@ -866,7 +855,7 @@ def _makeSameChannelDepth(arr1: np.ndarray, arr2: np.ndarray) -> tuple[np.ndarra
 
 
 def _addSubimageToImage(
-        image: Optional[np.ndarray], subimage: np.ndarray, x: int, y: int,
+        image: np.ndarray | None, subimage: np.ndarray, x: int, y: int,
         width: int, height: int) -> np.ndarray:
     """
     Add a subimage to a larger image as numpy arrays.
@@ -921,7 +910,7 @@ def _vipsAddAlphaBand(vimg: Any, otherImages: list[Any]) -> Any:
 
 
 def _addRegionTileToTiled(
-        image: Optional[dict[str, Any]], subimage: np.ndarray, x: int, y: int,
+        image: dict[str, Any] | None, subimage: np.ndarray, x: int, y: int,
         width: int, height: int, tile: dict[str, Any], **kwargs) -> dict[str, Any]:
     """
     Add a subtile to a vips image.
@@ -970,7 +959,7 @@ def _addRegionTileToTiled(
 
 
 def _calculateWidthHeight(
-        width: Optional[float], height: Optional[float], regionWidth: float,
+        width: float | None, height: float | None, regionWidth: float,
         regionHeight: float) -> tuple[int, int, float]:
     """
     Given a source width and height and a maximum destination width and/or
@@ -1080,7 +1069,7 @@ def _computeFramesPerTexture(
 
 
 def getTileFramesQuadInfo(
-        metadata: dict[str, Any], options: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        metadata: dict[str, Any], options: dict[str, Any] | None = None) -> dict[str, Any]:
     """
     Compute what tile_frames need to be requested for a particular condition.
 

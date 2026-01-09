@@ -25,23 +25,22 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
         'Programming Language :: Python :: 3.14',
     ],
-    python_requires='>=3.9',
+    python_requires='>=3.10',
     install_requires=[
         f'large-image{limit_version}',
-        'rasterio>=1.3 ; python_version < "3.14"',
+        'rasterio>=1.3',
         'packaging',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
         'all': [
-            'rio-cogeo ; python_version < "3.14"',
+            'rio-cogeo',
         ],
     },
     keywords='large_image, tile source',

@@ -14,6 +14,7 @@
 #  limitations under the License.
 ###############################################################################
 
+import contextlib
 import ctypes
 import io
 import json
@@ -895,10 +896,8 @@ class TiledTiffDirectory:
                 'WSI': 'thumbnail',
             }
             self._embeddedImages[typemap.get(typestr, typestr.lower())] = datastr
-        try:
+        with contextlib.suppress(Exception):
             self._description_record = etreeToDict(xml)
-        except Exception:
-            pass
         return True
 
     def read_image(self):

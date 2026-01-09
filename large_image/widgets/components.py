@@ -1,6 +1,6 @@
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Union
 
 import ipyvue
 import traitlets
@@ -27,8 +27,8 @@ class FrameSelector(ipyvue.VueTemplate):  # type: ignore
     colors = traitlets.Dict(colors_data).tag(sync=True)
     frameHistograms = traitlets.Dict({}).tag(sync=True)
 
-    updateFrameCallback: Union[Callable, None] = None
-    getFrameHistogram: Union[Callable, None] = None
+    updateFrameCallback: Callable | None = None
+    getFrameHistogram: Callable | None = None
 
     # register_component_from_file function does not work in Google Colab;
     # register child components from strings instead

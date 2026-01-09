@@ -24,6 +24,8 @@
 
 import atexit
 import builtins
+import contextlib
+import importlib.metadata
 import logging
 import math
 import os
@@ -33,8 +35,6 @@ import threading
 import types
 import weakref
 import zipfile
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 
@@ -45,11 +45,8 @@ from large_image.constants import TILE_FORMAT_NUMPY, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 bioformats = None
 # import javabridge
@@ -78,14 +75,10 @@ def _monitor_thread():
             while len(_openImages):
                 source = _openImages.pop()
                 source = source()
-                try:
+                with contextlib.suppress(Exception):
                     source._bioimage.close()
-                except Exception:
-                    pass
-                try:
+                with contextlib.suppress(Exception):
                     source._bioimage = None
-                except Exception:
-                    pass
         except Exception:
             pass
         finally:
@@ -247,11 +240,9 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     # release some file handles.
                     self._bioimage.init_reader()
                 except Exception as exc:
-                    try:
+                    with contextlib.suppress(Exception):
                         # Ask to open a file that should never exist
                         self._bioimage.rdr.setId('__\0__')
-                    except Exception:
-                        pass
                     self._bioimage.close()
                     self._bioimage = None
                     raise exc
@@ -588,11 +579,9 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if metadata.get(key):
                     found = re.match(r'^[^0-9.]*(\d*\.?\d+)[^0-9.]+(\d*\.?\d+)\D*$', metadata[key])
                     if found:
-                        try:
+                        with contextlib.suppress(Exception):
                             self._magnification['mm_x'], self._magnification['mm_y'] = (
                                 float(found.groups()[0]) * units, float(found.groups()[1]) * units)
-                        except Exception:
-                            pass
         for key in magkeys:
             if metadata.get(key):
                 self._magnification['magnification'] = float(metadata[key])

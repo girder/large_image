@@ -14,8 +14,8 @@
 #  limitations under the License.
 #############################################################################
 
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
+import contextlib
+import importlib.metadata
 from pathlib import Path
 
 from girder import events
@@ -30,11 +30,8 @@ from . import constants, handlers
 from .models.annotation import Annotation
 from .rest.annotation import AnnotationResource
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 def metadataSearchHandler(*args, **kwargs):

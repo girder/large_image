@@ -15,6 +15,7 @@
 ##############################################################################
 
 import concurrent.futures
+import contextlib
 import datetime
 import io
 import json
@@ -104,10 +105,8 @@ def createThumbnailsJobLog(job, info, prefix='', status=None):
         msg += 'Failed on %d thumbnail file%s (last failure on item %s)\n' % (
             info['failed'],
             's' if info['failed'] != 1 else '', info['lastFailed'])
-    try:
+    with contextlib.suppress(TypeError):
         job = Job().updateJob(job, log=msg, status=status)
-    except TypeError:
-        pass
     return job, msg
 
 
@@ -130,7 +129,7 @@ def createThumbnailsJob(job):
     thread.start()
 
 
-def createThumbnailsJobThread(job):  # noqa
+def createThumbnailsJobThread(job):
     """
     Create thumbnails for all of the large image items.
 
@@ -193,10 +192,8 @@ def createThumbnailsJobThread(job):  # noqa
                 if nextitem is not None:
                     query['_id'] = {'$gt': nextitem['_id']}
             # Wait a short time or until the oldest task is complete
-            try:
+            with contextlib.suppress(concurrent.futures.TimeoutError):
                 tasks[0].result(0.1)
-            except concurrent.futures.TimeoutError:
-                pass
             # Remove completed tasks from our list, adding their results to the
             # status.
             for pos in range(len(tasks) - 1, -1, -1):

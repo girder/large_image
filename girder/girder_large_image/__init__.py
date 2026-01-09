@@ -14,13 +14,13 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
+import importlib.metadata
 import json
 import logging
 import re
 import threading
 import warnings
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 from pathlib import Path
 
 import yaml
@@ -53,11 +53,8 @@ from .rest.item_meta import InternalMetadataItemResource
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 logger = logging.getLogger(__name__)
@@ -255,10 +252,8 @@ def addSettingsToConfig(config, user, name=None):
             extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA
 
     showExtra = None
-    try:
+    with contextlib.suppress(Exception):
         showExtra = json.loads(Setting().get(extraSetting))
-    except Exception:
-        pass
     if (isinstance(showExtra, dict) and 'images' in showExtra and
             isinstance(showExtra['images'], list)):
         for value in showExtra['images']:
@@ -512,14 +507,12 @@ class LargeImagePlugin(GirderPlugin):
     DISPLAY_NAME = 'Large Image'
 
     def load(self, info):
-        try:
+        with contextlib.suppress(Exception):
             # the mapnik binary files can complain about TLS exhaustion if they
             # aren't loaded early.  This seems to be somehow slightly
             # intractable in linux, so just load them now, but fail quietly
             # since they are optional
             import large_image_source_mapnik  # noqa
-        except Exception:
-            pass
         try:
             getPlugin('worker').load(info)
         except Exception:

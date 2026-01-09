@@ -1,6 +1,6 @@
 import math
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..constants import TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, TileOutputMimeTypes
 from . import utilities
@@ -18,8 +18,8 @@ class TileIterator:
 
     def __init__(
             self, source: 'tilesource.TileSource',
-            format: Union[str, tuple[str]] = (TILE_FORMAT_NUMPY, ),
-            resample: Optional[bool] = True, **kwargs) -> None:
+            format: str | tuple[str] = (TILE_FORMAT_NUMPY, ),
+            resample: bool | None = True, **kwargs) -> None:
         self.source = source
         self._kwargs = kwargs
         if not isinstance(format, tuple):
@@ -66,7 +66,7 @@ class TileIterator:
             return self.info
         return {}
 
-    def __len__(self) -> Optional[int]:
+    def __len__(self) -> int | None:
         if self.info is None:
             return None
         iterlen = ((cast(int, self.info['xmax']) - cast(int, self.info['xmin'])) *
@@ -75,7 +75,7 @@ class TileIterator:
             return 1 if cast(int, self.info['tile_position']) < iterlen else 0
         return iterlen
 
-    def _tileIteratorInfo(self, **kwargs) -> Optional[dict[str, Any]]:  # noqa
+    def _tileIteratorInfo(self, **kwargs) -> dict[str, Any] | None:  # noqa
         """
         Get information necessary to construct a tile iterator.
           If one of width or height is specified, the other is determined by
@@ -221,7 +221,7 @@ class TileIterator:
             metadata, desiredMagnification=mag, **kwargs.get('region', {}))
         regionWidth = right - left
         regionHeight = bottom - top
-        magRequestedScale: Optional[float] = None
+        magRequestedScale: float | None = None
         if maxWidth is None and maxHeight is None and mag:
             if mag.get('scale') in (1.0, None):
                 maxWidth, maxHeight = regionWidth, regionHeight
