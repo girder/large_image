@@ -16,7 +16,6 @@ lint.ignore = [
     "B017",  # assert raises exception
     "B026",  # star arg unpacking after keyword arg
     "B904",  # raise without from inside except
-    "B905",  # require strict= in zip calls (can't do it until python 3.10)
     "C408",  # unnecessary collection call (would prohibit dict())
     "D100",
     "D101",
@@ -46,6 +45,16 @@ lint.ignore = [
     "PT030",
     "RET503",  # implict-return on function that can return non-none
     "RET504",  # unncessary-assign before return
+    "SIM102",
+    "SIM103",
+    "SIM108",
+    "SIM110",
+    "SIM113",
+    "SIM114",
+    "SIM115",
+    "SIM401",
+
+    # "SIM105",
 ]
 line-length = 100
 lint.select = [
@@ -71,6 +80,7 @@ lint.select = [
     "Q",  # flake8-quotes
     "RET",
     "RSE",
+    "SIM",
     "T",  # print statements
     "W",  # pycodestyle warnings
     "YTT",  # flake8-2020

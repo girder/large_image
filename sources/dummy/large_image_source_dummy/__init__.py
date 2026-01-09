@@ -14,17 +14,14 @@
 #  limitations under the License.
 ##############################################################################
 
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
+import contextlib
+import importlib.metadata
 
 from large_image.constants import SourcePriority
 from large_image.tilesource import TileSource
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 class DummyTileSource(TileSource):

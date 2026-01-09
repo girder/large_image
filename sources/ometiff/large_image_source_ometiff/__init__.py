@@ -14,12 +14,12 @@
 #  limitations under the License.
 ##############################################################################
 
+import contextlib
 import copy
+import importlib.metadata
 import math
 import os
 from collections import OrderedDict
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
@@ -30,11 +30,8 @@ from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_NUMPY, TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 _omeUnitsToMeters = {
@@ -124,7 +121,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
             float(entry['SizeX']) / base.tileWidth,
             float(entry['SizeY']) / base.tileHeight)) / math.log(2))))
             for entry in omeimages]
-        omebylevel = dict(zip(levels, omeimages))
+        omebylevel = dict(zip(levels, omeimages, strict=True))
         self._omeLevels = [omebylevel.get(key) for key in range(max(omebylevel.keys()) + 1)]
         if base._tiffInfo.get('istiled'):
             if usesSubIfds:

@@ -14,12 +14,12 @@
 #  limitations under the License.
 ##############################################################################
 
+import contextlib
+import importlib.metadata
 import math
 import os
 import threading
 import warnings
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 
@@ -30,11 +30,8 @@ from large_image.tilesource import FileTileSource
 
 nd2 = None
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 def _lazyImport():

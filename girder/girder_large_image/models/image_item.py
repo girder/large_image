@@ -14,6 +14,7 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
 import io
 import json
 import logging
@@ -332,12 +333,10 @@ class ImageItem(Item):
         if 'largeImage' in item:
             job = None
             if 'jobId' in item['largeImage']:
-                try:
+                # If the job has been deleted we still need to clean up the
+                # rest of the tile information
+                with contextlib.suppress(ValidationException):
                     job = Job().load(item['largeImage']['jobId'], force=True, exc=True)
-                except ValidationException:
-                    # The job has been deleted, but we still need to clean up
-                    # the rest of the tile information
-                    pass
             if (item['largeImage'].get('expected') and job and
                     job.get('status') in (
                     JobStatus.QUEUED, JobStatus.RUNNING)):

@@ -1,18 +1,4 @@
-#############################################################################
-#  Copyright Kitware Inc.
-#
-#  Licensed under the Apache License, Version 2.0 ( the "License" );
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#############################################################################
+from __future__ import annotations
 
 import math
 import threading
@@ -44,9 +30,7 @@ def loadCaches(
     if len(_availableCaches):
         return
     epoints = entry_points()
-    # Python 3.10 uses select and deprecates dictionary interface
-    epointList = epoints.select(group=entryPointName) if hasattr(
-        epoints, 'select') else epoints.get(entryPointName, [])
+    epointList = epoints.select(group=entryPointName)
     for entryPoint in epointList:
         try:
             cacheClass = entryPoint.load()
@@ -66,8 +50,8 @@ def loadCaches(
 
 
 def pickAvailableCache(
-        sizeEach: int, portion: int = 8, maxItems: Optional[int] = None,
-        cacheName: Optional[str] = None) -> int:
+        sizeEach: int, portion: int = 8, maxItems: int | None = None,
+        cacheName: str | None = None) -> int:
     """
     Given an estimated size of an item, return how many of those items would
     fit in a fixed portion of the available virtual memory.
@@ -95,7 +79,7 @@ def pickAvailableCache(
     return numItems
 
 
-def getFirstAvailableCache() -> tuple[Optional[cachetools.Cache], Optional[threading.Lock]]:
+def getFirstAvailableCache() -> tuple[cachetools.Cache | None, threading.Lock | None]:
     cacheBackend = config.getConfig('cache_backend', None)
     if cacheBackend is not None:
         msg = 'cache_backend already set'
@@ -121,7 +105,7 @@ def getFirstAvailableCache() -> tuple[Optional[cachetools.Cache], Optional[threa
 class CacheFactory:
     logged = False
 
-    def getCacheSize(self, numItems: Optional[int], cacheName: Optional[str] = None) -> int:
+    def getCacheSize(self, numItems: int | None, cacheName: str | None = None) -> int:
         if numItems is None:
             defaultPortion = 32
             try:
@@ -143,9 +127,9 @@ class CacheFactory:
         return numItems
 
     def getCache(
-            self, numItems: Optional[int] = None,
-            cacheName: Optional[str] = None,
-            inProcess: bool = False) -> tuple[cachetools.Cache, Optional[threading.Lock]]:
+            self, numItems: int | None = None,
+            cacheName: str | None = None,
+            inProcess: bool = False) -> tuple[cachetools.Cache, threading.Lock | None]:
         loadCaches()
 
         # Default to `python` cache for inProcess

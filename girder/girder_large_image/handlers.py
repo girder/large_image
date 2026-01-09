@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import re
@@ -330,8 +331,6 @@ def handleSettingSave(event):
         large_image.config.setConfig('icc_correction', event.info['value'])
         large_image.cache_util.cachesClear()
         gc.collect()
-        try:
+        with contextlib.suppress(Exception):
             # ask the browser to clear the cache; it probably won't be honored
             setResponseHeader('Clear-Site-Data', '"cache"')
-        except Exception:
-            pass

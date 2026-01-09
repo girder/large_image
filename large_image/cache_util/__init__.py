@@ -15,7 +15,8 @@
 #############################################################################
 
 import atexit
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .cache import (CacheProperties, LruCacheMetaclass, getTileCache,
                     isTileCacheSetup, methodcache, strhash)

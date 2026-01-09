@@ -1,3 +1,4 @@
+import contextlib
 import inspect
 import logging
 import os
@@ -133,14 +134,12 @@ def convert_image_job(job):
     try:
         inputPath = None
         if not fileObj.get('imported'):
-            try:
+            with contextlib.suppress(Exception):
                 inputPath = File().getGirderMountFilePath(
                     fileObj,
                     **({'preferFlat': True} if mayHaveAdjacent != 'local' and
                         'preferFlat' in inspect.signature(
                         File.getGirderMountFilePath).parameters else {}))
-            except Exception:
-                pass
         inputPath = inputPath or File().getLocalFilePath(fileObj)
         with tempfile.TemporaryDirectory() as tempdir:
             dest = create_tiff(

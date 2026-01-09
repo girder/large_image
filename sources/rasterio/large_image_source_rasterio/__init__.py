@@ -14,15 +14,14 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
+import importlib.metadata
 import math
 import os
 import pathlib
 import tempfile
 import threading
 import warnings
-from contextlib import suppress
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import PIL.Image
@@ -43,11 +42,8 @@ from large_image.tilesource.geo import (GDALBaseFileTileSource,
                                         ProjUnitsAcrossLevel0_MaxSize)
 from large_image.tilesource.utilities import JSONDict
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 rio = None
 Affine = None
@@ -699,21 +695,20 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
             add_alpha = not src_alpha_band
 
             # read the image as a warp vrt
-            with self._getDatasetLock:
-                with rio.vrt.WarpedVRT(
-                    ds,
-                    resampling=rio.enums.Resampling.nearest,
-                    crs=self.projection,
-                    transform=dst_transform,
-                    height=self.tileHeight,
-                    width=self.tileWidth,
-                    add_alpha=add_alpha,
-                ) as vrt:
-                    try:
-                        tile = vrt.read(resampling=rio.enums.Resampling.nearest)
-                    except Exception:
-                        self.logger.exception('Failed to getTile')
-                        tile = None
+            with self._getDatasetLock, rio.vrt.WarpedVRT(
+                ds,
+                resampling=rio.enums.Resampling.nearest,
+                crs=self.projection,
+                transform=dst_transform,
+                height=self.tileHeight,
+                width=self.tileWidth,
+                add_alpha=add_alpha,
+            ) as vrt:
+                try:
+                    tile = vrt.read(resampling=rio.enums.Resampling.nearest)
+                except Exception:
+                    self.logger.exception('Failed to getTile')
+                    tile = None
 
         if tile is None:
             tile = np.zeros((1, 1))
@@ -848,7 +843,7 @@ class RasterioFileTileSource(GDALBaseFileTileSource, metaclass=LruCacheMetaclass
 
         # check if the units is a string or projection material
         isProj = False
-        with suppress(rio.errors.CRSError):
+        with contextlib.suppress(rio.errors.CRSError):
             isProj = make_crs(units) is not None
 
         # convert the coordinates if a projection exist

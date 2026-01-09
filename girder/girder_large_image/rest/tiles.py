@@ -14,6 +14,7 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
 import hashlib
 import io
 import math
@@ -69,10 +70,8 @@ def _adjustParams(params):
 
     :param params: the request parameters.  May be modified.
     """
-    try:
+    with contextlib.suppress(Exception):
         userAgent = cherrypy.request.headers.get('User-Agent', '').lower()
-    except Exception:
-        pass
     if params.get('encoding', 'JPEG') == 'JPEG':
         if ('ipad' in userAgent or 'ipod' in userAgent or 'iphone' in userAgent or
                 re.match('((?!chrome|android).)*safari', userAgent, re.IGNORECASE)):
