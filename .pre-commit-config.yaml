@@ -73,7 +73,7 @@ repos:
           - --py310-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.10
+    rev: v0.14.11
     hooks:
       - id: ruff
         args:
@@ -83,8 +83,8 @@ repos:
           - python
           - pyi
           - jupyter
-  - repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v2.0.4
+  - repo: https://github.com/hhatto/autopep8
+    rev: v2.3.2
     hooks:
       - id: autopep8
   - repo: https://github.com/PyCQA/flake8
