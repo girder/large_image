@@ -1,3 +1,4 @@
+import contextlib
 import json
 
 import cherrypy
@@ -181,12 +182,10 @@ class DICOMwebAssetstoreAdapter(AbstractAssetstoreAdapter):
         # Try to perform a singlepart request. If it fails, perform a multipart request
         # instead.
         response = None
-        try:
+        with contextlib.suppress(requests.HTTPError):
+            # If there is an HTTPError, the server might not accept single-part requests...
             response = self._request_retrieve_instance(file, multipart=False,
                                                        transfer_syntax=transfer_syntax)
-        except requests.HTTPError:
-            # If there is an HTTPError, the server might not accept single-part requests...
-            pass
 
         if self._is_singlepart_response(response):
             return response

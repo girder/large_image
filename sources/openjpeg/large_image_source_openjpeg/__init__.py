@@ -15,14 +15,14 @@
 ##############################################################################
 
 import builtins
+import contextlib
+import importlib.metadata
 import io
 import math
 import os
 import queue
 import struct
 import warnings
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 from xml.etree import ElementTree
 
 import PIL.Image
@@ -34,11 +34,8 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, etreeToDict
 from large_image.tilesource.utilities import _imageToNumpy
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 glymur = None
 
@@ -168,11 +165,9 @@ class OpenjpegFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if box_id == self._xmlTag:
                     self._parseMetadataXml(data)
                     continue
-                try:
+                with contextlib.suppress(Exception):
                     self._associatedImages[self._boxToTag[box_id]] = PIL.Image.open(
                         io.BytesIO(data))
-                except Exception:
-                    pass
             if box_id == 'jp2c':
                 for segment in box.codestream.segment:
                     if segment.marker_id == 'CME' and hasattr(segment, 'ccme'):

@@ -1,12 +1,27 @@
 # Change Log
 
+## 1.34.0
+
+### Improvements
+
+- Add support for Python 3.14 ([#2022](../../pull/2022), [#2026](../../pull/2026))
+- In Jupyter, set edge value of tilesource to transparent ([#2019](../../pull/2019))
+
+### Changes
+
+- Refactored internal code to use contextlib.suppress where appropriate ([#2031](../../pull/2031))
+- Drop support for Python 3.9 ([#2032](../../pull/2032))
+
+### Bug Fixes
+
+- When reading raw files via the PIL source, fix handling uint16 data ([#2030](../../pull/2030))
+- When copying an item via girder, ensure permissions on annotations are granted to the owner of the destination folder ([#2033](../../pull/2033))
+
 ## 1.33.5
 
 ### Improvements
 
 - Added a "pattern" property for polygon annotations ([#2020](../../pull/2020))
-- Add support for Python 3.14 ([#2022](../../pull/2022))
-- In Jupyter, set edge value of tilesource to transparent ([#2019](../../pull/2019))
 
 ### Changes
 

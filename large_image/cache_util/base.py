@@ -1,7 +1,8 @@
 import hashlib
 import threading
 import time
-from typing import Any, Callable, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, Optional, TypeVar
 
 import cachetools
 
@@ -13,7 +14,7 @@ class BaseCache(cachetools.Cache):
 
     def __init__(
             self, maxsize: float,
-            getsizeof: Optional[Callable[[_VT], float]] = None,
+            getsizeof: Callable[[_VT], float] | None = None,
             **kwargs) -> None:
         super().__init__(maxsize=maxsize, getsizeof=getsizeof, **kwargs)
         self.lastError: dict[tuple[Any, Callable], dict[str, Any]] = {}

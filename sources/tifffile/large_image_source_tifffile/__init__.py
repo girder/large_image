@@ -1,11 +1,11 @@
+import contextlib
+import importlib.metadata
 import json
 import logging
 import math
 import os
 import re
 import threading
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 from pathlib import Path
 
 import numpy as np
@@ -19,11 +19,8 @@ from large_image.tilesource import FileTileSource
 tifffile = None
 zarr = None
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 class checkForMissingDataHandler(logging.Handler):
@@ -424,7 +421,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         except Exception:
             pass
 
-    def _handle_scn(self):  # noqa
+    def _handle_scn(self):
         """
         For SCN files, parse the xml and possibly adjust how associated images
         are labelled.
@@ -470,12 +467,10 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                             channels[int(channel.attrib.get('index', 0))] = (
                                 large_image.tilesource.utilities.etreeToDict(channel)['channel'])
                         self._channelInfo = channels
-                        try:
+                        with contextlib.suppress(Exception):
                             self._channels = [
                                 channels.get(idx)['name'].split('|')[0]
                                 for idx in range(len(channels))]
-                        except Exception:
-                            pass
 
     def _handle_svs(self):
         """

@@ -1,5 +1,5 @@
 # Build wheels
-FROM python:3.13-slim AS build
+FROM python:3.14-slim AS build
 
 # Need git for setuptools_scm
 RUN apt-get update \
@@ -10,7 +10,7 @@ RUN apt-get update \
 COPY . /opt/build-context/
 WORKDIR /opt/build-context
 
-RUN python -m pip install --upgrade pip wheel setuptools
+RUN python -m pip install --no-cache-dir --upgrade pip wheel setuptools
 RUN sh .circleci/make_wheels.sh
 RUN mv ~/wheels /opt/build-context/
 
@@ -19,12 +19,13 @@ RUN echo "pylibmc>=1.5.1\nmatplotlib\npyvips\nsimplejpeg\n" \
 
 
 # Geospatial Sources
-FROM python:3.13-slim AS geo
+FROM python:3.14-slim AS geo
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
 # NOTE: this does not install any girder3 packages
 RUN pip install \
+    --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
     --find-links=/opt/wheels \
     -r /opt/wheels/requirements.txt \
@@ -37,12 +38,15 @@ RUN pip install \
 
 
 # All Sources
-FROM python:3.13-slim AS all
+FROM python:3.14-slim AS all
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
+# Needs for 3.14 to install older zarr and numcodecs
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc
 # NOTE: this does not install any girder3 packages
 RUN pip install \
+    --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
     --find-links=/opt/wheels \
     -r /opt/wheels/requirements.txt \
@@ -52,12 +56,13 @@ RUN pip install \
 
 
 # All Sources and Girder Packages
-FROM python:3.13-slim AS girder
+FROM python:3.14-slim AS girder
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
 # NOTE: this does not install any girder3 packages
 RUN pip install \
+    --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
     --find-links=/opt/wheels \
     -r /opt/wheels/requirements.txt \
@@ -70,6 +75,7 @@ COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
 RUN pip install \
+    --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
     --find-links=/opt/wheels \
     -r /opt/wheels/requirements.txt \
@@ -77,6 +83,7 @@ RUN pip install \
     /opt/wheels/large_image_converter*.whl \
     $(ls -1  /opt/wheels/large_image_source*.whl)
 RUN pip install \
+    --no-cache-dir \
     ipyleaflet \
     jupyter-server-proxy
 ENV LARGE_IMAGE_JUPYTER_PROXY='/proxy/'
@@ -89,6 +96,7 @@ LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
 # NOTE: this does not install any girder3 packages
 RUN pip install \
+    --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
     --find-links=/opt/wheels \
     -r /opt/wheels/requirements.txt \
@@ -99,6 +107,7 @@ RUN pip install \
     /opt/wheels/large_image_source_pil*.whl \
     /opt/wheels/large_image_converter*.whl
 RUN pip install \
+    --no-cache-dir \
     ipyleaflet \
     jupyter-server-proxy
 ENV LARGE_IMAGE_JUPYTER_PROXY='/proxy/'

@@ -733,6 +733,7 @@ class Annotation(AccessControlledModel):
         destItemId = destItem['_id']
         folder = Folder().load(destItem['folderId'], force=True)
         count = 0
+        user = None
         for annotation in annotations:
             logger.info('Copying annotation %d of %d from %s to %s',
                         count + 1, total, srcItemId, destItemId)
@@ -748,7 +749,11 @@ class Annotation(AccessControlledModel):
             # as the item's folder.
             annotation.pop('access', None)
             self.copyAccessPolicies(destItem, annotation, save=False)
-            self.setPublic(annotation, folder.get('public'), save=False)
+            self.setPublic(annotation, folder.get('public') or False, save=False)
+            if user is None:
+                user = User().load(folder['creatorId'], force=True)
+            if user is not None:
+                self.setUserAccess(annotation, user, AccessType.ADMIN, force=True, save=False)
             self.save(annotation)
             count += 1
         logger.info('Copied %d annotations from %s to %s ',

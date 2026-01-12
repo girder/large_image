@@ -15,13 +15,13 @@
 ##############################################################################
 
 import base64
+import contextlib
+import importlib.metadata
 import io
 import itertools
 import json
 import math
 import os
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import cachetools
 import numpy as np
@@ -39,11 +39,8 @@ from . import tiff_reader
 from .exceptions import (InvalidOperationTiffError, IOOpenTiffError,
                          IOTiffError, TiffError, ValidationTiffError)
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=10))
