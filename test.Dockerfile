@@ -8,12 +8,14 @@ FROM ubuntu:24.04
 
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 
+ARG NODE_VERSION=14
+ARG PYTHON_VERSIONS="3.11 3.9 3.10 3.12 3.13 3.14"
+
 # The default python version will be the first of all the versions listed
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
-    PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.11 3.9 3.10 3.12 3.13 3.14"
+    PATH="/.pyenv/bin:/.pyenv/shims:$PATH"
 
 # Consumers of this package aren't expecting an existing ubuntu user (there
 # wasn't one in the ubuntu:22.04 base)
@@ -105,13 +107,9 @@ RUN for ver in $PYTHON_VERSIONS; do \
     rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /.pyenv
 
 # Use nvm to install node
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-
-# Default node version
-RUN . ~/.bashrc && \
-    nvm install 14 && \
-    nvm alias default 14 && \
-    nvm use default && \
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \
+    . ~/.bashrc && \
+    if [ "$NODE_VERSION" = "14" ]; then \
     cd /root/.nvm/versions/node/v14.21.3/lib && \
     # upgrade packages to avoid security issues \
     npm install 'form-data@^2.5.5' && \
@@ -142,7 +140,12 @@ RUN . ~/.bashrc && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/make-fetch-happen && \
     npm install 'http-cache-semantics@^4.1.1' && \
     find / -xdev -name ip -exec grep '"version"' {}/package.json \; && \
+    true; else \
+    npm install -g npm@latest && \
+    true; fi && \
     rm -rf /root/.nvm/.cache && \
+    npm config set fetch-timeout 600000 && \
+    npm cache clean --force && \
     ln -s $(dirname `which npm`) /usr/local/node && \
     rdfind -minsize 1024 -makehardlinks true -makeresultsfile false /root/.nvm
 
