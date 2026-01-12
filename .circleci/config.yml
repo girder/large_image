@@ -159,12 +159,15 @@ jobs:
       - checkout
       - run:
           name: Build the test docker
-          command: docker build --progress=plain --force-rm -t girder/tox-and-node -f test.Dockerfile .
+          command: |
+            docker build --progress=plain --force-rm -t girder/tox-and-node -f test.Dockerfile .
+            docker build --progress=plain --force-rm -t girder/tox-and-node-lts --build-arg NODE_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | grep -oP 'v\K[0-9]+') --build-arg PYTHON_VERSIONS="3.13 3.10 3.11 3.12 3.14" -f test.Dockerfile .
       - run:
           name: Publish the images to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push girder/tox-and-node:latest
+            docker push girder/tox-and-node-lts:latest
   py310:
     machine:
       image: ubuntu-2204:current
