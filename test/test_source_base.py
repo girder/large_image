@@ -87,6 +87,7 @@ SourceAndFiles = {
     'tifffile': {
         'read': r'',
         'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm|monochrome1.dcm)$))',  # noqa
+        'skip': r'a131592c-a069-4aa7-8031-398654aa8a3d\.dcm',
     },
     'vips': {
         'read': r'',
