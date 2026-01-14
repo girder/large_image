@@ -35,7 +35,7 @@ setup(
     install_requires=[
         f'large-image{limit_version}',
         'pylibtiff',
-        'tifftools>=1.2.0',
+        'tifftools>=1.7.0',
     ],
     extras_require={
         'all': [
