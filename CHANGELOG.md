@@ -6,6 +6,7 @@
 
 - Add support for Python 3.14 ([#2022](../../pull/2022), [#2026](../../pull/2026))
 - In Jupyter, set edge value of tilesource to transparent ([#2019](../../pull/2019))
+- When reading tiff files via the tiff or openslide reader, stop reading sooner if they are corrupt ([#2037](../../pull/2037))
 
 ### Changes
 
