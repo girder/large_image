@@ -91,16 +91,26 @@ def copy_random_files_from_file_directory(file_dir: str, n_files: int = 10, file
                 break
 
 if __name__ == "__main__":
-    # copy_random_files_from_file_directory(file_dir="/wsi_archive/public/cancer_imaging_archive", destination_dir="/scr/arosado/large_image/ndpi")
     copy_random_files_from_file_directory(
-        file_dir="/wsi_archive/public/HEROHEGC/Training", 
-        destination_dir="/scr/arosado/large_image/mrxs_new",
-         n_files=10, 
-         large_image_meta_match={'magnification': 20.0, 'levels': 10, 'tileWidth': 256, 'tileHeight': 256}
+        file_dir="/wsi_archive/public/cancer_imaging_archive", 
+        destination_dir="/scr/arosado/large_image/ndpi",
+        n_files=10,
+        large_image_meta_match={'magnification': 40.0, 'levels': 10, 'tileWidth': 256, 'tileHeight': 256}
     )
-    # copy_random_files_from_file_directory(file_dir="/scr/arosado/tcga", destination_dir="/scr/arosado/large_image/svs", n_files=2, large_image_meta_match={'magnification': 40.0, 'levels': 10, 'tileWidth': 256, 'tileHeight': 256})
+    # copy_random_files_from_file_directory(
+    #     file_dir="/wsi_archive/public/HEROHEGC/Training", 
+    #     destination_dir="/scr/arosado/large_image/mrxs_new",
+    #      n_files=10, 
+    #      large_image_meta_match={'magnification': 20.0, 'levels': 10, 'tileWidth': 256, 'tileHeight': 256}
+    # )
+    # copy_random_files_from_file_directory(
+    #     file_dir="/scr/arosado/tcga", 
+    #     destination_dir="/scr/arosado/large_image/svs", 
+    #     n_files=10, 
+    #     large_image_meta_match={'magnification': 40.0, 'levels': 10, 'tileWidth': 240, 'tileHeight': 240}
+    # )
     # copy_random_files_from_file_directory(file_dir="/wsi_archive/public/HEROHEGC/Training", destination_dir="/scr/arosado/large_image/mrxs", n_files=1, large_image_meta_match={'magnification': 20.0})
-    print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/mrxs_new", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
+    # print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/mrxs", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
     # print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/svs", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
-    # print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/ndpi", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
+    print_directory_slide_dimensions(file_dir="/scr/arosado/large_image/ndpi", scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224})
     pass

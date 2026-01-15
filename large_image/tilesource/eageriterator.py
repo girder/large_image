@@ -151,6 +151,19 @@ class EagerIterator:
             if tile_size['width'] <= 0 or tile_size['height'] <= 0:
                 raise ValueError("tile_size width and height must be greater than 0")
 
+        if tile_overlap is not None:
+            if 'x' in tile_overlap and 'y' in tile_overlap:
+                if isinstance(tile_overlap['x'], int) and isinstance(tile_overlap['y'], int):
+                    if tile_overlap['x'] <= 0 or tile_overlap['y'] <= 0:
+                        raise ValueError("tile_overlap x and y must be greater than 0")
+                elif isinstance(tile_overlap['x'], float) and isinstance(tile_overlap['y'], float):
+                    if tile_overlap['x'] <= 0 or tile_overlap['y'] <= 0:
+                        raise ValueError("tile_overlap x and y must be greater than 0")
+                else:
+                    raise ValueError("tile_overlap x and y must be both integers or both floats")
+            else:
+                raise ValueError("tile_overlap must be a dictionary with both 'x' and 'y'")
+
         self.dtype = dtype
         self.nchw = nchw
         self.edge = edge
@@ -495,11 +508,13 @@ class EagerIterator:
         if xr < 0 or yr < 0:
             xlt = np.where(xlt > 0, xlt, 0).astype(np.uint)
             ytt = np.where(ytt > 0, ytt, 0).astype(np.uint)
-            print("Negative coordinates.\n Defaulting to 0.\n Please check your input tiles/regions.\n  Read_kwargs {}".format(read_kwargs))
+            raise UserWarning("Negative coordinates.\n Defaulting to 0.\n Please check your input tiles/regions.\n  Read_kwargs {}".format(read_kwargs))
+            # print("Negative coordinates.\n Defaulting to 0.\n Please check your input tiles/regions.\n  Read_kwargs {}".format(read_kwargs))
         if output_mode == 'regions' and (xrmax > slide_dimensions['base_size_x'] or ybmax > slide_dimensions['base_size_y']):
             ybt = np.where(ybt < slide_dimensions['base_size_y'], ybt, slide_dimensions['base_size_y']).astype(np.uint)
             xrt = np.where(xrt < slide_dimensions['base_size_x'], xrt, slide_dimensions['base_size_x']).astype(np.uint)
-            print("Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}".format(read_kwargs))
+            raise UserWarning("Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}".format(read_kwargs))
+            # print("Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}".format(read_kwargs))
 
         if output_mode == 'tiles':# tile size (x, y)
             xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint)

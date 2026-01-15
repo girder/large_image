@@ -7,13 +7,13 @@ from torchvision import io
 def make_sobel_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
     model = SobelFilter()
 
-    if compile_model:
-        # model.compile(backend="openxla")
-        model.compile(backend="inductor")
-
     model.eval()
 
     model.to(cuda_device)
+
+    # Compile model if needed
+    if compile_model:
+        model.compile()
 
     return model
 

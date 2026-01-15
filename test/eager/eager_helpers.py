@@ -27,6 +27,12 @@ from test.eager.paper.pytorch_efficientnet import make_efficientnet_model
 from test.eager.paper.huggingface_uni2_model import make_huggingface_uni2_model
 from test.eager.paper.pytorch_sobel_model import make_sobel_model
 
+def matplotlib_save_image(image_path: str, image: np.ndarray):
+    start_save_time = time.time()
+    plt.imsave(image_path, image)
+    end_save_time = time.time()
+    return end_save_time - start_save_time
+
 def make_pytorch_dataset(input_image_dir: str, transform: Optional[Callable] = None):
     from torch.utils.data import Dataset
     from torchvision.io import read_image
@@ -45,6 +51,7 @@ def make_pytorch_dataset(input_image_dir: str, transform: Optional[Callable] = N
             image = read_image(image_path, mode=ImageReadMode.RGB)
             if self.transform is not None:
                 if isinstance(self.transform, A.Compose):
+                    image = image.numpy()
                     image = self.transform(image=image)
                 elif isinstance(self.transform, Callable):
                     image = self.transform(image)
@@ -94,6 +101,7 @@ def setup_inference_model(performance_type: str, compile_model: bool = True, cud
         model = make_efficientnet_model(compile_model=compile_model, cuda_device=cuda_device)
     elif performance_type == 'inference_uni2':
         model = make_huggingface_uni2_model(compile_model=compile_model, cuda_device=cuda_device)
+        
     
     return model
 
@@ -200,8 +208,7 @@ def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_ite
         start_iterator_retreival_time = time.time()
         for batch in eager_iter:
             batch_images = batch['tile'].view()
-            batch_images = torch.tensor(batch_images)
-            batch_images = batch_images.to(cuda_device)
+            batch_images =batch_images.to(cuda_device)
             start_inference_time = time.time()
             batch_retreival_times.append(start_inference_time - start_iterator_retreival_time)
             output = model(batch_images)
@@ -212,12 +219,14 @@ def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_ite
 
         return batch_retreival_times, inference_times
 
-def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, *args, **kwargs):
+def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
     clear_cache()
 
     batch_retreival_times = []
     write_times = []
     inference_times = []
+
+    write_directory = None
     
     # Set caching
     if without_cache:
@@ -232,6 +241,14 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
         large_image.config.setConfig('icc_correction', True)
 
     model = setup_inference_model(performance_type, compile_model)
+
+    if performance_type == 'write':
+        # Make directory for images to be written to
+        write_directory = "/scr/arosado/performance/write/non_eager/default/images"
+        os.makedirs(write_directory, exist_ok=True)
+    elif performance_type == 'write_multiprocessing':
+        write_directory = "/scr/arosado/performance/write/non_eager/multiprocessing/images"
+        os.makedirs(write_directory, exist_ok=True)
 
     # Test performance without caching
     start_time = time.time()
@@ -271,7 +288,7 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
             end_batch_retreival_time = time.time()
-            plt.imsave("./image_{}_{}.png".format(tile_dict['tile_position']['region_x'], tile_dict['tile_position']['region_y']), image)
+            plt.imsave(f"{write_directory}/image_{int(tile_dict['tile_position']['region_x'])}_{int(tile_dict['tile_position']['region_y'])}.png", image)
             write_image_time = time.time() - end_batch_retreival_time
             write_times.append(write_image_time)
             batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
@@ -292,20 +309,21 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
             batch_retreival_times.append(batch_retreival_time)
     elif performance_type == 'write_multiprocessing':
         images_to_save = []
-
-        def save_image(image_to_save):
-            start_save_time = time.time()
-            plt.imsave(images_to_save[0], images_to_save[1])
-            end_save_time = time.time()
-            return end_save_time - start_save_time
         
+        start_batch_retreival_time = time.time()
         for tile_dict in tile_iterator:
-            images_to_save.append(["./image_{}_{}.png".format(tile_dict['tile_position']['region_x'], tile_dict['tile_position']['region_y']), tile_dict['tile']])
+            images_to_save.append([f"{write_directory}/image_{int(tile_dict['tile_position']['region_x'])}_{int(tile_dict['tile_position']['region_y'])}.png", tile_dict['tile']])
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
+            start_batch_retreival_time = end_batch_retreival_time
         
         with multiprocessing.Pool(processes=16) as pool:
-            write_times = pool.starmap(save_image, images_to_save)
+            write_times = pool.starmap(matplotlib_save_image, images_to_save)
             pool.close()
             pool.join()
+
+    elif performance_type == 'write_transform':
+        raise NotImplementedError("Write transform task is not implemented for non eager tasks")
         
     elif performance_type == 'inference_sobel':
         batch_retreival_times, inference_times = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
@@ -348,26 +366,11 @@ def run_dataset_task_performance_evaluation(file_path: str, file_dir: str, perfo
                 batch_retreival_times.append(time.time() - start_batch_retreival_time)
                 start_batch_retreival_time = time.time()
     elif performance_type == 'write':
-        start_batch_retreival_time = time.time()
-        for batch in dataloader:
-            end_batch_retreival_time = time.time()
-            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
-            for image in batch:
-                plt.imsave(f"./image_{image.shape[0]}_{image.shape[1]}.png", image)
-            write_times.append(time.time() - end_batch_retreival_time)
+        raise NotImplementedError("Write task is not implemented for dataset tasks")
     elif performance_type == 'write_multiprocessing':
-        start_batch_retreival_time = time.time()
-        for batch in dataloader:
-            end_batch_retreival_time = time.time()
-            images_to_save = []
-            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
-            for image in batch:
-                images_to_save.append([f"./image_{image.shape[0]}_{image.shape[1]}.png", image])
-            with multiprocessing.Pool(processes=10) as pool:
-                pool.starmap(plt.imsave, images_to_save)
-                pool.close()
-                pool.join()
-            write_times.append(time.time() - end_batch_retreival_time)
+        raise NotImplementedError("Write multiprocessing task is not implemented for dataset tasks")
+    elif performance_type == 'write_transform':
+        raise NotImplementedError("Write transform task is not implemented for dataset tasks")
     elif performance_type == 'pytorch_transform':
         start_batch_retreival_time = time.time()
         for batch in dataloader:
@@ -397,6 +400,8 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
     inference_times = []
     write_times = []
 
+    write_directory = None
+
     model = setup_inference_model(performance_type, compile_model)
 
     # Set caching
@@ -410,6 +415,14 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
         large_image.config.setConfig('icc_correction', False)
     else:
         large_image.config.setConfig('icc_correction', True)
+
+    if performance_type == 'write':
+        # Make directory for images to be written to
+        write_directory = "/scr/arosado/performance/write/eager/default/images"
+        os.makedirs(write_directory, exist_ok=True)
+    elif performance_type == 'write_multiprocessing':
+        write_directory = "/scr/arosado/performance/write/eager/multiprocessing/images"
+        os.makedirs(write_directory, exist_ok=True)
     
     # Set tiff source if needed
     start_time = time.time()
@@ -427,26 +440,54 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
     
     # Test read only performance
     if performance_type == 'read':
+        start_batch_retreival_time = time.time()
         for batch in eager_iter:
             batch_images = batch['tile'].view()
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
+            start_batch_retreival_time = end_batch_retreival_time
+
+    if performance_type == 'write_transform':
+        # In write transform space time to retreive the batch involves using a write transform function
+        start_batch_retreival_time = time.time()
+        for batch in eager_iter:
+            batch_images = batch['tile'].view()
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
+            start_batch_retreival_time = end_batch_retreival_time
+
     # Run write
     elif performance_type == 'write':
+        start_batch_retreival_time = time.time()
         for batch in eager_iter:
             batch_images = batch['tile'].view()
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
+            start_batch_retreival_time = end_batch_retreival_time
+
+            for i in range(batch_images.shape[0]):
+                plt.imsave(f"{write_directory}/image_{int(batch['tile_position']['region_x'][i])}_{int(batch['tile_position']['region_y'][i])}.png", batch_images[i])
+                write_times.append(time.time() - end_batch_retreival_time)
 
     # Run write with multiprocessing
     elif performance_type == 'write_multiprocessing':
+        images_to_save = []
+        
+        start_batch_retreival_time = time.time()
         for batch in eager_iter:
             batch_images = batch['tile'].view()
-
-            images_to_save = []        
+            end_batch_retreival_time = time.time()
+            batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
+            start_batch_retreival_time = end_batch_retreival_time
+   
             for i in range(batch_images.shape[0]):
-                images_to_save.append(["./image_{}_{}.png".format(batch['tile_position']['region_x'][i], batch['tile_position']['region_y'][i]), batch_images[i]])
+                images_to_save.append([f"{write_directory}/image_{int(batch['tile_position']['region_x'][i].item())}_{int(batch['tile_position']['region_y'][i].item())}.png", batch_images[i].copy()])
             
-            with multiprocessing.Pool(processes=10) as pool:
-                pool.starmap(plt.imsave, images_to_save)
-                pool.close()
-                pool.join()
+        with multiprocessing.Pool(processes=16) as pool:
+            write_times = pool.starmap(matplotlib_save_image, images_to_save)
+            pool.close()
+            pool.join()
+    
     # Run read with albumentations transform
     elif performance_type == 'albumentations_transform':
         for batch in eager_iter:

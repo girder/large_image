@@ -21,14 +21,15 @@ def make_efficientnet_model(model_name: str = "efficientnetb0", compile_model: b
     elif model_name == "efficientnetb7":
         model = efficientnet_b7(weights=EfficientNet_B7_Weights.DEFAULT)
     
-    # Compile model if needed
-    if compile_model:
-        model.compile()
-    
     # Set model to evaluation mode
     model.eval()
 
     model.to(cuda_device)
+
+    # Compile model if needed
+    if compile_model:
+        torch.compiler.set_stance("force_eager")
+        model = torch.compile(model)
 
     return model
 
