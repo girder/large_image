@@ -1,3 +1,6 @@
+// import tailwind
+import './stylesheets/importTailwind.css';
+
 // import modules for side effects
 import './routes';
 import './views/fileList';
@@ -12,6 +15,7 @@ import * as largeImage from './index';
 const {registerPluginNamespace} = girder.pluginUtils;
 const SearchFieldWidget = girder.views.widgets.SearchFieldWidget;
 
+console.log('registering plugin namespace for large image');
 registerPluginNamespace('large_image', largeImage);
 
 SearchFieldWidget.addMode(
