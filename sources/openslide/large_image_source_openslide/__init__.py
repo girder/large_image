@@ -89,7 +89,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'File will not be opened via OpenSlide.'
             raise TileSourceError(msg)
         try:
-            self._tiffinfo = tifftools.read_tiff(self._largeImagePath)
+            self._tiffinfo = tifftools.read_tiff(self._largeImagePath, maxUnknown=32)
             if tifftools.Tag.ICCProfile.value in self._tiffinfo['ifds'][0]['tags']:
                 self._iccprofiles = [self._tiffinfo['ifds'][0]['tags'][
                     tifftools.Tag.ICCProfile.value]['data']]

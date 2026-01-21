@@ -285,9 +285,10 @@ SourceEntrySchema = {
                 },
                 'warp': {
                     'description':
-                        'An object describing a series of landmarks which have both '
-                        'a source location and a destination location. These sets of points '
-                        'define a warp (thin plate spline or affine transform) that will '
+                        'An object describing a series of landmarks which '
+                        'have both a source location and a destination '
+                        'location. These sets of points define a warp (thin '
+                        'plate spline (TPS) or affine transform) that will '
                         'be applied to the source image.',
                     'type': 'object',
                     'properties': {
@@ -682,11 +683,23 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         warp_dst = np.array(warp_dst or []).astype(float)
         warp_src = warp_src[:min(warp_src.shape[0], warp_dst.shape[0]), :]
         warp_dst = warp_dst[:warp_src.shape[0], :]
+
+        useSimilarity = False
+        if len(warp_src) > 0 and len(warp_dst) > 0:
+            srcsvd = np.linalg.svd(warp_src - warp_src.mean(axis=0), compute_uv=False)
+            dstsvd = np.linalg.svd(warp_dst - warp_dst.mean(axis=0), compute_uv=False)
+            useSimilarity = warp_src.shape[0] < 3 or min(
+                srcsvd[1] / (srcsvd[0] or 1), dstsvd[1] / (dstsvd[0] or 1)) < 1e-3
+
         if warp_src.shape[0] < 1:
             pass
         elif warp_src.shape[0] == 1:
             m[0][2] += warp_dst[0][0] - warp_src[0][0]
             m[1][2] += warp_dst[0][1] - warp_src[0][1]
+        elif useSimilarity:
+            transformer = skimage_transform.SimilarityTransform()
+            transformer.estimate(warp_src, warp_dst)
+            m = transformer.params
         elif warp_src.shape[0] <= 3:
             transformer = skimage_transform.AffineTransform()
             transformer.estimate(warp_src, warp_dst)

@@ -45,7 +45,7 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 @cachetools.cached(cache=cachetools.LRUCache(maxsize=10))
 def _cached_read_tiff(path):
-    return tifftools.read_tiff(path)
+    return tifftools.read_tiff(path, maxUnknown=32)
 
 
 class TiffFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
