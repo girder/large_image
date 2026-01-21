@@ -507,10 +507,13 @@ class LargeImageResource(Resource):
                 item, user, createJobs, localJobs, cancelJobs, redo, result)
         return result
 
-    def _createLargeImagesItem(
+    def _createLargeImagesItem(  # noqa
             self, item, user, createJobs, localJobs, cancelJobs, redo, result):
         if item.get('largeImage'):
-            previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
+            try:
+                previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
+            except Exception:
+                previousFileId = None
             if item['largeImage'].get('expected'):
                 if not cancelJobs:
                     result['itemsSkipped'] += 1

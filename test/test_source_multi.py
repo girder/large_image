@@ -425,6 +425,46 @@ def testThinPlateSplineSingleMarker():
     assert np.all(tile[:, 0:10, :] == 0)
 
 
+def testThinPlateSplineTwoMarkers():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        # apply translation through warping
+        path=image_path,
+        position=dict(
+            x=0,
+            y=0,
+            warp=dict(src=[[0, 0], [2, 0]], dst=[[10, 10], [12, 10]]),
+        ),
+    )], tileWidth=74, tileHeight=74)
+    source = large_image_source_multi.open(json.dumps(spec))
+    tile = source.getTile(x=0, y=0, z=0, numpyAllowed=True)
+
+    assert tile.shape == (74, 74, 1)
+    assert np.all(tile[0:10, :, :] == 0)
+    assert np.all(tile[:, 0:10, :] == 0)
+
+
+def testThinPlateSplineThreeColinearMarkers():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
+    spec = dict(sources=[dict(
+        # apply translation through warping
+        path=image_path,
+        position=dict(
+            x=0,
+            y=0,
+            warp=dict(src=[[0, 0], [2, 0], [4, 0]], dst=[[10, 10], [12, 10], [14, 10]]),
+        ),
+    )], tileWidth=74, tileHeight=74)
+    source = large_image_source_multi.open(json.dumps(spec))
+    tile = source.getTile(x=0, y=0, z=0, numpyAllowed=True)
+
+    assert tile.shape == (74, 74, 1)
+    assert np.all(tile[0:10, :, :] == 0)
+    assert np.all(tile[:, 0:10, :] == 0)
+
+
 def testThinPlateSplineDropUnmatchedKeys():
     test_dir = os.path.dirname(os.path.realpath(__file__))
     image_path = os.path.join(test_dir, 'test_files', 'test_L_8.png')
