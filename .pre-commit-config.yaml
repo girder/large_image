@@ -5,7 +5,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-ast
@@ -59,21 +59,21 @@ repos:
     hooks:
       - id: circleci-config-validate
   - repo: https://github.com/ThisIsManta/stylus-supremacy
-    rev: v4.0.0
+    rev: v5.0.0
     hooks:
       - id: stylus-supremacy
         args:
           - '--options'
           - './girder/girder_large_image/web_client/package.json'
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args:
-          - --py39-plus
+          - --py310-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.1
+    rev: v0.14.11
     hooks:
       - id: ruff
         args:
@@ -83,8 +83,8 @@ repos:
           - python
           - pyi
           - jupyter
-  - repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v2.0.4
+  - repo: https://github.com/hhatto/autopep8
+    rev: v2.3.2
     hooks:
       - id: autopep8
   - repo: https://github.com/PyCQA/flake8
@@ -92,7 +92,7 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/pycqa/isort
-    rev: 6.0.1
+    rev: 7.0.0
     hooks:
       - id: isort
         name: isort (python)
@@ -101,9 +101,32 @@ repos:
     hooks:
       - id: yesqa
   - repo: https://github.com/lyz-code/yamlfix
-    rev: 1.17.0
+    rev: 1.19.1
     hooks:
       - id: yamlfix
         args:
           - -c
           - pyproject.toml
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker
+        args:
+          - --ignore
+          - DL3003
+          - --ignore
+          - DL3008
+          - --ignore
+          - DL3013
+          - --ignore
+          - DL3016
+          - --ignore
+          - DL3059
+          - --ignore
+          - DL4006
+          - --ignore
+          - SC2028
+          - --ignore
+          - SC2046
+          - --ignore
+          - SC2086

@@ -157,13 +157,14 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @param {number} levelDifference The difference in zoom level between the base image and the overlay
          * @returns An object containing parameters needed to create a pixelmap layer.
          */
-        _addPixelmapLayerParams(layerParams, pixelmapElement, levelDifference) {
+        _addPixelmapLayerParams(layerParams, pixelmapElement, levelDifference, extraArg) {
+            extraArg = extraArg || '';
             // For pixelmap overlays, there are additional parameters to set
             layerParams.keepLower = false;
             if (_.isFunction(layerParams.url) || levelDifference) {
-                layerParams.url = (x, y, z) => getApiRoot() + '/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                layerParams.url = (x, y, z) => getApiRoot() + '/item/' + pixelmapElement.girderId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG` + extraArg;
             } else {
-                layerParams.url = layerParams.url + '?encoding=PNG';
+                layerParams.url = layerParams.url + '?encoding=PNG' + extraArg;
             }
             let pixelmapData = pixelmapElement.values;
             if (pixelmapElement.boundaries) {
@@ -178,12 +179,15 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             const boundaries = pixelmapElement.boundaries;
             layerParams.style = {
                 color: (d, i) => {
-                    if (d < 0 || d >= categoryMap.length) {
+                    if (d < 0 || d >= categoryMap.length || d === undefined) {
                         console.warn(`No category found at index ${d} in the category map.`);
                         return 'rgba(0, 0, 0, 0)';
                     }
                     let color;
                     const category = categoryMap[d];
+                    if (!category) {
+                        return 'rgba(0, 0, 0, 0)';
+                    }
                     if (boundaries) {
                         color = (i % 2 === 0) ? category.fillColor : category.strokeColor;
                     } else {
@@ -209,10 +213,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             );
             params.layer.useCredentials = true;
             params.layer.url = `${getApiRoot()}/item/${overlayImageId}/tiles/zxy/{z}/{x}/{y}`;
-            if (this._countDrawnImageOverlays() <= 6) {
+            let extraarg = '';
+            if (this._countDrawnImageOverlays() <= 5) {
                 params.layer.autoshareRenderer = false;
             } else {
                 params.layer.renderer = 'canvas';
+                extraarg = '&edge=%23ffffff00';
+                params.layer.url += '?' + extraarg.substr(1);
             }
             params.layer.opacity = overlay.opacity || 1;
             params.layer.opacity *= this._globalAnnotationOpacity;
@@ -222,7 +229,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             levelDifference -= this._getOverlayRelativeScale(overlay);
 
             if (this.levels !== overlayImageMetadata.levels) {
-                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}` + (extraarg ? ('?' + extraarg.substr(1)) : '');
                 params.layer.minLevel = levelDifference;
                 params.layer.maxLevel += levelDifference;
 
@@ -242,10 +249,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 };
             }
             if (overlay.type === 'pixelmap') {
-                params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference);
+                params.layer = this._addPixelmapLayerParams(params.layer, overlay, levelDifference, extraarg);
             } else if (overlay.hasAlpha) {
                 params.layer.keepLower = false;
-                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG`;
+                params.layer.url = (x, y, z) => getApiRoot() + '/item/' + overlayImageId + `/tiles/zxy/${z - levelDifference}/${x}/${y}?encoding=PNG` + extraarg;
             }
             return params.layer;
         },
@@ -503,6 +510,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (annotation._centroids && centroidFeature) {
                         if (centroidFeature.verticesPerFeature) {
                             this.viewer.scheduleAnimationFrame(() => {
+                                if (!annotation._shownIds) {
+                                    return;
+                                }
                                 const centroidFeature = featureList.find((f) => f._centroidFeature);
                                 const count = centroidFeature.data().length;
                                 const shown = new Float32Array(count);
@@ -566,7 +576,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             this._hideElement = element;
             _.each(this._annotations, (layer, annotationId) => {
                 const features = layer.features;
-                console.log(features); // DWM::
                 this._mutateFeaturePropertiesForHighlight(annotationId, features);
             });
             this.viewer.scheduleAnimationFrame(this.viewer.draw);
@@ -955,7 +964,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         _onMouseFeature: function (evt, overlay, overlayLayer) {
-            var properties = evt.data.properties || {};
+            var properties = (evt.data || {}).properties || {};
             var eventType;
 
             if (!this._eventTypes) {

@@ -8,12 +8,14 @@ FROM ubuntu:24.04
 
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 
+ARG NODE_VERSION=14
+ARG PYTHON_VERSIONS="3.11 3.9 3.10 3.12 3.13 3.14"
+
 # The default python version will be the first of all the versions listed
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     PYENV_ROOT="/.pyenv" \
-    PATH="/.pyenv/bin:/.pyenv/shims:$PATH" \
-    PYTHON_VERSIONS="3.11 3.9 3.10 3.12 3.13"
+    PATH="/.pyenv/bin:/.pyenv/shims:$PATH"
 
 # Consumers of this package aren't expecting an existing ubuntu user (there
 # wasn't one in the ubuntu:22.04 base)
@@ -25,31 +27,20 @@ RUN apt-get update && \
       #  We had been installing \
       # software-properties-common \
       #  but this includes a copy of python which we will install later, so \
-      #  install its component parts without python (see \
+      #  install some of its component parts without python (see \
       #  https://packages.debian.org/stable/software-properties-common) \
-      ca-certificates \
-      distro-info-data \
       gir1.2-glib-2.0 \
-      gir1.2-packagekitglib-1.0 \
       gpg \
       iso-codes \
       lsb-release \
-      packagekit \
       # as specified by \
       # https://github.com/pyenv/pyenv/wiki#suggested-build-environment \
       build-essential \
       curl \
-      libbz2-dev \
       libffi-dev \
       liblzma-dev \
-      libncursesw5-dev \
       libreadline-dev \
       libsqlite3-dev \
-      libssl-dev \
-      libxml2-dev \
-      libxmlsec1-dev \
-      # llvm \
-      make \
       tk-dev \
       wget \
       xz-utils \
@@ -64,10 +55,8 @@ RUN apt-get update && \
       bzip2 \
       dirmngr \
       git \
-      gpg-agent \
       less \
       locales \
-      ssh \
       vim \
       # testing convenience \
       fonts-dejavu \
@@ -75,20 +64,20 @@ RUN apt-get update && \
       # shrink docker image \
       rdfind \
       # core girder \
-      gcc \
-      cmake \
       iptables \
       dnsutils \
-      automake \
-      rsync \
       universal-ctags \
       && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
+    find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en_US*' ! -name 'C' ! -name 'en' -type d -exec rm -rf {} + && \
+    find /usr/share/i18n -mindepth 1 ! -name 'en_US*' ! -name 'C' -type f -exec rm -f {} + && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
-    rm -r /etc/ssh/ssh_host* && \
+    rm -rf /etc/ssh/ssh_host* && \
     rm -rf /usr/share/vim/vim91/doc/* /usr/share/vim/vim91/tutor/* /usr/share/doc && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/* && \
+    rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /usr && \
+    rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /var
 
 RUN pyenv update && \
     pyenv install --list && \
@@ -101,10 +90,10 @@ RUN pyenv update && \
     echo $PYTHON_VERSIONS | tr " " "\n" > $PYENV_ROOT/version && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/* /root/.cache/* && \
-    find /.pyenv -name '*.so' -o -name '*.a' -o -name '*.so.*' -exec strip --strip-unneeded -p -D {} \; && \
+    find /.pyenv '(' -name '*.so' -o -name '*.a' -o -name '*.so.*' ')' -exec strip --strip-unneeded -p -D {} \; && \
     find /.pyenv -name 'libpython*.a' -delete && \
     # This makes duplicate python library files hardlinks of each other \
-    rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /.pyenv
+    rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /.pyenv
 
 RUN for ver in $PYTHON_VERSIONS; do \
     pyenv local $ver && \
@@ -115,35 +104,35 @@ RUN for ver in $PYTHON_VERSIONS; do \
     pyenv rehash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /tmp/* /var/tmp/* && \
-    rdfind -minsize 32768 -makehardlinks true -makeresultsfile false /.pyenv
+    rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /.pyenv
 
 # Use nvm to install node
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-
-# Default node version
-RUN . ~/.bashrc && \
-    nvm install 14 && \
-    nvm alias default 14 && \
-    nvm use default && \
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \
+    . ~/.bashrc && \
+    if [ "$NODE_VERSION" = "14" ]; then \
     cd /root/.nvm/versions/node/v14.21.3/lib && \
+    # upgrade packages to avoid security issues \
     npm install 'form-data@^2.5.5' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
+    npm install 'brace-expansion@^1.1.12' && \
     npm install 'cross-spawn@^6.0.6' && \
     npm install 'form-data@^2.5.5' && \
     npm install 'http-cache-semantics@^4.1.1' && \
+    npm install 'qs@^6.14.1' && \
     npm install 'semver@^5.7.2' && \
-    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
-    # ip package has an unaddressed HIGH CVE, ip-address is a direct sustitute \
+    # ip package has an unaddressed HIGH CVE, ip-address is a direct substitute \
     npm install --no-save ip-address && \
     rm -rf node_modules/ip && \
     mv node_modules/ip-address node_modules/ip && \
     find / -xdev -name ip -exec grep '"version"' {}/package.json \; && \
+    # update subpackages that need it \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/term-size && \
     npm install 'cross-spawn@^6.0.6' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/execa && \
     npm install 'cross-spawn@^6.0.6' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/request && \
     npm install 'form-data@^2.5.5' && \
+    npm install 'qs@^6.14.1' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/string-width && \
     npm install 'ansi-regex@^3.0.1' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/yargs && \
@@ -151,8 +140,14 @@ RUN . ~/.bashrc && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/make-fetch-happen && \
     npm install 'http-cache-semantics@^4.1.1' && \
     find / -xdev -name ip -exec grep '"version"' {}/package.json \; && \
+    true; else \
+    npm install -g npm@latest && \
+    true; fi && \
     rm -rf /root/.nvm/.cache && \
-    ln -s $(dirname `which npm`) /usr/local/node
+    npm config set fetch-timeout 600000 && \
+    npm cache clean --force && \
+    ln -s $(dirname `which npm`) /usr/local/node && \
+    rdfind -minsize 1024 -makehardlinks true -makeresultsfile false /root/.nvm
 
 ENV PATH="/usr/local/node:$PATH"
 

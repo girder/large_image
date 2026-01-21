@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import json
 import math
@@ -149,7 +150,7 @@ class AnnotationGeoJSON:
         sinr = math.sin(r)
         x -= cx
         y -= cy
-        return [x * cosr - y * sinr + cx, x * sinr + y * sinr + cy, z]
+        return [x * cosr - y * sinr + cx, x * sinr + y * cosr + cy, z]
 
     def circleType(self, element, geom, prop):
         x, y, z = element['center']
@@ -244,7 +245,7 @@ class GeoJSONAnnotation:
         self._annotation = {'elements': self._elements}
         self._parseFeature(geojson)
 
-    def _parseFeature(self, geoelem):  # noqa
+    def _parseFeature(self, geoelem):
         if isinstance(geoelem, (list, tuple)):
             for entry in geoelem:
                 self._parseFeature(entry)
@@ -269,10 +270,8 @@ class GeoJSONAnnotation:
                 element['label'] = {'value': element['label']}
             element['label']['value'] = str(element['label']['value'])
         if geoelem.get('properties', {}).get('annotation'):
-            try:
+            with contextlib.suppress(Exception):
                 self._annotation.update(geoelem['properties']['annotation'])
-            except Exception:
-                pass
             self._annotation['elements'] = self._elements
         elemtype = geoelem.get('properties', {}).get('type', '') or geoelem['geometry']['type']
         func = getattr(self, elemtype.lower() + 'Type', None)
@@ -422,10 +421,8 @@ def _cancelPlottableItemData(uuid, newRecord):
     with _recentPlottableItemDataLock:
         if uuid in _recentPlottableItemData:
             old = _recentPlottableItemData.pop(uuid)
-            try:
+            with contextlib.suppress(Exception):
                 old().cancel = True
-            except Exception:
-                pass
         if len(_recentPlottableItemData) > 7:
             _recentPlottableItemData.pop(next(iter(_recentPlottableItemData)))
         _recentPlottableItemData[uuid] = weakref.ref(newRecord)
@@ -433,7 +430,7 @@ def _cancelPlottableItemData(uuid, newRecord):
 
 class PlottableItemData:
     maxItems = 1000
-    maxAnnotationElements = 5000
+    maxAnnotationElements = 25000
     maxDistinct = 20
     allowedTypes = (str, bool, int, float)
 
@@ -1164,13 +1161,19 @@ class PlottableItemData:
                 if not self._sources or 'annotation' in self._sources:
                     count += self._collectColumns(columns, [annot], 'annotation', iid=iid)
                 # add annotation elements
-                if ((not self._sources or 'annotationelement' in self._sources) and
-                        Annotationelement().countElements(annot) <= self.maxAnnotationElements):
-                    for element in Annotationelement().yieldElements(annot, bbox=True):
-                        element['_aid'] = annot['_id']
-                        element['_aname'] = annot['annotation']['name']
-                        count += self._collectColumns(
-                            columns, [element], 'annotationelement', iid=iid, aid=str(annot['_id']))
+                if not self._sources or 'annotationelement' in self._sources:
+                    if Annotationelement().countElements(annot) <= self.maxAnnotationElements:
+                        for element in Annotationelement().yieldElements(annot, bbox=True):
+                            element['_aid'] = annot['_id']
+                            element['_aname'] = annot['annotation']['name']
+                            count += self._collectColumns(
+                                columns, [element], 'annotationelement',
+                                iid=iid, aid=str(annot['_id']))
+                    else:
+                        msg = ('Skipping annotation; too many elements '
+                               f'({Annotationelement().countElements(annot)} > '
+                               f'{self.maxAnnotationElements}')
+                        logger.info(msg)
                 if not iidx:
                     countsPerAnnotation[anidx] = count - startcount
         return count

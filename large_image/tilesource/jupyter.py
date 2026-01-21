@@ -16,6 +16,7 @@ likely lead to crashes. This is only for use in JupyterLab.
 """
 import ast
 import asyncio
+import contextlib
 import importlib.util
 import json
 import os
@@ -23,7 +24,7 @@ import re
 import threading
 import time
 import weakref
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 import numpy as np
@@ -105,7 +106,7 @@ class IPyLeafletMixin:
     """
 
     JUPYTER_HOST = '127.0.0.1'
-    JUPYTER_PROXY: Union[str, bool] = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', 'auto')
+    JUPYTER_PROXY: str | bool = os.environ.get('LARGE_IMAGE_JUPYTER_PROXY', 'auto')
 
     _jupyter_server_manager: Any
 
@@ -192,11 +193,11 @@ class Map:
     """
 
     def __init__(
-            self, *, ts: Optional[IPyLeafletMixin] = None,
-            metadata: Optional[dict] = None, url: Optional[str] = None,
-            gc: Optional[Any] = None, id: Optional[str] = None,
-            resource: Optional[str] = None,
-            editWarp: bool = False, reference: Optional[IPyLeafletMixin] = None,
+            self, *, ts: IPyLeafletMixin | None = None,
+            metadata: dict | None = None, url: str | None = None,
+            gc: Any | None = None, id: str | None = None,
+            resource: str | None = None,
+            editWarp: bool = False, reference: IPyLeafletMixin | None = None,
     ) -> None:
         """
         Specify the large image to be used with the IPyLeaflet Map.  One of (a)
@@ -214,18 +215,18 @@ class Map:
         :param resource: a girder resource path of an item or file that exists
             on the girder client.
         """
-        self._layer = self._map = self._metadata = None
-        self.frame_selector: Optional[FrameSelector] = None
-        self._frame_histograms: Optional[dict[int, Any]] = None
+        self._layer = self._map = self._metadata = self._frame_slider = None
+        self.frame_selector: FrameSelector | None = None
+        self._frame_histograms: dict[int, Any] | None = None
         self._ts = ts
         self._edit_warp = editWarp
         self._reference = reference
         self._reference_layer = None
         if self._edit_warp:
-            self.warp_points: dict[str, list[Optional[list[int]]]] = dict(src=[], dst=[])
-            self._warp_widgets: dict = dict()
+            self.warp_points: dict[str, list[list[int] | None]] = dict(src=[], dst=[])
+            self._warp_widgets: dict = {}
             self._warp_markers: dict = {'src': [], 'dst': []}
-            self._dragging_marker_id: Optional[str] = None
+            self._dragging_marker_id: str | None = None
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
             if id is None:
@@ -235,10 +236,8 @@ class Map:
                         fileId = entry['_id']
                     id = entry['itemId'] if entry.get('_modelType') == 'file' else entry['_id']
             if id:
-                try:
+                with contextlib.suppress(Exception):
                     metadata = gc.get(f'item/{id}/tiles')
-                except Exception:
-                    pass
                 if metadata:
                     url = gc.urlBase + f'item/{id}/tiles' + '/zxy/{z}/{x}/{y}'
                     if metadata.get('geospatial'):
@@ -315,8 +314,8 @@ class Map:
         return layer
 
     def make_map(
-            self, metadata: dict, layer: Optional[Any] = None,
-            center: Optional[tuple[float, float]] = None) -> Any:
+            self, metadata: dict, layer: Any | None = None,
+            center: tuple[float, float] | None = None) -> Any:
         """
         Create an ipyleaflet map given large_image metadata, an optional
         ipyleaflet layer, and the center of the tile source.
@@ -750,10 +749,10 @@ class Map:
         return JSONDict(self._metadata)
 
     @property
-    def id(self) -> Optional[str]:
+    def id(self) -> str | None:
         return getattr(self, '_id', None)
 
-    def to_map(self, coordinate: Union[list[float], tuple[float, float]]) -> tuple[float, float]:
+    def to_map(self, coordinate: list[float] | tuple[float, float]) -> tuple[float, float]:
         """
         Convert a coordinate from the image or projected image space to the map
         space.
@@ -773,7 +772,7 @@ class Map:
             return tuple(transf.transform(x, y)[::-1])
         return self._metadata['sizeY'] - y, x
 
-    def from_map(self, coordinate: Union[list[float], tuple[float, float]]) -> tuple[float, float]:
+    def from_map(self, coordinate: list[float] | tuple[float, float]) -> tuple[float, float]:
         """
         :param coordinate: a two-tuple that is in the map space coordinates.
         :returns: a two-tuple that is x, y in pixel space or x, y in image
@@ -851,14 +850,13 @@ class Map:
             async def fetch(url):
                 async with aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=900),
-                ) as session:
-                    async with session.get(url) as response:
-                        self._frame_histograms[frame] = await response.json()  # type: ignore
-                        # rewrite whole object for watcher
-                        if self.frame_selector is not None and self._frame_histograms is not None:
-                            self.frame_selector.frameHistograms = (
-                                self._frame_histograms.copy()  # type: ignore
-                            )
+                ) as session, session.get(url) as response:
+                    self._frame_histograms[frame] = await response.json()  # type: ignore
+                    # rewrite whole object for watcher
+                    if self.frame_selector is not None and self._frame_histograms is not None:
+                        self.frame_selector.frameHistograms = (
+                            self._frame_histograms.copy()  # type: ignore
+                        )
 
             asyncio.ensure_future(fetch(histogram_url))
 
@@ -978,6 +976,8 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             style = self.get_argument('style', default=None)
             warp = None
             encoding = self.get_argument('encoding', 'PNG')
+            if getattr(manager.tile_source, '_noCache', False):
+                manager.tile_source.edge = '#00000000'  # type: ignore[attr-defined]
             if style:
                 style = json.loads(style)
                 warp = style.get('warp')

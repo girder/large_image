@@ -159,26 +159,27 @@ jobs:
       - checkout
       - run:
           name: Build the test docker
-          command: docker build --progress=plain --force-rm -t girder/tox-and-node -f test.Dockerfile .
+          command: |
+            docker build --progress=plain --force-rm -t girder/tox-and-node -f test.Dockerfile .
       - run:
           name: Publish the images to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push girder/tox-and-node:latest
-  py39:
+  testdocker-lts:
     machine:
       image: ubuntu-2204:current
-    resource_class: large
     steps:
       - checkout
-      - allservices:
-          version: "3.9"
-          node: v14
-      - tox:
-          toxenv: test-py39
-      - coverage
-      - store_artifacts:
-          path: build/test/artifacts
+      - run:
+          name: Build the lts test docker
+          command: |
+            docker build --progress=plain --force-rm -t girder/tox-and-node-lts --build-arg NODE_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | grep -oP 'v\K[0-9]+') --build-arg PYTHON_VERSIONS="3.13 3.10 3.11 3.12 3.14" -f test.Dockerfile .
+      - run:
+          name: Publish the images to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push girder/tox-and-node-lts:latest
   py310:
     machine:
       image: ubuntu-2204:current
@@ -232,6 +233,21 @@ jobs:
           node: v14
       - tox:
           toxenv: test-py313
+          # environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
+      - coverage
+      - store_artifacts:
+          path: build/test/artifacts
+  py314:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large
+    steps:
+      - checkout
+      - allservices:
+          version: "3.14"
+          node: v14
+      - tox:
+          toxenv: test-py314
           # environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
       - coverage
       - store_artifacts:
@@ -351,13 +367,6 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
-      - py39:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore:
-                - gh-pages
       - py310:
           filters:
             tags:
@@ -380,6 +389,13 @@ workflows:
               ignore:
                 - gh-pages
       - py313:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore:
+                - gh-pages
+      - py314:
           filters:
             tags:
               only: /^v.*/
@@ -424,11 +440,11 @@ workflows:
       - release:
           requires:
             - check_release
-            - py39
             - py310
             - py311
             - py312
             - py313
+            - py314
             - lint_and_docs
             - type
             - wheels
@@ -441,11 +457,11 @@ workflows:
                 - girder-5
       - docs-deploy:
           requires:
-            - py39
             - py310
             - py311
             - py312
             - py313
+            - py314
             - lint_and_docs
             - type
             - wheels
@@ -466,11 +482,11 @@ workflows:
               only:
                 - master
     jobs:
-      - py39
       - py310
       - py311
       - py312
       - py313
+      - py314
       - lint_and_docs
       - type
       - compare

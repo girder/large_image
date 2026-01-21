@@ -14,15 +14,15 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
 import datetime
+import importlib.metadata
 import json
 import os
 import re
 import threading
 import time
 import warnings
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import yaml
 from girder_jobs.constants import JobStatus
@@ -55,11 +55,8 @@ from .rest.item_meta import InternalMetadataItemResource
 from .rest.large_image_resource import LargeImageResource
 from .rest.tiles import TilesItemResource
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 mimetypes = None
@@ -378,11 +375,9 @@ def handleSettingSave(event):
         large_image.config.setConfig('icc_correction', event.info['value'])
         large_image.cache_util.cachesClear()
         gc.collect()
-        try:
+        with contextlib.suppress(Exception):
             # ask the browser to clear the cache; it probably won't be honored
             setResponseHeader('Clear-Site-Data', '"cache"')
-        except Exception:
-            pass
 
 
 def metadataSearchHandler(  # noqa
@@ -571,10 +566,8 @@ def addSettingsToConfig(config, user, name=None):
             extraSetting = constants.PluginSettings.LARGE_IMAGE_SHOW_EXTRA
 
     showExtra = None
-    try:
+    with contextlib.suppress(Exception):
         showExtra = json.loads(Setting().get(extraSetting))
-    except Exception:
-        pass
     if (isinstance(showExtra, dict) and 'images' in showExtra and
             isinstance(showExtra['images'], list)):
         for value in showExtra['images']:
@@ -831,6 +824,12 @@ class LargeImagePlugin(GirderPlugin):
     CLIENT_SOURCE_PATH = 'web_client'
 
     def load(self, info):
+        with contextlib.suppress(Exception):
+            # the mapnik binary files can complain about TLS exhaustion if they
+            # aren't loaded early.  This seems to be somehow slightly
+            # intractable in linux, so just load them now, but fail quietly
+            # since they are optional
+            import large_image_source_mapnik  # noqa
         try:
             getPlugin('worker').load(info)
         except Exception:

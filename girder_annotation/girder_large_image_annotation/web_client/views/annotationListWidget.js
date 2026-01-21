@@ -138,6 +138,7 @@ const AnnotationListWidget = View.extend({
     setViewer(viewer) {
         this._drawn.clear();
         this._viewer = viewer;
+        this.collection._viewer = viewer;
         return this;
     },
 

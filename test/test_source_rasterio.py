@@ -1,9 +1,8 @@
+import contextlib
 from unittest import TestCase
 
-try:
+with contextlib.suppress(ImportError):
     import large_image_source_rasterio
-except ImportError:
-    pass
 
 from .source_geo_base import _GDALBaseSourceTest
 

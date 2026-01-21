@@ -14,6 +14,7 @@
 #  limitations under the License.
 ###############################################################################
 
+import contextlib
 import ctypes
 import io
 import json
@@ -80,6 +81,8 @@ def patchLibtiff():
     libtiff_ctypes.TIFFDataType.TIFF_SLONG8 = 17
     # BigTIFF 64-bit unsigned integer (offset)
     libtiff_ctypes.TIFFDataType.TIFF_IFD8 = 18
+    # Some versions of pylibtiff specify an argtypes where they shouldn't
+    libtiff_ctypes.libtiff.TIFFGetField.argtypes = None
 
 
 patchLibtiff()
@@ -893,10 +896,8 @@ class TiledTiffDirectory:
                 'WSI': 'thumbnail',
             }
             self._embeddedImages[typemap.get(typestr, typestr.lower())] = datastr
-        try:
+        with contextlib.suppress(Exception):
             self._description_record = etreeToDict(xml)
-        except Exception:
-            pass
         return True
 
     def read_image(self):

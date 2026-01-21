@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import math
 import os
@@ -123,10 +124,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._lowres = {}
             self.sizeX = subImage.width
             self.sizeY = subImage.height
-            try:
+            with contextlib.suppress(Exception):
                 self._image.close()
-            except Exception:
-                pass
             self._image = subImage
         self._checkLowerLevels()
         self.levels = int(max(1, math.ceil(math.log(
@@ -200,10 +199,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not self._image:
             return result
         for key in self._image.get_fields():
-            try:
+            with contextlib.suppress(Exception):
                 result[key] = self._image.get(key)
-            except Exception:
-                pass
         if len(self._frames) > 1:
             result['frames'] = []
             for idx in range(1, len(self._frames)):
@@ -211,10 +208,8 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 result['frames'].append(frameresult)
                 img = self._getFrameImage(idx)
                 for key in img.get_fields():
-                    try:
+                    with contextlib.suppress(Exception):
                         frameresult[key] = img.get(key)
-                    except Exception:
-                        pass
         return result
 
     def getMetadata(self):
@@ -284,7 +279,7 @@ class VipsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         lowres = None
         if self._lowres and step > 1:
             use = 0
-            for ll in self._lowres[frame].keys():
+            for ll in self._lowres[frame]:
                 if 2 ** ll <= step:
                     use = max(use, ll)
             if use:

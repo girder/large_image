@@ -14,6 +14,7 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
 import io
 import json
 import os
@@ -50,14 +51,28 @@ class ImageItem(Item):
         self.ensureIndices(['largeImage.fileId'])
         File().ensureIndices([
             ([
-                ('isLargeImageThumbnail', pymongo.ASCENDING),
-                ('attachedToType', pymongo.ASCENDING),
                 ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageThumbnail', pymongo.ASCENDING),
+                ('thumbnailKey', pymongo.ASCENDING),
             ], {}),
             ([
-                ('isLargeImageData', pymongo.ASCENDING),
-                ('attachedToType', pymongo.ASCENDING),
                 ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageData', pymongo.ASCENDING),
+                ('thumbnailKey', pymongo.ASCENDING),
+            ], {}),
+            ([
+                ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageThumbnail', pymongo.ASCENDING),
+                ('_id', pymongo.DESCENDING),
+            ], {}),
+            ([
+                ('attachedToId', pymongo.ASCENDING),
+                ('attachedToType', pymongo.ASCENDING),
+                ('isLargeImageData', pymongo.ASCENDING),
+                ('_id', pymongo.DESCENDING),
             ], {}),
         ])
 
@@ -311,12 +326,10 @@ class ImageItem(Item):
         if 'largeImage' in item:
             job = None
             if 'jobId' in item['largeImage']:
-                try:
+                # If the job has been deleted we still need to clean up the
+                # rest of the tile information
+                with contextlib.suppress(ValidationException):
                     job = Job().load(item['largeImage']['jobId'], force=True, exc=True)
-                except ValidationException:
-                    # The job has been deleted, but we still need to clean up
-                    # the rest of the tile information
-                    pass
             if (item['largeImage'].get('expected') and job and
                     job.get('status') in (
                     JobStatus.QUEUED, JobStatus.RUNNING)):

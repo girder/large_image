@@ -25,13 +25,13 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
     ],
-    python_requires='>=3.9',
+    python_requires='>=3.10',
     install_requires=[
         f'large-image{limit_version}',
         'openslide-python>=1.4.1',
@@ -40,7 +40,7 @@ setup(
         'openslide-bin; platform_system=="Windows" and platform_machine=="AMD64"',
         'openslide-bin; platform_system=="Darwin" and platform_machine=="arm64"',
         'openslide-bin; platform_system=="Darwin" and platform_machine=="x86_64"',
-        'tifftools>=1.2.0',
+        'tifftools>=1.7.0',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',

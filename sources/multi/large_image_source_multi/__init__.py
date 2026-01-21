@@ -1,5 +1,7 @@
 import builtins
+import contextlib
 import copy
+import importlib.metadata
 import itertools
 import json
 import math
@@ -7,8 +9,6 @@ import os
 import re
 import threading
 import warnings
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 from pathlib import Path
 
 import numpy as np
@@ -21,11 +21,8 @@ from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource
 from large_image.tilesource.utilities import _makeSameChannelDepth, fullAlphaValue
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 jsonschema = None
 _validator = None
@@ -288,9 +285,10 @@ SourceEntrySchema = {
                 },
                 'warp': {
                     'description':
-                        'An object describing a series of landmarks which have both '
-                        'a source location and a destination location. These sets of points '
-                        'define a warp (thin plate spline or affine transform) that will '
+                        'An object describing a series of landmarks which '
+                        'have both a source location and a destination '
+                        'location. These sets of points define a warp (thin '
+                        'plate spline (TPS) or affine transform) that will '
                         'be applied to the source image.',
                     'type': 'object',
                     'properties': {

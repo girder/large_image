@@ -14,9 +14,9 @@
 #  limitations under the License.
 #############################################################################
 
+import contextlib
 import functools
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
+import importlib.metadata
 
 import mapnik
 import PIL.Image
@@ -29,11 +29,8 @@ from large_image.constants import PROJECTION_SENTINEL, TILE_FORMAT_PIL, SourcePr
 from large_image.exceptions import TileSourceError
 from large_image.tilesource.utilities import JSONDict
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 mapnik.logger.set_severity(mapnik.severity_type.Debug)
@@ -174,6 +171,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 'min': 'min',
                 'max': 'max',
             })
+        self._allowNoScale = True
         return True
 
     def _setDefaultStyle(self):
@@ -251,7 +249,7 @@ class MapnikFileTileSource(GDALFileTileSource, metaclass=LruCacheMetaclass):
                 msg = 'A palette must have at least 2 colors.'
                 raise TileSourceError(msg)
             values = self.interpolateMinMax(minimum, maximum, len(colors))
-            for value, color in sorted(zip(values, colors)):
+            for value, color in sorted(zip(values, colors, strict=True)):
                 colorizer.add_stop(value, mapnik.Color(color))
 
         return colorizer

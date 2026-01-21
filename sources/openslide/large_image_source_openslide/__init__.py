@@ -14,11 +14,11 @@
 #  limitations under the License.
 ##############################################################################
 
+import contextlib
+import importlib.metadata
 import io
 import math
 import os
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _importlib_version
 
 import numpy as np
 import openslide
@@ -30,11 +30,8 @@ from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
 from large_image.tilesource import FileTileSource, nearPowerOfTwo
 
-try:
-    __version__ = _importlib_version(__name__)
-except PackageNotFoundError:
-    # package is not installed
-    pass
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version(__name__)
 
 
 class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -92,7 +89,7 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'File will not be opened via OpenSlide.'
             raise TileSourceError(msg)
         try:
-            self._tiffinfo = tifftools.read_tiff(self._largeImagePath)
+            self._tiffinfo = tifftools.read_tiff(self._largeImagePath, maxUnknown=32)
             if tifftools.Tag.ICCProfile.value in self._tiffinfo['ifds'][0]['tags']:
                 self._iccprofiles = [self._tiffinfo['ifds'][0]['tags'][
                     tifftools.Tag.ICCProfile.value]['data']]
@@ -213,16 +210,12 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         # Try to read it, but fall back to 256 if it isn't set.
         width = height = 256
-        try:
+        with contextlib.suppress(ValueError, KeyError):
             width = int(self._openslide.properties[
                 'openslide.level[0].tile-width'])
-        except (ValueError, KeyError):
-            pass
-        try:
+        with contextlib.suppress(ValueError, KeyError):
             height = int(self._openslide.properties[
                 'openslide.level[0].tile-height'])
-        except (ValueError, KeyError):
-            pass
         # If the tile size is too small (<4) or wrong (<=0), use a default value
         if width < 4:
             width = 256
@@ -258,10 +251,8 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'width': svsLevelDimensions[svslevel][0],
                     'height': svsLevelDimensions[svslevel][1],
                 }
-                try:
+                with contextlib.suppress(Exception):
                     level['downsample'] = self._openslide.level_downsamples[svslevel]
-                except Exception:
-                    pass
                 if level['width'] > 0 and level['height'] > 0:
                     # add to the list so that we can sort by resolution and
                     # then by earlier entries

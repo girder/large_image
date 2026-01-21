@@ -15,6 +15,7 @@
 ##############################################################################
 
 import concurrent.futures
+import contextlib
 import datetime
 import io
 import json
@@ -102,10 +103,8 @@ def createThumbnailsJobLog(job, info, prefix='', status=None):
         msg += 'Failed on %d thumbnail file%s (last failure on item %s)\n' % (
             info['failed'],
             's' if info['failed'] != 1 else '', info['lastFailed'])
-    try:
+    with contextlib.suppress(TypeError):
         job = Job().updateJob(job, log=msg, status=status)
-    except TypeError:
-        pass
     return job, msg
 
 
@@ -128,7 +127,7 @@ def createThumbnailsJob(job):
     thread.start()
 
 
-def createThumbnailsJobThread(job):  # noqa
+def createThumbnailsJobThread(job):
     """
     Create thumbnails for all of the large image items.
 
@@ -191,10 +190,8 @@ def createThumbnailsJobThread(job):  # noqa
                 if nextitem is not None:
                     query['_id'] = {'$gt': nextitem['_id']}
             # Wait a short time or until the oldest task is complete
-            try:
+            with contextlib.suppress(concurrent.futures.TimeoutError):
                 tasks[0].result(0.1)
-            except concurrent.futures.TimeoutError:
-                pass
             # Remove completed tasks from our list, adding their results to the
             # status.
             for pos in range(len(tasks) - 1, -1, -1):
@@ -501,7 +498,7 @@ class LargeImageResource(Resource):
         if recurse:
             for childFolder in Folder().childFolders(parent=folder, parentType='folder'):
                 result['childFoldersRecursed'] += 1
-                self.createLargeImagesRecurse(
+                self._createLargeImagesRecurse(
                     childFolder, user, recurse, createJobs, localJobs,
                     cancelJobs, redo, result)
         for item in Folder().childItems(folder=folder):
@@ -510,10 +507,13 @@ class LargeImageResource(Resource):
                 item, user, createJobs, localJobs, cancelJobs, redo, result)
         return result
 
-    def _createLargeImagesItem(
+    def _createLargeImagesItem(  # noqa
             self, item, user, createJobs, localJobs, cancelJobs, redo, result):
         if item.get('largeImage'):
-            previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
+            try:
+                previousFileId = item['largeImage'].get('originalId', item['largeImage']['fileId'])
+            except Exception:
+                previousFileId = None
             if item['largeImage'].get('expected'):
                 if not cancelJobs:
                     result['itemsSkipped'] += 1

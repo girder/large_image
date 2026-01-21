@@ -1,3 +1,4 @@
+import contextlib
 import errno
 from typing import Any
 
@@ -31,8 +32,9 @@ class TileSourceMalformedError(TileSourceError):
 
 
 class TileSourceFileNotFoundError(TileSourceError, FileNotFoundError):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(errno.ENOENT, *args, **kwargs)
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
+        self.errno = errno.ENOENT
 
 
 class TileCacheError(TileGeneralError):
@@ -53,10 +55,8 @@ def _improveJsonschemaValidationError(exp):
         min_error = min(error_freq.values(), key=lambda k: (len(k), k[0].schema_path))[0]
         for key in dir(min_error):
             if not key.startswith('_'):
-                try:
+                with contextlib.suppress(Exception):
                     setattr(exp, key, getattr(min_error, key))
-                except Exception:
-                    pass
     except Exception:
         pass
 

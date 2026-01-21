@@ -18,9 +18,11 @@ from .datastore import datastore, registry
 # In general, if there is something in skipTiles, the reader should be improved
 # to either indicate that the file can't be read or changed to handle reading
 # with correct exceptions.
-# 'skip' is used to exclude testing specific paths.  This might be necessary
+#   'skip' is used to exclude testing specific paths.  This might be necessary
 # if a file is dependent on other files as these generalized tests don't ensure
 # a download order.
+#   'python' can be used to skip sources that don't support specific python
+# versions (e.g., `'python': sys.version_info < (3, 14),`).
 SourceAndFiles = {
     'bioformats': {
         'read': r'(\.(czi|jp2|svs|scn|dcm|qptiff|ndppi|nd2)|[0-9a-f].*\.dcm)$',
@@ -33,12 +35,12 @@ SourceAndFiles = {
     'deepzoom': {},
     'dicom': {
         'read': r'\.dcm$',
-        'noread': r'tcia.*\.dcm$',
+        'noread': r'(tcia.*|monochrome1)\.dcm$',
     },
     'dummy': {'any': True, 'skipTiles': r''},
     'gdal': {
-        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
-        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
+        'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff|nc)|18[-0-9a-f]{34}\.dcm)$',
+        'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff)$)',
         'skip': r'nokeyframe\.ome\.tiff$',
         'skipTiles': r'\.*nc$',
     },
@@ -63,7 +65,7 @@ SourceAndFiles = {
     'openjpeg': {'read': r'\.(jp2)$'},
     'openslide': {
         'read': r'\.(ptif|svs|ndpi|tif.*|qptiff|dcm)$',
-        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi)',  # noqa
+        'noread': r'(oahu|DDX58_AXL|huron\.image2_jpeg2k|landcover_sample|d042-353\.crop|US_Geo\.|extraoverview|imagej|bad_axes|synthetic_untiled|indica|tcia.*dcm|multiplane.*ndpi|monochrome1.dcm)',  # noqa
         'skip': r'nokeyframe\.ome\.tiff|TCGA-55.*\.ome\.tiff|\.czi$',
         'skipTiles': r'one_layer_missing',
     },
@@ -75,6 +77,7 @@ SourceAndFiles = {
         'read': r'(\.(jpg|jpeg|jp2|ptif|scn|svs|ndpi|tif.*|qptiff)|18[-0-9a-f]{34}\.dcm)$',
         'noread': r'(huron\.image2_jpeg2k|sample_jp2k_33003|TCGA-DU-6399|\.(ome.tiff|nc)$)',
         'skip': r'(indica|nokeyframe\.ome\.tiff$)',
+        # 'python': sys.version_info < (3, 14),
     },
     'test': {'any': True, 'skipTiles': r''},
     'tiff': {
@@ -83,14 +86,11 @@ SourceAndFiles = {
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles)'},
     'tifffile': {
         'read': r'',
-        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm)$)' +  # noqa
-                  (r'|bad_axes' if sys.version_info < (3, 9) else '') +
-                  r')',
-        'skip': r'indica' if sys.version_info < (3, 9) else '^$',
+        'noread': r'((\.(nc|nd2|yml|yaml|json|czi|png|jpg|jpeg|jp2|zarr\.db|zarr\.zip)|(nokeyframe\.ome\.tiff|XY01\.ome\.tif|level.*\.dcm|tcia.*dcm|monochrome1.dcm)$))',  # noqa
     },
     'vips': {
         'read': r'',
-        'noread': r'(\.(nc|nd2|yml|yaml|json|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm)$',
+        'noread': r'(\.(nc|nd2|yml|yaml|json|png|svs|scn|zarr\.db|zarr\.zip)|tcia.*dcm|monochrome1.dcm)$',  # noqa
         'skip': r'\.czi$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)',  # noqa
     },

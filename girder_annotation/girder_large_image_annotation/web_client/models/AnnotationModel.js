@@ -76,13 +76,13 @@ const AnnotationModel = AccessControlledModel.extend({
     defaults: {
         annotation: {},
         minElements: 5000,
-        maxDetails: 250000,
-        maxCentroids: 2000000
+        maxDetails: 500000,
+        maxCentroids: 5000000
     },
 
     initialize() {
         if (!this.get('updated') && getCurrentUser()) {
-            this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+            this.attributes.updated = (new Date()).toISOString(); // eslint-disable-line backbone/no-model-attributes
             this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
         }
         this._region = {
@@ -99,18 +99,20 @@ const AnnotationModel = AccessControlledModel.extend({
             this.get('annotation').elements || []
         );
         this._elements.annotation = this;
-
-        this.listenTo(this._elements, 'change add remove reset', () => {
-            // copy the object to ensure a change event is triggered
-            var annotation = _.extend({}, this.get('annotation'));
-
-            annotation.elements = this._elements.toJSON();
-            this.set('annotation', annotation);
-        });
+        this.bindListeners();
+    },
+    bindListeners: function () {
+        this.listenTo(this._elements, 'change add remove reset', this.handleChangeEvent);
         this.listenTo(this._elements, 'change add', this.handleElementChanged);
         this.listenTo(this._elements, 'remove', this.handleElementRemoved);
     },
+    handleChangeEvent: function () {
+        // copy the object to ensure a change event is triggered
+        var annotation = _.extend({}, this.get('annotation'));
 
+        annotation.elements = this._elements.toJSON();
+        this.set('annotation', annotation);
+    },
     handleElementChanged: function (element, collection, options) {
         if (!this._centroids) {
             return;
@@ -120,12 +122,13 @@ const AnnotationModel = AccessControlledModel.extend({
             fillColor: element.get('fillColor'),
             lineColor: element.get('lineColor'),
             lineWidth: element.get('lineWidth'),
-            closed: element.get('closed')
+            closed: element.get('closed'),
+            pattern: element.get('pattern')
         };
         let propidx;
         for (propidx = 0; propidx < this._centroids.props.length; propidx += 1) {
             const p = this._centroids.props[propidx];
-            if (p.type === props.type && p.fillColor === props.fillColor && p.lineColor === props.lineColor && p.lineWidth === props.lineWidth && p.closed === props.closed) {
+            if (p.type === props.type && p.fillColor === props.fillColor && p.lineColor === props.lineColor && p.lineWidth === props.lineWidth && p.closed === props.closed && p.pattern === props.pattern) {
                 break;
             }
         }
@@ -227,10 +230,7 @@ const AnnotationModel = AccessControlledModel.extend({
         var restOpts = {
             url: url,
             data: {
-                sort: 'size',
-                sortdir: -1,
                 centroids: true,
-                limit: this.get('maxCentroids'),
                 _: (this.get('updated') || this.get('created')) + '_' + this.get('_version')
             },
             xhrFields: {
@@ -238,7 +238,11 @@ const AnnotationModel = AccessControlledModel.extend({
             },
             error: null
         };
-
+        if ((this.get('_elementQuery') || {}).count && (this.get('_elementQuery') || {}).count > this.get('maxCentroids')) {
+            restOpts.data.sort = 'size';
+            restOpts.data.sortdir = -1;
+            restOpts.data.limit = this.get('maxCentroids');
+        }
         return restRequest(restOpts).done((resp) => {
             let dv = new DataView(resp);
             let z0 = 0, z1 = dv.byteLength - 1;
@@ -291,6 +295,27 @@ const AnnotationModel = AccessControlledModel.extend({
         });
     },
 
+    fetchCentroidsWrapper: function (opts) {
+        this._inFetch = 'centroids';
+        return this.fetchCentroids().then(() => {
+            this._inFetch = true;
+            if (opts.extraPath) {
+                this.trigger('g:fetched.' + opts.extraPath);
+            } else {
+                this.trigger('g:fetched');
+            }
+            return null;
+        }).always(() => {
+            this._inFetch = false;
+            if (this._nextFetch) {
+                var nextFetch = this._nextFetch;
+                this._nextFetch = null;
+                nextFetch();
+            }
+            return null;
+        });
+    },
+
     /**
      * Fetch a single resource from the server. Triggers g:fetched on success,
      * or g:error on error.
@@ -305,10 +330,11 @@ const AnnotationModel = AccessControlledModel.extend({
         }
 
         opts = opts || {};
+        var user = getCurrentUser();
         var restOpts = {
             url: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
             /* Add our region request into the query */
-            data: Object.assign({}, this._region, {_: (this.get('updated') || this.get('created')) + '_' + this.get('_version')})
+            data: Object.assign({}, this._region, {_: (this.get('updated') || this.get('created')) + (user && user.id ? '_' + user.id : '') + '_' + this.get('_version')})
         };
         if (opts.extraPath) {
             restOpts.url += '/' + opts.extraPath;
@@ -316,13 +342,28 @@ const AnnotationModel = AccessControlledModel.extend({
         if (opts.ignoreError) {
             restOpts.error = null;
         }
+        if (this._pageElements === undefined && (this.get('_elementCount') || 0) > this.get('minElements') && (this.get('_detailsCount') || 0) > this.get('maxDetails')) {
+            this._pageElements = true;
+            return this.fetchCentroidsWrapper(opts);
+        }
         this._inFetch = true;
         if (this._refresh) {
             delete this._pageElements;
             delete this._centroids;
             this._refresh = false;
         }
-        return restRequest(restOpts).done((resp) => {
+        return restRequest(restOpts).always(() => {
+            if (this._inFetch !== 'centroids') {
+                this._inFetch = false;
+                if (this._nextFetch) {
+                    var nextFetch = this._nextFetch;
+                    this._nextFetch = null;
+                    if (this._pageElements !== false) {
+                        nextFetch();
+                    }
+                }
+            }
+        }).done((resp) => {
             const annotation = resp.annotation || {};
             const elements = annotation.elements || [];
 
@@ -332,24 +373,7 @@ const AnnotationModel = AccessControlledModel.extend({
             if (this._pageElements === undefined && resp._elementQuery) {
                 this._pageElements = resp._elementQuery.count > resp._elementQuery.returned;
                 if (this._pageElements) {
-                    this._inFetch = 'centroids';
-                    this.fetchCentroids().then(() => {
-                        this._inFetch = true;
-                        if (opts.extraPath) {
-                            this.trigger('g:fetched.' + opts.extraPath);
-                        } else {
-                            this.trigger('g:fetched');
-                        }
-                        return null;
-                    }).always(() => {
-                        this._inFetch = false;
-                        if (this._nextFetch) {
-                            var nextFetch = this._nextFetch;
-                            this._nextFetch = null;
-                            nextFetch();
-                        }
-                        return null;
-                    });
+                    this.fetchCentroidsWrapper(opts);
                 } else {
                     this._nextFetch = null;
                 }
@@ -366,17 +390,6 @@ const AnnotationModel = AccessControlledModel.extend({
             this._fromFetch = null;
         }).fail((err) => {
             this.trigger('g:error', err);
-        }).always(() => {
-            if (this._inFetch !== 'centroids') {
-                this._inFetch = false;
-                if (this._nextFetch) {
-                    var nextFetch = this._nextFetch;
-                    this._nextFetch = null;
-                    if (this._pageElements !== false) {
-                        nextFetch();
-                    }
-                }
-            }
         });
     },
 
@@ -511,7 +524,7 @@ const AnnotationModel = AccessControlledModel.extend({
         let xhr = false;
         if (!this.isNew()) {
             if (getCurrentUser()) {
-                this.attributes.updated = '' + Date.now(); // eslint-disable-line backbone/no-model-attributes
+                this.attributes.updated = (new Date()).toISOString(); // eslint-disable-line backbone/no-model-attributes
                 this.attributes.updatedId = getCurrentUser().id; // eslint-disable-line backbone/no-model-attributes
             }
             xhr = restRequest({
@@ -532,7 +545,11 @@ const AnnotationModel = AccessControlledModel.extend({
     geojson() {
         const json = this.get('annotation') || {};
         const elements = json.elements || [];
-        return convert(elements, {annotation: this.id});
+        let levels;
+        try {
+            levels = this.collection._viewer.metadata.levels;
+        } catch (err) {}
+        return convert(elements, {annotation: this.id}, levels);
     },
 
     /**

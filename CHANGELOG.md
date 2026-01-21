@@ -1,27 +1,121 @@
 # Change Log
 
+## 1.34.0
+
+### Improvements
+
+- Add support for Python 3.14 ([#2022](../../pull/2022), [#2026](../../pull/2026))
+- In Jupyter, set edge value of tilesource to transparent ([#2019](../../pull/2019))
+- When reading tiff files via the tiff or openslide reader, stop reading sooner if they are corrupt ([#2037](../../pull/2037))
+- Support two point warp correspondence in the multi-source ([#2039](../../pull/2039))
+
+### Changes
+
+- Refactored internal code to use contextlib.suppress where appropriate ([#2031](../../pull/2031))
+- Drop support for Python 3.9 ([#2032](../../pull/2032))
+
+### Bug Fixes
+
+- When reading raw files via the PIL source, fix handling uint16 data ([#2030](../../pull/2030))
+- When copying an item via girder, ensure permissions on annotations are granted to the owner of the destination folder ([#2033](../../pull/2033))
+- The large_image/folder/{}/tiles endpoint didn't always handle partially complete items ([#2038](../../pull/2038))
+
+## 1.33.5
+
+### Improvements
+
+- Added a "pattern" property for polygon annotations ([#2020](../../pull/2020))
+
+### Changes
+
+- Change delattr to del when it doesn't matter ([#2021](../../pull/2021))
+
+## 1.33.4
+
+### Improvements
+
+- Remove locking in reading nd2 tiles ([#1977](../../pull/1977))
+- Get a pixel from multiple frames in a single REST call ([#2002](../../pull/2002))
+- Add another index to speed up deleting large images in Girder ([#2005](../../pull/2005))
+
+### Changes
+
+- Increase the detail threshold for large annotations ([#1995](../../pull/1995))
+- Update to work with tol-colors >= 2 ([#2000](../../pull/2000))
+- Load some sources earlier in Girder ([#2004](../../pull/2004))
+- Increase number of annotation elements processed for metadata plots ([#2012](../../pull/2012))
+- More listed mimetypes ([#2013](../../pull/2013))
+- Make it easier to rebind annotation models ([#2014](../../pull/2014))
+
+### Bug Fixes
+
+- Fixed recursion in the create large images in a folder endpoint ([#1993](../../pull/1993))
+- When overlaying many image annotations, some showed artifacts ([#1998](../../pull/1998))
+- Fix annotation caching with different users ([#1999](../../pull/1999))
+- Work around how bioformats handles DICOMs in Monochrome1 ([#1834](../../pull/1834))
+- Guard a missing data field in pixelmap annotation actions ([#2010](../../pull/2010), [#2011](../../pull/2011))
+- Fixed an issue emitting geojson annotations with rotated rectangles and ellipses ([#2015](../../pull/2015))
+
+## 1.33.3
+
+### Changes
+
+- Handle a recent change in pylibtiff ([#1992](../../pull/1992))
+
+## 1.33.2
+
+### Bug Fixes
+
+- Fix some raw bson handling ([#1991](../../pull/1991))
+
+## 1.33.1
+
+### Improvements
+
+- Speed up annotation centroid queries ([#1981](../../pull/1981), [#1990](../../pull/1990))
+- Improve large annotation load and display speed ([#1982](../../pull/1982))
+- Denormalize some values in the annotation collection to support improving display speed ([#1984](../../pull/1984))
+- Improve indices for annotationelement queries ([#1985](../../pull/1985))
+- Use some raw bson handling to speed up annotationelement serialization ([#1986](../../pull/1986))
+- Improve indices used in large image associated files in girder ([#1988](../../pull/1988))
+
+### Changes
+
+- Skip adjacent DICOM file search during Girder import ([#1987](../../pull/1987))
+- Update to work with the most recent wsidicom ([#1989](../../pull/1989))
+
+### Bug Fixes
+
+- Add a guard to avoid a javascript except if annotations are not loaded enough ([#1983](../../pull/1983))
+
 ## 1.33.0
 
 ### Features
 
 - Multi-source Thin Plate Spline Warping ([#1947](../../pull/1947))
+- Support subdatasets and frames in geospatial sources ([#1972](../../pull/1972))
 
 ### Improvements
 
 - Improve reading certain tiles via tiff source ([#1946](../../pull/1946))
 - Clearer error messages on jsonschema issues in the multi source ([#1951](../../pull/1951))
+- Add an option to the image converter to preserve float datatypes ([#1968](../../pull/1968))
+- Specify that geospatial girder sources could be multi-file to better find adjacent files to a vrt ([#1971](../../pull/1971))
 
 ### Changes
 
 - Do not check if items are used as annotation elements in DocumentDB ([#1949](../../pull/1949), [#1953](../../pull/1953))
 - Ensure a valid gdal version ([#1945](../../pull/1945))
 - Drop support for Python 3.8 ([#1950](../../pull/1950), [#1957](../../pull/1957))
+- Change some internals on how allowing netcdf files without scale are handled ([#1970](../../pull/1970))
 
 ### Bug Fixes
 
 - Sometimes the annotation PATCH endpoint would report a duplicate ID ([#1952](../../pull/1952))
 - Harden reading ometiff that have certain planar configurations ([#1956](../../pull/1956))
 - If a tile is larger than expected, guard its size ([#1955](../../pull/1955))
+- Zarr Write: Prevent multiple values for the overwrite kwarg ([#1965](../../pull/1965))
+- Eliminate a javascript exception in the histogram viewer ([#1967](../../pull/1967))
 
 ## 1.32.11
 

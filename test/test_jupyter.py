@@ -83,9 +83,8 @@ async def testJupyterIpyleaflet():
     port = source._jupyter_server_manager.port
 
     async def fetch(url):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                return response
+        async with aiohttp.ClientSession() as session, session.get(url) as response:
+            return response
 
     r = await fetch(f'http://localhost:{port}/tile?z=0&x=0&y=0&encoding=png')
     r.raise_for_status()

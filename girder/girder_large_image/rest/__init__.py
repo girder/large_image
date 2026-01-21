@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import json
 
 from girder import logger
@@ -10,7 +11,7 @@ from girder.models.folder import Folder
 from girder.models.item import Item
 
 
-def addSystemEndpoints(apiRoot):  # noqa
+def addSystemEndpoints(apiRoot):
     """
     This adds endpoints to routes that already exist in Girder.
 
@@ -40,10 +41,8 @@ def addSystemEndpoints(apiRoot):  # noqa
             except Exception as exc:
                 logger.warning('Failed to parse _filter_ from text field: %r', exc)
         if filters:
-            try:
+            with contextlib.suppress(Exception):
                 logger.debug('Item find filters: %s', json.dumps(filters))
-            except Exception:
-                pass
         if recurse or group:
             return _itemFindRecursive(
                 self, origItemFind, folderId, text, name, limit, offset, sort,

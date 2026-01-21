@@ -907,6 +907,33 @@ def testPixel(server, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testPixelMultiframe(server, admin, fsAssetstore):
+    file = utilities.uploadExternalFile(
+        'ITGA3Hi_export_crop2.nd2', admin, fsAssetstore)
+    itemId = str(file['itemId'])
+
+    resp = server.request(
+        path='/item/%s/tiles/pixel' % itemId, user=admin,
+        params={'left': 500, 'top': 500, 'frame': 4})
+    assert utilities.respStatus(resp) == 200
+    assert 32 < resp.json['l'] < 36
+    assert 8708 < resp.json['value'][0] < 8748
+
+    resp = server.request(
+        path='/item/%s/tiles/pixel' % itemId, user=admin,
+        params={'left': 500, 'top': 500, 'frameList': '4,5,50'})
+    assert utilities.respStatus(resp) == 200
+    assert len(resp.json) == 3
+    assert resp.json[0]['frame'] == 4
+    assert 32 < resp.json[0]['l'] < 36
+    assert 8708 < resp.json[0]['value'][0] < 8748
+    assert resp.json[2]['frame'] == 50
+    assert 5 < resp.json[2]['l'] < 9
+    assert 1825 < resp.json[2]['value'][0] < 1865
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testGetTileSource(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
         'sample_image.ptif', admin, fsAssetstore)
