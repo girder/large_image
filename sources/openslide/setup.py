@@ -40,7 +40,7 @@ setup(
         'openslide-bin; platform_system=="Windows" and platform_machine=="AMD64"',
         'openslide-bin; platform_system=="Darwin" and platform_machine=="arm64"',
         'openslide-bin; platform_system=="Darwin" and platform_machine=="x86_64"',
-        'tifftools>=1.2.0',
+        'tifftools>=1.7.0',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
