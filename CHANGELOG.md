@@ -17,6 +17,7 @@
 
 - When reading raw files via the PIL source, fix handling uint16 data ([#2030](../../pull/2030))
 - When copying an item via girder, ensure permissions on annotations are granted to the owner of the destination folder ([#2033](../../pull/2033))
+- The large_image/folder/{}/tiles endpoint didn't always handle partially complete items ([#2038](../../pull/2038))
 
 ## 1.33.5
 
