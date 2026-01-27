@@ -1,6 +1,7 @@
 import sys
 import os
-from tkinter import FALSE
+import math
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -13,12 +14,216 @@ sys.path.append(base_path)
 
 from test.eager.eager_helpers import run_reproducible_performance_evaluation, run_performance_testing_on_directory
 
+def plot_regions(regions, filename):
+    plt.figure(figsize=(10, 10), dpi=300)
+    plt.scatter(regions[:, 0], regions[:, 1], s=0.1)
+    plt.xlabel('X position (px)')
+    plt.ylabel('Y position (px)')
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
 def write_transform(image, x: int, y: int):
     if x > -1 and y > -1:
         plt.imsave(f"/scr/arosado/performance/write/eager/transform/images/image_{x}_{y}.png", image)
         return image
     else:
         return image
+
+def create_regions_for_file(file_path, region_size=(224, 224), n_regions=10000, dense=False, n_normal_regions=None, normal_sigma=None):
+    import large_image
+    source = large_image.open(file_path)
+    metadata = source.getMetadata()
+
+    if dense:
+        if n_normal_regions is None and not isinstance(n_normal_regions, int):
+            raise ValueError("n_normal_regions must be provided if dense is True")
+        if normal_sigma is None and not isinstance(normal_sigma, float):
+            raise ValueError("normal_sigma must be provided if dense is True")
+
+        n_regions_per_normal_region = math.ceil(n_regions / n_normal_regions)
+
+        regions = np.zeros((n_regions, 4))
+
+        normal_regions_tops = np.random.randint(metadata['sizeY'] - region_size[1], size=n_normal_regions)
+        normal_regions_lefts = np.random.randint(metadata['sizeX'] - region_size[0], size=n_normal_regions)
+
+        def region_in_bounds(regions, region_index):
+            return np.any(regions[region_index,:2] < 0) or np.any(regions[region_index,0] > (metadata['sizeY'] - region_size[1])) or np.any(regions[region_index,1] > (metadata['sizeX'] - region_size[0]))
+
+        for i in range(n_normal_regions):
+            if i == n_normal_regions - 1:
+                normal_regions = np.random.normal((normal_regions_tops[i], normal_regions_lefts[i]), (normal_sigma, normal_sigma), size=(n_regions - i*n_regions_per_normal_region, 2))
+
+            else:
+                normal_regions = np.random.normal((normal_regions_tops[i], normal_regions_lefts[i]), (normal_sigma, normal_sigma), size=(n_regions_per_normal_region, 2))
+
+            for j in range(normal_regions.shape[0]):
+                if region_in_bounds(normal_regions, j):
+                    while region_in_bounds(normal_regions, j):
+                        normal_regions[j] = np.random.normal((normal_regions_tops[j // n_normal_regions], normal_regions_lefts[j // n_normal_regions]), (normal_sigma, normal_sigma), size=(1, 2))
+
+
+            normal_regions = np.round(normal_regions, decimals=0)
+            regions[i*normal_regions.shape[0]:i*normal_regions.shape[0] + normal_regions.shape[0], :2] = normal_regions
+            regions[i*normal_regions.shape[0]:i*normal_regions.shape[0] + normal_regions.shape[0], 2] = region_size[1]
+            regions[i*normal_regions.shape[0]:i*normal_regions.shape[0] + normal_regions.shape[0], 3] = region_size[0]
+
+        return regions
+        
+    else:
+        lefts = np.random.randint(metadata['sizeX'] - region_size[0], size=n_regions)
+        tops = np.random.randint(metadata['sizeY'] - region_size[1], size=n_regions)
+
+        regions = np.zeros((n_regions, 4))
+        regions[:,1] = lefts
+        regions[:,0] = tops
+
+        for i in range(n_regions):
+            regions[i, 2] = region_size[1]
+            regions[i, 3] = region_size[0]
+
+        return regions
+
+def test_dense_regions(test_path):
+    regions_5k = create_regions_for_file(test_path, n_regions=5000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_10k = create_regions_for_file(test_path, n_regions=10000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_15k = create_regions_for_file(test_path, n_regions=15000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_20k = create_regions_for_file(test_path, n_regions=20000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_25k = create_regions_for_file(test_path, n_regions=25000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_50k = create_regions_for_file(test_path, n_regions=50000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_75k = create_regions_for_file(test_path, n_regions=75000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_100k = create_regions_for_file(test_path, n_regions=100000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_150k = create_regions_for_file(test_path, n_regions=150000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_200k = create_regions_for_file(test_path, n_regions=200000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_250k = create_regions_for_file(test_path, n_regions=250000, dense=True, n_normal_regions=100, normal_sigma=5000)
+    regions_300k = create_regions_for_file(test_path, n_regions=300000, dense=True, n_normal_regions=100, normal_sigma=5000)
+
+    os.makedirs('/scr/arosado/performance/regions/dense', exist_ok=True)
+    
+    plot_regions(regions_5k, '/scr/arosado/performance/regions/dense/5k.png')
+    plot_regions(regions_10k, '/scr/arosado/performance/regions/dense/10k.png')
+    plot_regions(regions_15k, '/scr/arosado/performance/regions/dense/15k.png')
+    plot_regions(regions_20k, '/scr/arosado/performance/regions/dense/20k.png')
+    plot_regions(regions_25k, '/scr/arosado/performance/regions/dense/25k.png')
+    plot_regions(regions_50k, '/scr/arosado/performance/regions/dense/50k.png')
+    plot_regions(regions_75k, '/scr/arosado/performance/regions/dense/75k.png')
+    plot_regions(regions_100k, '/scr/arosado/performance/regions/dense/100k.png')
+    plot_regions(regions_150k, '/scr/arosado/performance/regions/dense/150k.png')
+    plot_regions(regions_200k, '/scr/arosado/performance/regions/dense/200k.png')
+    plot_regions(regions_250k, '/scr/arosado/performance/regions/dense/250k.png')
+    plot_regions(regions_300k, '/scr/arosado/performance/regions/dense/300k.png')
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/5k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_5k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/10k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_10k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/15k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_15k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/20k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_20k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/25k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_25k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/50k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_50k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/75k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_75k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/100k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_100k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/150k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_150k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/200k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_200k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_250k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/2/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_300k, region_size={'width':224, 'height': 224})
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/5k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_5k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/10k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_10k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/15k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_15k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/20k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_20k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/25k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_25k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/50k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_50k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/75k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_75k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/100k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_100k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/150k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_150k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/200k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_200k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_250k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/3/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_300k, region_size={'width':224, 'height': 224})
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/5k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_5k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/10k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_10k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/15k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_15k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/20k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_20k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/25k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_25k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/50k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_50k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/75k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_75k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/100k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_100k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/150k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_150k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/200k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_200k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_250k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/dense/4/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_300k, region_size={'width':224, 'height': 224})
+
+def test_sparse_regions(test_path):
+    regions_5k = create_regions_for_file(test_path, n_regions=5000)
+    regions_10k = create_regions_for_file(test_path, n_regions=10000)
+    regions_15k = create_regions_for_file(test_path, n_regions=15000)
+    regions_20k = create_regions_for_file(test_path, n_regions=20000)
+    regions_25k = create_regions_for_file(test_path, n_regions=25000)
+    regions_50k = create_regions_for_file(test_path, n_regions=50000)
+    regions_75k = create_regions_for_file(test_path, n_regions=75000)
+    regions_100k = create_regions_for_file(test_path, n_regions=100000)
+    regions_150k = create_regions_for_file(test_path, n_regions=150000)
+    regions_200k = create_regions_for_file(test_path, n_regions=200000)
+    regions_250k = create_regions_for_file(test_path, n_regions=250000)
+    regions_300k = create_regions_for_file(test_path, n_regions=300000)
+
+
+    os.makedirs('/scr/arosado/performance/regions/sparse', exist_ok=True)
+
+    plot_regions(regions_5k, '/scr/arosado/performance/regions/sparse/5k.png')
+    plot_regions(regions_10k, '/scr/arosado/performance/regions/sparse/10k.png')
+    plot_regions(regions_15k, '/scr/arosado/performance/regions/sparse/15k.png')
+    plot_regions(regions_20k, '/scr/arosado/performance/regions/sparse/20k.png')
+    plot_regions(regions_25k, '/scr/arosado/performance/regions/sparse/25k.png')
+    plot_regions(regions_50k, '/scr/arosado/performance/regions/sparse/50k.png')
+    plot_regions(regions_75k, '/scr/arosado/performance/regions/sparse/75k.png')
+    plot_regions(regions_100k, '/scr/arosado/performance/regions/sparse/100k.png')
+    plot_regions(regions_150k, '/scr/arosado/performance/regions/sparse/150k.png')
+    plot_regions(regions_200k, '/scr/arosado/performance/regions/sparse/200k.png')
+    plot_regions(regions_250k, '/scr/arosado/performance/regions/sparse/250k.png')
+    plot_regions(regions_300k, '/scr/arosado/performance/regions/sparse/300k.png')
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/5k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_5k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/10k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_10k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/15k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_15k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/20k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_20k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/25k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_25k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/50k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_50k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/75k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_75k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/100k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_100k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/150k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_150k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/200k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_200k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_250k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/2/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', regions=regions_300k, region_size={'width':224, 'height': 224})
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/5k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_5k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/10k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_10k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/15k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_15k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/20k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_20k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/25k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_25k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/50k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_50k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/75k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_75k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/100k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_100k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/150k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_150k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/200k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_200k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_250k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/3/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=3, regions=regions_300k, region_size={'width':224, 'height': 224})
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/5k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_5k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/10k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_10k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/15k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_15k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/20k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_20k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/25k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_25k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/50k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_50k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/75k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_75k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/100k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_100k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/150k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_150k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/200k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_200k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_250k, region_size={'width':224, 'height': 224})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_300k, region_size={'width':224, 'height': 224})
+
+def test_region(test_path):
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/region/eager", without_cache=False, run_eager=True, performance_type='read', region=dict(left=100, top=100, width=10000, height=10000, units='base_pixels'))
 
 def test_read_high_performance(test_path):
     # Run performance evaluation with high performance settings
@@ -31,9 +236,20 @@ def test_read_high_performance(test_path):
 
 
 def test_read(test_path, file_dir):
-    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=True, run_dataset=True, performance_type='read')
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager", without_cache=True, run_eager=True, performance_type='read')
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=False, run_dataset=True, performance_type='read')
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/without_cache", without_cache=True, run_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/with_cache_memory_tracking", without_cache=False, run_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')
+
+
+def test_read_memory_tracking(test_path, file_dir):
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=False, run_dataset=True, performance_type='read', track_memory=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/without_cache", without_cache=True, run_eager=True, performance_type='read', track_memory=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/with_cache_memory_tracking", without_cache=False, run_eager=True, performance_type='read', track_memory=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
+
 
 def test_write(test_path):
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/default", without_cache=False, run_eager=True, performance_type='write')
@@ -47,10 +263,35 @@ def test_write(test_path):
 
 def test_write_transform(test_path):
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write", without_cache=False, only_eager=False, performance_type='write', transform=write_transform)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_transform_eager_multiprocessing", without_cache=False, only_eager=True, performance_type='write_multiprocessing')
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_transform_eager_multiprocessing", without_cache=False, run_eager=True, performance_type='write_multiprocessing')
 
 def test_without_icc(test_path):
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc", without_cache=True, only_eager=False, without_icc=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/eager/without_cache", without_cache=False, run_eager=True, without_icc=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/eager/cache", without_cache=True, run_eager=True, without_icc=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/non_eager/without_cache", without_cache=True, only_eager=False, run_non_eager=True, without_icc=False)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/non_eager/with_cache", without_cache=False, only_eager=False, run_non_eager=True, without_icc=False)
+
+
+def test_local_slow(slow_drive_test_speed, slow_drive_dataset_path):
+    run_reproducible_performance_evaluation(slow_drive_test_speed, n_runs=5, output_dir="/scr/arosado/performance/local_drive/slow_drive/eager", without_cache=False, run_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(slow_drive_test_speed, n_runs=5, output_dir="/scr/arosado/performance/local_drive/slow_drive/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(slow_drive_test_speed, file_dir=slow_drive_dataset_path, n_runs=5, output_dir="/scr/arosado/performance/local_drive/slow_drive/dataset", without_cache=False, run_eager=False, run_dataset=True, performance_type='read')
+
+def test_s3(s3_test_path, s3_transfer_acceleration_test_path):
+    run_reproducible_performance_evaluation(s3_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/s3/eager", without_cache=False, run_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(s3_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/s3/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')
+
+    run_reproducible_performance_evaluation(s3_transfer_acceleration_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/s3_transfer_acceleration/eager", without_cache=False, run_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(s3_transfer_acceleration_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/s3_transfer_acceleration/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')   
+
+def test_network(wsi_archive_test_path, wsi_archive_dataset_path, optimus_test_path, optimus_dataset_path):
+    # run_reproducible_performance_evaluation(wsi_archive_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/wsi_archive/eager", without_cache=False, run_eager=True, performance_type='read')
+    # run_reproducible_performance_evaluation(wsi_archive_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/wsi_archive/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(wsi_archive_test_path, file_dir=wsi_archive_dataset_path, n_runs=5, output_dir="/scr/arosado/performance/network/wsi_archive/dataset", without_cache=False, run_dataset=True, performance_type='read')
+
+    # run_reproducible_performance_evaluation(optimus_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/optimus/eager", without_cache=False, run_eager=True, performance_type='read')
+    # run_reproducible_performance_evaluation(optimus_test_path, n_runs=5, output_dir="/scr/arosado/performance/network/optimus/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')
+    # run_reproducible_performance_evaluation(optimus_test_path, file_dir=optimus_dataset_path, n_runs=5, output_dir="/scr/arosado/performance/network/optimus/dataset", without_cache=False, run_dataset=True, performance_type='read')
 
 def test_prefetch_workers(test_path):
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/prefetch_workers/1", without_cache=False, only_eager=True, prefetch=1, workers=1)
@@ -218,12 +459,19 @@ def test_svs_mag_resolution(test_path):
     
 def test_svs_mm_resolution(test_path):
     # Test performance with different resolutions
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_1x", without_cache=False, scale={'mm_x':  0.00025*2*2*2*5, 'mm_y': 0.00025*2*2*2*5})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_2.5x", without_cache=False, scale={'mm_x':  0.00025*2*2*2*2, 'mm_y': 0.00025*2*2*2*2})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_5x", without_cache=False, scale={'mm_x':  0.00025*2*2*2, 'mm_y': 0.00025*2*2*2})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_10x", without_cache=False, scale={'mm_x':  0.00025*2*2, 'mm_y': 0.00025*2*2})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_20x", without_cache=False, scale={'mm_x':  0.00025*2, 'mm_y': 0.00025*2})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_40x", without_cache=False, scale={'mm_x':  0.00025, 'mm_y': 0.00025})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_1x", without_cache=False, run_eager=True, scale={'mm_x':  0.00025*2*2*2*5, 'mm_y': 0.00025*2*2*2*5})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_2.5x", without_cache=False, run_eager=True, scale={'mm_x':  0.00025*2*2*2*2, 'mm_y': 0.00025*2*2*2*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_5x", without_cache=False, run_eager=True, scale={'mm_x':  0.00025*2*2*2, 'mm_y': 0.00025*2*2*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_10x", without_cache=False, run_eager=True, scale={'mm_x':  0.00025*2*2, 'mm_y': 0.00025*2*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_20x", without_cache=False, run_eager=True, scale={'mm_x':  0.00025*2, 'mm_y': 0.00025*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_40x", without_cache=False, run_eager=True, scale={'mm_x':  0.00025, 'mm_y': 0.00025})
+
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_1x", without_cache=False, run_eager=False, run_non_eager=True, scale={'mm_x':  0.00025*2*2*2*5, 'mm_y': 0.00025*2*2*2*5})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_2.5x", without_cache=False, run_eager=False, run_non_eager=True, scale={'mm_x':  0.00025*2*2*2*2, 'mm_y': 0.00025*2*2*2*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_5x", without_cache=False, run_eager=False, run_non_eager=True, scale={'mm_x':  0.00025*2*2*2, 'mm_y': 0.00025*2*2*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_10x", without_cache=False, run_eager=False, run_non_eager=True, scale={'mm_x':  0.00025*2*2, 'mm_y': 0.00025*2*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_20x", without_cache=False, run_eager=False, run_non_eager=True, scale={'mm_x':  0.00025*2, 'mm_y': 0.00025*2})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/mm_resolution/mm_40x", without_cache=False, run_eager=False, run_non_eager=True, scale={'mm_x':  0.00025, 'mm_y': 0.00025})
 
 def test_svs_tile_size(test_path):
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_size/96", without_cache=False, tile_size={'width': 96, 'height': 96})
@@ -379,7 +627,18 @@ def test_svs_uni2(test_path):
 
 if __name__ == "__main__":
     test_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+    wsi_archive_test_path = '/wsi_archive/large_image/performance/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+    wsi_archive_dataset_path = '/wsi_archive/large_image/performance/svs_test_tiles'
+    
     test_dir = '/scr/arosado/large_image/svs_test_tiles'
+    s3_test_path = '/tmp/s3/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+    s3_transfer_acceleration_test_path = '/tmp/s3_transfer_acceleration/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+
+    slow_drive_test_path = '/data/performance/large_image/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+    slow_drive_dataset_path = '/data/performance/large_image/svs_test_tiles'
+
+    optimus_test_path = '/large_image_network_performance/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+    optimus_dataset_path = '/large_image_network_performance/svs_test_tiles'
 
     svs_dir = '/scr/arosado/large_image/svs'
     mrxs_dir = '/scr/arosado/large_image/mrxs'
@@ -394,11 +653,14 @@ if __name__ == "__main__":
     )
 
     # run_performance_testing_on_directory(svs_dir, file_extensions=[".svs"], output_dir="/scr/arosado/performance/svs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
-    # run_performance_testing_on_directory(mrxs_dir, file_extensions=[".mrxs"], output_dir="/scr/arosado/performance/mrxs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
+    run_performance_testing_on_directory(mrxs_dir, file_extensions=[".mrxs"], output_dir="/scr/arosado/performance/mrxs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # run_performance_testing_on_directory(ndpi_dir, file_extensions=[".ndpi"], output_dir="/scr/arosado/performance/ndpi", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
 
     # Test read performance
     # test_read(test_path, test_dir)
+
+    # Test read memory tracking
+    # test_read_memory_tracking(test_path, test_dir)
 
     # Test write performance
     # test_write(test_path)
@@ -418,11 +680,23 @@ if __name__ == "__main__":
     # Test performance with default settings
     # test_svs_default()
 
+    # Test region
+    # test_region(test_path)
+
+    # Test sparse regions
+    # test_sparse_regions(test_path)
+
+    # Test dense regions
+    # test_dense_regions(test_path)
+
     # Test performance with different tile overlaps
-    test_tile_overlap(test_path)
+    # test_tile_overlap(test_path)
 
     # Test performance with different resolutions
     # test_svs_mag_resolution()
+
+    # Test performance with different mm resolutions
+    # test_svs_mm_resolution(test_path)
 
     # Test performance with different batch sizes
     # test_batch_size()
@@ -431,7 +705,13 @@ if __name__ == "__main__":
     # test_chunk_size(test_path)
 
     # Test performance without ICC correction
-    # test_without_icc()
+    # test_without_icc(test_path)
+
+    # Test network performance
+    # test_network(wsi_archive_test_path, wsi_archive_dataset_path, optimus_test_path, optimus_dataset_path)
+
+    # Test local drive performance
+    # test_local_slow(slow_drive_test_path, slow_drive_dataset_path)
 
     # Test performance with different prefetch and workers
     # test_prefetch_workers()

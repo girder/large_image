@@ -18,11 +18,13 @@ class EagerIterator:
             self, 
             source: 'tilesource.TileSource',
             output_mode: str = 'tiles',
-            tile_overlap: Union[Dict[str, int] | Dict[str, float]] = {'x': 0, 'y': 0},
+            tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None,
             mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
+            region: Optional[Dict[str, Any]] = None,
             scale: Optional[Dict[str, Any]] = None,
             tile_size: Optional[Dict[str, int]] = None,
             region_size: Optional[Dict[str, int]] = None,
+            source_scale: Optional[Union[int, float]] = None,
             dtype: np.typing.DTypeLike = np.uint8,
             chunk_mult: int = 2,
             edge: bool = False,
@@ -154,11 +156,11 @@ class EagerIterator:
         if tile_overlap is not None:
             if 'x' in tile_overlap and 'y' in tile_overlap:
                 if isinstance(tile_overlap['x'], int) and isinstance(tile_overlap['y'], int):
-                    if tile_overlap['x'] <= 0 or tile_overlap['y'] <= 0:
-                        raise ValueError("tile_overlap x and y must be greater than 0")
+                    if tile_overlap['x'] < 0 or tile_overlap['y'] < 0:
+                        raise ValueError("tile_overlap x and y must be greater than or equal to 0")
                 elif isinstance(tile_overlap['x'], float) and isinstance(tile_overlap['y'], float):
-                    if tile_overlap['x'] <= 0 or tile_overlap['y'] <= 0:
-                        raise ValueError("tile_overlap x and y must be greater than 0")
+                    if tile_overlap['x'] < 0 or tile_overlap['y'] < 0:
+                        raise ValueError("tile_overlap x and y must be greater than or equal to 0")
                 else:
                     raise ValueError("tile_overlap x and y must be both integers or both floats")
             else:
@@ -185,7 +187,7 @@ class EagerIterator:
         # Use the mask to determine the tiles if in tile mode
         if output_mode == 'tiles':
             # Use default tile source to determine slide dimensions
-            self.slide_dimensions = calculate_slide_dimensions(self.source, scale, tile_size)
+            self.slide_dimensions = calculate_slide_dimensions(self.source, region, scale, tile_size, source_scale)
             if tiles is None:
                 tiles = return_relevant_tile_indexes_for_slide_dim(self.slide_dimensions, tile_overlap)
             if mask is not None:
@@ -202,7 +204,12 @@ class EagerIterator:
             # Use default region source to determine slide dimensions
             if region_size is not None:
                 # Regions of form (left, top, width, height)
-                self.slide_dimensions = calculate_slide_dimensions(self.source, scale, region_size)
+                if source_scale is not None:
+                    raise ValueError("source_scale parammter must be None for regions mode")
+                elif region is not None:
+                    raise ValueError("region parameter must be None for regions mode")
+                    
+                self.slide_dimensions = calculate_slide_dimensions(self.source, region, scale, region_size, source_scale)
 
                 # Check if region size is appropriate
                 h_max = regions[:, 2].max()
@@ -525,9 +532,8 @@ class EagerIterator:
 
             xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint)
             yto = np.floor(np.divide((ytt - yr) , slide_dimensions['conv_mm_y'])).astype(np.uint)
-
-            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y']))
-            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x']))
+            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y'])).astype(np.uint)
+            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x'])).astype(np.uint)
         else:
             raise ValueError("Output mode not supported by read method.")
 

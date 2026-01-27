@@ -24,7 +24,7 @@ from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb, padding
 
 from test.eager.paper.pytorch_efficientnet import make_efficientnet_model
-from test.eager.paper.huggingface_uni2_model import make_huggingface_uni2_model
+from test.eager.paper.huggingface_uni2_model import make_huggingface_uni2_model, make_huggingface_uni_model
 from test.eager.paper.pytorch_sobel_model import make_sobel_model
 
 def matplotlib_save_image(image_path: str, image: np.ndarray):
@@ -101,6 +101,8 @@ def setup_inference_model(performance_type: str, compile_model: bool = True, cud
         model = make_efficientnet_model(compile_model=compile_model, cuda_device=cuda_device)
     elif performance_type == 'inference_uni2':
         model = make_huggingface_uni2_model(compile_model=compile_model, cuda_device=cuda_device)
+    elif performance_type == 'inference_uni':
+        model = make_huggingface_uni_model(compile_model=compile_model, cuda_device=cuda_device)
         
     
     return model
@@ -187,16 +189,24 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
     
     return batch_retreival_times, inference_times
 
-def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
+def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_memory: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
-    if without_cache:
-        setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
-        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+    def run_non_eager_performance():
+        if without_cache:
+            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, **kwargs)
+            add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+        else:
+            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, **kwargs)
+            add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
-    setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
-    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+    if track_memory:
+        import memray
+        with memray.Tracker(os.path.join(output_dir, f'non_eager_{n_evaluation}.bin'), follow_fork=True, native_traces=True):
+            run_non_eager_performance()
+    else:
+        run_non_eager_performance()
 
     return performance_data
 
@@ -219,7 +229,7 @@ def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_ite
 
         return batch_retreival_times, inference_times
 
-def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
+def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, output_dir: str = './performance', *args, **kwargs):
     clear_cache()
 
     batch_retreival_times = []
@@ -437,7 +447,7 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
     
     eager_iter = tile_source.eagerIterator(**kwargs)
     setup_time = time.time() - start_time
-    
+
     # Test read only performance
     if performance_type == 'read':
         start_batch_retreival_time = time.time()
@@ -515,28 +525,45 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
     return setup_time, performance_time, batch_retreival_times, inference_times, write_times
 
 
-def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', *args, **kwargs):
+def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
-    # Test performance with default resolution without caching
-    if without_cache:
-        setup_time, process_time, batch_retreival_times, inference_times, write_times = run_eager_task_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, **kwargs)
-        add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+    def run_eager_performance():
+        # Test performance with default resolution without caching
+        if without_cache:
+            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_eager_task_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model,**kwargs)
+            add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+        else:
+            # Test read only performance with cache
+            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_eager_task_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
+            add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
-    # Test read only performance with cache
-    setup_time, process_time, batch_retreival_times, inference_times, write_times = run_eager_task_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, **kwargs)
-    add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+    if track_class_memory:
+        import memray
+        with memray.Tracker(os.path.join(output_dir, f'eager_{n_evaluation}.bin'), follow_fork=True, native_traces=True):
+            run_eager_performance()
+    else:
+        run_eager_performance()
 
     return performance_data
 
-def run_dataset_performance_evaluation(file_path: str, file_dir: str, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
+def run_dataset_performance_evaluation(file_path: str, file_dir: str, performance_type: str = 'read', compile_model: bool = True, track_memory: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
     performance_data = {}
-    add_default_wsi_dimensions(performance_data, file_path)
 
-    # Test performance with default resolution without caching
-    setup_time, process_time, batch_retreival_times, inference_times, write_times = run_dataset_task_performance_evaluation(file_path, file_dir, performance_type, compile_model, **kwargs)
-    add_performance_data(performance_data, performance_data['file_dimensions'], 'pytorch_dataset', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+    def run_dataset_performance():
+        add_default_wsi_dimensions(performance_data, file_path)
+
+        # Test performance with default resolution without caching
+        setup_time, process_time, batch_retreival_times, inference_times, write_times = run_dataset_task_performance_evaluation(file_path, file_dir, performance_type, compile_model, track_memory, output_dir, **kwargs)
+        add_performance_data(performance_data, performance_data['file_dimensions'], 'pytorch_dataset', setup_time, process_time, batch_retreival_times, inference_times, write_times)
+
+    if track_memory:
+        import memray
+        with memray.Tracker(os.path.join(output_dir, f'dataset_{n_evaluation}.bin'), follow_fork=True, native_traces=True):
+            run_dataset_performance()
+    else:
+        run_dataset_performance()
 
     return performance_data
 
@@ -749,7 +776,7 @@ def add_performance_data(performance_data: dict, target_dimensions: dict, perfor
 
     performance_data[performance_type] = performance_entry
 
-def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, file_dir: Optional[str] = None, output_dir: str = "./performance", without_cache: bool = False, run_eager: bool = False, run_non_eager: bool = False, run_dataset: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, **kwargs):
+def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, file_dir: Optional[str] = None, track_memory: bool = False, output_dir: str = "./performance", without_cache: bool = False, run_eager: bool = False, run_non_eager: bool = False, run_dataset: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, **kwargs):
     print("Running reproducible performance evaluation with output directory: ", output_dir)
     eager_runs = []
     non_eager_runs = []
@@ -771,19 +798,19 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, fil
             raise ValueError("file_dir is required when running dataset performance evaluation")
         for i in range(n_runs):
             print(f"Running dataset performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_dataset_performance_evaluation(file_path, file_dir, performance_type, compile_model, **kwargs)
+            performance_data = run_dataset_performance_evaluation(file_path, file_dir, performance_type, compile_model, track_memory, output_dir, i, **kwargs)
             dataset_runs.append(performance_data)
 
     if run_eager:
         for i in range(n_runs):
             print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
+            performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, i, **kwargs)
             eager_runs.append(performance_data)
 
     if run_non_eager:
         for i in range(n_runs):
             print(f"Running non-eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
+            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, i, **kwargs)
             non_eager_runs.append(performance_data)
     
     eager_runs = aggregate_runs(eager_runs, eager_output_file_path)
@@ -796,7 +823,7 @@ def run_multi_slide_performance_evaluation():
     mrxs_dir = os.path.join("/scr/arosado/")
 
 
-def run_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs', '.ndpi'], performance_types: list[str] = ['read', 'write', 'inference_sobel', 'inference_efficientnetb0', 'inference_uni2'], output_dir: str = "./performance", n_runs: int=1, n_files: int=1, **kwargs):
+def run_performance_testing_on_directory(directory: str, file_extensions: list[str] = ['.tif', '.svs', '.mrxs', '.ndpi'], performance_types: list[str] = ['read', 'write', 'inference_sobel', 'inference_efficientnetb0', 'inference_uni2'], track_class_memory: bool = False, output_dir: str = "./performance", n_runs: int=1, n_files: int=1, **kwargs):
     # Make directory for output file if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
@@ -871,24 +898,24 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                 # Run performance evaluation for each run
                 for n in range(n_runs):                    
                     # Do every type of inference for eager and non-eager
-                    if not skip_eager_sobel:
-                        print(f"Running eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        eager_performance_sobel.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', **kwargs))
-                    if not skip_eager_efficientnetb0:
-                        print(f"Running eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        eager_performance_efficientnetb0.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', **kwargs))
+                    # if not skip_eager_sobel:
+                    #     print(f"Running eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     eager_performance_sobel.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', track_class_memory=track_class_memory, output_dir=output_dir, **kwargs))
+                    # if not skip_eager_efficientnetb0:
+                    #     print(f"Running eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     eager_performance_efficientnetb0.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', track_class_memory=track_class_memory, output_dir=output_dir, **kwargs))
                     if not skip_eager_uni2:
                         print(f"Running eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        eager_performance_uni2.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', **kwargs))
-                    if not skip_non_eager_sobel:
-                        print(f"Running non-eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        non_eager_performance_sobel.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', **kwargs))
-                    if not skip_non_eager_efficientnetb0:
-                        print(f"Running non-eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        non_eager_performance_efficientnetb0.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', **kwargs))
+                        eager_performance_uni2.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', track_class_memory=track_class_memory, output_dir=output_dir, **kwargs))
+                    # if not skip_non_eager_sobel:
+                    #     print(f"Running non-eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     non_eager_performance_sobel.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
+                    # if not skip_non_eager_efficientnetb0:
+                    #     print(f"Running non-eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     non_eager_performance_efficientnetb0.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
                     if not skip_non_eager_uni2:
                         print(f"Running non-eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        non_eager_performance_uni2.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', **kwargs))
+                        non_eager_performance_uni2.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
 
                 # Aggregate performance runs
                 if not skip_eager_sobel:

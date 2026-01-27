@@ -120,3 +120,15 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
         model.compile()
 
     return model
+
+def make_huggingface_uni_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
+    model = timm.create_model("hf-hub:MahmoodLab/uni", pretrained=True, init_values=1e-5, dynamic_img_size=False)
+
+    model.eval()
+
+    model.to(cuda_device)
+
+    if compile_model:
+        model.compile()
+
+    return model

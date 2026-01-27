@@ -210,9 +210,9 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
 
     # Calculate coordinates in the original image
     # Use rounding to avoid floating point precision issues
-    sx = np.round(sorted_tiles[:, 1] * slide_dimensions['tile_width_before_scaling'], decimals=0)
+    sx = np.round(sorted_tiles[:, 1] * slide_dimensions['tile_width_before_scaling'] + slide_dimensions['region_left'], decimals=0)
     spx = np.round(sx + slide_dimensions['tile_width_before_scaling'], decimals=0)
-    sy = np.round(sorted_tiles[:, 0] * slide_dimensions['tile_height_before_scaling'], decimals=0)
+    sy = np.round(sorted_tiles[:, 0] * slide_dimensions['tile_height_before_scaling'] + slide_dimensions['region_top'], decimals=0)
     spy = np.round(sy + slide_dimensions['tile_height_before_scaling'], decimals=0)
     
     # Get tile with the most relevant region
