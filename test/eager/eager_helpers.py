@@ -195,10 +195,10 @@ def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = F
 
     def run_non_eager_performance():
         if without_cache:
-            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, **kwargs)
+            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_task_performance_evaluation(file_path, True, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, **kwargs)
             add_performance_data(performance_data, performance_data['file_dimensions'], 'without_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
         else:
-            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_read_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, **kwargs)
+            setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_task_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, **kwargs)
             add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
     if track_memory:
@@ -229,7 +229,7 @@ def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_ite
 
         return batch_retreival_times, inference_times
 
-def run_non_eager_read_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, output_dir: str = './performance', *args, **kwargs):
+def run_non_eager_task_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, output_dir: str = './performance', *args, **kwargs):
     clear_cache()
 
     batch_retreival_times = []
@@ -281,7 +281,15 @@ def run_non_eager_read_performance_evaluation(file_path: str, without_cache: boo
             end_batch_retreival_time = time.time()
             batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
             batch_retreival_times.append(batch_retreival_time)
-                
+
+    elif performance_type == 'regions':
+        del tile_iterator
+        if 'regions' not in kwargs:
+            raise ValueError("regions must be provided for regions performance type")
+        else:
+            regions = kwargs['regions']
+            for region in regions:
+                region = tile_source.getRegion(region={'left': int(region[1].item()), 'top': int(region[0].item()), 'width': int(region[3] - region[1]), 'height': int(region[2] - region[0])}, format=large_image.constants.TILE_FORMAT_NUMPY)
     elif performance_type == 'transform':
         for tile_dict in tile_iterator:
             image = tile_dict['tile']
@@ -560,6 +568,7 @@ def run_dataset_performance_evaluation(file_path: str, file_dir: str, performanc
 
     if track_memory:
         import memray
+        memray.dump_all_records()
         with memray.Tracker(os.path.join(output_dir, f'dataset_{n_evaluation}.bin'), follow_fork=True, native_traces=True):
             run_dataset_performance()
     else:

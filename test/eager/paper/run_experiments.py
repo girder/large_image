@@ -167,7 +167,6 @@ def test_sparse_regions(test_path):
     regions_250k = create_regions_for_file(test_path, n_regions=250000)
     regions_300k = create_regions_for_file(test_path, n_regions=300000)
 
-
     os.makedirs('/scr/arosado/performance/regions/sparse', exist_ok=True)
 
     plot_regions(regions_5k, '/scr/arosado/performance/regions/sparse/5k.png')
@@ -244,11 +243,11 @@ def test_read(test_path, file_dir):
 
 
 def test_read_memory_tracking(test_path, file_dir):
-    # run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=False, run_dataset=True, performance_type='read', track_memory=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=1, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=False, run_dataset=True, performance_type='read', track_memory=True)
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/without_cache", without_cache=True, run_eager=True, performance_type='read', track_memory=True)
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/with_cache_memory_tracking", without_cache=False, run_eager=True, performance_type='read', track_memory=True)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
 
 
 def test_write(test_path):
@@ -266,10 +265,10 @@ def test_write_transform(test_path):
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_transform_eager_multiprocessing", without_cache=False, run_eager=True, performance_type='write_multiprocessing')
 
 def test_without_icc(test_path):
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/eager/without_cache", without_cache=False, run_eager=True, without_icc=True)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/eager/cache", without_cache=True, run_eager=True, without_icc=True)
-    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/non_eager/without_cache", without_cache=True, only_eager=False, run_non_eager=True, without_icc=False)
-    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/non_eager/with_cache", without_cache=False, only_eager=False, run_non_eager=True, without_icc=False)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/eager/without_cache", without_cache=True, run_eager=True, without_icc=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/eager/cache", without_cache=False, run_eager=True, without_icc=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, without_icc=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/without_icc/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, without_icc=True)
 
 
 def test_local_slow(slow_drive_test_speed, slow_drive_dataset_path):
@@ -426,25 +425,35 @@ def test_svs_default(test_path):
 
 
 def test_tile_overlap(test_path):
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/10", without_cache=False, run_eager=True, tile_overlap={'x': 10, 'y': 10})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/25", without_cache=False, run_eager=True, tile_overlap={'x': 25, 'y': 25})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/50", without_cache=False, run_eager=True, tile_overlap={'x': 50, 'y': 50})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/75", without_cache=False, run_eager=True, tile_overlap={'x': 75, 'y': 75})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/100", without_cache=False, run_eager=True, tile_overlap={'x': 100, 'y': 100})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/125", without_cache=False, run_eager=True, tile_overlap={'x': 125, 'y': 125})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/150", without_cache=False, run_eager=True, tile_overlap={'x': 150, 'y': 150})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/175", without_cache=False, run_eager=True, tile_overlap={'x': 175, 'y': 175})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/200", without_cache=False, run_eager=True, tile_overlap={'x': 200, 'y': 200})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/10", without_cache=False, run_eager=True, tile_overlap={'x': 10, 'y': 10})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/25", without_cache=False, run_eager=True, tile_overlap={'x': 25, 'y': 25})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/50", without_cache=False, run_eager=True, tile_overlap={'x': 50, 'y': 50})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/75", without_cache=False, run_eager=True, tile_overlap={'x': 75, 'y': 75})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/100", without_cache=False, run_eager=True, tile_overlap={'x': 100, 'y': 100})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/125", without_cache=False, run_eager=True, tile_overlap={'x': 125, 'y': 125})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/150", without_cache=False, run_eager=True, tile_overlap={'x': 150, 'y': 150})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/175", without_cache=False, run_eager=True, tile_overlap={'x': 175, 'y': 175})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager/200", without_cache=False, run_eager=True, tile_overlap={'x': 200, 'y': 200})
 
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/10", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 10, 'y': 10})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/25", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 25, 'y': 25})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/50", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 50, 'y': 50})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/75", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 75, 'y': 75})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/100", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 100, 'y': 100})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/125", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 125, 'y': 125})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/150", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 150, 'y': 150})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/175", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 175, 'y': 175})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/200", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 200, 'y': 200})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/10", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 10, 'y': 10})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/25", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 25, 'y': 25})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/50", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 50, 'y': 50})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/75", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 75, 'y': 75})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/100", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 100, 'y': 100})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/125", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 125, 'y': 125})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/150", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 150, 'y': 150})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/175", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 175, 'y': 175})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/non_eager/200", without_cache=False, run_eager=False, run_non_eager=True, tile_overlap={'x': 200, 'y': 200})
+
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/10", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 10, 'y': 10})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/25", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 25, 'y': 25})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/50", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 50, 'y': 50})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/75", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 75, 'y': 75})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/100", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 100, 'y': 100})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/125", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 125, 'y': 125})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/150", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 150, 'y': 150})
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/175", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 175, 'y': 175})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/200", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 200, 'y': 200})
 
 
 def test_svs_mag_resolution(test_path):
@@ -508,7 +517,9 @@ def test_svs_dataset_inference_performance(test_path, file_dir):
         ]
     )
 
-    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/dataset_uni2_inference", without_cache=False, run_dataset=True, performance_type='inference_uni2', batch=64, transform=transform)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/dataset_uni2_inference", without_cache=False, run_dataset=True, performance_type='inference_uni2', batch=64, transform=transform)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/dataset_efficientnetb0_inference", without_cache=False, run_dataset=True, performance_type='inference_efficientnetb0', batch=64, transform=transform)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/dataset_sobel_inference", without_cache=False, run_dataset=True, performance_type='inference_sobel', batch=64, transform=transform)
 
 def test_svs_with_tiff_source(test_path):
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_tiff_source", without_cache=True, run_eager=True, with_tiff_source=True)
@@ -543,13 +554,13 @@ def test_transform(test_path, file_dir):
     )
 
     run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/transform/dataset/albumentations", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='albumentations_transform', transform=albumentations_transform)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/non_eager/albumentations", without_cache=False, run_eager=False, run_non_eager=True, performance_type='albumentations_transform', transform=albumentations_transform)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/eager/albumentations", without_cache=False, run_eager=True, run_non_eager=False, performance_type='albumentations_transform', transform=albumentations_transform)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/non_eager/albumentations", without_cache=False, run_eager=False, run_non_eager=True, performance_type='albumentations_transform', transform=albumentations_transform)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/eager/albumentations", without_cache=False, run_eager=True, run_non_eager=False, performance_type='albumentations_transform', transform=albumentations_transform)
     
 
-    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/transform/dataset/pytorch", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='pytorch_transform', transform=pytorch_transform)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/non_eager/pytorch", without_cache=False, run_eager=False, run_non_eager=True, performance_type='pytorch_transform', transform=pytorch_transform)
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/eager/pytorch", without_cache=False, run_eager=True, run_non_eager=False, performance_type='pytorch_transform', transform=pytorch_transform)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/transform/dataset/pytorch", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='pytorch_transform', transform=pytorch_transform)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/non_eager/pytorch", without_cache=False, run_eager=False, run_non_eager=True, performance_type='pytorch_transform', transform=pytorch_transform)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/transform/eager/pytorch", without_cache=False, run_eager=True, run_non_eager=False, performance_type='pytorch_transform', transform=pytorch_transform)
     
 
 
@@ -653,14 +664,14 @@ if __name__ == "__main__":
     )
 
     # run_performance_testing_on_directory(svs_dir, file_extensions=[".svs"], output_dir="/scr/arosado/performance/svs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
-    run_performance_testing_on_directory(mrxs_dir, file_extensions=[".mrxs"], output_dir="/scr/arosado/performance/mrxs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
+    # run_performance_testing_on_directory(mrxs_dir, file_extensions=[".mrxs"], output_dir="/scr/arosado/performance/mrxs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # run_performance_testing_on_directory(ndpi_dir, file_extensions=[".ndpi"], output_dir="/scr/arosado/performance/ndpi", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
 
     # Test read performance
     # test_read(test_path, test_dir)
 
     # Test read memory tracking
-    # test_read_memory_tracking(test_path, test_dir)
+    test_read_memory_tracking(test_path, test_dir)
 
     # Test write performance
     # test_write(test_path)
@@ -745,6 +756,7 @@ if __name__ == "__main__":
 
     # Test dataset inference performance
     # test_svs_dataset_inference_performance(test_path, file_dir=test_dir)
+
 
     # Test workers performance
     # test_workers(test_path, file_dir=test_dir)
