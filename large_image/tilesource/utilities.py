@@ -464,7 +464,9 @@ def _vipsParameters(
     if not forTiled:
         convertParams = {
             'compression': defaultCompression or 'jpeg',
-            'Q': 90,
+            # Make quality as LESS than 90 so that vips does not use RGB
+            # colorspace for these images; that confuses openslide's svs reader
+            'Q': 89,
             'predictor': 'horizontal',
             'tile': False,
         }
