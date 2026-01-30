@@ -33,14 +33,14 @@ setup(
     ],
     python_requires='>=3.10',
     install_requires=[
-        'girder>=3.1.18',
-        'girder-jobs>=3.0.3',
+        'girder>=5.0.0a10',
+        'girder-jobs>=5.0.0a10',
         f'large_image{limit_version}',
     ],
     extras_require={
         'tasks': [
             f'large-image-tasks[girder]{limit_version}',
-            'girder-worker[girder]>=0.6.0',
+            'girder-worker[girder]>=5.0.0a10',
         ],
     },
     include_package_data=True,
@@ -51,6 +51,9 @@ setup(
     entry_points={
         'girder.plugin': [
             'large_image = girder_large_image:LargeImagePlugin',
+        ],
+        'girder_worker_plugins': [
+            'import_tracker = girder_large_image.girder_worker_plugin:LargeImageWorkerPlugin',
         ],
     },
 )

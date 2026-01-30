@@ -3,15 +3,23 @@ FROM python:3.14-slim AS build
 
 # Need git for setuptools_scm
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git curl \
     && apt-get purge -y --auto-remove \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+    . ~/.bashrc && \
+    nvm install --lts && \
+    nvm alias default lts/* && \
+    nvm use default && \
+    rm -rf /root/.nvm/.cache && \
+    ln -s $(dirname `which npm`) /usr/local/node
 
 COPY . /opt/build-context/
 WORKDIR /opt/build-context
 
 RUN python -m pip install --no-cache-dir --upgrade pip wheel setuptools
-RUN sh .circleci/make_wheels.sh
+RUN PATH="$PATH:/usr/local/node" bash .circleci/release_pypi.sh skip
 RUN mv ~/wheels /opt/build-context/
 
 RUN echo "pylibmc>=1.5.1\nmatplotlib\npyvips\nsimplejpeg\n" \
@@ -60,7 +68,7 @@ FROM python:3.14-slim AS girder
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
-# NOTE: this does not install any girder3 packages
+# NOTE: this does not install any girder packages
 RUN pip install \
     --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \

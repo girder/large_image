@@ -34,8 +34,11 @@ setup(
     python_requires='>=3.10',
     install_requires=[
         f'large-image{limit_version}',
-        # zarr 3 removes the SQLiteStore
+        # Pin zarr < 3.0 due to refactoring of stores:
+        # https://github.com/zarr-developers/zarr-python/issues/1274
         'zarr<3',
+        # numcodecs and imagecodecs had been required by zarr, but now needs to be asked for
+        'imagecodecs',
         # numcodecs had been required by zarr, but now needs to be asked for
         # 0.16 requires zarr 3 (but does specify such)
         'numcodecs<0.16',

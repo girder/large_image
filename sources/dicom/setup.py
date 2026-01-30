@@ -28,7 +28,7 @@ entry_points = {
 
 girder_extras = [
     f'girder-large-image{limit_version}',
-    'girder>=3.2.3',
+    'girder>=5.0.0a10',
 ]
 
 setup(
