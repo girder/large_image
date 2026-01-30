@@ -124,7 +124,6 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | b
     npm install --no-save ip-address && \
     rm -rf node_modules/ip && \
     mv node_modules/ip-address node_modules/ip && \
-    find / -xdev -name ip -exec grep '"version"' {}/package.json \; && \
     # update subpackages that need it \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/term-size && \
     npm install 'cross-spawn@^6.0.6' && \
@@ -139,7 +138,8 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | b
     npm install 'ansi-regex@^4.1.1' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/make-fetch-happen && \
     npm install 'http-cache-semantics@^4.1.1' && \
-    find / -xdev -name ip -exec grep '"version"' {}/package.json \; && \
+    # We can't actually upgrade tar past 6.x \
+    sed -i 's/4\.4\.19/*/g' /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/tar/package.json && \
     true; else \
     npm install -g npm@latest && \
     true; fi && \

@@ -77,5 +77,7 @@ autoclass_content = 'both'
 
 mermaid_version = '10.6.0'
 mermaid_init_js = 'mermaid.initialize({startOnLoad:true});'
+mermaid_width = '50%'
+mermaid_height = 'auto'
 
 nbsphinx_requirejs_path = ''

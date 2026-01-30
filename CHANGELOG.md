@@ -13,6 +13,7 @@
 
 - Refactored internal code to use contextlib.suppress where appropriate ([#2031](../../pull/2031))
 - Drop support for Python 3.9 ([#2032](../../pull/2032))
+- When converting images, associated images stored as jpegs will be YCbCr ([#2043](../../pull/2043))
 
 ### Bug Fixes
 

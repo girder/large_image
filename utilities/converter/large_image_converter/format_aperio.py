@@ -171,7 +171,7 @@ def create_thumbnail_and_label(tempPath, info, ifdCount, needsLabel, labelPositi
         imagePath = tempPath + '-image_%s.tiff' % subImage
         image.save(
             imagePath, 'TIFF', compression='tiff_jpeg',
-            quality=int(kwargs.get('quality', 90)))
+            quality=int(kwargs.get('quality', 89)))
         imageInfo = tifftools.read_tiff(imagePath)
         ifd = imageInfo['ifds'][0]
         if subImage == 'label':
