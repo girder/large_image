@@ -30,7 +30,7 @@ commands:
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: _JAVA_OPTIONS="-Xmx2g" LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=3 COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=3 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv
+          command: _JAVA_OPTIONS="-Xmx2g" LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=3 COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=2 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv
             >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
@@ -111,7 +111,7 @@ commands:
       - run:
           name: start redis
           command: |
-            docker run --rm -d -p 6379:6379 redis
+            docker run --rm -d -p 6379:6379 redis --maxmemory 64mb
             echo "export REDIS_TEST_URL=127.0.01:6379" >> $BASH_ENV
       - run:
           name: Use nvm
