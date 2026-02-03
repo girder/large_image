@@ -8,7 +8,8 @@ from .eager_utils import eager_fn
 from .eager_utils.eager_shared_array import SharedArray
 from .eager_utils.eager_pytorch_threading_context import _PyTorchThreadingContext
 
-from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
+import multiprocessing
+from concurrent.futures import ALL_COMPLETED, wait
 
 import numpy as np
 from PIL import Image
@@ -246,7 +247,8 @@ class EagerIterator:
             random.shuffle(self.read_kwargs)
 
         # Setup the process pool after transform is registered
-        self.pool = ProcessPoolExecutor(max_workers=workers)
+        from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
+        self.pool = ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("fork"))
         self._initialize(batch, prefetch)
 
     def _setup_out_dims(self):
@@ -275,13 +277,13 @@ class EagerIterator:
 
     def _setup_out_dims_for_transform(self):
         test_data = np.zeros(self.out_dims[1:], dtype=self.dtype)
-        if 'albumentations.core.composition.Compose' in str(type(eager_fn._eager_iter_transform)):
-            test_out = eager_fn._eager_iter_transform(image=test_data)
+        if 'albumentations.core.composition.Compose' in str(type(self.transform)):
+            test_out = self.transform(image=test_data)
             self.dtype = test_out['image'].dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out['image'].shape))
             self.is_torch = False
-        elif 'torchvision.transforms' in str(type(eager_fn._eager_iter_transform)) or 'torchvision.transforms.v2' in str(type(eager_fn._eager_iter_transform)):
-            test_out = eager_fn._eager_iter_transform(test_data)
+        elif 'torchvision.transforms' in str(type(self.transform)) or 'torchvision.transforms.v2' in str(type(self.transform)):
+            test_out = self.transform(test_data)
             self.dtype = test_out.dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
             self.is_torch = True
@@ -319,7 +321,7 @@ class EagerIterator:
                 try:
                     test_x = int(-1)
                     test_y = int(-1)
-                    test_out = eager_fn._eager_iter_transform(test_data, test_x, test_y)
+                    test_out = self.transform(test_data, test_x, test_y)
                     if self.is_torch and not isinstance(test_out, torch.Tensor):
                         raise ValueError("Transform callable must return a torch.Tensor if torch is used in the transform")
                     elif not isinstance(test_out, np.ndarray):
