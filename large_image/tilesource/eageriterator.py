@@ -434,7 +434,7 @@ class EagerIterator:
         # last batch may only have partial size
         if self.pos == len(self.read_kwargs) and not len(self.queue):
             # Use resize_shm to adjust the shape of the shared memory to prevent issues if using pytorch tensors
-            tiles.resize_shm([len(batch_read_kwargs), tiles.shape[1], tiles.shape[2], tiles.shape[3]])
+            tiles.resize_shm([len(batch_read_kwargs), *tiles.shape[1:]])
 
         return self._tiles_and_read_kwargs_to_dict(tiles, batch_read_kwargs)
     
