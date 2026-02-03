@@ -619,7 +619,6 @@ class EagerIterator:
         # Don't change to target dtype until after transform
         if transform:
             if transform == _EAGER_FN_SENTINEL:
-                from .eager_utils import eager_fn
                 transform = eager_fn.get_transform()
                 if transform is None:
                     raise ValueError("Eager transform not set in eager_utils.eager_fn")
