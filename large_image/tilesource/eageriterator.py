@@ -12,6 +12,7 @@ from PIL import Image
 from .. import tilesource
 
 from .eager_utils.eager_image_modifications import pad_tile, pad_chunk_if_necessary, rgba2rgb
+from .eager_utils import eager_fn
 
 class EagerIterator:
     def __init__(
@@ -248,7 +249,9 @@ class EagerIterator:
         if self.transform is not None:
             if self.transform_save_mode is not None and self.transform_save_mode not in ['tile_x_y', 'region_x_y']:
                 raise ValueError("transform_save_mode must be either 'tile_x_y' or 'region_x_y'")
+            eager_fn._register('transform', self.transform)
             self._setup_out_dims_for_transform()
+            
     
         if self.nchw:
             self.out_dims = [self.out_dims[0], self.out_dims[3], self.out_dims[1], self.out_dims[2]]
@@ -256,19 +259,19 @@ class EagerIterator:
 
     def _setup_out_dims_for_transform(self):
         test_data = np.zeros(self.out_dims[1:], dtype=self.dtype)
-        if 'albumentations.core.composition.Compose' in str(type(self.transform)):
-            test_out = self.transform(image=test_data)
+        if 'albumentations.core.composition.Compose' in str(type(eager_fn.transform)):
+            test_out = eager_fn.transform(image=test_data)
             self.dtype = test_out['image'].dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out['image'].shape))
             self.is_torch = False
-        elif 'torchvision.transforms' in str(type(self.transform)) or 'torchvision.transforms.v2' in str(type(self.transform)):
-            test_out = self.transform(test_data)
+        elif 'torchvision.transforms' in str(type(eager_fn.transform)) or 'torchvision.transforms.v2' in str(type(eager_fn.transform)):
+            test_out = eager_fn.transform(test_data)
             self.dtype = test_out.dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
             self.is_torch = True
-        elif isinstance(self.transform, Callable):
+        elif isinstance(eager_fn.transform, Callable):
             # handle case if torch is used in the transform
-            if 'torch' in str(type(self.transform)):
+            if 'torch' in str(type(eager_fn.transform)):
                 try:
                     import torch
                     self.is_torch = True
@@ -279,14 +282,14 @@ class EagerIterator:
             
             # Check the signature of the transform
             import inspect
-            transform_signature = inspect.signature(self.transform)
+            transform_signature = inspect.signature(eager_fn.transform)
             transform_parameters = transform_signature.parameters
 
             if len(transform_parameters) == 0:
                 raise ValueError("Transform callable must have at least one parameter")
             elif len(transform_parameters) == 1:
                 try:
-                    test_out = self.transform(test_data)
+                    test_out = eager_fn.transform(test_data)
                     if not isinstance(test_out, np.ndarray) and not isinstance(test_out, torch.Tensor):
                         raise ValueError("Transform callable must return a numpy array or torch.Tensor")
                     self.dtype = test_out.dtype
@@ -300,7 +303,7 @@ class EagerIterator:
                 try:
                     test_x = int(-1)
                     test_y = int(-1)
-                    test_out = self.transform(test_data, test_x, test_y)
+                    test_out = eager_fn.transform(test_data, test_x, test_y)
                     if self.is_torch and not isinstance(test_out, torch.Tensor):
                         raise ValueError("Transform callable must return a torch.Tensor if torch is used in the transform")
                     elif not isinstance(test_out, np.ndarray):
@@ -651,7 +654,7 @@ class EagerIterator:
             self.output_mode,
             self.batch,
             self.slide_dimensions,
-            self.transform,
+            eager_fn.transform,
             self.pad_mode,
             self.pad_fill_mode,
             self.callable_arg_num,

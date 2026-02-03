@@ -244,18 +244,28 @@ def test_read(test_path, file_dir):
 
 def test_read_memory_tracking(test_path, file_dir):
     run_reproducible_performance_evaluation(test_path, n_runs=1, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=False, run_dataset=True, performance_type='read', track_memory=True)
-    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/without_cache", without_cache=True, run_eager=True, performance_type='read', track_memory=True)
-    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/with_cache_memory_tracking", without_cache=False, run_eager=True, performance_type='read', track_memory=True)
-    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
-    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/without_cache", without_cache=True, run_eager=True, performance_type='read', track_memory=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/with_cache_memory_tracking", without_cache=False, run_eager=True, performance_type='read', track_memory=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read', track_memory=True)
 
 
 def test_write(test_path):
+    def write_transform_test(image, x: int, y: int):
+        if x > -1 and y > -1:
+            plt.imsave(f"/scr/arosado/performance/write/eager/transform/images/image_{x}_{y}.png", image)
+            return image
+        else:
+            return image
+
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/default_test_eager", without_cache=False, run_eager=True, performance_type='write', transform =write_transform_test)
+
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/default", without_cache=False, run_eager=True, performance_type='write')
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/multiprocessing", without_cache=False, run_eager=True, performance_type='write_multiprocessing')
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/multiprocessing", without_cache=False, run_eager=True, performance_type='write_multiprocessing')
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/non_eager/default", without_cache=False, run_eager=False, run_non_eager=True, performance_type='write')
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/non_eager/multiprocessing", without_cache=False, run_eager=False, run_non_eager=True, performance_type='write_multiprocessing')
-    # # Make directory for images to be written to
+    # # # Make directory for images to be written to
     # os.makedirs("/scr/arosado/performance/write/eager/transform/images", exist_ok=True)
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/transform", without_cache=False, run_eager=True, performance_type='write_transform', transform=write_transform)
 
@@ -453,7 +463,7 @@ def test_tile_overlap(test_path):
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/125", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 125, 'y': 125})
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/150", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 150, 'y': 150})
     # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/175", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 175, 'y': 175})
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/200", without_cache=False, run_eager=True, chunk_mult=3, tile_overlap={'x': 200, 'y': 200})
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/tile_overlap/eager_chunk_mult_3/200", without_cache=False, run_eager=True, chunk_mult=10, tile_overlap={'x': 200, 'y': 200})
 
 
 def test_svs_mag_resolution(test_path):
@@ -584,7 +594,7 @@ def test_svs_with_pytorch_transform(test_path):
 
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_pytorch_transform", without_cache=False, run_eager=True, run_non_eager=True, performance_type='pytorch_transform', transform=transform)
 
-def test_svs_with_efficientnet(test_path):
+def test_svs_with_efficientnet(test_path, file_dir=None):
     transform = v2.Compose(
         [
             v2.Resize(224),
@@ -594,7 +604,20 @@ def test_svs_with_efficientnet(test_path):
     )
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/with_efficientnet", without_cache=False, run_eager=False, performance_type='inference_efficientnetb0', transform=transform)
 
-def test_svs_sobel(test_path):
+def test_svs_with_efficientnet_energy(test_path, file_dir=None):
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+    
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/efficientnet_energy/eager", without_cache=False, run_eager=True, performance_type='inference_efficientnetb0', transform=transform, track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/efficientnet_energy/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='inference_efficientnetb0', transform=transform, track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/efficientnet_energy/dataset", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='inference_efficientnetb0', transform=transform, track_energy=True)
+
+def test_svs_sobel(test_path, file_dir=None):
     transform = v2.Compose(
         [
             v2.Resize(224),
@@ -603,6 +626,27 @@ def test_svs_sobel(test_path):
         ]
     )
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/sobel", without_cache=False, run_eager=False, performance_type='inference_sobel', transform=transform)
+
+
+def test_svs_sobel_energy(test_path, file_dir=None):
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+    
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/eager/sobel_energy", without_cache=False, run_eager=True, performance_type='inference_sobel', transform=transform, track_energy=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/non_eager/sobel_energy", without_cache=False, run_eager=False, run_non_eager=True, performance_type='inference_sobel', transform=transform, track_energy=True)
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/dataset/sobel_energy", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='inference_sobel', transform=transform, track_energy=True)
+
+def test_svs_write_energy(test_path):
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_energy/eager/default", without_cache=False, run_eager=True, performance_type='write', track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_energy/eager/multiprocessing", without_cache=False, run_eager=True, performance_type='write_multiprocessing', track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_energy/non_eager/default", without_cache=False, run_eager=False, run_non_eager=True, performance_type='write', track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_energy/non_eager/multiprocessing", without_cache=False, run_eager=False, run_non_eager=True, performance_type='write_multiprocessing', track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write_energy/eager/transform", without_cache=False, run_eager=True, performance_type='write_transform', transform=write_transform, track_energy=True)
 
 def test_svs_uni2(test_path):
     transform = v2.Compose(
@@ -636,6 +680,155 @@ def test_svs_uni2(test_path):
         transform=transform_rescale
         )
 
+def test_svs_uni2_energy(test_path, file_dir=None):
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.Resize(size=(224, 224)),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/uni2_energy/eager", without_cache=False, run_eager=True, performance_type='inference_uni2', compile_model=True, transform=transform, track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/uni2_energy/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='inference_uni2', compile_model=True, transform=transform, track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/uni2_energy/dataset", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='inference_uni2', compile_model=True, transform=transform, track_energy=True)
+
+    transform_rescale = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+
+    run_reproducible_performance_evaluation(
+        test_path, 
+        n_runs=5, 
+        output_dir="/scr/arosado/performance/uni2_energy/eager_rescale", 
+        without_cache=False, 
+        run_eager=True, 
+        performance_type='inference_uni2', 
+        compile_model=True,
+        scale={'mm_x': 0.0005, 'mm_y': 0.0005},
+        tile_size={'width': 224, 'height': 224},
+        transform=transform_rescale,
+        track_energy=True
+        )
+
+    run_reproducible_performance_evaluation(
+        test_path, 
+        n_runs=5, 
+        output_dir="/scr/arosado/performance/uni2_energy/non_eager_rescale", 
+        without_cache=False, 
+        run_eager=False,
+        run_non_eager=True,
+        performance_type='inference_uni2', 
+        compile_model=True,
+        scale={'mm_x': 0.0005, 'mm_y': 0.0005},
+        tile_size={'width': 224, 'height': 224},
+        transform=transform_rescale,
+        track_energy=True
+        )
+
+def test_svs_uni_energy(test_path, file_dir=None):
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.Resize(size=(224, 224)),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/uni_energy/eager", without_cache=False, run_eager=True, performance_type='inference_uni', compile_model=True, transform=transform, track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/uni_energy/non_eager", without_cache=False, run_eager=False, run_non_eager=True, performance_type='inference_uni', compile_model=True, transform=transform, track_energy=True)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/uni_energy/dataset", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='inference_uni', compile_model=True, transform=transform, track_energy=True)
+
+    transform_rescale = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+
+    run_reproducible_performance_evaluation(
+        test_path, 
+        n_runs=5, 
+        output_dir="/scr/arosado/performance/uni_energy/eager_rescale", 
+        without_cache=False, 
+        run_eager=True, 
+        performance_type='inference_uni', 
+        compile_model=True,
+        scale={'mm_x': 0.0005, 'mm_y': 0.0005},
+        tile_size={'width': 224, 'height': 224},
+        transform=transform_rescale,
+        track_energy=True
+    )
+
+    run_reproducible_performance_evaluation(
+        test_path, 
+        n_runs=5, 
+        output_dir="/scr/arosado/performance/uni_energy/non_eager_rescale", 
+        without_cache=False, 
+        run_eager=False, 
+        run_non_eager=True, 
+        performance_type='inference_uni', 
+        compile_model=True,
+        scale={'mm_x': 0.0005, 'mm_y': 0.0005},
+        tile_size={'width': 224, 'height': 224},
+        transform=transform_rescale,
+        track_energy=True
+    )
+
+def test_svs_uni(test_path, file_dir=None):
+    transform = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.Resize(size=(224, 224)),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+    run_reproducible_performance_evaluation(test_path, n_runs=2, output_dir="/scr/arosado/performance/eager/with_uni", without_cache=False, run_eager=True, performance_type='inference_uni', compile_model=True, transform=transform)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/non_eager/with_uni", without_cache=False, run_eager=False, run_non_eager=True, performance_type='inference_uni', compile_model=True, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/dataset/with_uni", without_cache=False, run_eager=False, run_non_eager=False, run_dataset=True, performance_type='inference_uni', compile_model=True, transform=transform)
+
+    transform_rescale = v2.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
+
+    run_reproducible_performance_evaluation(
+        test_path, 
+        n_runs=5, 
+        output_dir="/scr/arosado/performance/eager/with_uni_rescale", 
+        without_cache=False, 
+        run_eager=True, 
+        performance_type='inference_uni', 
+        compile_model=True,
+        scale={'mm_x': 0.0005, 'mm_y': 0.0005},
+        tile_size={'width': 224, 'height': 224},
+        transform=transform_rescale
+    )
+
+    run_reproducible_performance_evaluation(
+        test_path, 
+        n_runs=5, 
+        output_dir="/scr/arosado/performance/non_eager/with_uni_rescale", 
+        without_cache=False, 
+        run_eager=False, 
+        run_non_eager=True, 
+        performance_type='inference_uni', 
+        compile_model=True,
+        scale={'mm_x': 0.0005, 'mm_y': 0.0005},
+        tile_size={'width': 224, 'height': 224},
+        transform=transform_rescale
+    )
+
+
 if __name__ == "__main__":
     test_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
     wsi_archive_test_path = '/wsi_archive/large_image/performance/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
@@ -666,12 +859,12 @@ if __name__ == "__main__":
     # run_performance_testing_on_directory(svs_dir, file_extensions=[".svs"], output_dir="/scr/arosado/performance/svs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # run_performance_testing_on_directory(mrxs_dir, file_extensions=[".mrxs"], output_dir="/scr/arosado/performance/mrxs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # run_performance_testing_on_directory(ndpi_dir, file_extensions=[".ndpi"], output_dir="/scr/arosado/performance/ndpi", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
-
+    pass
     # Test read performance
     # test_read(test_path, test_dir)
 
     # Test read memory tracking
-    test_read_memory_tracking(test_path, test_dir)
+    # test_read_memory_tracking(test_path, test_dir)
 
     # Test write performance
     # test_write(test_path)
@@ -702,6 +895,9 @@ if __name__ == "__main__":
 
     # Test performance with different tile overlaps
     # test_tile_overlap(test_path)
+
+    # Test performance with uni
+    # test_svs_uni(test_path, test_dir)
 
     # Test performance with different resolutions
     # test_svs_mag_resolution()
@@ -741,6 +937,21 @@ if __name__ == "__main__":
 
     # Test performance with albumentations transform
     # test_albumentations_transform(test_path)
+
+    # Test performance with sobel energy
+    # test_svs_sobel_energy(test_path, file_dir=test_dir)
+
+    # Test performance with efficientnet energy
+    # test_svs_with_efficientnet_energy(test_path, file_dir=test_dir)
+
+    # Test uni energy
+    # test_svs_uni_energy(test_path, file_dir=test_dir)
+
+    # Test uni2 energy
+    # test_svs_uni2_energy(test_path, file_dir=test_dir)
+
+    # Test write energy
+    test_write(test_path)
 
     # Test performance with sobel
     # test_svs_sobel(test_path)

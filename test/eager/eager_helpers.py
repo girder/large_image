@@ -20,8 +20,11 @@ from torch.nn.functional import pad
 from torchvision.transforms import v2
 from torchvision.io import ImageReadMode
 
+from zeus.monitor import ZeusMonitor
+
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb, padding
+from large_image.tilesource.eager_utils.eager_wsi_operations import calculate_slide_dimensions
 
 from test.eager.paper.pytorch_efficientnet import make_efficientnet_model
 from test.eager.paper.huggingface_uni2_model import make_huggingface_uni2_model, make_huggingface_uni_model
@@ -115,10 +118,7 @@ def calculate_batch_retreival_time(start_iterator_retreival_time: float, end_bat
         return end_batch_retreival_time - last_batch_retreival_time
 
 
-def perform_pytorch_dataset_inference(dataset: torch.utils.data.Dataset, model: torch.nn.Module, cuda_device: str = 'cuda:0', **kwargs):
-    from torch.utils.data import DataLoader
-    dataloader = DataLoader(dataset, batch_size=kwargs['batch'], shuffle=False)
-
+def perform_pytorch_dataset_inference(dataloader: torch.utils.data.DataLoader, model: torch.nn.Module, cuda_device: str = 'cuda:0', **kwargs):
     inference_times = []
     batch_retreival_times = []
 
@@ -189,7 +189,19 @@ def perform_non_eager_inference_with_pytorch_model(model: torch.nn.Module, tile_
     
     return batch_retreival_times, inference_times
 
-def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_memory: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
+def run_non_eager_performance_evaluation(
+    file_path: str,
+    without_cache: bool = False,
+    without_icc: bool = False,
+    with_tiff_source: bool = False, 
+    performance_type: str = 'read',
+    compile_model: bool = True, 
+    track_memory: bool = False, 
+    track_energy: bool = False,
+    output_dir: str = './performance', 
+    n_evaluation: int = 0,
+    *args, 
+    **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
@@ -201,12 +213,19 @@ def run_non_eager_performance_evaluation(file_path: str, without_cache: bool = F
             setup_time, process_time, batch_retreival_times, inference_times, write_times = run_non_eager_task_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, **kwargs)
             add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
+    if track_energy:
+        monitor = ZeusMonitor(gpu_indices=[0])
+        monitor.begin_window('performance_evaluation')
+
     if track_memory:
         import memray
         with memray.Tracker(os.path.join(output_dir, f'non_eager_{n_evaluation}.bin'), follow_fork=True, native_traces=True):
             run_non_eager_performance()
     else:
         run_non_eager_performance()
+
+    if track_energy:
+        performance_data = add_energy_data(monitor, performance_data)
 
     return performance_data
 
@@ -229,7 +248,15 @@ def perform_eager_inference_with_pytorch_model(model: torch.nn.Module, eager_ite
 
         return batch_retreival_times, inference_times
 
-def run_non_eager_task_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, output_dir: str = './performance', *args, **kwargs):
+def run_non_eager_task_performance_evaluation(
+    file_path: str, 
+    without_cache: bool = False, 
+    without_icc: bool = False, 
+    with_tiff_source: bool = False, 
+    performance_type: str = 'read', 
+    compile_model: bool = True, 
+    *args, 
+    **kwargs):
     clear_cache()
 
     batch_retreival_times = []
@@ -273,10 +300,13 @@ def run_non_eager_task_performance_evaluation(file_path: str, without_cache: boo
 
     tile_iterator = tile_source.tileIterator(**kwargs)
     setup_time = time.time() - start_time
+
+    count = 0
     
     start_iterator_retreival_time = time.time()
     if performance_type == 'read':
         for tile_dict in tile_iterator:
+            count += 1
             image = tile_dict['tile']
             end_batch_retreival_time = time.time()
             batch_retreival_time = calculate_batch_retreival_time(start_iterator_retreival_time, end_batch_retreival_time, batch_retreival_times)
@@ -349,6 +379,8 @@ def run_non_eager_task_performance_evaluation(file_path: str, without_cache: boo
         batch_retreival_times, inference_times = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
     elif performance_type == 'inference_uni2':
         batch_retreival_times, inference_times = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
+    elif performance_type == 'inference_uni':
+        batch_retreival_times, inference_times = perform_non_eager_inference_with_pytorch_model(model, tile_iterator, **kwargs)
 
     process_time = time.time() - start_time
 
@@ -400,11 +432,13 @@ def run_dataset_task_performance_evaluation(file_path: str, file_dir: str, perfo
             end_batch_retreival_time = time.time()
             batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
     elif performance_type == 'inference_sobel':
-        batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataset, model, **kwargs)
+        batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataloader, model, **kwargs)
     elif performance_type == 'inference_efficientnetb0':
-        batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataset, model, **kwargs)
+        batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataloader, model, **kwargs)
     elif performance_type == 'inference_uni2':
-        batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataset, model, **kwargs)
+        batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataloader, model, **kwargs)
+    elif performance_type == 'inference_uni':
+        batch_retreival_times, inference_times = perform_pytorch_dataset_inference(dataloader, model, **kwargs)
 
     performance_time = time.time() - start_time
 
@@ -440,6 +474,9 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
         os.makedirs(write_directory, exist_ok=True)
     elif performance_type == 'write_multiprocessing':
         write_directory = "/scr/arosado/performance/write/eager/multiprocessing/images"
+        os.makedirs(write_directory, exist_ok=True)
+    elif performance_type == 'write_transform':
+        write_directory = "/scr/arosado/performance/write/eager/transform/images"
         os.makedirs(write_directory, exist_ok=True)
     
     # Set tiff source if needed
@@ -523,6 +560,8 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
         batch_retreival_times, inference_times = perform_eager_inference_with_pytorch_model(model, eager_iter)
     elif performance_type == 'inference_uni2':
         batch_retreival_times, inference_times = perform_eager_inference_with_pytorch_model(model, eager_iter)        
+    elif performance_type == 'inference_uni':
+        batch_retreival_times, inference_times = perform_eager_inference_with_pytorch_model(model, eager_iter)
 
     performance_time = time.time() - start_time
 
@@ -532,8 +571,19 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
 
     return setup_time, performance_time, batch_retreival_times, inference_times, write_times
 
+def add_energy_data(monitor: ZeusMonitor, performance_data: dict):
+    energy_data = monitor.end_window('performance_evaluation')
+    performance_data['energy_data'] = {
+        'cpu_energy': energy_data.cpu_energy,
+        'gpu_energy': energy_data.gpu_energy,
+        'dram_energy': energy_data.dram_energy,
+        'time': energy_data.time
+    }
 
-def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
+    return performance_data
+
+
+def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, track_energy: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
     performance_data = {}
     add_default_wsi_dimensions(performance_data, file_path)
 
@@ -547,6 +597,11 @@ def run_eager_performance_evaluation(file_path: str, without_cache: bool = False
             setup_time, process_time, batch_retreival_times, inference_times, write_times = run_eager_task_performance_evaluation(file_path, False, without_icc, with_tiff_source, performance_type, compile_model, **kwargs)
             add_performance_data(performance_data, performance_data['file_dimensions'], 'with_cache', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
+    if track_energy:
+        monitor = ZeusMonitor(gpu_indices=[0])
+
+        monitor.begin_window('performance_evaluation')
+
     if track_class_memory:
         import memray
         with memray.Tracker(os.path.join(output_dir, f'eager_{n_evaluation}.bin'), follow_fork=True, native_traces=True):
@@ -554,9 +609,12 @@ def run_eager_performance_evaluation(file_path: str, without_cache: bool = False
     else:
         run_eager_performance()
 
+    if track_energy:
+        performance_data = add_energy_data(monitor, performance_data)
+
     return performance_data
 
-def run_dataset_performance_evaluation(file_path: str, file_dir: str, performance_type: str = 'read', compile_model: bool = True, track_memory: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
+def run_dataset_performance_evaluation(file_path: str, file_dir: str, performance_type: str = 'read', compile_model: bool = True, track_memory: bool = False, track_energy: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
     performance_data = {}
 
     def run_dataset_performance():
@@ -566,6 +624,10 @@ def run_dataset_performance_evaluation(file_path: str, file_dir: str, performanc
         setup_time, process_time, batch_retreival_times, inference_times, write_times = run_dataset_task_performance_evaluation(file_path, file_dir, performance_type, compile_model, track_memory, output_dir, **kwargs)
         add_performance_data(performance_data, performance_data['file_dimensions'], 'pytorch_dataset', setup_time, process_time, batch_retreival_times, inference_times, write_times)
 
+    if track_energy:
+        monitor = ZeusMonitor(gpu_indices=[0])
+        monitor.begin_window('performance_evaluation')
+
     if track_memory:
         import memray
         memray.dump_all_records()
@@ -574,10 +636,13 @@ def run_dataset_performance_evaluation(file_path: str, file_dir: str, performanc
     else:
         run_dataset_performance()
 
+    if track_energy:
+        performance_data = add_energy_data(monitor, performance_data)
+
     return performance_data
 
 
-def add_default_wsi_dimensions(performance_data: dict, file_path: str):
+def add_default_wsi_dimensions(performance_data: dict, file_path: str, **kwargs):
     # Get the size of the image
     source = large_image.open(file_path)
     target_dimensions = {}
@@ -592,6 +657,8 @@ def add_default_wsi_dimensions(performance_data: dict, file_path: str):
     target_dimensions['band_count'] = source.getMetadata()['bandCount']
 
     performance_data['file_dimensions'] = target_dimensions.copy()
+
+    performance_data['slide_dimensions'] = calculate_slide_dimensions(source, **kwargs)
 
     del source
 
@@ -620,6 +687,11 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         run_write_times_without_cache = []
         run_pytorch_dataset_write_times = []
 
+        run_cpu_energy = {}
+        run_gpu_energy = {}
+        run_dram_energy = {}
+        run_energy_times = []
+
         aggregated_inference_times_with_cache = np.array([])
         aggregated_inference_times_without_cache = np.array([])
         aggregated_batch_retreival_times_with_cache = np.array([])
@@ -629,6 +701,10 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         aggregated_pytorch_dataset_inference_times = np.array([])
         aggregated_pytorch_dataset_batch_retreival_times = np.array([])
         aggregated_pytorch_dataset_write_times = np.array([])
+        aggregated_cpu_energies = {}
+        aggregated_gpu_energies = {}
+        aggregated_dram_energies = {}
+        aggregated_energy_times = np.array([])
 
         f.attrs['tile_width'] = runs[0]['file_dimensions']['tile_width']
         f.attrs['tile_height'] = runs[0]['file_dimensions']['tile_height']
@@ -637,11 +713,47 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         f.attrs['magnification'] = runs[0]['file_dimensions']['magnification']
         f.attrs['levels'] = runs[0]['file_dimensions']['levels']
         f.attrs['band_count'] = runs[0]['file_dimensions']['band_count']
+        
+        for key in runs[0]['slide_dimensions']:
+            f.attrs[f'slide_dimensions_{key}'] = runs[0]['slide_dimensions'][key]
 
         output_data = {}
 
         # aggregate runs
         for run in runs:
+            if 'energy_data' in run:
+                if 'cpu_energy' in run['energy_data']:
+                    for n in run['energy_data']['cpu_energy']:
+                        if n not in run_cpu_energy:
+                            run_cpu_energy[n] = []
+                            aggregated_cpu_energies[n] = np.array([run['energy_data']['cpu_energy'][n]])
+                        else:
+                            aggregated_cpu_energies[n] = np.concatenate([aggregated_cpu_energies[n], np.array([run['energy_data']['cpu_energy'][n]])])
+                        run_cpu_energy[n].append(run['energy_data']['cpu_energy'][n])
+                if 'gpu_energy' in run['energy_data']:
+                    for n in range(len(run['energy_data']['gpu_energy'])):
+                        if n not in run_gpu_energy:
+                            run_gpu_energy[n] = []
+                            aggregated_gpu_energies[n] = np.array([run['energy_data']['gpu_energy'][n]])
+                        else:
+                            aggregated_gpu_energies[n] = np.concatenate([aggregated_gpu_energies[n], np.array([run['energy_data']['gpu_energy'][n]])])
+                        run_gpu_energy[n].append(run['energy_data']['gpu_energy'][n])
+                if 'dram_energy' in run['energy_data']:
+                    for n in range(len(run['energy_data']['dram_energy'])):
+                        if n not in run_dram_energy:
+                            run_dram_energy[n] = []
+                            aggregated_dram_energies[n] = np.array([run['energy_data']['dram_energy'][n]])
+                        else:
+                            aggregated_dram_energies[n] = np.concatenate([aggregated_dram_energies[n], np.array([run['energy_data']['dram_energy'][n]])])
+                        run_dram_energy[n].append(run['energy_data']['dram_energy'][n])
+                        
+                if 'time' in run['energy_data']:
+                    run_energy_times.append(run['energy_data']['time'])
+                    if aggregated_energy_times.shape[0] == 0:
+                        aggregated_energy_times = np.array([run['energy_data']['time']])
+                    else:
+                        aggregated_energy_times = np.concatenate([aggregated_energy_times, np.array([run['energy_data']['time']])])
+
             if 'pytorch_dataset' in run:
                 setup_times_pytorch_dataset.append(run['pytorch_dataset']['setup_time'])
                 process_times_pytorch_dataset.append(run['pytorch_dataset']['process_time'])
@@ -732,6 +844,26 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         if len(run_pytorch_dataset_write_times) > 0:
             output_data['run_pytorch_dataset_write_times'] = run_pytorch_dataset_write_times
             output_data['aggregated_pytorch_dataset_write_times'] = aggregated_pytorch_dataset_write_times
+        if len(run_cpu_energy[0]) > 0:
+            for key in run_cpu_energy:
+                run_cpu_energy[key] = np.array(run_cpu_energy[key])
+                output_data[f'run_cpu_energy_{key}'] = [run_cpu_energy[key]]
+                output_data[f'aggregated_cpu_energy_{key}'] = aggregated_cpu_energies[key]
+        if len(run_gpu_energy[0]) > 0:
+            for key in run_gpu_energy:
+                run_gpu_energy[key] = np.array(run_gpu_energy[key])
+                output_data[f'run_gpu_energy_{key}'] = [run_gpu_energy[key]]
+                output_data[f'aggregated_gpu_energy_{key}'] = aggregated_gpu_energies[key]
+        if len(run_dram_energy[0]) > 0:
+            for key in run_dram_energy:
+                run_dram_energy[key] = np.array(run_dram_energy[key])
+                output_data[f'run_dram_energy_{key}'] = [run_dram_energy[key]]
+                output_data[f'aggregated_dram_energy_{key}'] = aggregated_dram_energies[key]
+        if len(run_energy_times) > 0:
+            run_energy_times = np.array(run_energy_times)
+            output_data['run_energy_times'] = [run_energy_times]
+            output_data['aggregated_energy_times'] = aggregated_energy_times
+        
 
         for key in output_data:
             split_key = key.split('_')
@@ -785,7 +917,22 @@ def add_performance_data(performance_data: dict, target_dimensions: dict, perfor
 
     performance_data[performance_type] = performance_entry
 
-def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, file_dir: Optional[str] = None, track_memory: bool = False, output_dir: str = "./performance", without_cache: bool = False, run_eager: bool = False, run_non_eager: bool = False, run_dataset: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = False, **kwargs):
+def run_reproducible_performance_evaluation(
+    file_path: str, 
+    n_runs: int = 3, 
+    file_dir: Optional[str] = None, 
+    track_memory: bool = False,
+    track_energy: bool = False,
+    output_dir: str = "./performance", 
+    without_cache: bool = False, 
+    run_eager: bool = False, 
+    run_non_eager: bool = False, 
+    run_dataset: bool = False, 
+    without_icc: bool = False, 
+    with_tiff_source: bool = False, 
+    performance_type: str = 'read', 
+    compile_model: bool = False, 
+    **kwargs):
     print("Running reproducible performance evaluation with output directory: ", output_dir)
     eager_runs = []
     non_eager_runs = []
@@ -807,19 +954,19 @@ def run_reproducible_performance_evaluation(file_path: str, n_runs: int = 3, fil
             raise ValueError("file_dir is required when running dataset performance evaluation")
         for i in range(n_runs):
             print(f"Running dataset performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_dataset_performance_evaluation(file_path, file_dir, performance_type, compile_model, track_memory, output_dir, i, **kwargs)
+            performance_data = run_dataset_performance_evaluation(file_path, file_dir, performance_type, compile_model, track_memory, track_energy, output_dir, i, **kwargs)
             dataset_runs.append(performance_data)
 
     if run_eager:
         for i in range(n_runs):
             print(f"Running eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, i, **kwargs)
+            performance_data = run_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, track_memory, track_energy, output_dir, i, **kwargs)
             eager_runs.append(performance_data)
 
     if run_non_eager:
         for i in range(n_runs):
             print(f"Running non-eager performance evaluation {i+1} of {n_runs} with kwargs: {kwargs}")
-            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, track_memory, output_dir, i, **kwargs)
+            performance_data = run_non_eager_performance_evaluation(file_path, without_cache, without_icc, with_tiff_source, performance_type, compile_model, track_memory, track_energy, output_dir, i, **kwargs)
             non_eager_runs.append(performance_data)
     
     eager_runs = aggregate_runs(eager_runs, eager_output_file_path)
@@ -851,7 +998,7 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                 file_size = os.path.getsize(file_path)
                 base_filename = os.path.basename(file_path)
 
-                if file_ext in [".ndpi", ".mrxs"]:
+                if file_ext in [".mrxs", ".ndpi"]:
                     with_tiff_source = False
                 else:
                     with_tiff_source = True
@@ -860,9 +1007,11 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                 eager_sobel_output_path = os.path.join(output_dir, f'{base_filename}_eager_performance_sobel.h5')
                 eager_efficientnetb0_output_path = os.path.join(output_dir, f'{base_filename}_eager_performance_efficientnetb0.h5')
                 eager_uni2_output_path = os.path.join(output_dir, f'{base_filename}_eager_performance_uni2.h5')
+                eager_uni_output_path = os.path.join(output_dir, f'{base_filename}_eager_performance_uni.h5')
                 non_eager_sobel_output_path = os.path.join(output_dir, f'{base_filename}_non_eager_performance_sobel.h5')
                 non_eager_efficientnetb0_output_path = os.path.join(output_dir, f'{base_filename}_non_eager_performance_efficientnetb0.h5')
                 non_eager_uni2_output_path = os.path.join(output_dir, f'{base_filename}_non_eager_performance_uni2.h5')
+                non_eager_uni_output_path = os.path.join(output_dir, f'{base_filename}_non_eager_performance_uni.h5')
 
                 if os.path.exists(eager_sobel_output_path):
                     skip_eager_sobel = True
@@ -876,6 +1025,11 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                     skip_eager_uni2 = True
                 else:
                     skip_eager_uni2 = False
+                if os.path.exists(eager_uni_output_path):
+                    skip_eager_uni = True
+                else:
+                    skip_eager_uni = False
+                
                 if os.path.exists(non_eager_sobel_output_path):
                     skip_non_eager_sobel = True
                 else:
@@ -888,8 +1042,14 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                     skip_non_eager_uni2 = True
                 else:
                     skip_non_eager_uni2 = False
+                if os.path.exists(non_eager_uni_output_path):
+                    skip_non_eager_uni = True
+                else:
+                    skip_non_eager_uni = False
 
-                if skip_eager_sobel and skip_eager_efficientnetb0 and skip_eager_uni2 and skip_non_eager_sobel and skip_non_eager_efficientnetb0 and skip_non_eager_uni2:
+                print("Starting performance evaluation for file: ", file_path)
+
+                if skip_eager_sobel and skip_eager_efficientnetb0 and skip_eager_uni2 and skip_non_eager_sobel and skip_non_eager_efficientnetb0 and skip_non_eager_uni2 and skip_eager_uni and skip_non_eager_uni:
                     print(f"Skipping performance evaluation for file: {file_path} because output files already exist")
                     continue
                 
@@ -897,15 +1057,19 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                 eager_performance_sobel = []
                 eager_performance_efficientnetb0 = []
                 eager_performance_uni2 = []
+                eager_performance_uni = []
 
                 non_eager_performance_sobel = []
                 non_eager_performance_efficientnetb0 = []
                 non_eager_performance_uni2 = []
+                non_eager_performance_uni = []
 
-                print("Starting performance evaluation for file: ", file_path)
+                
+
+                pass
 
                 # Run performance evaluation for each run
-                for n in range(n_runs):                    
+                # for n in range(n_runs):                    
                     # Do every type of inference for eager and non-eager
                     # if not skip_eager_sobel:
                     #     print(f"Running eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
@@ -913,33 +1077,43 @@ def run_performance_testing_on_directory(directory: str, file_extensions: list[s
                     # if not skip_eager_efficientnetb0:
                     #     print(f"Running eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
                     #     eager_performance_efficientnetb0.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', track_class_memory=track_class_memory, output_dir=output_dir, **kwargs))
-                    if not skip_eager_uni2:
-                        print(f"Running eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        eager_performance_uni2.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', track_class_memory=track_class_memory, output_dir=output_dir, **kwargs))
+                    # if not skip_eager_uni2:
+                    #     print(f"Running eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     eager_performance_uni2.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', track_class_memory=track_class_memory, output_dir=output_dir, **kwargs))
+                    # if not skip_eager_uni:
+                    #     print(f"Running eager performance evaluation {'inference_uni'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     eager_performance_uni.append(run_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni', track_class_memory=track_class_memory, output_dir=output_dir, **kwargs))
                     # if not skip_non_eager_sobel:
                     #     print(f"Running non-eager performance evaluation {'inference_sobel'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
                     #     non_eager_performance_sobel.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_sobel', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
                     # if not skip_non_eager_efficientnetb0:
                     #     print(f"Running non-eager performance evaluation {'inference_efficientnetb0'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
                     #     non_eager_performance_efficientnetb0.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_efficientnetb0', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
-                    if not skip_non_eager_uni2:
-                        print(f"Running non-eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
-                        non_eager_performance_uni2.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
+                    # if not skip_non_eager_uni2:
+                    #     print(f"Running non-eager performance evaluation {'inference_uni2'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     non_eager_performance_uni2.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni2', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
+                    # if not skip_non_eager_uni:
+                    #     print(f"Running non-eager performance evaluation {'inference_uni'} {n+1} of {n_runs} for {file_path} with kwargs: {kwargs}")
+                    #     non_eager_performance_uni.append(run_non_eager_performance_evaluation(file_path, without_cache=False, without_icc=False, with_tiff_source=with_tiff_source, performance_type='inference_uni', track_memory=track_class_memory, output_dir=output_dir, **kwargs))
 
                 # Aggregate performance runs
-                if not skip_eager_sobel:
-                    aggregate_runs(eager_performance_sobel, eager_sobel_output_path)
-                if not skip_eager_efficientnetb0:
-                    aggregate_runs(eager_performance_efficientnetb0, eager_efficientnetb0_output_path)
-                if not skip_eager_uni2:
-                    aggregate_runs(eager_performance_uni2, eager_uni2_output_path)
+                # if not skip_eager_sobel:
+                #     aggregate_runs(eager_performance_sobel, eager_sobel_output_path)
+                # if not skip_eager_efficientnetb0:
+                #     aggregate_runs(eager_performance_efficientnetb0, eager_efficientnetb0_output_path)
+                # if not skip_eager_uni2:
+                #     aggregate_runs(eager_performance_uni2, eager_uni2_output_path)
+                # if not skip_eager_uni:
+                #     aggregate_runs(eager_performance_uni, eager_uni_output_path)
 
-                if not skip_non_eager_sobel:
-                    aggregate_runs(non_eager_performance_sobel, non_eager_sobel_output_path)
-                if not skip_non_eager_efficientnetb0:
-                    aggregate_runs(non_eager_performance_efficientnetb0, non_eager_efficientnetb0_output_path)
-                if not skip_non_eager_uni2:
-                    aggregate_runs(non_eager_performance_uni2, non_eager_uni2_output_path)
+                # if not skip_non_eager_sobel:
+                #     aggregate_runs(non_eager_performance_sobel, non_eager_sobel_output_path)
+                # if not skip_non_eager_efficientnetb0:
+                #     aggregate_runs(non_eager_performance_efficientnetb0, non_eager_efficientnetb0_output_path)
+                # if not skip_non_eager_uni2:
+                #     aggregate_runs(non_eager_performance_uni2, non_eager_uni2_output_path)
+                # if not skip_non_eager_uni:
+                #     aggregate_runs(non_eager_performance_uni, non_eager_uni_output_path)
 
                 print(f"Finished performance evaluation for file: {file_path}")
                     
