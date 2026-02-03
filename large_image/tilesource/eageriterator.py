@@ -2,17 +2,18 @@ import math, os, random, time
 from typing import Optional, Tuple, Union, Callable, Dict, Any
 import logging
 from collections import deque
-from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
+
+from .eager_utils.eager_image_modifications import pad_tile, pad_chunk_if_necessary, rgba2rgb
+from .eager_utils import eager_fn
 from .eager_utils.eager_shared_array import SharedArray
 from .eager_utils.eager_pytorch_threading_context import _PyTorchThreadingContext
+
+from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
 
 import numpy as np
 from PIL import Image
 
 from .. import tilesource
-
-from .eager_utils.eager_image_modifications import pad_tile, pad_chunk_if_necessary, rgba2rgb
-from .eager_utils import eager_fn
 
 class EagerIterator:
     def __init__(
