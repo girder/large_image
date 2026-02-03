@@ -251,12 +251,24 @@ def test_read_memory_tracking(test_path, file_dir):
 
 
 def test_write(test_path):
-    def write_transform_test(image, x: int, y: int):
-        if x > -1 and y > -1:
-            plt.imsave(f"/scr/arosado/performance/write/eager/transform/images/image_{x}_{y}.png", image)
-            return image
-        else:
-            return image
+    test_param = {
+        '0': 0.5,
+        '1': 0.5,
+        '2': 0.5
+    }
+
+    def write_transform_test(image):
+        # if x > -1 and y > -1:
+        #     plt.imsave(f"/scr/arosado/performance/write/eager/transform/images/image_{x}_{y}.png", image)
+        #     return image
+        # else:
+        #     return image
+        def print_write_statement():
+            print(f"Write...{test_param['0']}_{test_param['1']}_{test_param['2']}")
+
+        print_write_statement()
+
+        return image
 
 
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/default_test_eager", without_cache=False, run_eager=True, performance_type='write', transform =write_transform_test)

@@ -297,7 +297,7 @@ class EagerIterator:
                     self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
                     self.callable_arg_num = 1
                 except Exception:
-                    raise ValueError("Transform callable must have at least one parameter")
+                    raise ValueError("Transform callable must have at least one parameter and return a numpy array or torch.Tensor")
             elif len(transform_parameters) == 2:
                 raise ValueError("Transform callable must have one or three parameters")
             elif len(transform_parameters) == 3:
