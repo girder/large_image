@@ -170,7 +170,6 @@ class EagerIterator:
         self.dtype = dtype
         self.nchw = nchw
         self.edge = edge
-        self.pool = ProcessPoolExecutor(max_workers=workers)
         self.batch = batch
         self.output_mode = output_mode
         self.scale = scale
@@ -241,6 +240,8 @@ class EagerIterator:
             random.seed(seed)
             random.shuffle(self.read_kwargs)
 
+        # Setup the process pool after transform is registered
+        self.pool = ProcessPoolExecutor(max_workers=workers)
         self._initialize(batch, prefetch)
 
     def _setup_out_dims(self):
