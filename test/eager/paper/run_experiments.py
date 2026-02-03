@@ -257,18 +257,18 @@ def test_write(test_path):
         '2': 0.5
     }
 
-    def write_transform_test(image):
-        # if x > -1 and y > -1:
-        #     plt.imsave(f"/scr/arosado/performance/write/eager/transform/images/image_{x}_{y}.png", image)
-        #     return image
-        # else:
-        #     return image
-        def print_write_statement():
-            print(f"Write...{test_param['0']}_{test_param['1']}_{test_param['2']}")
+    def write_transform_test(image, x, y):
+        if x > -1 and y > -1:
+            plt.imsave(f"/scr/arosado/performance/write/eager/transform/images/image_{x}_{y}.png", image)
+            return image
+        else:
+            return image
+        # def print_write_statement():
+        #     print(f"Write...{test_param['0']}_{test_param['1']}_{test_param['2']}")
 
-        print_write_statement()
+        # print_write_statement()
 
-        return image
+        # return image
 
 
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/write/eager/default_test_eager", without_cache=False, run_eager=True, performance_type='write', transform =write_transform_test)

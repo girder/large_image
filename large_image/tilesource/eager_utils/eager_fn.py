@@ -1,6 +1,16 @@
-import sys
+"""
+Module for sharing a transform across eager iterator worker processes.
+"""
 
-def _register(name, fn):
-    fn.__module__ = __name__
-    fn.__qualname__ = name
-    setattr(sys.modules[__name__], name, fn)
+from typing import Callable, Optional
+
+_eager_iter_transform: Optional[Callable] = None
+
+
+def set_transform(fn: Callable) -> None:
+    global _eager_iter_transform
+    _eager_iter_transform = fn
+
+
+def get_transform() -> Optional[Callable]:
+    return _eager_iter_transform

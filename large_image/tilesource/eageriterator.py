@@ -1,4 +1,4 @@
-import math, os, random, time
+import math, os, random, time, pickle
 from typing import Optional, Tuple, Union, Callable, Dict, Any
 import logging
 from collections import deque
@@ -14,6 +14,8 @@ import numpy as np
 from PIL import Image
 
 from .. import tilesource
+
+_EAGER_FN_SENTINEL = "__large_image_eager_fn__"
 
 class EagerIterator:
     def __init__(
@@ -184,6 +186,7 @@ class EagerIterator:
         self.callable_arg_num = None
         self.transform = transform
         self.transform_save_mode = transform_save_mode
+        self._worker_transform = None
 
         # Use the mask to determine the tiles if in tile mode
         if output_mode == 'tiles':
@@ -225,6 +228,7 @@ class EagerIterator:
 
         # Determine if the output changes based on the transform
         self._setup_out_dims()
+        self._worker_transform = self._prepare_worker_transform(self.transform)
 
         n_possible_tiles = self.slide_dimensions['tile_target_range_x'] * self.slide_dimensions['tile_target_range_y']
 
@@ -251,29 +255,39 @@ class EagerIterator:
         if self.transform is not None:
             if self.transform_save_mode is not None and self.transform_save_mode not in ['tile_x_y', 'region_x_y']:
                 raise ValueError("transform_save_mode must be either 'tile_x_y' or 'region_x_y'")
-            eager_fn._register('transform', self.transform)
             self._setup_out_dims_for_transform()
             
     
         if self.nchw:
             self.out_dims = [self.out_dims[0], self.out_dims[3], self.out_dims[1], self.out_dims[2]]
 
+    def _prepare_worker_transform(self, transform: Optional[Callable]):
+        if transform is None:
+            return None
+        try:
+            pickle.dumps(transform)
+            return transform
+        except Exception:
+            from .eager_utils import eager_fn
+            eager_fn.set_transform(transform)
+            return _EAGER_FN_SENTINEL
+
 
     def _setup_out_dims_for_transform(self):
         test_data = np.zeros(self.out_dims[1:], dtype=self.dtype)
-        if 'albumentations.core.composition.Compose' in str(type(eager_fn.transform)):
-            test_out = eager_fn.transform(image=test_data)
+        if 'albumentations.core.composition.Compose' in str(type(eager_fn._eager_iter_transform)):
+            test_out = eager_fn._eager_iter_transform(image=test_data)
             self.dtype = test_out['image'].dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out['image'].shape))
             self.is_torch = False
-        elif 'torchvision.transforms' in str(type(eager_fn.transform)) or 'torchvision.transforms.v2' in str(type(eager_fn.transform)):
-            test_out = eager_fn.transform(test_data)
+        elif 'torchvision.transforms' in str(type(eager_fn._eager_iter_transform)) or 'torchvision.transforms.v2' in str(type(eager_fn._eager_iter_transform)):
+            test_out = eager_fn._eager_iter_transform(test_data)
             self.dtype = test_out.dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
             self.is_torch = True
-        elif isinstance(eager_fn.transform, Callable):
+        elif isinstance(self.transform, Callable):
             # handle case if torch is used in the transform
-            if 'torch' in str(type(eager_fn.transform)):
+            if 'torch' in str(type(self.transform)):
                 try:
                     import torch
                     self.is_torch = True
@@ -284,14 +298,14 @@ class EagerIterator:
             
             # Check the signature of the transform
             import inspect
-            transform_signature = inspect.signature(eager_fn.transform)
+            transform_signature = inspect.signature(self.transform)
             transform_parameters = transform_signature.parameters
 
             if len(transform_parameters) == 0:
                 raise ValueError("Transform callable must have at least one parameter")
             elif len(transform_parameters) == 1:
                 try:
-                    test_out = eager_fn.transform(test_data)
+                    test_out = self.transform(test_data)
                     if not isinstance(test_out, np.ndarray) and not isinstance(test_out, torch.Tensor):
                         raise ValueError("Transform callable must return a numpy array or torch.Tensor")
                     self.dtype = test_out.dtype
@@ -305,7 +319,7 @@ class EagerIterator:
                 try:
                     test_x = int(-1)
                     test_y = int(-1)
-                    test_out = eager_fn.transform(test_data, test_x, test_y)
+                    test_out = eager_fn._eager_iter_transform(test_data, test_x, test_y)
                     if self.is_torch and not isinstance(test_out, torch.Tensor):
                         raise ValueError("Transform callable must return a torch.Tensor if torch is used in the transform")
                     elif not isinstance(test_out, np.ndarray):
@@ -602,6 +616,11 @@ class EagerIterator:
 
         # Don't change to target dtype until after transform
         if transform:
+            if transform == _EAGER_FN_SENTINEL:
+                from .eager_utils import eager_fn
+                transform = eager_fn.get_transform()
+                if transform is None:
+                    raise ValueError("Eager transform not set in eager_utils.eager_fn")
             if 'albumentations.core.composition.Compose' in str(type(transform)):
                 tiles = [
                     transform(image=tile)['image'].astype(dtype)
@@ -656,7 +675,7 @@ class EagerIterator:
             self.output_mode,
             self.batch,
             self.slide_dimensions,
-            eager_fn.transform,
+            self._worker_transform,
             self.pad_mode,
             self.pad_fill_mode,
             self.callable_arg_num,
