@@ -139,7 +139,8 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | b
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/make-fetch-happen && \
     npm install 'http-cache-semantics@^4.1.1' && \
     # We can't actually upgrade tar past 6.x \
-    sed -i 's/4\.4\.19/*/g' /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/tar/package.json && \
+    sed -i 's/4\.4\.19/8.0.0/g' /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/tar/package.json && \
+    sed -i 's/6\.14\.18/12.0.0/g' /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/package.json && \
     true; else \
     npm install -g npm@latest && \
     true; fi && \
