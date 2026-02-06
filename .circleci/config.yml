@@ -367,6 +367,13 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
+      - testdocker-lts:
+          filters:
+            branches:
+              only:
+                - master
+                # Create a branch of this name to push to docker hub
+                - testdocker
       - py310:
           filters:
             tags:
