@@ -44,7 +44,7 @@ def _dfFromFile(fileid, full=False):
     file = File().load(fileid, force=True)
     ext = os.path.splitext(file['name'])[1]
     reader = dataFileExtReaders.get(
-        ext, dataFileExtReaders.get(file.get('mimeType'), None))
+        ext, dataFileExtReaders.get(file.get('mimeType')))
     if reader == 'read_excel':
         params = {
             'sheet_name': None,

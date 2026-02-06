@@ -14,10 +14,11 @@ try:
 except ImportError:  # pragma: no cover
     pytest.skip(reason='Requires ipyleaflet, tornado, IPython', allow_module_level=True)
 
+TEST_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 def testJupyterIpyleafletGeospatial():
-    testDir = os.path.dirname(os.path.realpath(__file__))
-    imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+    imagePath = os.path.join(TEST_DIR, 'test_files', 'rgb_geotiff.tiff')
     source = large_image.open(imagePath, projection='EPSG:3857', noCache=True)
     assert source.geospatial
     assert source.projection
@@ -30,8 +31,7 @@ def testJupyterIpyleafletGeospatial():
 
 @pytest.mark.asyncio
 async def testJupyterIpyleafletMultiFrame():
-    testDir = os.path.dirname(os.path.realpath(__file__))
-    imagePath = os.path.join(testDir, 'test_files', 'multi_channels.yml')
+    imagePath = os.path.join(TEST_DIR, 'test_files', 'multi_channels.yml')
     source = large_image.open(imagePath, projection='EPSG:3857', noCache=True)
     assert source.frames
 
@@ -74,8 +74,7 @@ async def testJupyterIpyleafletMultiFrame():
 
 @pytest.mark.asyncio
 async def testJupyterIpyleaflet():
-    testDir = os.path.dirname(os.path.realpath(__file__))
-    imagePath = os.path.join(testDir, 'test_files', 'test_orient0.tif')
+    imagePath = os.path.join(TEST_DIR, 'test_files', 'test_orient0.tif')
     source = large_image.open(imagePath, noCache=True)
     source._ipython_display_()  # smoke test
     port = source._jupyter_server_manager.port
@@ -95,8 +94,7 @@ async def testJupyterIpyleaflet():
 def testJupyterIpyleafletMapRegion():
     from ipyleaflet import GeomanDrawControl
 
-    testDir = os.path.dirname(os.path.realpath(__file__))
-    imagePath = os.path.join(testDir, 'test_files', 'test_orient0.tif')
+    imagePath = os.path.join(TEST_DIR, 'test_files', 'test_orient0.tif')
     source = large_image.open(imagePath, noCache=True)
     display = source._map.make_map(
         source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326'),
@@ -131,8 +129,7 @@ def testJupyterIpyleafletMapRegion():
 def testJupyterIpyleafletMapGeospatialRegion():
     from ipyleaflet import GeomanDrawControl
 
-    testDir = os.path.dirname(os.path.realpath(__file__))
-    imagePath = os.path.join(testDir, 'test_files', 'rgb_geotiff.tiff')
+    imagePath = os.path.join(TEST_DIR, 'test_files', 'rgb_geotiff.tiff')
     source = large_image.open(imagePath, projection='EPSG:3857', noCache=True)
     display = source._map.make_map(
         source.metadata, source.as_leaflet_layer(), source.getCenter(srs='EPSG:4326'),
