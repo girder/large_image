@@ -271,6 +271,11 @@ def calculate_slide_dimensions(source: TileSource, region: Optional[Dict[str, in
     source_meta = source.getMetadata()
 
     if region is not None:
+        if 'bottom' in region:
+            region['height'] = region['bottom'] - region['top']
+        if 'right' in region:
+            region['width'] = region['right'] - region['left']
+        
         if 'left' not in region or 'top' not in region or 'width' not in region or 'height' not in region:
             raise ValueError("Region must be a dictionary with 'left', 'top', 'width', and 'height'")
         elif region['width'] <= 0 or region['height'] <= 0:
@@ -286,12 +291,16 @@ def calculate_slide_dimensions(source: TileSource, region: Optional[Dict[str, in
         else:
             slide_dimensions['region_left'] = region['left']
             slide_dimensions['region_top'] = region['top']
+            slide_dimensions['region_right'] = region['left'] + region['width']
+            slide_dimensions['region_bottom'] = region['top'] + region['height']
             slide_dimensions['region_width'] = region['width']
             slide_dimensions['region_height'] = region['height']
             slide_dimensions['region_units'] = region['units']
     else:
         slide_dimensions['region_left'] = 0
         slide_dimensions['region_top'] = 0
+        slide_dimensions['region_right'] = source_meta['sizeX']
+        slide_dimensions['region_bottom'] = source_meta['sizeY']
         slide_dimensions['region_width'] = source_meta['sizeX']
         slide_dimensions['region_height'] = source_meta['sizeY']
         slide_dimensions['region_units'] = 'base_pixels'

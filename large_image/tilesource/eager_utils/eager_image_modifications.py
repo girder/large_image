@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from typing import Any
 
 def padding(array: np.ndarray, xx: int, yy: int):
     """
@@ -67,28 +68,36 @@ def pad_tile(tile: np.ndarray, w: int, h: int, pad_mode: str, pad_fill_mode: str
     elif pad_mode == 'equal':
         top, bottom, left, right = return_needed_padding_equal(tile, w, h)
         out = pad_color(out, top, bottom, left, right, constant_color)
+    elif pad_mode == 'right_bottom':
+        top, bottom, left, right = return_needed_padding_right_bottom(tile, w, h)
+        out = pad_color(out, top, bottom, left, right, constant_color)
     else:
         raise ValueError("Invalid pad_mode value. Must be 'wsi_edge' or 'equal'.")
 
     return out
 
-def return_constant_color(image: np.ndarray, pad_fill_mode: str):
+def return_constant_color(image: np.ndarray, pad_fill_mode: Any):
     # Determine the color that will be used for paadding
     if image.shape[0] == 0 or image.shape[1] == 0:
         return (0, 0, 0)
-    if pad_fill_mode == 'mean_color':
-        mean_pixel = np.floor(np.mean(image, axis=(0, 1))).astype(np.uint8)
-        constant_color = (mean_pixel[0], mean_pixel[1], mean_pixel[2])
-    elif pad_fill_mode == 'default':
-        constant_color = (0, 0, 0)
-    elif pad_fill_mode == 'white':
-        constant_color = (255, 255, 255)
-    elif pad_fill_mode == 'max':
-        max_pixel = np.max(image)
-        constant_color = (max_pixel, max_pixel, max_pixel)
+    
+    if isinstance(pad_fill_mode, str):
+        if pad_fill_mode == 'mean_color':
+            mean_pixel = np.floor(np.mean(image, axis=(0, 1))).astype(np.uint8)
+            constant_color = (mean_pixel[0], mean_pixel[1], mean_pixel[2])
+        elif pad_fill_mode == 'default':
+            constant_color = (0, 0, 0)
+        elif pad_fill_mode == 'white':
+            constant_color = (255, 255, 255)
+        elif pad_fill_mode == 'max':
+            max_pixel = np.max(image)
+            constant_color = (max_pixel, max_pixel, max_pixel)
+        return constant_color
     elif isinstance(pad_fill_mode, int):
         constant_color = (pad_fill_mode, pad_fill_mode, pad_fill_mode)
     elif isinstance(pad_fill_mode, tuple):
+        constant_color = pad_fill_mode
+    elif isinstance(pad_fill_mode, list):
         constant_color = pad_fill_mode
     else:
         raise ValueError("Invalid pad_fill_mode.  Must be 'default', 'max', int or tuple.")
@@ -111,6 +120,22 @@ def return_needed_padding_wsi_edge(image: np.ndarray, w: int, h: int, t_dist: in
     if image.shape[0] != h and t_dist < b_dist and y_pad > 0:
         top = y_pad
     if image.shape[0] != h and t_dist > b_dist and y_pad > 0:
+        bottom = y_pad
+
+    return top, bottom, left, right
+
+def return_needed_padding_right_bottom(image: np.ndarray, w: int, h: int):
+    x_pad = w - image.shape[1]
+    y_pad = h - image.shape[0]
+
+    left = 0
+    right = 0
+    top = 0
+    bottom = 0
+    
+    if image.shape[1] != w:
+        right = x_pad
+    if image.shape[0] != h:
         bottom = y_pad
 
     return top, bottom, left, right
@@ -141,17 +166,29 @@ def return_needed_padding_equal(image: np.ndarray, w: int, h: int):
 
     return top, bottom, left, right
 
+def remove_unnecessary_image_information(slide_dimensions: dict, chunk: np.ndarray, xlt: np.ndarray, xrt: np.ndarray, ytt: np.ndarray, ybt: np.ndarray, pad_fill_mode: str):
+    if np.any(xrt > slide_dimensions['region_right']):
+        constant_color = return_constant_color(chunk, pad_fill_mode)
+        diff_r = np.min((slide_dimensions['region_right'] - xrt).astype(np.int64))
+        chunk[:, diff_r:, :] = constant_color
+    if np.any(ybt > slide_dimensions['region_bottom']):
+        constant_color = return_constant_color(chunk, pad_fill_mode)
+        diff_b = np.min((slide_dimensions['region_bottom'] - ybt).astype(np.int64))
+        chunk[diff_b:, :, :] = constant_color
 
-def pad_chunk_if_necessary(base_size_x: int,  base_size_y: int, chunk: np.ndarray, xlt: np.ndarray, xrt: np.ndarray, ytt: np.ndarray, ybt: np.ndarray, w: int, h: int, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):
-    if chunk.shape[0] != h or chunk.shape[1] != w:
+    return chunk
+
+def pad_chunk_if_necessary(slide_dimensions: dict, chunk: np.ndarray, xlt: np.ndarray, xrt: np.ndarray, ytt: np.ndarray, ybt: np.ndarray, w: int, h: int, pad_mode: str = 'wsi_edge', pad_fill_mode: str = 'default'):    
+    if chunk.shape[0] != w or chunk.shape[1] != h:
         out = chunk.copy()
 
         constant_color = return_constant_color(chunk, pad_fill_mode)
 
         l_dist = np.abs(np.min(xlt).astype(np.int64))
         t_dist = np.abs(np.min(ytt).astype(np.int64))
-        r_dist = np.abs(base_size_x - np.max(xrt).astype(np.int64))
-        b_dist = np.abs(base_size_y - np.max(ybt).astype(np.int64))
+
+        r_dist = np.abs(slide_dimensions['region_right'] - np.max(xrt).astype(np.int64))
+        b_dist = np.abs(slide_dimensions['region_bottom'] - np.max(ybt).astype(np.int64))            
 
         # Based on pad mode choose how padding will be applied to image top, bottom, left and right
         if pad_mode == 'wsi_edge':
@@ -164,6 +201,7 @@ def pad_chunk_if_necessary(base_size_x: int,  base_size_y: int, chunk: np.ndarra
             raise ValueError("Invalid pad_mode value. Must be 'wsi_edge' or 'equal'.")
 
         return out
+        
     else:
         return chunk
 

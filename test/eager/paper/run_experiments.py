@@ -235,11 +235,11 @@ def test_read_high_performance(test_path):
 
 
 def test_read(test_path, file_dir):
-    run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=False, run_dataset=True, performance_type='read')
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/without_cache", without_cache=True, run_eager=True, performance_type='read')
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/with_cache_memory_tracking", without_cache=False, run_eager=True, performance_type='read')
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read')
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, file_dir=file_dir, output_dir="/scr/arosado/performance/read/dataset", without_cache=False, run_dataset=True, performance_type='read')
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/without_cache", without_cache=True, run_eager=True, performance_type='read')
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/eager/with_cache", without_cache=False, run_eager=True, performance_type='read')
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/without_cache", without_cache=True, run_eager=False, run_non_eager=True, performance_type='read')
+    # run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/read/non_eager/with_cache", without_cache=False, run_eager=False, run_non_eager=True, performance_type='read')
 
 
 def test_read_memory_tracking(test_path, file_dir):
@@ -792,6 +792,17 @@ def test_svs_uni_energy(test_path, file_dir=None):
         track_energy=True
     )
 
+def test_region(test_path):
+    region = {
+        'left': 121416,
+        'top': 73196,
+        'right': 130371,
+        'bottom': 82151,
+        'units': 'base_pixels'
+    }
+
+    run_reproducible_performance_evaluation(test_path, n_runs=1, output_dir="/scr/arosado/performance/region/eager", without_cache=False, run_eager=True, performance_type='read', region=region, scale={'mm_x': 0.0005038, 'mm_y': 0.0005038})
+
 def test_svs_uni(test_path, file_dir=None):
     transform = v2.Compose(
         [
@@ -845,6 +856,8 @@ if __name__ == "__main__":
     test_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
     wsi_archive_test_path = '/wsi_archive/large_image/performance/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
     wsi_archive_dataset_path = '/wsi_archive/large_image/performance/svs_test_tiles'
+
+    test_region_image = "/wsi_archive/DUGGER_LAB/Batch8/08-195-Temporal_AT8.czi"
     
     test_dir = '/scr/arosado/large_image/svs_test_tiles'
     s3_test_path = '/tmp/s3/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
@@ -868,12 +881,16 @@ if __name__ == "__main__":
         ]
     )
 
+    # test_region(test_region_image)
+    
+
     # run_performance_testing_on_directory(svs_dir, file_extensions=[".svs"], output_dir="/scr/arosado/performance/svs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # run_performance_testing_on_directory(mrxs_dir, file_extensions=[".mrxs"], output_dir="/scr/arosado/performance/mrxs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # run_performance_testing_on_directory(ndpi_dir, file_extensions=[".ndpi"], output_dir="/scr/arosado/performance/ndpi", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
-    pass
+    # pass
     # Test read performance
-    # test_read(test_path, test_dir)
+    test_read(test_path, test_dir)
+    pass
 
     # Test read memory tracking
     # test_read_memory_tracking(test_path, test_dir)
@@ -963,7 +980,7 @@ if __name__ == "__main__":
     # test_svs_uni2_energy(test_path, file_dir=test_dir)
 
     # Test write energy
-    test_write(test_path)
+    # test_write(test_path)
 
     # Test performance with sobel
     # test_svs_sobel(test_path)

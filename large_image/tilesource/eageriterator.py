@@ -3,7 +3,7 @@ from typing import Optional, Tuple, Union, Callable, Dict, Any
 import logging
 from collections import deque
 
-from .eager_utils.eager_image_modifications import pad_tile, pad_chunk_if_necessary, rgba2rgb
+from .eager_utils.eager_image_modifications import pad_tile, pad_chunk_if_necessary, rgba2rgb, remove_unnecessary_image_information
 from .eager_utils import eager_fn
 from .eager_utils.eager_shared_array import SharedArray
 from .eager_utils.eager_pytorch_threading_context import _PyTorchThreadingContext
@@ -183,6 +183,7 @@ class EagerIterator:
         self.randomize_chunks = randomize_chunks
         self.seed = seed
         self.tile_overlap = tile_overlap
+        self.region = region
         self.is_torch = False
         self.callable_arg_num = None
         self.transform = transform
@@ -238,7 +239,7 @@ class EagerIterator:
             self.read_kwargs = gen_read_args_for_regions(self.slide_dimensions, regions, edge=edge, chunk_mult=chunk_mult)
         elif output_mode == 'tiles':
             assert isinstance(tiles, list) or isinstance(tiles, np.ndarray), "Tiles must be a list or numpy array"
-            self.read_kwargs = gen_read_args_for_tiles(n_possible_tiles, self.slide_dimensions, tiles, edge=edge, chunk_mult=chunk_mult)
+            self.read_kwargs = gen_read_args_for_tiles(n_possible_tiles, self.slide_dimensions, tiles, edge=edge, chunk_mult=chunk_mult, region=self.region)
         else:
             raise ValueError("Supplied output mode must be either tiles or regions")
 
@@ -498,7 +499,8 @@ class EagerIterator:
         offset: int, 
         output_mode: str, 
         batch: int, 
-        slide_dimensions: dict, 
+        slide_dimensions: dict,
+        region: Optional[Dict[str, Any]] = None,
         transform: Optional[Callable] = None, 
         pad_mode: str = 'wsi_edge', 
         pad_fill_mode: str = 'default', 
@@ -517,44 +519,43 @@ class EagerIterator:
         :param offset: The offset of the current batch.
         """
         read_kwargs = np.array(read_kwargs)
-        xlt = read_kwargs[:, 6].astype(np.uint)
-        ytt = read_kwargs[:, 4].astype(np.uint)
-        xrt = read_kwargs[:, 7].astype(np.uint)
-        ybt = read_kwargs[:, 5].astype(np.uint)
-        tile_y = read_kwargs[:, 2].astype(np.uint)
-        tile_x = read_kwargs[:, 3].astype(np.uint)
+        xlt = read_kwargs[:, 6]
+        ytt = read_kwargs[:, 4]
+        xrt = read_kwargs[:, 7]
+        ybt = read_kwargs[:, 5]
+        tile_y = read_kwargs[:, 2]
+        tile_x = read_kwargs[:, 3]
         xr = np.min(xlt)
         yr = np.min(ytt)
 
-        ybmax = np.max(ybt)
-        xrmax = np.max(xrt)
+        w = np.max(xrt - xr)
+        h = np.max(ybt - yr)
 
-        w = np.max(xrt) - xr
-        h = np.max(ybt) - yr
+        ybmax = np.max(ybt - yr)
+        xrmax = np.max(xrt - xr)
 
         # Handle cases where supplied coordinates are not within margins of the image
         if xr < 0 or yr < 0:
-            xlt = np.where(xlt > 0, xlt, 0).astype(np.uint)
-            ytt = np.where(ytt > 0, ytt, 0).astype(np.uint)
+            xlt = np.where(xlt > 0, xlt, 0)
+            ytt = np.where(ytt > 0, ytt, 0)
             raise UserWarning("Negative coordinates.\n Defaulting to 0.\n Please check your input tiles/regions.\n  Read_kwargs {}".format(read_kwargs))
             # print("Negative coordinates.\n Defaulting to 0.\n Please check your input tiles/regions.\n  Read_kwargs {}".format(read_kwargs))
         if output_mode == 'regions' and (xrmax > slide_dimensions['base_size_x'] or ybmax > slide_dimensions['base_size_y']):
-            ybt = np.where(ybt < slide_dimensions['base_size_y'], ybt, slide_dimensions['base_size_y']).astype(np.uint)
-            xrt = np.where(xrt < slide_dimensions['base_size_x'], xrt, slide_dimensions['base_size_x']).astype(np.uint)
+            ybt = np.where(ybt < slide_dimensions['base_size_y'], ybt, slide_dimensions['base_size_y'])
+            xrt = np.where(xrt < slide_dimensions['base_size_x'], xrt, slide_dimensions['base_size_x'])
             raise UserWarning("Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}".format(read_kwargs))
             # print("Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}".format(read_kwargs))
 
         if output_mode == 'tiles':# tile size (x, y)
-            xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint)
-            yto = np.floor(np.divide((ytt - yr), slide_dimensions['conv_mm_y'])).astype(np.uint)
-            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y'])).astype(np.uint)
-            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x'])).astype(np.uint)
+            xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint64)
+            yto = np.floor(np.divide((ytt - yr), slide_dimensions['conv_mm_y'])).astype(np.uint64)
+            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y'])).astype(np.uint64)
+            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x'])).astype(np.uint64)
         elif output_mode == 'regions':
-
-            xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint)
-            yto = np.floor(np.divide((ytt - yr) , slide_dimensions['conv_mm_y'])).astype(np.uint)
-            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y'])).astype(np.uint)
-            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x'])).astype(np.uint)
+            xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint64)
+            yto = np.floor(np.divide((ytt - yr) , slide_dimensions['conv_mm_y'])).astype(np.uint64)
+            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y'])).astype(np.uint64)
+            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x'])).astype(np.uint64)
         else:
             raise ValueError("Output mode not supported by read method.")
 
@@ -568,12 +569,12 @@ class EagerIterator:
                 # no scaling needed
                 no_scale = True
                 kwargs = dict(
-                    region=dict(left=xr, top=yr, width=w, height=h, units='base_pixels'),
+                    region=dict(left=xr.item(), top=yr.item(), height=h.item(), width=w.item(), units='base_pixels'),
                     format="numpy",
                 )
             else:
                 kwargs = dict(
-                    sourceRegion=dict(left=xr.item(), top=yr.item(), width=w.item(), height=h.item(), units='base_pixels'),
+                    sourceRegion=dict(left=xr.item(), top=yr.item(), height=h.item(), width=w.item(), units='base_pixels'),
                     targetScale=dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'], units='mm'),
                     format="numpy",
                 )
@@ -582,12 +583,12 @@ class EagerIterator:
                 # no scaling needed
                 no_scale = True
                 kwargs = dict(
-                    region=dict(left=xr.item(), top=yr.item(), width=w.item(), height=h.item(), units="base_pixels"),
+                    region=dict(left=xr.item(), top=yr.item(), height=h.item(), width=w.item(), units="base_pixels"),
                     format="numpy",
                 )
             else:
                 kwargs = dict(
-                    sourceRegion = dict(left=xr.item(), top=yr.item(), width=w.item(), height=h.item(), units='base_pixels'),
+                    sourceRegion = dict(left=xr.item(), top=yr.item(), height=h.item(), width=w.item(), units='base_pixels'),
                     targetScale = dict(magnification= slide_dimensions['target_magnification']),
                     format = "numpy"
                 )
@@ -605,11 +606,17 @@ class EagerIterator:
         chunk = rgba2rgb(chunk)
 
         if output_mode == 'tiles':
-            chunk = pad_chunk_if_necessary(slide_dimensions['base_size_x'], slide_dimensions['base_size_y'], chunk, xlt, xrt, ytt, ybt, w_max, h_max, pad_mode, pad_fill_mode)
-            tiles = [
-                chunk[yt : h, xl : w, :].astype(chunk.dtype)
-                for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
-            ]
+            chunk = pad_chunk_if_necessary(slide_dimensions, chunk, xlt, xrt, ytt, ybt, w_max, h_max, pad_mode, pad_fill_mode)
+            if region is not None:
+                tiles = [
+                    chunk[yt : h, xl : w, :].astype(chunk.dtype) if h == slide_dimensions['tile_size'][0] and w == slide_dimensions['tile_size'][1] else pad_tile(chunk[yt : h, xl : w, :].astype(chunk.dtype), slide_dimensions['tile_size'][0], slide_dimensions['tile_size'][1], 'right_bottom', pad_fill_mode)
+                    for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
+                ]
+            else:
+                tiles = [
+                    chunk[yt : h, xl : w, :].astype(chunk.dtype)
+                    for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
+                ]
         elif output_mode == 'regions':
             tiles = [
                 pad_tile(chunk[yt:h, xl:w, :].astype(chunk.dtype), slide_dimensions['tile_size'][0], slide_dimensions['tile_size'][1], pad_mode, pad_fill_mode)
@@ -676,6 +683,7 @@ class EagerIterator:
             self.output_mode,
             self.batch,
             self.slide_dimensions,
+            self.region,
             self._worker_transform,
             self.pad_mode,
             self.pad_fill_mode,

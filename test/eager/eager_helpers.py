@@ -203,7 +203,7 @@ def run_non_eager_performance_evaluation(
     *args, 
     **kwargs):
     performance_data = {}
-    add_default_wsi_dimensions(performance_data, file_path)
+    add_default_wsi_dimensions(performance_data, file_path, **kwargs)
 
     def run_non_eager_performance():
         if without_cache:
@@ -493,12 +493,17 @@ def run_eager_task_performance_evaluation(file_path: str, without_cache: bool = 
     eager_iter = tile_source.eagerIterator(**kwargs)
     setup_time = time.time() - start_time
 
+    # image, _ = tile_source.getRegion(region=kwargs.get('region', None), scale=kwargs.get('scale', None), format=large_image.constants.TILE_FORMAT_NUMPY)
+    # plt.imsave(f"./test_images/image.png", image)
+
     # Test read only performance
     if performance_type == 'read':
         start_batch_retreival_time = time.time()
         for batch in eager_iter:
             batch_images = batch['tile'].view()
             end_batch_retreival_time = time.time()
+            # for i in range(batch_images.shape[0]):
+            #     plt.imsave(f"./test_images/image_{int(batch['tile_position']['region_x'][i])}_{int(batch['tile_position']['region_y'][i])}.png", batch_images[i])
             batch_retreival_times.append(end_batch_retreival_time - start_batch_retreival_time)
             start_batch_retreival_time = end_batch_retreival_time
 
@@ -585,7 +590,7 @@ def add_energy_data(monitor: ZeusMonitor, performance_data: dict):
 
 def run_eager_performance_evaluation(file_path: str, without_cache: bool = False, without_icc: bool = False, with_tiff_source: bool = False, performance_type: str = 'read', compile_model: bool = True, track_class_memory: bool = False, track_energy: bool = False, output_dir: str = './performance', n_evaluation: int = 0, *args, **kwargs):
     performance_data = {}
-    add_default_wsi_dimensions(performance_data, file_path)
+    add_default_wsi_dimensions(performance_data, file_path, **kwargs)
 
     def run_eager_performance():
         # Test performance with default resolution without caching
@@ -618,7 +623,7 @@ def run_dataset_performance_evaluation(file_path: str, file_dir: str, performanc
     performance_data = {}
 
     def run_dataset_performance():
-        add_default_wsi_dimensions(performance_data, file_path)
+        add_default_wsi_dimensions(performance_data, file_path, **kwargs)
 
         # Test performance with default resolution without caching
         setup_time, process_time, batch_retreival_times, inference_times, write_times = run_dataset_task_performance_evaluation(file_path, file_dir, performance_type, compile_model, track_memory, output_dir, **kwargs)
@@ -844,24 +849,16 @@ def aggregate_runs(runs: list[dict], output_file_path: str):
         if len(run_pytorch_dataset_write_times) > 0:
             output_data['run_pytorch_dataset_write_times'] = run_pytorch_dataset_write_times
             output_data['aggregated_pytorch_dataset_write_times'] = aggregated_pytorch_dataset_write_times
-        if len(run_cpu_energy[0]) > 0:
+        if len(run_cpu_energy) > 0 and len(run_cpu_energy[0]) > 0:
             for key in run_cpu_energy:
-                run_cpu_energy[key] = np.array(run_cpu_energy[key])
-                output_data[f'run_cpu_energy_{key}'] = [run_cpu_energy[key]]
                 output_data[f'aggregated_cpu_energy_{key}'] = aggregated_cpu_energies[key]
-        if len(run_gpu_energy[0]) > 0:
+        if len(run_gpu_energy) > 0 and len(run_gpu_energy[0]) > 0:
             for key in run_gpu_energy:
-                run_gpu_energy[key] = np.array(run_gpu_energy[key])
-                output_data[f'run_gpu_energy_{key}'] = [run_gpu_energy[key]]
                 output_data[f'aggregated_gpu_energy_{key}'] = aggregated_gpu_energies[key]
-        if len(run_dram_energy[0]) > 0:
+        if len(run_dram_energy) > 0 and len(run_dram_energy[0]) > 0:
             for key in run_dram_energy:
-                run_dram_energy[key] = np.array(run_dram_energy[key])
-                output_data[f'run_dram_energy_{key}'] = [run_dram_energy[key]]
                 output_data[f'aggregated_dram_energy_{key}'] = aggregated_dram_energies[key]
         if len(run_energy_times) > 0:
-            run_energy_times = np.array(run_energy_times)
-            output_data['run_energy_times'] = [run_energy_times]
             output_data['aggregated_energy_times'] = aggregated_energy_times
         
 

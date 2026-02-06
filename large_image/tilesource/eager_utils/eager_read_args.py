@@ -1,3 +1,5 @@
+from typing import Optional, Dict, Any
+
 import numpy as np
 from pykdtree.kdtree import KDTree
 from typing import Union, List
@@ -170,7 +172,7 @@ def gen_read_args_for_regions(slide_dimensions: dict, regions: Union[list, np.nd
     # possible_tiles = np.stack((x.flatten(), y.flatten()), axis=-1)
 
     # Regions of form (center_y, center_x, top, bottom, left, right)
-    regions = np.column_stack((org_tile_y, org_tile_x, center_y, center_x, regions[:, 0], yb, regions[:, 1], xr))
+    regions = np.column_stack((org_tile_y, org_tile_x, center_y, center_x, regions[:, 0], yb, regions[:, 1], xr)).astype(np.int64)
     # Distance from 0, 0
     dist = (center_y ** 2 + center_x ** 2) ** 0.5
     # Sort regions by distance from 0, 0
@@ -186,7 +188,7 @@ def gen_read_args_for_regions(slide_dimensions: dict, regions: Union[list, np.nd
     return chunks
 
 
-def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles: Union[list, np.ndarray], edge: bool = False, chunk_mult: int = 2):
+def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles: Union[list, np.ndarray], edge: bool = False, chunk_mult: int = 2, region: Optional[Dict[str, Any]] = None):
     '''
     # todo: update documentation
     :param n_possible_tiles: The number of possible tiles in a complete grid made using the slide dimensions
@@ -214,6 +216,10 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
     spx = np.round(sx + slide_dimensions['tile_width_before_scaling'], decimals=0)
     sy = np.round(sorted_tiles[:, 0] * slide_dimensions['tile_height_before_scaling'] + slide_dimensions['region_top'], decimals=0)
     spy = np.round(sy + slide_dimensions['tile_height_before_scaling'], decimals=0)
+
+    if region is not None:
+        spx[spx > slide_dimensions['region_right']] = slide_dimensions['region_right']
+        spy[spy > slide_dimensions['region_bottom']] = slide_dimensions['region_bottom']
     
     # Get tile with the most relevant region
     center_x = (sx + spx) / 2
@@ -223,7 +229,7 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
     
 
     # Combine into the sorted_tiles array
-    sorted_tiles = np.column_stack((org_tile_y, org_tile_x, sorted_tiles, sy, spy, sx, spx))
+    sorted_tiles = np.column_stack((org_tile_y, org_tile_x, sorted_tiles, sy, spy, sx, spx)).astype(np.int64)
 
     # Keep track of whether edges are thrown out, if thrown out they can still form a complete grid
     diff_from_edge = 0
