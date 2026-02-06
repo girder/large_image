@@ -1,0 +1,1012 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python Module Index &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e9af8ede" />
+
+  
+    <link rel="shortcut icon" href="_static/K.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+      <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.6.0/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = `pre.mermaid {
+    /* Same as .mermaid-container > pre */
+    display: block;
+    width: 50%;
+}
+
+pre.mermaid > svg {
+    /* Same as .mermaid-container > pre > svg */
+    height: auto;
+    width: 100%;
+    max-width: 100% !important;
+}`;
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = `.mermaid-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.mermaid-container > pre {
+    display: block;
+    width: 50%;
+}
+
+.mermaid-container > pre > svg {
+    height: auto;
+    width: 100%;
+    max-width: 100% !important;
+}
+
+.mermaid-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #333;
+}
+
+.mermaid-fullscreen-btn:hover {
+    opacity: 100% !important;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-btn.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-btn.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 95vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    padding: 20px;
+    overflow: auto;
+}
+
+.mermaid-fullscreen-modal.dark-theme {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.mermaid-fullscreen-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen {
+    position: relative;
+    width: 95vw;
+    height: 90vh;
+    max-width: 95vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen.dark-theme {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.mermaid-container-fullscreen pre.mermaid {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen .mermaid svg {
+    height: 100% !important;
+    width: 100% !important;
+    cursor: grab;
+}
+
+.mermaid-fullscreen-close {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    font-size: 24px;
+    line-height: 1;
+    color: #333;
+}
+
+.mermaid-fullscreen-close:hover {
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-close.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-close.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal .mermaid-fullscreen-btn {
+    display: none !important;
+}`;
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        all_mermaids.forEach((el) => {
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+        await mermaid.run();
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+
+    if ("False" === "True") {
+        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("");
+            if(all_mermaids.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else if(svgs.size() !== mermaids_to_add_zoom) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else {
+                svgs.each(function() {
+                    var svg = d3.select(this);
+                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+                    var inner = svg.select("g");
+                    var zoom = d3.zoom().on("zoom", function(event) {
+                        inner.attr("transform", event.transform);
+                    });
+                    svg.call(zoom);
+                });
+            }
+        }
+    } else if(all_mermaids.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if ("True" !== "True") return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.style.opacity = '50%';
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scroll, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.sdisplay = 'block';
+
+                if ("False" === "True") {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+const load = async () => {
+    initStyles();
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...JSON.parse(
+                    `{"startOnLoad": false}`
+                ),
+                ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...JSON.parse(
+        `{"startOnLoad": false}`
+    ),
+    ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+    }
+);
+
+window.addEventListener("load", load);</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+ 
+
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="girder_index.html">Girder Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_index.html">API Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Python Module Index</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+
+   <h1>Python Module Index</h1>
+
+   <div class="modindex-jumpbox">
+   <a href="#cap-g"><strong>g</strong></a> | 
+   <a href="#cap-l"><strong>l</strong></a>
+   </div>
+
+   <table class="indextable modindextable">
+     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
+     <tr class="cap" id="cap-g"><td></td><td>
+       <strong>g</strong></td><td></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-1" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/girder_large_image/girder_large_image.html#module-girder_large_image"><code class="xref">girder_large_image</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.html#module-girder_large_image.constants"><code class="xref">girder_large_image.constants</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.html#module-girder_large_image.girder_tilesource"><code class="xref">girder_large_image.girder_tilesource</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.html#module-girder_large_image.loadmodelcache"><code class="xref">girder_large_image.loadmodelcache</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.models.html#module-girder_large_image.models"><code class="xref">girder_large_image.models</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.models.html#module-girder_large_image.models.image_item"><code class="xref">girder_large_image.models.image_item</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.rest.html#module-girder_large_image.rest"><code class="xref">girder_large_image.rest</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.rest.html#module-girder_large_image.rest.item_meta"><code class="xref">girder_large_image.rest.item_meta</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.rest.html#module-girder_large_image.rest.large_image_resource"><code class="xref">girder_large_image.rest.large_image_resource</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image/girder_large_image.rest.html#module-girder_large_image.rest.tiles"><code class="xref">girder_large_image.rest.tiles</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-2" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.html#module-girder_large_image_annotation"><code class="xref">girder_large_image_annotation</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.html#module-girder_large_image_annotation.constants"><code class="xref">girder_large_image_annotation.constants</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.html#module-girder_large_image_annotation.handlers"><code class="xref">girder_large_image_annotation.handlers</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.models.html#module-girder_large_image_annotation.models"><code class="xref">girder_large_image_annotation.models</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.models.html#module-girder_large_image_annotation.models.annotation"><code class="xref">girder_large_image_annotation.models.annotation</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.models.html#module-girder_large_image_annotation.models.annotationelement"><code class="xref">girder_large_image_annotation.models.annotationelement</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.rest.html#module-girder_large_image_annotation.rest"><code class="xref">girder_large_image_annotation.rest</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.rest.html#module-girder_large_image_annotation.rest.annotation"><code class="xref">girder_large_image_annotation.rest.annotation</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-2">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/girder_large_image_annotation/girder_large_image_annotation.utils.html#module-girder_large_image_annotation.utils"><code class="xref">girder_large_image_annotation.utils</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
+     <tr class="cap" id="cap-l"><td></td><td>
+       <strong>l</strong></td><td></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-3" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image/large_image.html#module-large_image"><code class="xref">large_image</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.cache_util.html#module-large_image.cache_util"><code class="xref">large_image.cache_util</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.cache_util.html#module-large_image.cache_util.base"><code class="xref">large_image.cache_util.base</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.cache_util.html#module-large_image.cache_util.cache"><code class="xref">large_image.cache_util.cache</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.cache_util.html#module-large_image.cache_util.cachefactory"><code class="xref">large_image.cache_util.cachefactory</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.cache_util.html#module-large_image.cache_util.memcache"><code class="xref">large_image.cache_util.memcache</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.cache_util.html#module-large_image.cache_util.rediscache"><code class="xref">large_image.cache_util.rediscache</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.html#module-large_image.config"><code class="xref">large_image.config</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.html#module-large_image.constants"><code class="xref">large_image.constants</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.html#module-large_image.exceptions"><code class="xref">large_image.exceptions</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource"><code class="xref">large_image.tilesource</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.base"><code class="xref">large_image.tilesource.base</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.geo"><code class="xref">large_image.tilesource.geo</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.jupyter"><code class="xref">large_image.tilesource.jupyter</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.resample"><code class="xref">large_image.tilesource.resample</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.stylefuncs"><code class="xref">large_image.tilesource.stylefuncs</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.tiledict"><code class="xref">large_image.tilesource.tiledict</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.tileiterator"><code class="xref">large_image.tilesource.tileiterator</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image/large_image.tilesource.html#module-large_image.tilesource.utilities"><code class="xref">large_image.tilesource.utilities</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-4" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_converter/large_image_converter.html#module-large_image_converter"><code class="xref">large_image_converter</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-4">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_converter/large_image_converter.html#module-large_image_converter.format_aperio"><code class="xref">large_image_converter.format_aperio</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-5" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_bioformats/large_image_source_bioformats.html#module-large_image_source_bioformats"><code class="xref">large_image_source_bioformats</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-5">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_bioformats/large_image_source_bioformats.html#module-large_image_source_bioformats.girder_source"><code class="xref">large_image_source_bioformats.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-6" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_deepzoom/large_image_source_deepzoom.html#module-large_image_source_deepzoom"><code class="xref">large_image_source_deepzoom</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-6">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_deepzoom/large_image_source_deepzoom.html#module-large_image_source_deepzoom.girder_source"><code class="xref">large_image_source_deepzoom.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-7" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.html#module-large_image_source_dicom"><code class="xref">large_image_source_dicom</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.assetstore.html#module-large_image_source_dicom.assetstore"><code class="xref">large_image_source_dicom.assetstore</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.assetstore.html#module-large_image_source_dicom.assetstore.dicomweb_assetstore_adapter"><code class="xref">large_image_source_dicom.assetstore.dicomweb_assetstore_adapter</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.assetstore.html#module-large_image_source_dicom.assetstore.rest"><code class="xref">large_image_source_dicom.assetstore.rest</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.html#module-large_image_source_dicom.dicom_metadata"><code class="xref">large_image_source_dicom.dicom_metadata</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.html#module-large_image_source_dicom.dicom_tags"><code class="xref">large_image_source_dicom.dicom_tags</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.html#module-large_image_source_dicom.dicomweb_utils"><code class="xref">large_image_source_dicom.dicomweb_utils</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.html#module-large_image_source_dicom.girder_plugin"><code class="xref">large_image_source_dicom.girder_plugin</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-7">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_dicom/large_image_source_dicom.html#module-large_image_source_dicom.girder_source"><code class="xref">large_image_source_dicom.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="_build/large_image_source_dummy/large_image_source_dummy.html#module-large_image_source_dummy"><code class="xref">large_image_source_dummy</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-8" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_gdal/large_image_source_gdal.html#module-large_image_source_gdal"><code class="xref">large_image_source_gdal</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-8">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_gdal/large_image_source_gdal.html#module-large_image_source_gdal.girder_source"><code class="xref">large_image_source_gdal.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-9" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_mapnik/large_image_source_mapnik.html#module-large_image_source_mapnik"><code class="xref">large_image_source_mapnik</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-9">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_mapnik/large_image_source_mapnik.html#module-large_image_source_mapnik.girder_source"><code class="xref">large_image_source_mapnik.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-10" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_multi/large_image_source_multi.html#module-large_image_source_multi"><code class="xref">large_image_source_multi</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-10">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_multi/large_image_source_multi.html#module-large_image_source_multi.girder_source"><code class="xref">large_image_source_multi.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-11" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_nd2/large_image_source_nd2.html#module-large_image_source_nd2"><code class="xref">large_image_source_nd2</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-11">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_nd2/large_image_source_nd2.html#module-large_image_source_nd2.girder_source"><code class="xref">large_image_source_nd2.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-12" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_ometiff/large_image_source_ometiff.html#module-large_image_source_ometiff"><code class="xref">large_image_source_ometiff</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-12">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_ometiff/large_image_source_ometiff.html#module-large_image_source_ometiff.girder_source"><code class="xref">large_image_source_ometiff.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-13" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_openjpeg/large_image_source_openjpeg.html#module-large_image_source_openjpeg"><code class="xref">large_image_source_openjpeg</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-13">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_openjpeg/large_image_source_openjpeg.html#module-large_image_source_openjpeg.girder_source"><code class="xref">large_image_source_openjpeg.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-14" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_openslide/large_image_source_openslide.html#module-large_image_source_openslide"><code class="xref">large_image_source_openslide</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-14">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_openslide/large_image_source_openslide.html#module-large_image_source_openslide.girder_source"><code class="xref">large_image_source_openslide.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-15" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_pil/large_image_source_pil.html#module-large_image_source_pil"><code class="xref">large_image_source_pil</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-15">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_pil/large_image_source_pil.html#module-large_image_source_pil.girder_source"><code class="xref">large_image_source_pil.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-16" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_rasterio/large_image_source_rasterio.html#module-large_image_source_rasterio"><code class="xref">large_image_source_rasterio</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-16">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_rasterio/large_image_source_rasterio.html#module-large_image_source_rasterio.girder_source"><code class="xref">large_image_source_rasterio.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="_build/large_image_source_test/large_image_source_test.html#module-large_image_source_test"><code class="xref">large_image_source_test</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-17" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_tiff/large_image_source_tiff.html#module-large_image_source_tiff"><code class="xref">large_image_source_tiff</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-17">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_tiff/large_image_source_tiff.html#module-large_image_source_tiff.exceptions"><code class="xref">large_image_source_tiff.exceptions</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-17">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_tiff/large_image_source_tiff.html#module-large_image_source_tiff.girder_source"><code class="xref">large_image_source_tiff.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-17">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_tiff/large_image_source_tiff.html#module-large_image_source_tiff.tiff_reader"><code class="xref">large_image_source_tiff.tiff_reader</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-18" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_tifffile/large_image_source_tifffile.html#module-large_image_source_tifffile"><code class="xref">large_image_source_tifffile</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-18">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_tifffile/large_image_source_tifffile.html#module-large_image_source_tifffile.girder_source"><code class="xref">large_image_source_tifffile.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-19" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_vips/large_image_source_vips.html#module-large_image_source_vips"><code class="xref">large_image_source_vips</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-19">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_vips/large_image_source_vips.html#module-large_image_source_vips.girder_source"><code class="xref">large_image_source_vips.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-20" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_source_zarr/large_image_source_zarr.html#module-large_image_source_zarr"><code class="xref">large_image_source_zarr</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-20">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_source_zarr/large_image_source_zarr.html#module-large_image_source_zarr.girder_source"><code class="xref">large_image_source_zarr.girder_source</code></a></td><td>
+       <em></em></td></tr>
+     <tr>
+       <td><img src="_static/minus.png" class="toggler"
+              id="toggle-21" style="display: none" alt="-" /></td>
+       <td>
+       <a href="_build/large_image_tasks/large_image_tasks.html#module-large_image_tasks"><code class="xref">large_image_tasks</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-21">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="_build/large_image_tasks/large_image_tasks.html#module-large_image_tasks.tasks"><code class="xref">large_image_tasks.tasks</code></a></td><td>
+       <em></em></td></tr>
+   </table>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
