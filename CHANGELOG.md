@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.34.1
+
+### Bug Fixes
+
+- Reading a small region from a large tile could be wrong ([#2049](../../pull/2049))
+
 ## 1.34.0
 
 ### Improvements
