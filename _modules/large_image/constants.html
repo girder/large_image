@@ -1,0 +1,711 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>large_image.constants &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=e9af8ede" />
+
+  
+    <link rel="shortcut icon" href="../../_static/K.png"/>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+      <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.6.0/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = `pre.mermaid {
+    /* Same as .mermaid-container > pre */
+    display: block;
+    width: 50%;
+}
+
+pre.mermaid > svg {
+    /* Same as .mermaid-container > pre > svg */
+    height: auto;
+    width: 100%;
+    max-width: 100% !important;
+}`;
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = `.mermaid-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.mermaid-container > pre {
+    display: block;
+    width: 50%;
+}
+
+.mermaid-container > pre > svg {
+    height: auto;
+    width: 100%;
+    max-width: 100% !important;
+}
+
+.mermaid-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #333;
+}
+
+.mermaid-fullscreen-btn:hover {
+    opacity: 100% !important;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-btn.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-btn.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 95vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    padding: 20px;
+    overflow: auto;
+}
+
+.mermaid-fullscreen-modal.dark-theme {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.mermaid-fullscreen-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen {
+    position: relative;
+    width: 95vw;
+    height: 90vh;
+    max-width: 95vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen.dark-theme {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.mermaid-container-fullscreen pre.mermaid {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen .mermaid svg {
+    height: 100% !important;
+    width: 100% !important;
+    cursor: grab;
+}
+
+.mermaid-fullscreen-close {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    font-size: 24px;
+    line-height: 1;
+    color: #333;
+}
+
+.mermaid-fullscreen-close:hover {
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-close.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-close.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal .mermaid-fullscreen-btn {
+    display: none !important;
+}`;
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        all_mermaids.forEach((el) => {
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+        await mermaid.run();
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+
+    if ("False" === "True") {
+        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("");
+            if(all_mermaids.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else if(svgs.size() !== mermaids_to_add_zoom) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else {
+                svgs.each(function() {
+                    var svg = d3.select(this);
+                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+                    var inner = svg.select("g");
+                    var zoom = d3.zoom().on("zoom", function(event) {
+                        inner.attr("transform", event.transform);
+                    });
+                    svg.call(zoom);
+                });
+            }
+        }
+    } else if(all_mermaids.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if ("True" !== "True") return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.style.opacity = '50%';
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scroll, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.sdisplay = 'block';
+
+                if ("False" === "True") {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+const load = async () => {
+    initStyles();
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...JSON.parse(
+                    `{"startOnLoad": false}`
+                ),
+                ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...JSON.parse(
+        `{"startOnLoad": false}`
+    ),
+    ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+    }
+);
+
+window.addEventListener("load", load);</script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../development.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../girder_index.html">Girder Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_index.html">API Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">large_image.constants</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for large_image.constants</h1><div class="highlight"><pre>
+<span></span><span class="c1">#############################################################################</span>
+<span class="c1">#  Copyright Kitware Inc.</span>
+<span class="c1">#</span>
+<span class="c1">#  Licensed under the Apache License, Version 2.0 ( the &quot;License&quot; );</span>
+<span class="c1">#  you may not use this file except in compliance with the License.</span>
+<span class="c1">#  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1">#  See the License for the specific language governing permissions and</span>
+<span class="c1">#  limitations under the License.</span>
+<span class="c1">#############################################################################</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
+
+
+<div class="viewcode-block" id="SourcePriority">
+<a class="viewcode-back" href="../../_build/large_image/large_image.html#large_image.constants.SourcePriority">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SourcePriority</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">IntEnum</span><span class="p">):</span>
+    <span class="n">NAMED</span> <span class="o">=</span> <span class="mi">0</span>    <span class="c1"># Explicitly requested</span>
+    <span class="n">PREFERRED</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">HIGHER</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">HIGH</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">MEDIUM</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">LOW</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">LOWER</span> <span class="o">=</span> <span class="mi">6</span>
+    <span class="n">IMPLICIT_HIGH</span> <span class="o">=</span> <span class="mi">7</span>
+    <span class="n">IMPLICIT</span> <span class="o">=</span> <span class="mi">8</span>
+    <span class="n">IMPLICIT_LOW</span> <span class="o">=</span> <span class="mi">9</span>
+    <span class="n">FALLBACK_HIGH</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">FALLBACK</span> <span class="o">=</span> <span class="mi">11</span>
+    <span class="n">MANUAL</span> <span class="o">=</span> <span class="mi">12</span>  <span class="c1"># This and higher values will never be selected automatically</span></div>
+
+
+
+<span class="n">TILE_FORMAT_IMAGE</span> <span class="o">=</span> <span class="s1">&#39;image&#39;</span>
+<span class="n">TILE_FORMAT_PIL</span> <span class="o">=</span> <span class="s1">&#39;PIL&#39;</span>
+<span class="n">TILE_FORMAT_NUMPY</span> <span class="o">=</span> <span class="s1">&#39;numpy&#39;</span>
+
+
+<span class="n">NEW_IMAGE_PATH_FLAG</span> <span class="o">=</span> <span class="s1">&#39;__new_image__&#39;</span>
+
+
+<span class="n">PROJECTION_SENTINEL</span> <span class="o">=</span> <span class="s1">&#39;__default__&#39;</span>
+
+
+<span class="n">TileOutputMimeTypes</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;JPEG&#39;</span><span class="p">:</span> <span class="s1">&#39;image/jpeg&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;PNG&#39;</span><span class="p">:</span> <span class="s1">&#39;image/png&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;TIFF&#39;</span><span class="p">:</span> <span class="s1">&#39;image/tiff&#39;</span><span class="p">,</span>
+    <span class="c1"># TILED indicates the region output should be generated as a tiled TIFF</span>
+    <span class="s1">&#39;TILED&#39;</span><span class="p">:</span> <span class="s1">&#39;image/tiff&#39;</span><span class="p">,</span>
+    <span class="c1"># JFIF forces conversion to JPEG through PIL to ensure the image is in a</span>
+    <span class="c1"># common colorspace.  JPEG colorspace is complex: see</span>
+    <span class="c1">#   https://docs.oracle.com/javase/8/docs/api/javax/imageio/metadata/</span>
+    <span class="c1">#                           doc-files/jpeg_metadata.html</span>
+    <span class="s1">&#39;JFIF&#39;</span><span class="p">:</span> <span class="s1">&#39;image/jpeg&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">TileOutputPILFormat</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;JFIF&#39;</span><span class="p">:</span> <span class="s1">&#39;JPEG&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">TileInputUnits</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="kc">None</span><span class="p">:</span> <span class="s1">&#39;base_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;base&#39;</span><span class="p">:</span> <span class="s1">&#39;base_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;base_pixel&#39;</span><span class="p">:</span> <span class="s1">&#39;base_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;base_pixels&#39;</span><span class="p">:</span> <span class="s1">&#39;base_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;pixel&#39;</span><span class="p">:</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;pixels&#39;</span><span class="p">:</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;mag_pixel&#39;</span><span class="p">:</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;mag_pixels&#39;</span><span class="p">:</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;magnification_pixel&#39;</span><span class="p">:</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;magnification_pixels&#39;</span><span class="p">:</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;nm&#39;</span><span class="p">:</span> <span class="s1">&#39;nm&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;nanometer&#39;</span><span class="p">:</span> <span class="s1">&#39;nm&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;nanometers&#39;</span><span class="p">:</span> <span class="s1">&#39;nm&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;um&#39;</span><span class="p">:</span> <span class="s1">&#39;um&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;μm&#39;</span><span class="p">:</span> <span class="s1">&#39;um&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;micrometers&#39;</span><span class="p">:</span> <span class="s1">&#39;um&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;micrometer&#39;</span><span class="p">:</span> <span class="s1">&#39;um&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;microns&#39;</span><span class="p">:</span> <span class="s1">&#39;um&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;micron&#39;</span><span class="p">:</span> <span class="s1">&#39;um&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;mm&#39;</span><span class="p">:</span> <span class="s1">&#39;mm&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;millimeter&#39;</span><span class="p">:</span> <span class="s1">&#39;mm&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;millimeters&#39;</span><span class="p">:</span> <span class="s1">&#39;mm&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;m&#39;</span><span class="p">:</span> <span class="s1">&#39;m&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;meter&#39;</span><span class="p">:</span> <span class="s1">&#39;m&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;meters&#39;</span><span class="p">:</span> <span class="s1">&#39;m&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;km&#39;</span><span class="p">:</span> <span class="s1">&#39;km&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;kilometer&#39;</span><span class="p">:</span> <span class="s1">&#39;km&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;kilometers&#39;</span><span class="p">:</span> <span class="s1">&#39;km&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;fraction&#39;</span><span class="p">:</span> <span class="s1">&#39;fraction&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;projection&#39;</span><span class="p">:</span> <span class="s1">&#39;projection&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;proj&#39;</span><span class="p">:</span> <span class="s1">&#39;projection&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;wgs84&#39;</span><span class="p">:</span> <span class="s1">&#39;proj4:EPSG:4326&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;4326&#39;</span><span class="p">:</span> <span class="s1">&#39;proj4:EPSG:4326&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># numpy dtype to pyvips GValue</span>
+<span class="n">dtypeToGValue</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="s1">&#39;char&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="s1">&#39;uchar&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;d&#39;</span><span class="p">:</span> <span class="s1">&#39;double&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="s1">&#39;dpcomplex&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;f&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;F&#39;</span><span class="p">:</span> <span class="s1">&#39;complex&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;h&#39;</span><span class="p">:</span> <span class="s1">&#39;short&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;H&#39;</span><span class="p">:</span> <span class="s1">&#39;ushort&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;i&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;I&#39;</span><span class="p">:</span> <span class="s1">&#39;uint&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">GValueToDtype</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">dtypeToGValue</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+
+<span class="n">ExtraExtensionsToMimetypes</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;adf&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-esri-grid&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;apng&#39;</span><span class="p">:</span> <span class="s1">&#39;image/apng&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;bil&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-envi-bil&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;bip&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-envi-bip&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;cr2&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-canon-cr2&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;dds&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-dds&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;dem&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-usgs-dem&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ers&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-erdas-ers&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;exr&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-exr&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;fit&#39;</span><span class="p">:</span> <span class="s1">&#39;image/fits&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;fits&#39;</span><span class="p">:</span> <span class="s1">&#39;image/fits&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;flc&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-autodesk-flc&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;fli&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-autodesk-fli&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;flt&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-flt&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;grd&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-surfer-grd&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;hdr&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-hdr&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;img&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-erdas-hfa&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;lan&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-erdas-lan&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;lei&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-leica-lei&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;lif&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-leica-lif&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;lsm&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-zeiss-lsm&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;mng&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-mng&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;mrw&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-minolta-mrw&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ndpi&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-ndpi&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;nef&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-nikon-nef&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;oib&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-olympus-oib&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;oir&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-olympus-oir&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;pbm&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-portable-bitmap&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;pgm&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-portable-graymap&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;pict&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-pict&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;pix&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-pcidsk&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ppm&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-portable-pixmap&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;qoi&#39;</span><span class="p">:</span> <span class="s1">&#39;image/qoi&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ras&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-cmu-raster&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;rgb&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-rgb&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;rgba&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-rgba&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sid&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-mrsid&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;stk&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-metamorph-stk&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;svg&#39;</span><span class="p">:</span> <span class="s1">&#39;image/svg+xml&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;svs&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-svs&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ter&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-terragen-terrain&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;zif&#39;</span><span class="p">:</span> <span class="s1">&#39;image/zif&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;zvi&#39;</span><span class="p">:</span> <span class="s1">&#39;image/x-zeiss-zvi&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

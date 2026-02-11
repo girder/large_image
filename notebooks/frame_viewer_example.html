@@ -1,0 +1,235 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Large Image Frame Selector in Jupyter &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=e9af8ede" />
+
+  
+    <link rel="shortcut icon" href="../_static/K.png"/>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Developer Guide" href="../development.html" />
+    <link rel="prev" title="Using the Zarr Tile Sink" href="zarr_sink_example.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../notebooks.html">Jupyter Notebook Examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../notebooks.html#rendered-views">Rendered Views</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="large_image_examples.html">Using Large Image in Jupyter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="zarr_sink_example.html">Using the Zarr Tile Sink</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Large Image Frame Selector in Jupyter</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Installation">Installation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../notebooks.html#download-and-use-locally">Download and Use Locally</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notebooks.html#run-in-google-colab">Run in Google Colab</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../development.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../girder_index.html">Girder Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_index.html">API Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../notebooks.html">Jupyter Notebook Examples</a></li>
+      <li class="breadcrumb-item active">Large Image Frame Selector in Jupyter</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/frame_viewer_example.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Large-Image-Frame-Selector-in-Jupyter">
+<h1>Large Image Frame Selector in Jupyter<a class="headerlink" href="#Large-Image-Frame-Selector-in-Jupyter" title="Link to this heading"></a></h1>
+<p>The large_image library has some convenience features for use in Jupyter Notebooks and Jupyter Lab. The same widgets that can allow compositing frames together in Girder and HistomicsUI can also be used in Jupyter.</p>
+<section id="Installation">
+<h2>Installation<a class="headerlink" href="#Installation" title="Link to this heading"></a></h2>
+<p>The large_image library has a variety of tile sources to support a wide range of file formats. The example used in this notebook can just be pip installed. We also install ipyleafleft to allow interactivity with the images.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>pip<span class="w"> </span>install<span class="w"> </span>large_image<span class="o">[</span>tiff<span class="o">]</span><span class="w"> </span><span class="s1">&#39;ipyleaflet&gt;=0.19&#39;</span><span class="w"> </span>ipyvue<span class="w"> </span>--find-links<span class="o">=</span>https://girder.github.io/large_image_wheels
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+</pre></div></div>
+</div>
+<p><strong>Get a Sample File</strong></p>
+<p>Now we get a file to show off some of the capabilities. The sample file is an extract from a much larger file but is sufficient for demonstration purposes.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get a file so we can use it locally</span>
+<span class="o">!</span>curl<span class="w"> </span>-L<span class="w"> </span>-C<span class="w"> </span>-<span class="w"> </span>-o<span class="w"> </span>wd-extract.jpeg.tiff<span class="w"> </span>https://data.kitware.com/api/v1/file/hashsum/sha512/ab0e68399f924484b96e2268e3ac277875b10619a673dcf3951380a5e5f0c9bb2b37139a8c522dacc0f40036fcb438a30143b69874454299af64ebb8062b272a/download
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+** Resuming transfer from byte position 51446408
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0 49.0M    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+</pre></div></div>
+</div>
+<p><strong>Load the file in python</strong></p>
+<p>When we open a file, it just reads the metadata. Actual pixel data is read as needed.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">large_image</span>
+
+<span class="n">source</span> <span class="o">=</span> <span class="n">large_image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">&#39;wd-extract.jpeg.tiff&#39;</span><span class="p">)</span>
+<span class="c1"># The thumbnail method returns a tuple with an image or numpy array and a mime type</span>
+<span class="n">source</span><span class="o">.</span><span class="n">getThumbnail</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_frame_viewer_example_6_0.jpg" src="../_images/notebooks_frame_viewer_example_6_0.jpg" />
+</div>
+</div>
+<p><strong>Show the Image Interactively</strong></p>
+<p>If ipyleafleft is available, you can zoom in on the image. Since this is a multi-frame image (there are 24 image channels), you also get controls to look at different frames.</p>
+<p>Try these:</p>
+<ul class="simple">
+<li><p>Switch the Image Control Mode to “Channel Compositing”.</p></li>
+<li><p>Switch the Image Control Mode to “Axis” and click “Max Merge”.</p></li>
+<li><p>On Channel Compositing, turn off all channels except “Antigen Ki67” and click “Auto Range”</p></li>
+</ul>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Just end your cell on the source variable, and an interactive image will appear</span>
+<span class="n">source</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8f1dd862cac64862978b75ba9bf75226", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="zarr_sink_example.html" class="btn btn-neutral float-left" title="Using the Zarr Tile Sink" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../development.html" class="btn btn-neutral float-right" title="Developer Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
