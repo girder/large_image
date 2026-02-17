@@ -39,6 +39,9 @@ def return_tile_slides_meeting_area_threshold(mask: np.ndarray, slide_dim: dict,
         if np.sum(mask_patch > threshold_mask) > np.size(mask_patch) * area_threshold:
             return_tiles.append(tile)
 
+    if len(return_tiles) == 0:
+        raise ValueError("No tiles found in the mask that meets parameters. Please ensure your mask is for the entire whole slide image and your scale and region parameters are correct.")
+
     return return_tiles
 
 def return_relevant_tile_indexes_for_slide_dim(slide_dimensions: dict, tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None):
@@ -96,7 +99,7 @@ def return_relevant_tile_indexes_for_slide_dim(slide_dimensions: dict, tile_over
 def get_patch_from_mask_for_tile(mask: np.ndarray, slide_dimensions: dict, tile: list):
     """
     A function that returns a patch from the mask for a given tile.
-    :param mask: The mask.
+    :param mask: The mask for the entire whole slide image.
     :param slide_dimensions: The slide dimensions dictionary determined by calculate_slide_dimensions.
     :param tile: The tile in the form of (y, x).
     :returns: The appropriate patch from the mask.
@@ -111,11 +114,11 @@ def get_patch_from_mask_for_tile(mask: np.ndarray, slide_dimensions: dict, tile:
     conv_x_base_to_mask = mask_size_x / slide_dimensions['base_size_x']
     conv_y_base_to_mask = mask_size_y / slide_dimensions['base_size_y']
 
-    bound_x1 = round(conv_x_base_to_mask * tile_x * slide_dimensions['tile_width_before_scaling'] + slide_dimensions['region_left'])
-    bound_x2 = round(conv_x_base_to_mask * (tile_x + 1) * slide_dimensions['tile_width_before_scaling'] + slide_dimensions['region_left'])
+    bound_x1 = round(conv_x_base_to_mask * tile_x * slide_dimensions['tile_width_before_scaling'] + (slide_dimensions['region_left'] * conv_x_base_to_mask))
+    bound_x2 = round(conv_x_base_to_mask * (tile_x + 1) * slide_dimensions['tile_width_before_scaling'] + (slide_dimensions['region_left'] * conv_x_base_to_mask))
 
-    bound_y1 = round(conv_y_base_to_mask * tile_y * slide_dimensions['tile_height_before_scaling'] + slide_dimensions['region_top'])
-    bound_y2 = round(conv_y_base_to_mask * (tile_y + 1) * slide_dimensions['tile_height_before_scaling'] + slide_dimensions['region_top'])
+    bound_y1 = round(conv_y_base_to_mask * tile_y * slide_dimensions['tile_height_before_scaling'] + (slide_dimensions['region_top'] * conv_y_base_to_mask))
+    bound_y2 = round(conv_y_base_to_mask * (tile_y + 1) * slide_dimensions['tile_height_before_scaling'] + (slide_dimensions['region_top'] * conv_y_base_to_mask))
 
     patch_mask = mask[bound_y1:bound_y2,bound_x1:bound_x2]
 

@@ -19,6 +19,9 @@ import torch
 from torch.nn.functional import pad
 from torchvision.transforms import v2
 from torchvision.io import ImageReadMode
+import cv2
+from shapely.geometry import Polygon
+from shapely import affinity, to_geojson
 
 from zeus.monitor import ZeusMonitor
 
@@ -1213,3 +1216,126 @@ def run_eager_iterator_with_pytorch_transform(tile_source: large_image.tilesourc
     print(f"Time taken: {end_time - start_time} seconds")
 
     return output_image_count, tile_image_count, count
+
+def thresh_hsl(thresh_img):
+    if thresh_img.shape[2] == 3:
+        thresh_img = cv2.cvtColor(thresh_img, cv2.COLOR_RGB2HLS)
+    elif thresh_img.shape[2] == 4:
+        thresh_img = cv2.cvtColor(thresh_img, cv2.COLOR_RGBA2RGB)
+        thresh_img = cv2.cvtColor(thresh_img, cv2.COLOR_RGB2HLS)
+    else:
+        raise ValueError("Image must be RGB or RGBA")
+
+    # Attempt to remove the white background using a statistical approach
+
+    mean_lightness = np.mean(thresh_img[:,:,1])
+    std_lightness = np.std(thresh_img[:,:,1])
+
+    mean_hue = np.mean(thresh_img[:,:,0])
+    std_hue = np.std(thresh_img[:,:,0])
+
+    mean_sat = np.mean(thresh_img[:,:,2])
+    std_sat = np.std(thresh_img[:,:,2])
+
+    lightness_cutoff = None
+    if mean_lightness + (std_lightness * 2) >= 245:
+        lightness_cutoff = 245
+    else:
+        lightness_cutoff = mean_lightness    
+
+    thresh_img[(thresh_img[:,:,1] >= lightness_cutoff)] = [0,0,0]
+
+    # Assume if hue is greater than mean hue, then it is a non-background tile
+
+    grey = thresh_img[:,:,1]
+    grey[(thresh_img[:,:,0] > mean_hue) & (thresh_img[:,:,2] > mean_sat)] = 255
+
+    return thresh_img, grey
+
+
+def get_tissue_mask_with_background_elimination(img, return_polygons=False, threshold_contour_areas=[0.0001, 0.00005], debug_output_path=None, slide_dimensions=None):
+    thresh = img.copy()
+
+    thresh, gray = thresh_hsl(thresh)
+
+    kernel = np.ones((3,3), np.uint8)
+    gray = cv2.dilate(gray, kernel, iterations=1)
+    thresh_after = cv2.threshold(gray, 5, 250, cv2.THRESH_OTSU)[1]
+    # thresh_after = cv2.bitwise_not(thresh_after)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))
+    morph = cv2.morphologyEx(thresh_after, cv2.MORPH_OPEN, kernel, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
+    morph = cv2.morphologyEx(morph, cv2.MORPH_CLOSE, kernel, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))
+    morph = cv2.morphologyEx(morph, cv2.MORPH_ERODE, kernel, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+
+    # Find contours that are relevant in the image
+    polygons = []
+    contours, hierarchy = cv2.findContours(morph, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    contour_mask = np.zeros_like(gray)
+    contour_count = 0
+    for threshold in threshold_contour_areas:
+        for contour_count, contour in enumerate(contours):
+            contour_area = cv2.contourArea(contour)
+            if contour_area > threshold * (img.shape[0] * img.shape[1]):
+                # Check if this is an outer contour (parent is -1) or inner contour (hole)
+                if hierarchy[0][contour_count,3] == -1:  # Outer contour
+                    cv2.drawContours(contour_mask, [contour], 0, 255, -1)
+                elif hierarchy[0][contour_count,3] != -1:  # Inner contour (hole)
+                    cv2.drawContours(contour_mask, [contour], 0, 0, -1)
+
+                if return_polygons:
+                    polygon = Polygon(np.squeeze(contour))
+                    if slide_dimensions is not None:
+                        polygon = affinity.scale(polygon, xfact=(slide_dimensions['base_size_x'] / thresh.shape[1]), yfact=(slide_dimensions['base_size_y'] / thresh.shape[0]), origin=(0,0))
+                    polygons.append(to_geojson(polygon))
+
+    blur = cv2.GaussianBlur(contour_mask, (5,5), sigmaX=0, sigmaY=0, borderType = cv2.BORDER_DEFAULT)
+
+    if debug_output_path is not None:
+        print("Saving original image {}".format(img.shape))
+        img_out_path = os.path.join(debug_output_path, 'test_original.png')
+        plt.imsave(img_out_path, img)
+
+        print("Saving threshold before {}".format(thresh.shape))
+        img_out_path = os.path.join(debug_output_path, 'test_threshold_before.png')
+        plt.imsave(img_out_path, thresh)
+
+        print("Saving thresh hue {}".format(thresh[:,:,0].shape))
+        img_out_path = os.path.join(debug_output_path, 'test_threshold_hue.png')
+        plt.imsave(img_out_path, thresh[:,:,0])
+
+        print("Saving thresh lightness {}".format(thresh[:,:,1].shape))
+        img_out_path = os.path.join(debug_output_path, 'test_threshold_lightness.png')
+        plt.imsave(img_out_path, thresh[:,:,1])
+
+        print("Saving thresh sat {}".format(thresh[:,:,2].shape))
+        img_out_path = os.path.join(debug_output_path, 'test_threshold_saturation.png')
+        plt.imsave(img_out_path, thresh[:,:,2])
+
+        print("Saving grayscale after {}".format(gray.shape))
+        img_out_path = os.path.join(debug_output_path, 'test_gray.png')
+        plt.imsave(img_out_path, gray)
+
+        print("Saving threshold after {}".format(thresh_after.shape))
+        img_out_path = os.path.join(debug_output_path, 'test_threshold_after.png')
+        plt.imsave(img_out_path, thresh_after)
+
+        print("Saving morph {}".format(morph.shape))
+        img_out_path = os.path.join(debug_output_path, 'test_morph.png')
+        plt.imsave(img_out_path, morph)
+
+        print("Saving contour mask {}".format(contour_mask.shape))
+        img_out_path = os.path.join(debug_output_path, 'test_contour_mask.png')
+        plt.imsave(img_out_path, contour_mask)
+
+        print("Saving blur {}".format(blur.shape))
+        img_out_path = os.path.join(debug_output_path, 'test_blur.png')
+        plt.imsave(img_out_path, blur)
+
+
+    if return_polygons:
+        return blur, polygons
+    else:
+        return blur, None

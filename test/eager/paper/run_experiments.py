@@ -1,7 +1,7 @@
 import sys
 import os
 import math
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 
 import numpy as np
 import torch
@@ -9,11 +9,13 @@ from matplotlib import pyplot as plt
 import albumentations as A
 from torchvision.transforms import v2
 
+import large_image
+
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 sys.path.append(base_path)
 
-from test.eager.eager_helpers import run_reproducible_performance_evaluation, run_performance_testing_on_directory
+from test.eager.eager_helpers import run_reproducible_performance_evaluation, run_performance_testing_on_directory, get_tissue_mask_with_background_elimination
 
 def plot_regions(regions, filename):
     plt.figure(figsize=(10, 10), dpi=300)
@@ -222,11 +224,11 @@ def test_sparse_regions(test_path):
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_250k, region_size={'width':224, 'height': 224})
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_300k, region_size={'width':224, 'height': 224})
 
-def test_region(test_path, region=Optional[Dict[str, Any]], tiles=None):
+def test_region(test_path, region: Optional[Dict[str, Any]] = None, tiles: Optional[np.ndarray] = None, tile_size: Optional[Dict[str, int]] = None, scale: Optional[Dict[str, Any]] = None, transform: Optional[Callable] = None, mask: Optional[np.ndarray] = None):
     if region is None:
         region = dict(left=100, top=100, width=10000, height=10000, units='base_pixels')
 
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/region/eager", without_cache=False, run_eager=True, performance_type='read', region=region, tiles=tiles)
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/region/eager", without_cache=False, run_eager=True, performance_type='read', region=region, tiles=tiles, tile_size=tile_size, scale=scale, transform=transform, mask=mask)
 
 def test_read_high_performance(test_path):
     # Run performance evaluation with high performance settings
@@ -893,8 +895,24 @@ if __name__ == "__main__":
         "units": "base_pixels"
     }
 
+    torch_transform = v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+    ])
+
+    source = large_image.open(test_region_image_2)
+
+    low_res_img, _ = source.getRegion(scale={'mm_x': 0.01, 'mm_y': 0.01}, format=large_image.constants.TILE_FORMAT_NUMPY)
+
+    plt.imsave("low_res_img.png", low_res_img)
+
+
+    mask, polygons = get_tissue_mask_with_background_elimination(low_res_img)
+
+    plt.imsave("mask.png", mask)
+
     # Test region
-    test_region(test_region_image_2, region=region, tiles=None)
+    test_region(test_region_image_2, region=region, tiles=None, tile_size={'width': 224, 'height': 224}, scale={'mm_x': 0.00025, 'mm_y': 0.00025}, transform=torch_transform, mask=mask)
     pass
 
 
