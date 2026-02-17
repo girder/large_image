@@ -254,7 +254,7 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
 
     return out
 
-def calculate_slide_dimensions(source: TileSource, region: Optional[Dict[str, int]] = None, scale: Optional[Dict[str, Any]] = None, tile_size: Optional[Dict[str, int]] = None, source_scale: Optional[Dict[str, Any]] = None):
+def calculate_slide_dimensions(source: TileSource, region: Optional[Dict[str, int]] = None, scale: Optional[Dict[str, Any]] = None, tile_size: Optional[Dict[str, int]] = None, source_scale: Optional[Dict[str, Any]] = None, **kwargs):
     '''
     A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
     :param source: A large image tile source.

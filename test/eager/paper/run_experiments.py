@@ -1,6 +1,7 @@
 import sys
 import os
 import math
+from typing import Optional, Dict, Any
 
 import numpy as np
 import torch
@@ -221,8 +222,11 @@ def test_sparse_regions(test_path):
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/250k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_250k, region_size={'width':224, 'height': 224})
     run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir='/scr/arosado/performance/regions/sparse/4/300k', without_cache=False, run_eager=True, performance_type='read', output_mode='regions', pad_mode='equal', chunk_mult=4, regions=regions_300k, region_size={'width':224, 'height': 224})
 
-def test_region(test_path):
-    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/region/eager", without_cache=False, run_eager=True, performance_type='read', region=dict(left=100, top=100, width=10000, height=10000, units='base_pixels'))
+def test_region(test_path, region=Optional[Dict[str, Any]], tiles=None):
+    if region is None:
+        region = dict(left=100, top=100, width=10000, height=10000, units='base_pixels')
+
+    run_reproducible_performance_evaluation(test_path, n_runs=5, output_dir="/scr/arosado/performance/region/eager", without_cache=False, run_eager=True, performance_type='read', region=region, tiles=tiles)
 
 def test_read_high_performance(test_path):
     # Run performance evaluation with high performance settings
@@ -792,17 +796,6 @@ def test_svs_uni_energy(test_path, file_dir=None):
         track_energy=True
     )
 
-def test_region(test_path):
-    region = {
-        'left': 121416,
-        'top': 73196,
-        'right': 130371,
-        'bottom': 82151,
-        'units': 'base_pixels'
-    }
-
-    run_reproducible_performance_evaluation(test_path, n_runs=1, output_dir="/scr/arosado/performance/region/eager", without_cache=False, run_eager=True, performance_type='read', region=region, scale={'mm_x': 0.0005038, 'mm_y': 0.0005038})
-
 def test_svs_uni(test_path, file_dir=None):
     transform = v2.Compose(
         [
@@ -858,6 +851,7 @@ if __name__ == "__main__":
     wsi_archive_dataset_path = '/wsi_archive/large_image/performance/svs_test_tiles'
 
     test_region_image = "/wsi_archive/DUGGER_LAB/Batch8/08-195-Temporal_AT8.czi"
+    test_region_image_2 = "/wsi_archive/APOLLO_NP/2016/E16-128/ScannedSlides/unknown/E16-128_14_pTDP.svs"
     
     test_dir = '/scr/arosado/large_image/svs_test_tiles'
     s3_test_path = '/tmp/s3/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
@@ -889,8 +883,21 @@ if __name__ == "__main__":
     # run_performance_testing_on_directory(ndpi_dir, file_extensions=[".ndpi"], output_dir="/scr/arosado/performance/ndpi", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # pass
     # Test read performance
-    test_read(test_path, test_dir)
+    # test_read(test_path, test_dir)
+
+    region = {
+        "left": 35412,
+        "top": 31980,
+        "width": 896,
+        "height": 896,
+        "units": "base_pixels"
+    }
+
+    # Test region
+    test_region(test_region_image_2, region=region, tiles=None)
     pass
+
+
 
     # Test read memory tracking
     # test_read_memory_tracking(test_path, test_dir)

@@ -115,7 +115,6 @@ class EagerIterator:
         
         Given its specific use case, the eager iterator does not support all of the options available in the tileIterator.  
         The eager iterator does not support the following options:
-            - region
             - format
 
         This iterator is experimental and may not work with all tile sources.  Please consider the different expected inputs when attempting to use the eager iterator.
