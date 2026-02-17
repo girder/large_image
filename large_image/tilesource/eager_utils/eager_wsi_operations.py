@@ -276,6 +276,9 @@ def calculate_slide_dimensions(source: TileSource, region: Optional[Dict[str, in
         if 'right' in region:
             region['width'] = region['right'] - region['left']
         
+        if 'units' not in region:
+            raise ValueError("Region must be a dictionary with 'units' which can be 'base_pixels', 'mag_pixels', or 'mm'")
+        
         if 'left' not in region or 'top' not in region or 'width' not in region or 'height' not in region:
             raise ValueError("Region must be a dictionary with 'left', 'top', 'width', and 'height'")
         elif region['width'] <= 0 or region['height'] <= 0:
