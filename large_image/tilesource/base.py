@@ -566,7 +566,7 @@ class TileSource(IPyLeafletMixin):
 
     @methodcache()
     def histogram(  # noqa
-            self, dtype: npt.DTypeLike = None, onlyMinMax: bool = False,
+            self, dtype: npt.DTypeLike | None = None, onlyMinMax: bool = False,
             bins: int = 256, density: bool = False, format: Any = None,
             *args, **kwargs) -> dict[str, np.ndarray | list[dict[str, Any]]]:
         """

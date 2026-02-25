@@ -5,6 +5,7 @@
 ### Bug Fixes
 
 - Reading a small region from a large tile could be wrong ([#2049](../../pull/2049))
+- Fix a type in the histogram signature ([#2051](../../pull/2051))
 
 ## 1.34.0
 
