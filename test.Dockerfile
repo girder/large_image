@@ -107,7 +107,7 @@ RUN for ver in $PYTHON_VERSIONS; do \
     rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /.pyenv
 
 # Use nvm to install node
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash && \
     . ~/.bashrc && \
     if [ "$NODE_VERSION" = "14" ]; then \
     cd /root/.nvm/versions/node/v14.21.3/lib && \
@@ -118,6 +118,7 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | b
     npm install 'cross-spawn@^6.0.6' && \
     npm install 'form-data@^2.5.5' && \
     npm install 'http-cache-semantics@^4.1.1' && \
+    npm install 'minimatch@^3.1.3' && \
     npm install 'qs@^6.14.1' && \
     npm install 'semver@^5.7.2' && \
     # ip package has an unaddressed HIGH CVE, ip-address is a direct substitute \
@@ -138,9 +139,11 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | b
     npm install 'ansi-regex@^4.1.1' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/make-fetch-happen && \
     npm install 'http-cache-semantics@^4.1.1' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/glob && \
+    npm install 'minimatch@^3.1.3' && \
     # We can't actually upgrade tar past 6.x \
     sed -i 's/4\.4\.19/8.0.0/g' /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/tar/package.json && \
-    sed -i 's/6\.14\.18/12.0.0/g' /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/package.json && \
+    npm --version && \
     true; else \
     npm install -g npm@latest && \
     true; fi && \
