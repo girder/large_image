@@ -33,8 +33,8 @@ setup(
     ],
     python_requires='>=3.10',
     install_requires=[
-        'girder>=3.1.18',
-        'girder-jobs>=3.0.3',
+        'girder>=3.1.18,<5',
+        'girder-jobs>=3.0.3,<5',
         f'large_image{limit_version}',
     ],
     extras_require={
