@@ -6,6 +6,7 @@ from collections import deque
 from .eager_utils.eager_image_modifications import pad_tile, pad_chunk_if_necessary, rgba2rgb, remove_unnecessary_image_information
 from .eager_utils import eager_fn
 from .eager_utils.eager_shared_array import SharedArray
+from .eager_utils.eager_read_args import default_region_coords_and_target_scale_from_read_args
 from .eager_utils.eager_pytorch_threading_context import _PyTorchThreadingContext
 
 import multiprocessing
@@ -16,7 +17,8 @@ from PIL import Image
 
 from .. import tilesource
 
-_EAGER_FN_SENTINEL = "__large_image_eager_fn__"
+_EAGER_FN_TRANSFORM_SENTINEL = "__large_image_eager_fn__"
+_EAGER_FN_TRANSFORM_SCALE_SENTINEL = "__large_image_eager_fn_transform_scale__"
 
 class EagerIterator:
     def __init__(
@@ -46,7 +48,8 @@ class EagerIterator:
             seed: int = 42,
             area_threshold: float = 0.25,
             threshold_mask: Union[int, float] = 100,
-            transform_save_mode: Optional[str] = 'tile_x_y'
+            transform_save_mode: Optional[str] = 'tile_x_y',
+            transform_scale: Optional[Callable] = None
             ):
         """
         Initialize the EagerIterator class.  The EagerIterator class is an iterator intended for use in AI/ML applications.
@@ -188,6 +191,7 @@ class EagerIterator:
         self.transform = transform
         self.transform_save_mode = transform_save_mode
         self._worker_transform = None
+        self.transform_scale = transform_scale
 
         # Use the mask to determine the tiles if in tile mode
         if output_mode == 'tiles':
@@ -230,6 +234,7 @@ class EagerIterator:
         # Determine if the output changes based on the transform
         self._setup_out_dims()
         self._worker_transform = self._prepare_worker_transform(self.transform)
+        self._worker_transform_scale = self._prepare_worker_transform_scale(self.transform_scale)
 
         n_possible_tiles = self.slide_dimensions['tile_target_range_x'] * self.slide_dimensions['tile_target_range_y']
 
@@ -245,6 +250,27 @@ class EagerIterator:
         if randomize_chunks:
             random.seed(seed)
             random.shuffle(self.read_kwargs)
+
+        # Test transform scale
+        if transform_scale is not None:
+            import inspect
+            transform_scale_signature = inspect.signature(transform_scale)
+            transform_scale_parameters = transform_scale_signature.parameters
+            if len(transform_scale_parameters) != 2:
+                raise ValueError("transform_scale must have two parameters for read_kwargs which is a list of and slide_dimensions")
+            try:
+                xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = transform_scale(self.read_kwargs[0], self.slide_dimensions)
+            except Exception as e:
+                raise ValueError("Provided transform_scale test call failed.  Error: {}".format(e))
+
+            if not isinstance(xlt, np.ndarray) or not isinstance(ytt, np.ndarray) or not isinstance(xrt, np.ndarray) or not isinstance(ybt, np.ndarray) or not isinstance(mm_x, np.ndarray) or not isinstance(mm_y, np.ndarray) or not isinstance(target_scale, dict):
+                raise ValueError("transform_scale must return 6 numpy arrays for left, top, right, bottom coordinates, mm_x, mm_y, and a dictionary for the target scale")
+            elif self.slide_dimensions['scale_mode'] == 'mm' and not 'mm_x' in target_scale and not 'mm_y' in target_scale:
+                raise ValueError("transform_scale must return a dictionary with units 'mm' if scale_mode is 'mm'")
+            elif self.slide_dimensions['scale_mode'] == 'mag' and not 'magnification' in target_scale:
+                raise ValueError("transform_scale must return a dictionary with 'magnification' if scale_mode is 'mag'")
+            else:
+                eager_fn.set_transform_scale(transform_scale)
 
         # Setup the process pool after transform is registered
         from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
@@ -272,7 +298,18 @@ class EagerIterator:
         except Exception:
             from .eager_utils import eager_fn
             eager_fn.set_transform(transform)
-            return _EAGER_FN_SENTINEL
+            return _EAGER_FN_TRANSFORM_SENTINEL
+
+    def _prepare_worker_transform_scale(self, transform_scale: Optional[Callable]):
+        if transform_scale is None:
+            return None
+        try:
+            pickle.dumps(transform_scale)
+            return transform_scale
+        except Exception:
+            from .eager_utils import eager_fn
+            eager_fn.set_transform_scale(transform_scale)
+            return _EAGER_FN_TRANSFORM_SCALE_SENTINEL
 
 
     def _setup_out_dims_for_transform(self):
@@ -407,6 +444,8 @@ class EagerIterator:
         # wait on the futures linked to the next batch
         try:
             futures, tiles, batch_read_kwargs = self.queue.pop()
+            if len(batch_read_kwargs.shape) == 1:
+                batch_read_kwargs = np.expand_dims(batch_read_kwargs, axis=0)
             # Flatten futures if it's a list of lists (can happen when batches span multiple reads)
             # At line 720, futures can become a list of lists when batches > 1
             if futures and isinstance(futures[0], list):
@@ -438,7 +477,7 @@ class EagerIterator:
 
         return self._tiles_and_read_kwargs_to_dict(tiles, batch_read_kwargs)
     
-    def _tiles_and_read_kwargs_to_dict(self, tiles: SharedArray, read_kwargs: list):
+    def _tiles_and_read_kwargs_to_dict(self, tiles: SharedArray, read_kwargs: np.ndarray):
         """
         Convert the read_kwargs list to a dictionary for simplified access to the relevant read arguments in a way that is more consistent with the original tileIterator.
         The dictionary is returned with the following keys:
@@ -463,20 +502,20 @@ class EagerIterator:
         :param read_kwargs: A list of read arguments used to produce the SharedNumpyArray.
         :return: A dictionary with the read arguments.
         """
-        np_read_kwargs = np.array(read_kwargs)
+        # np_read_kwargs = np.array(read_kwargs)
 
         return {
             'format': 'numpy',
             'tile': tiles,
-            'gx': np_read_kwargs[:, 6], # left
-            'gy': np_read_kwargs[:, 4], # top
-            'level_x': np_read_kwargs[:, 1],
-            'level_y': np_read_kwargs[:, 0],
+            'gx': read_kwargs[:, 6], # left
+            'gy': read_kwargs[:, 4], # top
+            'level_x': read_kwargs[:, 1],
+            'level_y': read_kwargs[:, 0],
             'tile_position': {
-                'level_x': np_read_kwargs[:, 1],
-                'level_y': np_read_kwargs[:, 0],
-                'region_x': np_read_kwargs[:, 3],
-                'region_y': np_read_kwargs[:, 2],
+                'level_x': read_kwargs[:, 1],
+                'level_y': read_kwargs[:, 0],
+                'region_x': read_kwargs[:, 3],
+                'region_y': read_kwargs[:, 2],
             },
             'width': self.slide_dimensions['tile_size'][0], # right - left
             'height': self.slide_dimensions['tile_size'][1], # bottom - top
@@ -504,7 +543,8 @@ class EagerIterator:
         pad_mode: str = 'wsi_edge', 
         pad_fill_mode: str = 'default', 
         callable_arg_num: Optional[int] = None,
-        transform_save_mode: Optional[str] = 'tile_x_y'
+        transform_save_mode: Optional[str] = 'tile_x_y',
+        worker_transform_scale: Optional[Callable] = None
         ):
         """ 
         A static method used for reading regions from a tile source and filling the SharedNumpyArray with the results.
@@ -518,10 +558,15 @@ class EagerIterator:
         :param offset: The offset of the current batch.
         """
         read_kwargs = np.array(read_kwargs)
-        xlt = read_kwargs[:, 6]
-        ytt = read_kwargs[:, 4]
-        xrt = read_kwargs[:, 7]
-        ybt = read_kwargs[:, 5]
+
+        if worker_transform_scale == _EAGER_FN_TRANSFORM_SCALE_SENTINEL:
+            _worker_transform_scale = eager_fn.get_transform_scale()
+            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = _worker_transform_scale(read_kwargs, slide_dimensions)
+        elif worker_transform_scale is not None:
+            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = worker_transform_scale(read_kwargs, slide_dimensions)
+        else:
+            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = default_region_coords_and_target_scale_from_read_args(read_kwargs, slide_dimensions)
+            
         tile_y = read_kwargs[:, 2]
         tile_x = read_kwargs[:, 3]
         xr = np.min(xlt)
@@ -546,15 +591,15 @@ class EagerIterator:
             # print("Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}".format(read_kwargs))
 
         if output_mode == 'tiles':# tile size (x, y)
-            xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint64)
-            yto = np.floor(np.divide((ytt - yr), slide_dimensions['conv_mm_y'])).astype(np.uint64)
-            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y'])).astype(np.uint64)
-            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x'])).astype(np.uint64)
+            xlo = np.floor(np.divide((xlt - xr), conv_mm_x)).astype(np.uint64)
+            yto = np.floor(np.divide((ytt - yr), conv_mm_y)).astype(np.uint64)
+            ho = yto + np.floor(np.divide((ybt - ytt), conv_mm_y)).astype(np.uint64)
+            wo = xlo + np.floor(np.divide((xrt - xlt), conv_mm_x)).astype(np.uint64)
         elif output_mode == 'regions':
-            xlo = np.floor(np.divide((xlt - xr), slide_dimensions['conv_mm_x'])).astype(np.uint64)
-            yto = np.floor(np.divide((ytt - yr) , slide_dimensions['conv_mm_y'])).astype(np.uint64)
-            ho = yto + np.floor(np.divide((ybt - ytt), slide_dimensions['conv_mm_y'])).astype(np.uint64)
-            wo = xlo + np.floor(np.divide((xrt - xlt), slide_dimensions['conv_mm_x'])).astype(np.uint64)
+            xlo = np.floor(np.divide((xlt - xr), conv_mm_x)).astype(np.uint64)
+            yto = np.floor(np.divide((ytt - yr) , conv_mm_y)).astype(np.uint64)
+            ho = yto + np.floor(np.divide((ybt - ytt), conv_mm_y)).astype(np.uint64)
+            wo = xlo + np.floor(np.divide((xrt - xlt), conv_mm_x)).astype(np.uint64)
         else:
             raise ValueError("Output mode not supported by read method.")
 
@@ -564,7 +609,7 @@ class EagerIterator:
         no_scale = False
         #
         if slide_dimensions['scale_mode'] == 'mm':
-            if slide_dimensions['base_mm_x'] == slide_dimensions['target_mm_x'] and slide_dimensions['base_mm_y'] == slide_dimensions['target_mm_y']:
+            if slide_dimensions['base_mm_x'] == target_scale['mm_x'] and slide_dimensions['base_mm_y'] == target_scale['mm_y']:
                 # no scaling needed
                 no_scale = True
                 kwargs = dict(
@@ -574,7 +619,7 @@ class EagerIterator:
             else:
                 kwargs = dict(
                     sourceRegion=dict(left=xr.item(), top=yr.item(), height=h.item(), width=w.item(), units='base_pixels'),
-                    targetScale=dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'], units='mm'),
+                    targetScale=target_scale,
                     format="numpy",
                 )
         elif slide_dimensions['scale_mode'] == 'mag':
@@ -588,7 +633,7 @@ class EagerIterator:
             else:
                 kwargs = dict(
                     sourceRegion = dict(left=xr.item(), top=yr.item(), height=h.item(), width=w.item(), units='base_pixels'),
-                    targetScale = dict(magnification= slide_dimensions['target_magnification']),
+                    targetScale =target_scale,
                     format = "numpy"
                 )
         else:
@@ -624,7 +669,7 @@ class EagerIterator:
 
         # Don't change to target dtype until after transform
         if transform:
-            if transform == _EAGER_FN_SENTINEL:
+            if transform == _EAGER_FN_TRANSFORM_SENTINEL:
                 transform = eager_fn.get_transform()
                 if transform is None:
                     raise ValueError("Eager transform not set in eager_utils.eager_fn")
@@ -665,6 +710,7 @@ class EagerIterator:
                 sharrs[sharr_index].insert(np.transpose(tile, [2, 0, 1]), slice_index)
             else:
                 sharrs[sharr_index].insert(tile, slice_index)
+            sharrs[sharr_index].insert_mm(mm_x[i], mm_y[i], slice_index)
 
     def _submitfn(self, read_kwargs: list, sharrs: list, offset: int):
         """
@@ -687,7 +733,8 @@ class EagerIterator:
             self.pad_mode,
             self.pad_fill_mode,
             self.callable_arg_num,
-            self.transform_save_mode
+            self.transform_save_mode,
+            self._worker_transform_scale
         )      
 
     def _fill(self):
@@ -698,6 +745,7 @@ class EagerIterator:
             """
             A while loop used by the _fill method to fill the queue with read operations to be processed by the process pool.
             """
+            
             while len(self.queue) < self.prefetch and self.pos < len(self.read_kwargs):
                 """if the last read from the prior batch spanned batch boundaries then
                 the leftmost element in self.queue contains the futures, shared array,
@@ -706,12 +754,15 @@ class EagerIterator:
                     while len(self.queue) == 0:
                         time.sleep(0.01)
                     futures, tiles, batch_kwargs = self.queue.popleft()
+                    if len(batch_kwargs.shape) == 1:
+                        batch_kwargs = np.expand_dims(batch_kwargs, axis=0)
                 else:
                     """last read aligned with batch boundary, create new shared array,
                     and read_kwargs, futures containers"""
                     tiles = SharedArray(self.out_dims, self.dtype, self.is_torch)
                     futures = []
-                    batch_kwargs = []
+                    # batch_kwargs = []
+                    batch_kwargs = np.empty((0, self.read_kwargs[0].shape[1]))
 
                 """submit enough jobs to fill at least one batch - a single job may 
                 fill multiple batches - or multiple jobs may be needed to fill one 
@@ -748,7 +799,7 @@ class EagerIterator:
                     the offset and submit another job on the next iteration"""
                     futures.append(self._submitfn(reads, tiles, offset))
                     offset = offset + len(reads)
-                    batch_kwargs = batch_kwargs + reads
+                    batch_kwargs = np.concatenate([batch_kwargs, reads], axis=0)
                     self.pos = self.pos + 1
                 self.overflow = len(batch_kwargs) % self.batch
 
@@ -756,10 +807,10 @@ class EagerIterator:
                 to the other batches - also divide kwargs according to batch boundaries
                 """
                 futures = [futures] + (batches - 1) * [[futures[-1]]]
-                batch_kwargs = [
+                batch_kwargs = np.concatenate([
                     batch_kwargs[i : i + self.batch]
                     for i in range(0, len(batch_kwargs), self.batch)
-                ]
+                ], axis=0)
 
                 # enqueue batches
                 for f, t, b in zip(futures, tiles, batch_kwargs):

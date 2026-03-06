@@ -21,7 +21,7 @@ def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
     # Split into chunks using group boundaries
     split_indices = np.where(np.diff(group_ids) != 0)[0] + 1
     chunks = np.split(sorted_tiles, split_indices)
-    chunks = [list(chunk) for chunk in chunks]
+    chunks = [np.array(chunk) for chunk in chunks]
 
     return chunks
 
@@ -111,7 +111,7 @@ def chunks_from_kd_tree(sorted_in: np.ndarray, used: np.ndarray, points: np.ndar
 
             if chunk.shape[0] > 0:
                 used[used_update_idxs] = True
-                chunk = chunk.tolist()
+                # chunk = chunk.tolist()
 
                 chunks.append(chunk)
 
@@ -171,8 +171,11 @@ def gen_read_args_for_regions(slide_dimensions: dict, regions: Union[list, np.nd
     #
     # possible_tiles = np.stack((x.flatten(), y.flatten()), axis=-1)
 
+    mm_y = np.full(regions.shape[0], slide_dimensions['target_mm_y'])
+    mm_x = np.full(regions.shape[0], slide_dimensions['target_mm_x'])
+
     # Regions of form (center_y, center_x, top, bottom, left, right)
-    regions = np.column_stack((org_tile_y, org_tile_x, center_y, center_x, regions[:, 0], yb, regions[:, 1], xr)).astype(np.int64)
+    regions = np.column_stack((org_tile_y, org_tile_x, center_y, center_x, regions[:, 0], yb, regions[:, 1], xr, mm_y, mm_x)).astype(np.float32)
     # Distance from 0, 0
     dist = (center_y ** 2 + center_x ** 2) ** 0.5
     # Sort regions by distance from 0, 0
@@ -217,6 +220,9 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
     sy = np.round(sorted_tiles[:, 0] * slide_dimensions['tile_height_before_scaling'] + slide_dimensions['region_top'], decimals=0)
     spy = np.round(sy + slide_dimensions['tile_height_before_scaling'], decimals=0)
 
+    mm_x = np.full(sorted_tiles.shape[0], slide_dimensions['target_mm_x'])
+    mm_y = np.full(sorted_tiles.shape[0], slide_dimensions['target_mm_y'])
+
     if region is not None:
         spx[spx > slide_dimensions['region_right']] = slide_dimensions['region_right']
         spy[spy > slide_dimensions['region_bottom']] = slide_dimensions['region_bottom']
@@ -229,7 +235,7 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
     
 
     # Combine into the sorted_tiles array
-    sorted_tiles = np.column_stack((org_tile_y, org_tile_x, sorted_tiles, sy, spy, sx, spx)).astype(np.int64)
+    sorted_tiles = np.column_stack((org_tile_y, org_tile_x, sorted_tiles, sy, spy, sx, spx, mm_y, mm_x)).astype(np.float32)
 
     # Keep track of whether edges are thrown out, if thrown out they can still form a complete grid
     diff_from_edge = 0
@@ -244,3 +250,20 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
         chunks = gen_read_args_incomplete_grid(sorted_tiles, chunk_size)
 
     return chunks
+
+def default_region_coords_and_target_scale_from_read_args(read_kwargs: np.ndarray, slide_dimensions: dict):
+    xlt = read_kwargs[:, 6]
+    ytt = read_kwargs[:, 4]
+    xrt = read_kwargs[:, 7]
+    ybt = read_kwargs[:, 5]
+    mm_x = read_kwargs[:, 9]
+    mm_y = read_kwargs[:, 8]
+
+    if slide_dimensions['scale_mode'] == 'mm':
+        scale_dict = dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'])
+    elif slide_dimensions['scale_mode'] == 'mag':
+        scale_dict = dict(magnification= slide_dimensions['target_magnification'])
+    else:
+        raise ValueError("Invalid scale mode")
+
+    return xlt, ytt, xrt, ybt, mm_x, mm_y, scale_dict, slide_dimensions['conv_mm_x'], slide_dimensions['conv_mm_y']

@@ -869,13 +869,13 @@ if __name__ == "__main__":
     mrxs_dir = '/scr/arosado/large_image/mrxs'
     ndpi_dir = '/scr/arosado/large_image/ndpi'
 
-    transform = v2.Compose(
-        [
-            v2.ToImage(),
-            v2.ToDtype(torch.float32, scale=True),
-            v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-        ]
-    )
+    # transform = v2.Compose(
+    #     [
+    #         v2.ToImage(),
+    #         v2.ToDtype(torch.float32, scale=True),
+    #         v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+    #     ]
+    # )
 
     # test_region(test_region_image)
     
@@ -885,35 +885,35 @@ if __name__ == "__main__":
     # run_performance_testing_on_directory(ndpi_dir, file_extensions=[".ndpi"], output_dir="/scr/arosado/performance/ndpi", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # pass
     # Test read performance
-    # test_read(test_path, test_dir)
+    test_read(test_path, test_dir)
 
-    region = {
-        "left": 35412,
-        "top": 31980,
-        "width": 896,
-        "height": 896,
-        "units": "base_pixels"
-    }
+    # region = {
+    #     "left": 35412,
+    #     "top": 31980,
+    #     "width": 896,
+    #     "height": 896,
+    #     "units": "base_pixels"
+    # }
 
-    torch_transform = v2.Compose([
-        v2.ToImage(),
-        v2.ToDtype(torch.float32, scale=True),
-    ])
+    # torch_transform = v2.Compose([
+    #     v2.ToImage(),
+    #     v2.ToDtype(torch.float32, scale=True),
+    # ])
 
-    source = large_image.open(test_region_image_2)
+    # source = large_image.open(test_region_image_2)
 
-    low_res_img, _ = source.getRegion(scale={'mm_x': 0.01, 'mm_y': 0.01}, format=large_image.constants.TILE_FORMAT_NUMPY)
+    # low_res_img, _ = source.getRegion(scale={'mm_x': 0.01, 'mm_y': 0.01}, format=large_image.constants.TILE_FORMAT_NUMPY)
 
-    plt.imsave("low_res_img.png", low_res_img)
+    # # plt.imsave("low_res_img.png", low_res_img)
 
 
-    mask, polygons = get_tissue_mask_with_background_elimination(low_res_img)
+    # mask, polygons = get_tissue_mask_with_background_elimination(low_res_img)
 
-    plt.imsave("mask.png", mask)
+    # # plt.imsave("mask.png", mask)
 
-    # Test region
-    test_region(test_region_image_2, region=region, tiles=None, tile_size={'width': 224, 'height': 224}, scale={'mm_x': 0.00025, 'mm_y': 0.00025}, transform=torch_transform, mask=mask)
-    pass
+    # # # Test region
+    # test_region(test_region_image_2, region=region, tiles=None, tile_size={'width': 224, 'height': 224}, scale={'mm_x': 0.00025, 'mm_y': 0.00025}, transform=torch_transform, mask=mask)
+    # pass
 
 
 

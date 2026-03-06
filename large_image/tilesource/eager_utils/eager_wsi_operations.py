@@ -402,7 +402,6 @@ def calculate_slide_dimensions(source: TileSource, region: Optional[Dict[str, in
 
                     
             else:
-
                 convert_scale_px = source.convertRegionScale(
                     sourceRegion=dict(
                         left=slide_dimensions['region_left'], 

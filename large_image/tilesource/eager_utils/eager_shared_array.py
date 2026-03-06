@@ -14,20 +14,28 @@ class SharedArray:
         """Init"""
         self.shape = shape        
         self.is_torch = is_torch
-        self.dtype = dtype        
+        self.dtype = dtype
+        self.mm_dtype = np.float32
+        # Per-item runtime scale metadata in [mm_y, mm_x] order
+        self.mm_shape = (shape[0], 2)
         
         if is_torch:
             import torch.multiprocessing # type: ignore
             self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
-            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
-            self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+            self.shm_array = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
+            self.buf = torch.frombuffer(self.shm_array.buf, dtype=self.dtype).reshape(self.shape)
         else:
             if callable(self.dtype):
                 self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype().itemsize
             else:
                 self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
-            self.shm = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
-            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
+            self.shm_array = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
+            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm_array.buf)
+
+        # Shared 2D buffer aligned with batch index for runtime scale metadata
+        mm_size = functools.reduce(operator.mul, self.mm_shape, 1) * np.dtype(self.mm_dtype).itemsize
+        self.mm_shm_array = multiprocessing.shared_memory.SharedMemory(create=True, size=mm_size)
+        self.mm_buf = np.ndarray(self.mm_shape, dtype=self.mm_dtype, buffer=self.mm_shm_array.buf)
         
         self.created = True
     
@@ -40,15 +48,15 @@ class SharedArray:
         close() may raise BufferError; in that case we silently skip so the
         process can continue and rely on the OS to clean up at exit.
         """
-        if not hasattr(self, "shm"):
+        if not hasattr(self, "shm_array"):
             return
         
         # Close shm first to avoid issues with deleting buffer reference
         # when buffer is still in use
         # Otherwise, we get a BufferError: cannot close exported pointers exist
         try:
-            if hasattr(self, "shm"):
-                self.shm.close()
+            if hasattr(self, "shm_array"):
+                self.shm_array.close()
         except BufferError:
             # Other exported pointers still exist; cannot close now.
             # This is expected when user code still holds references to view() results
@@ -64,11 +72,26 @@ class SharedArray:
         except Exception:
             # Ignore errors when deleting buffer reference
             pass
+
+        try:
+            if hasattr(self, "mm_shm_array"):
+                self.mm_shm_array.close()
+        except BufferError:
+            return
+        except Exception:
+            return
+
+        try:
+            if hasattr(self, "mm_buf"):
+                del self.mm_buf
+        except Exception:
+            pass
             
         # Only attempt to unlink if close() succeeded
         try:
             if getattr(self, "created", None) is True:
-                self.shm.unlink()
+                self.shm_array.unlink()
+                self.mm_shm_array.unlink()
         except FileNotFoundError:
             # Already cleaned up
             pass
@@ -84,6 +107,7 @@ class SharedArray:
         expects a certain size based on the shape provided.
         '''
         self.shape = shape
+        self.mm_shape = (shape[0], 2)
         if self.is_torch:
             import torch.multiprocessing # type: ignore
             self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize            
@@ -93,19 +117,25 @@ class SharedArray:
             else:
                 itemsize = self.dtype.itemsize
             self.shm_size = functools.reduce(operator.mul, shape, 1) * itemsize
+        self.mm_shm_size = functools.reduce(operator.mul, self.mm_shape, 1) * np.dtype(self.mm_dtype).itemsize
 
     def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int): # type: ignore
         """Insert a batch dimension slice."""
         self.buf[i] = arr
+
+    def insert_mm(self, mm_x: float, mm_y: float, i: int):
+        """Insert mm scale metadata as [mm_y, mm_x] for a batch index."""
+        self.mm_buf[i, 0] = mm_y
+        self.mm_buf[i, 1] = mm_x
 
     def copy(self, arr: Union[np.ndarray, 'torch.Tensor']): # type: ignore
         """Copy an array into the shared memory."""
         self.shape = arr.shape
         if self.is_torch:
             import torch # type: ignore
-            self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+            self.buf = torch.frombuffer(self.shm_array.buf, dtype=self.dtype).reshape(self.shape)
         else:
-            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
+            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm_array.buf)
         self.buf[:] = arr[:]
 
     def tobytes(self):
@@ -116,12 +146,16 @@ class SharedArray:
         """View the shared memory."""
         if self.is_torch:
             import torch # type: ignore
-            view_buf = torch.frombuffer(self.shm.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
+            view_buf = torch.frombuffer(self.shm_array.buf[:self.shm_size], dtype=self.dtype).reshape(self.shape)
             return view_buf
         else:
             # copy bytes for view
-            view_buf = np.ndarray(self.shape, self.dtype, buffer=self.shm.buf)
+            view_buf = np.ndarray(self.shape, self.dtype, buffer=self.shm_array.buf)
             return view_buf
+
+    def mm_view(self):
+        """View consolidated mm shared memory buffer with [mm_y, mm_x] columns."""
+        return np.ndarray(self.mm_shape, self.mm_dtype, buffer=self.mm_shm_array.buf)
 
     # If we want easier interoperability, we could, instead, forward a
     # whitelist of attributes to our underlying np.ndarray object; these could
@@ -137,25 +171,31 @@ class SharedArray:
     def __getstate__(self):
         """Get the state of the shared memory."""
         state = self.__dict__.copy()
-        del state["shm"]
+        state.pop("shm", None)
         state.pop("buf", None)
+        state.pop("mm_buf", None)
         state["created"] = False
-        state["shm_name"] = self.shm.name
+        state["shm_name"] = self.shm_array.name
+        state["mm_shm_name"] = self.mm_shm_array.name
         return state
 
     def __setstate__(self, state: dict):
         """Set the state of the shared memory."""
         state = state.copy()
         shm_name = state.pop("shm_name")
+        mm_shm_name = state.pop("mm_shm_name")
         self.__dict__.update(state)
         self._closed = False  # Reset closed state when unpickling
         self._exported_refs = weakref.WeakSet()  # Initialize reference tracking
-        self.shm = multiprocessing.shared_memory.SharedMemory(shm_name)
+        self.shm_array = multiprocessing.shared_memory.SharedMemory(shm_name)
+        self.mm_shm_array = multiprocessing.shared_memory.SharedMemory(mm_shm_name)
+        
         if self.is_torch:
             import torch # type: ignore
-            self.buf = torch.frombuffer(self.shm.buf, dtype=self.dtype).reshape(self.shape)
+            self.buf = torch.frombuffer(self.shm_array.buf, dtype=self.dtype).reshape(self.shape)
         else:
-            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm.buf)
+            self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm_array.buf)
+        self.mm_buf = np.ndarray(self.mm_shape, dtype=self.mm_dtype, buffer=self.mm_shm_array.buf)
 
     def __del__(self):
         """Delete the shared memory."""
