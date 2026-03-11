@@ -394,6 +394,53 @@ def run_non_eager_task_performance_evaluation(
     
     return setup_time, process_time, batch_retreival_times, inference_times, write_times
 
+def generate_random_tile_indexes(
+        source,
+        size: int,
+        scale: dict | None = None,
+        tile_size: dict | None = None,
+        tile_overlap: dict | None = None,
+        region: dict | None = None,
+        seed: int | None = None,
+    ) -> np.ndarray:
+    """
+    Generate random, unique tile indexes for eagerIterator's ``tiles`` parameter.
+
+    Returns an array shaped ``(size, 2)`` in ``[tile_y, tile_x]`` order.
+    """
+    if size <= 0:
+        raise ValueError("size must be > 0")
+
+    # Probe iterator to compute valid tile index ranges for the selected options.
+    probe = source.eagerIterator(
+        scale=scale,
+        tile_size=tile_size,
+        tile_overlap=tile_overlap,
+        region=region,
+        batch=1,
+        prefetch=1,
+        workers=2,
+    )
+    try:
+        tile_range_y = int(probe.slide_dimensions['tile_target_range_y'])
+        tile_range_x = int(probe.slide_dimensions['tile_target_range_x'])
+    finally:
+        probe.cleanup()
+
+    total_tiles = tile_range_y * tile_range_x
+    if size > total_tiles:
+        raise ValueError(
+            f"Requested {size} tiles, but only {total_tiles} are available "
+            f"for this source/scale configuration."
+        )
+
+    rng = np.random.default_rng(seed)
+    linear_idx = rng.choice(total_tiles, size=size, replace=False)
+    tile_y = linear_idx // tile_range_x
+    tile_x = linear_idx % tile_range_x
+
+    return np.column_stack((tile_y, tile_x)).astype(np.int64)
+
 def run_dataset_task_performance_evaluation(file_path: str, file_dir: str, performance_type: str = 'read', compile_model: bool = True, *args, **kwargs):
     clear_cache()
 

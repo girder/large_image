@@ -231,10 +231,24 @@ class EagerIterator:
         else:
             raise ValueError("output mode must be either tiles or regions, If regions, regions must be provided")
 
+        # Cache a stable targetScale payload used by workers.
+        if self.slide_dimensions['scale_mode'] == 'mm':
+            self.slide_dimensions['_target_scale'] = {
+                'mm_x': self.slide_dimensions['target_mm_x'],
+                'mm_y': self.slide_dimensions['target_mm_y'],
+            }
+        elif self.slide_dimensions['scale_mode'] == 'mag':
+            self.slide_dimensions['_target_scale'] = {
+                'magnification': self.slide_dimensions['target_magnification'],
+            }
+        else:
+            raise ValueError("Invalid scale mode")
+
         # Determine if the output changes based on the transform
         self._setup_out_dims()
         self._worker_transform = self._prepare_worker_transform(self.transform)
         self._worker_transform_scale = self._prepare_worker_transform_scale(self.transform_scale)
+        self._enable_dynamic_mm = self._worker_transform_scale is not None
 
         n_possible_tiles = self.slide_dimensions['tile_target_range_x'] * self.slide_dimensions['tile_target_range_y']
 
@@ -264,7 +278,17 @@ class EagerIterator:
                 raise ValueError("Provided transform_scale test call failed.  Error: {}".format(e))
 
             if not isinstance(xlt, np.ndarray) or not isinstance(ytt, np.ndarray) or not isinstance(xrt, np.ndarray) or not isinstance(ybt, np.ndarray) or not isinstance(mm_x, np.ndarray) or not isinstance(mm_y, np.ndarray) or not isinstance(target_scale, dict):
-                raise ValueError("transform_scale must return 6 numpy arrays for left, top, right, bottom coordinates, mm_x, mm_y, and a dictionary for the target scale")
+                raise ValueError(
+                    """
+                    transform_scale must return 9 values in the following order:
+                    xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = transform_scale(read_kwargs, slide_dimensions)
+                    xlt: numpy array of left coordinates
+                    ytt: numpy array of top coordinates
+                    xrt: numpy array of right coordinates
+                    ybt: numpy array of bottom coordinates
+                    mm_x: numpy array of mm_x values
+                    mm_y: numpy array of mm_y values
+                    """)
             elif self.slide_dimensions['scale_mode'] == 'mm' and not 'mm_x' in target_scale and not 'mm_y' in target_scale:
                 raise ValueError("transform_scale must return a dictionary with units 'mm' if scale_mode is 'mm'")
             elif self.slide_dimensions['scale_mode'] == 'mag' and not 'magnification' in target_scale:
@@ -557,7 +581,7 @@ class EagerIterator:
         :param sharrs: A list of SharedNumpyArray objects to be filled.
         :param offset: The offset of the current batch.
         """
-        read_kwargs = np.array(read_kwargs)
+        read_kwargs = np.asarray(read_kwargs)
 
         if worker_transform_scale == _EAGER_FN_TRANSFORM_SCALE_SENTINEL:
             _worker_transform_scale = eager_fn.get_transform_scale()
@@ -565,7 +589,11 @@ class EagerIterator:
         elif worker_transform_scale is not None:
             xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = worker_transform_scale(read_kwargs, slide_dimensions)
         else:
-            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = default_region_coords_and_target_scale_from_read_args(read_kwargs, slide_dimensions)
+            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = default_region_coords_and_target_scale_from_read_args(
+                read_kwargs,
+                slide_dimensions,
+                include_mm=False,
+            )
             
         tile_y = read_kwargs[:, 2]
         tile_x = read_kwargs[:, 3]
@@ -710,7 +738,8 @@ class EagerIterator:
                 sharrs[sharr_index].insert(np.transpose(tile, [2, 0, 1]), slice_index)
             else:
                 sharrs[sharr_index].insert(tile, slice_index)
-            sharrs[sharr_index].insert_mm(mm_x[i], mm_y[i], slice_index)
+            if worker_transform_scale is not None:
+                sharrs[sharr_index].insert_mm(mm_x[i], mm_y[i], slice_index)
 
     def _submitfn(self, read_kwargs: list, sharrs: list, offset: int):
         """
@@ -759,7 +788,7 @@ class EagerIterator:
                 else:
                     """last read aligned with batch boundary, create new shared array,
                     and read_kwargs, futures containers"""
-                    tiles = SharedArray(self.out_dims, self.dtype, self.is_torch)
+                    tiles = SharedArray(self.out_dims, self.dtype, self.is_torch, enable_mm=self._enable_dynamic_mm)
                     futures = []
                     # batch_kwargs = []
                     batch_kwargs = np.empty((0, self.read_kwargs[0].shape[1]))
@@ -788,7 +817,7 @@ class EagerIterator:
                     tiles = [
                         *tiles,
                         *[
-                            SharedArray(self.out_dims, self.dtype, self.is_torch)
+                            SharedArray(self.out_dims, self.dtype, self.is_torch, enable_mm=self._enable_dynamic_mm)
                             for _ in range(batches - 1)
                         ],
                     ]
@@ -807,13 +836,13 @@ class EagerIterator:
                 to the other batches - also divide kwargs according to batch boundaries
                 """
                 futures = [futures] + (batches - 1) * [[futures[-1]]]
-                batch_kwargs = np.concatenate([
+                batch_kwargs_batches = [
                     batch_kwargs[i : i + self.batch]
                     for i in range(0, len(batch_kwargs), self.batch)
-                ], axis=0)
+                ]
 
                 # enqueue batches
-                for f, t, b in zip(futures, tiles, batch_kwargs):
+                for f, t, b in zip(futures, tiles, batch_kwargs_batches):
                     self.queue.appendleft((f, t, b))
         try:
             if self.is_torch:

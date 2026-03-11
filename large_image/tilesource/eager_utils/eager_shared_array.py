@@ -1,6 +1,6 @@
 import os
 import weakref
-from typing import Union, List, Any
+from typing import Union, List, Any, TYPE_CHECKING
 import multiprocessing.shared_memory
 import operator
 import functools
@@ -8,13 +8,22 @@ import functools
 import numpy as np
 
 # Ignore torch import errors given they aren't required for this module
+if TYPE_CHECKING:
+    import torch
 
 class SharedArray:
-    def __init__(self, shape: Union[tuple, list], dtype: Union[np.dtype, 'torch.dtype'], is_torch: bool = False): # type: ignore
+    def __init__(
+        self,
+        shape: Union[tuple, list],
+        dtype: Union[np.dtype, 'torch.dtype'],
+        is_torch: bool = False,
+        enable_mm: bool = False,
+    ):  # type: ignore
         """Init"""
         self.shape = shape        
         self.is_torch = is_torch
         self.dtype = dtype
+        self.enable_mm = enable_mm
         self.mm_dtype = np.float32
         # Per-item runtime scale metadata in [mm_y, mm_x] order
         self.mm_shape = (shape[0], 2)
@@ -32,10 +41,11 @@ class SharedArray:
             self.shm_array = multiprocessing.shared_memory.SharedMemory(create=True, size=self.shm_size)
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm_array.buf)
 
-        # Shared 2D buffer aligned with batch index for runtime scale metadata
-        mm_size = functools.reduce(operator.mul, self.mm_shape, 1) * np.dtype(self.mm_dtype).itemsize
-        self.mm_shm_array = multiprocessing.shared_memory.SharedMemory(create=True, size=mm_size)
-        self.mm_buf = np.ndarray(self.mm_shape, dtype=self.mm_dtype, buffer=self.mm_shm_array.buf)
+        if self.enable_mm:
+            # Shared 2D buffer aligned with batch index for runtime scale metadata
+            mm_size = functools.reduce(operator.mul, self.mm_shape, 1) * np.dtype(self.mm_dtype).itemsize
+            self.mm_shm_array = multiprocessing.shared_memory.SharedMemory(create=True, size=mm_size)
+            self.mm_buf = np.ndarray(self.mm_shape, dtype=self.mm_dtype, buffer=self.mm_shm_array.buf)
         
         self.created = True
     
@@ -73,25 +83,27 @@ class SharedArray:
             # Ignore errors when deleting buffer reference
             pass
 
-        try:
-            if hasattr(self, "mm_shm_array"):
-                self.mm_shm_array.close()
-        except BufferError:
-            return
-        except Exception:
-            return
+        if self.enable_mm:
+            try:
+                if hasattr(self, "mm_shm_array"):
+                    self.mm_shm_array.close()
+            except BufferError:
+                return
+            except Exception:
+                return
 
-        try:
-            if hasattr(self, "mm_buf"):
-                del self.mm_buf
-        except Exception:
-            pass
+            try:
+                if hasattr(self, "mm_buf"):
+                    del self.mm_buf
+            except Exception:
+                pass
             
         # Only attempt to unlink if close() succeeded
         try:
             if getattr(self, "created", None) is True:
                 self.shm_array.unlink()
-                self.mm_shm_array.unlink()
+                if self.enable_mm:
+                    self.mm_shm_array.unlink()
         except FileNotFoundError:
             # Already cleaned up
             pass
@@ -125,6 +137,8 @@ class SharedArray:
 
     def insert_mm(self, mm_x: float, mm_y: float, i: int):
         """Insert mm scale metadata as [mm_y, mm_x] for a batch index."""
+        if not self.enable_mm:
+            raise RuntimeError("SharedArray mm metadata not enabled.")
         self.mm_buf[i, 0] = mm_y
         self.mm_buf[i, 1] = mm_x
 
@@ -155,6 +169,8 @@ class SharedArray:
 
     def mm_view(self):
         """View consolidated mm shared memory buffer with [mm_y, mm_x] columns."""
+        if not self.enable_mm:
+            raise RuntimeError("SharedArray mm metadata not enabled for this iterator.")
         return np.ndarray(self.mm_shape, self.mm_dtype, buffer=self.mm_shm_array.buf)
 
     # If we want easier interoperability, we could, instead, forward a
@@ -176,7 +192,7 @@ class SharedArray:
         state.pop("mm_buf", None)
         state["created"] = False
         state["shm_name"] = self.shm_array.name
-        state["mm_shm_name"] = self.mm_shm_array.name
+        state["mm_shm_name"] = self.mm_shm_array.name if self.enable_mm else None
         return state
 
     def __setstate__(self, state: dict):
@@ -188,14 +204,16 @@ class SharedArray:
         self._closed = False  # Reset closed state when unpickling
         self._exported_refs = weakref.WeakSet()  # Initialize reference tracking
         self.shm_array = multiprocessing.shared_memory.SharedMemory(shm_name)
-        self.mm_shm_array = multiprocessing.shared_memory.SharedMemory(mm_shm_name)
+        if self.enable_mm:
+            self.mm_shm_array = multiprocessing.shared_memory.SharedMemory(mm_shm_name)
         
         if self.is_torch:
             import torch # type: ignore
             self.buf = torch.frombuffer(self.shm_array.buf, dtype=self.dtype).reshape(self.shape)
         else:
             self.buf = np.ndarray(self.shape, dtype=self.dtype, buffer=self.shm_array.buf)
-        self.mm_buf = np.ndarray(self.mm_shape, dtype=self.mm_dtype, buffer=self.mm_shm_array.buf)
+        if self.enable_mm:
+            self.mm_buf = np.ndarray(self.mm_shape, dtype=self.mm_dtype, buffer=self.mm_shm_array.buf)
 
     def __del__(self):
         """Delete the shared memory."""

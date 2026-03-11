@@ -251,19 +251,30 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict, tiles
 
     return chunks
 
-def default_region_coords_and_target_scale_from_read_args(read_kwargs: np.ndarray, slide_dimensions: dict):
+def default_region_coords_and_target_scale_from_read_args(
+    read_kwargs: np.ndarray,
+    slide_dimensions: dict,
+    include_mm: bool = True,
+):
     xlt = read_kwargs[:, 6]
     ytt = read_kwargs[:, 4]
     xrt = read_kwargs[:, 7]
     ybt = read_kwargs[:, 5]
-    mm_x = read_kwargs[:, 9]
-    mm_y = read_kwargs[:, 8]
 
-    if slide_dimensions['scale_mode'] == 'mm':
-        scale_dict = dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'])
-    elif slide_dimensions['scale_mode'] == 'mag':
-        scale_dict = dict(magnification= slide_dimensions['target_magnification'])
+    if include_mm:
+        mm_x = read_kwargs[:, 9]
+        mm_y = read_kwargs[:, 8]
     else:
-        raise ValueError("Invalid scale mode")
+        mm_x = None
+        mm_y = None
+
+    scale_dict = slide_dimensions.get('_target_scale')
+    if scale_dict is None:
+        if slide_dimensions['scale_mode'] == 'mm':
+            scale_dict = dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'])
+        elif slide_dimensions['scale_mode'] == 'mag':
+            scale_dict = dict(magnification=slide_dimensions['target_magnification'])
+        else:
+            raise ValueError("Invalid scale mode")
 
     return xlt, ytt, xrt, ybt, mm_x, mm_y, scale_dict, slide_dimensions['conv_mm_x'], slide_dimensions['conv_mm_y']
