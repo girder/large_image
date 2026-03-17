@@ -269,6 +269,11 @@ def default_region_coords_and_target_scale_from_read_args(
         mm_y = None
 
     scale_dict = slide_dimensions.get('_target_scale')
+    tile_size_dict = slide_dimensions.get('_tile_size')
+
+    if tile_size_dict is None:
+        tile_size_dict = dict(width=slide_dimensions['tile_size'][0], height=slide_dimensions['tile_size'][1])
+
     if scale_dict is None:
         if slide_dimensions['scale_mode'] == 'mm':
             scale_dict = dict(mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'])
@@ -277,4 +282,4 @@ def default_region_coords_and_target_scale_from_read_args(
         else:
             raise ValueError("Invalid scale mode")
 
-    return xlt, ytt, xrt, ybt, mm_x, mm_y, scale_dict, slide_dimensions['conv_mm_x'], slide_dimensions['conv_mm_y']
+    return xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, scale_dict, slide_dimensions['conv_mm_x'], slide_dimensions['conv_mm_y']

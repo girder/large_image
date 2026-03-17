@@ -244,8 +244,10 @@ class EagerIterator:
         else:
             raise ValueError("Invalid scale mode")
 
+        # Create a stable tile size dictionary for workers to use
+        self.slide_dimensions['_tile_size'] = dict(width=self.slide_dimensions['tile_size'][0], height=self.slide_dimensions['tile_size'][1])
+
         # Determine if the output changes based on the transform
-        self._setup_out_dims()
         self._worker_transform = self._prepare_worker_transform(self.transform)
         self._worker_transform_scale = self._prepare_worker_transform_scale(self.transform_scale)
         self._enable_dynamic_mm = self._worker_transform_scale is not None
@@ -273,7 +275,10 @@ class EagerIterator:
             if len(transform_scale_parameters) != 2:
                 raise ValueError("transform_scale must have two parameters for read_kwargs which is a list of and slide_dimensions")
             try:
-                xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = transform_scale(self.read_kwargs[0], self.slide_dimensions)
+                xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = transform_scale(self.read_kwargs[0], self.slide_dimensions)
+                # transform scale can resize the tile size, so we need to update the slide_dimensions
+                self.slide_dimensions['_tile_size'] = tile_size_dict
+
             except Exception as e:
                 raise ValueError("Provided transform_scale test call failed.  Error: {}".format(e))
 
@@ -296,13 +301,16 @@ class EagerIterator:
             else:
                 eager_fn.set_transform_scale(transform_scale)
 
+        # Setup the output dimensions after transform and transform_scale are registered
+        self._setup_out_dims()
+
         # Setup the process pool after transform is registered
         from concurrent.futures import ProcessPoolExecutor, ALL_COMPLETED, wait
         self.pool = ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("fork"))
         self._initialize(batch, prefetch)
 
     def _setup_out_dims(self):
-        self.out_dims = [self.batch, self.slide_dimensions['tile_size'][1], self.slide_dimensions['tile_size'][0], 3]
+        self.out_dims = [self.batch, self.slide_dimensions['_tile_size']['height'], self.slide_dimensions['_tile_size']['width'], 3]
         
         if self.transform is not None:
             if self.transform_save_mode is not None and self.transform_save_mode not in ['tile_x_y', 'region_x_y']:
@@ -349,51 +357,41 @@ class EagerIterator:
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
             self.is_torch = True
         elif isinstance(self.transform, Callable):
-            # handle case if torch is used in the transform
-            if 'torch' in str(type(self.transform)):
-                try:
-                    import torch
-                    self.is_torch = True
-                except Exception:
-                    raise ImportError("torch must be installed to use a transform callable that returns a torch.Tensor")
-            else:
-                self.is_torch = False
-            
-            # Check the signature of the transform
-            import inspect
-            transform_signature = inspect.signature(self.transform)
-            transform_parameters = transform_signature.parameters
+            try:
+                import torch
+            except Exception:
+                torch = None
 
-            if len(transform_parameters) == 0:
-                raise ValueError("Transform callable must have at least one parameter")
-            elif len(transform_parameters) == 1:
+            def _set_output_config(test_out):
+                if isinstance(test_out, np.ndarray):
+                    self.is_torch = False
+                elif torch is not None and isinstance(test_out, torch.Tensor):
+                    self.is_torch = True
+                else:
+                    raise ValueError("Transform callable must return a numpy array or torch.Tensor")
+
+                self.dtype = test_out.dtype
+                self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
+
+            test_x = int(-1)
+            test_y = int(-1)
+            probe_errors = []
+
+            for arg_num, args in ((1, (test_data,)), (3, (test_data, test_x, test_y))):
                 try:
-                    test_out = self.transform(test_data)
-                    if not isinstance(test_out, np.ndarray) and not isinstance(test_out, torch.Tensor):
-                        raise ValueError("Transform callable must return a numpy array or torch.Tensor")
-                    self.dtype = test_out.dtype
-                    self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
-                    self.callable_arg_num = 1
-                except Exception:
-                    raise ValueError("Transform callable must have at least one parameter and return a numpy array or torch.Tensor")
-            elif len(transform_parameters) == 2:
-                raise ValueError("Transform callable must have one or three parameters")
-            elif len(transform_parameters) == 3:
-                try:
-                    test_x = int(-1)
-                    test_y = int(-1)
-                    test_out = self.transform(test_data, test_x, test_y)
-                    if self.is_torch and not isinstance(test_out, torch.Tensor):
-                        raise ValueError("Transform callable must return a torch.Tensor if torch is used in the transform")
-                    elif not isinstance(test_out, np.ndarray):
-                        raise ValueError("Transform callable must return a numpy array or torch.Tensor")
-                    self.dtype = test_out.dtype
-                    self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))                    
-                    self.callable_arg_num = 3
-                except Exception as e:
-                    raise ValueError("Transform callable must have three parameters and return a numpy array or torch.Tensor.  Error: {}".format(e))
+                    test_out = self.transform(*args)
+                    _set_output_config(test_out)
+                    self.callable_arg_num = arg_num
+                    break
+                except Exception as exc:
+                    probe_errors.append(f"{arg_num}-arg probe failed: {exc}")
             else:
-                raise ValueError("Transform callable must have one or three parameters")
+                raise ValueError(
+                    "Transform callable must accept either (image) or (image, x, y) "
+                    "and return a numpy array or torch.Tensor. Errors: {}".format(
+                        "; ".join(probe_errors)
+                    )
+                )
         else:
             raise ValueError("Transform must be a albumentations.core.composition.Compose or torchvision.transforms.v2._container.Compose object or a callable")
 
@@ -414,8 +412,19 @@ class EagerIterator:
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
             self.cleanup()
-        finally:
-            return False
+        except Exception as cleanup_exc:
+            # Shared-memory cleanup can race across workers/processes; ignore
+            # expected contention errors during teardown.
+            is_shm_race = (
+                isinstance(cleanup_exc, (FileNotFoundError, BufferError))
+                or (
+                    isinstance(cleanup_exc, OSError)
+                    and "No such file or directory" in str(cleanup_exc)
+                )
+            )
+            if not is_shm_race and exc_type is None:
+                raise
+        return False
     
     def cleanup(self, wait=True):
         """Clean up resources including the process pool and any remaining shared memory."""
@@ -585,11 +594,11 @@ class EagerIterator:
 
         if worker_transform_scale == _EAGER_FN_TRANSFORM_SCALE_SENTINEL:
             _worker_transform_scale = eager_fn.get_transform_scale()
-            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = _worker_transform_scale(read_kwargs, slide_dimensions)
+            xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = _worker_transform_scale(read_kwargs, slide_dimensions)
         elif worker_transform_scale is not None:
-            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = worker_transform_scale(read_kwargs, slide_dimensions)
+            xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = worker_transform_scale(read_kwargs, slide_dimensions)
         else:
-            xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = default_region_coords_and_target_scale_from_read_args(
+            xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = default_region_coords_and_target_scale_from_read_args(
                 read_kwargs,
                 slide_dimensions,
                 include_mm=False,
@@ -681,7 +690,9 @@ class EagerIterator:
             chunk = pad_chunk_if_necessary(slide_dimensions, chunk, xlt, xrt, ytt, ybt, w_max, h_max, pad_mode, pad_fill_mode)
             if region is not None:
                 tiles = [
-                    chunk[yt : h, xl : w, :].astype(chunk.dtype) if h == slide_dimensions['tile_size'][0] and w == slide_dimensions['tile_size'][1] else pad_tile(chunk[yt : h, xl : w, :].astype(chunk.dtype), slide_dimensions['tile_size'][0], slide_dimensions['tile_size'][1], 'right_bottom', pad_fill_mode)
+                    chunk[yt : h, xl : w, :].astype(chunk.dtype) if h == tile_size_dict['height'] and w == tile_size_dict['width'] else pad_tile(
+                        chunk[yt : h, xl : w, :].astype(chunk.dtype), tile_size_dict['height'], tile_size_dict['width'], 'right_bottom', pad_fill_mode
+                        )
                     for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
                 ]
             else:
@@ -691,7 +702,7 @@ class EagerIterator:
                 ]
         elif output_mode == 'regions':
             tiles = [
-                pad_tile(chunk[yt:h, xl:w, :].astype(chunk.dtype), slide_dimensions['tile_size'][0], slide_dimensions['tile_size'][1], pad_mode, pad_fill_mode)
+                pad_tile(chunk[yt:h, xl:w, :].astype(chunk.dtype), tile_size_dict['height'], tile_size_dict['width'], pad_mode, pad_fill_mode)
                 for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
             ]
 
@@ -713,20 +724,32 @@ class EagerIterator:
                 ]
             else:
                 # raise(Exception("Reached callable case"))
+                try:
+                    import torch
+                except Exception:
+                    torch = None
+
+                def _cast_callable_output(tile_out):
+                    if isinstance(tile_out, np.ndarray):
+                        return tile_out.astype(dtype)
+                    if torch is not None and isinstance(tile_out, torch.Tensor):
+                        return tile_out.to(dtype=dtype) if dtype is not None else tile_out
+                    raise ValueError("Transform callable must return a numpy array or torch.Tensor")
+
                 if callable_arg_num == 1:
                     tiles = [
-                        transform(tile).astype(dtype)
+                        _cast_callable_output(transform(tile))
                         for tile in tiles
                     ]
                 elif callable_arg_num == 3:
                     if transform_save_mode == 'tile_x_y':
                         tiles = [
-                            transform(tile, x, y).astype(dtype)
+                            _cast_callable_output(transform(tile, x, y))
                             for tile, x, y in zip(tiles, tile_x, tile_y)
                         ]
                     elif transform_save_mode == 'region_x_y':
                         tiles = [
-                            transform(tile, x, y).astype(dtype)
+                            _cast_callable_output(transform(tile, x, y))
                             for tile, x, y in zip(tiles, xlt, ytt)
                         ]
 

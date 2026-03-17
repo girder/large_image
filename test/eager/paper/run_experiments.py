@@ -878,6 +878,8 @@ if __name__ == "__main__":
     # )
 
     # test_region(test_region_image)
+
+    test_sparse_regions(test_path)
     
 
     # run_performance_testing_on_directory(svs_dir, file_extensions=[".svs"], output_dir="/scr/arosado/performance/svs", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
@@ -885,7 +887,7 @@ if __name__ == "__main__":
     # run_performance_testing_on_directory(ndpi_dir, file_extensions=[".ndpi"], output_dir="/scr/arosado/performance/ndpi", n_runs=5, n_files=10, scale={'mm_x': 0.0005, 'mm_y': 0.0005}, tile_size={'width': 224, 'height': 224}, transform=transform)
     # pass
     # Test read performance
-    test_read(test_path, test_dir)
+    # test_read(test_path, test_dir)
 
     # region = {
     #     "left": 35412,
