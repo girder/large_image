@@ -869,6 +869,10 @@ if __name__ == "__main__":
     mrxs_dir = '/scr/arosado/large_image/mrxs'
     ndpi_dir = '/scr/arosado/large_image/ndpi'
 
+    source = large_image.open(test_path)
+
+    pass
+
     # transform = v2.Compose(
     #     [
     #         v2.ToImage(),

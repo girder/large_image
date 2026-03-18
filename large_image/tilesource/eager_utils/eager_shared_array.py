@@ -48,6 +48,7 @@ class SharedArray:
             self.mm_buf = np.ndarray(self.mm_shape, dtype=self.mm_dtype, buffer=self.mm_shm_array.buf)
         
         self.created = True
+        self._closed = False
     
     def close(self) -> None:
         """Attempt to release the shared memory segment.
@@ -58,12 +59,24 @@ class SharedArray:
         close() may raise BufferError; in that case we silently skip so the
         process can continue and rely on the OS to clean up at exit.
         """
-        if not hasattr(self, "shm_array"):
+        if self._closed or not hasattr(self, "shm_array"):
             return
-        
-        # Close shm first to avoid issues with deleting buffer reference
-        # when buffer is still in use
-        # Otherwise, we get a BufferError: cannot close exported pointers exist
+
+        # Release our direct exported pointers before closing SharedMemory.
+        # If user code still holds view() results, close can still BufferError.
+        try:
+            if hasattr(self, "buf"):
+                del self.buf
+        except Exception:
+            pass
+
+        if self.enable_mm:
+            try:
+                if hasattr(self, "mm_buf"):
+                    del self.mm_buf
+            except Exception:
+                pass
+
         try:
             if hasattr(self, "shm_array"):
                 self.shm_array.close()
@@ -75,14 +88,6 @@ class SharedArray:
             # Ignore other shutdown-time issues
             return
 
-        try:
-            # Drop our direct reference before closing to avoid BufferError
-            if hasattr(self, "buf"):
-                del self.buf
-        except Exception:
-            # Ignore errors when deleting buffer reference
-            pass
-
         if self.enable_mm:
             try:
                 if hasattr(self, "mm_shm_array"):
@@ -91,12 +96,6 @@ class SharedArray:
                 return
             except Exception:
                 return
-
-            try:
-                if hasattr(self, "mm_buf"):
-                    del self.mm_buf
-            except Exception:
-                pass
             
         # Only attempt to unlink if close() succeeded
         try:
@@ -110,6 +109,8 @@ class SharedArray:
         except Exception:
             # Ignore unlink issues during interpreter shutdown
             pass
+        finally:
+            self._closed = True
 
     def resize_shm(self, shape: Union[tuple, list]):
         '''
