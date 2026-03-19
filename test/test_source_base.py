@@ -406,6 +406,20 @@ def testGetRegionAutoOffset():
     assert np.all(region2 == region1)
 
 
+def testGetRegionOffsetLargeTile():
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
+    source = large_image.open(imagePath, maxSize=16384)
+    region1, _ = source.getRegion(
+        region=dict(left=1536, top=2048, width=512, height=512),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    region2, _ = source.getRegion(
+        region=dict(left=1536, top=2048, width=512, height=512),
+        tile_size=dict(width=240, height=240),
+        format=large_image.constants.TILE_FORMAT_NUMPY)
+    assert np.all(region2 == region1)
+
+
 def testGetGeospatialRegion():
     imagePath = datastore.fetch('sample_image.ptif')
     source = large_image.open(imagePath)

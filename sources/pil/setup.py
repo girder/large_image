@@ -37,13 +37,13 @@ setup(
     ],
     extras_require={
         'all': [
-            'rawpy ; python_version < "3.14"',
+            'rawpy',
             'pillow-heif',
             'pillow-jxl-plugin',
             'pillow-jpls ; python_version < "3.13"',
         ],
         'common': [
-            'rawpy ; python_version < "3.14"',
+            'rawpy',
             'pillow-heif',
             'pillow-jxl-plugin',
         ],
