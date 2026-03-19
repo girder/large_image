@@ -1208,7 +1208,7 @@ class PlottableItemData:
                     except Exception:
                         logger.info(
                             f'Cannot process file {file["_id"]}: {file["name"]} as a dataframe')
-                        raise
+                        continue
                 if not iidx:
                     countsPerDataFile[dfidx] = count - startcount
         return count

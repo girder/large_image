@@ -270,12 +270,15 @@ jobs:
           root: build
           paths: docs
   compare:
-    executor: toxandnode
+    machine:
+      image: ubuntu-2204:current
     resource_class: large
     steps:
       - checkout
+      - switchpython:
+          version: "3.14"
       - tox:
-          toxenv: compare-py313
+          toxenv: compare-py314
       - store_artifacts:
           path: build/tox/compare.txt
       - store_artifacts:
