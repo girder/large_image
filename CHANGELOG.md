@@ -2,6 +2,10 @@
 
 ## 1.34.1
 
+### Changes
+
+- Mark for girder < 5 ([#2054](../../pull/2054))
+
 ### Bug Fixes
 
 - Reading a small region from a large tile could be wrong ([#2049](../../pull/2049))
