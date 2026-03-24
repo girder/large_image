@@ -43,7 +43,9 @@ class RedisCache(BaseCache):
         self._redisCls = Redis
         super().__init__(0, getsizeof=getsizeof)
         self._cache_key_prefix = 'large_image_'
-        self._clientParams = (f'redis://{url}', dict(
+        if '://' not in url:
+            url = f'redis://{url}'
+        self._clientParams = (url, dict(
             username=username, password=password, db=0, retry_on_timeout=1))
         self._client: Redis = Redis.from_url(self._clientParams[0], **self._clientParams[1])
         if mustBeAvailable:
