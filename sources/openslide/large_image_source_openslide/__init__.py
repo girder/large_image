@@ -316,6 +316,8 @@ class OpenslideFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         results = {'openslide': {}}
         for key in self._openslide.properties:
+            if not key or not len(key) or key.endswith('.'):
+                continue
             results['openslide'][key] = self._openslide.properties[key]
             if key == 'openslide.comment':
                 leader = self._openslide.properties[key].split('\n', 1)[0].strip()
