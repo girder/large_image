@@ -370,6 +370,7 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
+                - girder-3
       - testdocker-lts:
           filters:
             branches:
@@ -377,6 +378,7 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
+                - girder-3
       - py310:
           filters:
             tags:
