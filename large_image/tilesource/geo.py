@@ -152,7 +152,7 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
                           if 'bands' in cast(JSONDict, self.style) else [self.style])
             for styleBand in styleBands:
 
-                styleBand = styleBand.copy()
+                styleBand = cast(JSONDict, styleBand).copy()
                 # Default to band 1 -- perhaps we should default to gray or
                 # green instead.
                 styleBand['band'] = self._bandNumber(styleBand.get('band', 1))
@@ -198,7 +198,8 @@ class GDALBaseFileTileSource(GeoBaseFileTileSource):
             styleBands = (cast(JSONDict, self.style)['bands']
                           if 'bands' in cast(JSONDict, self.style) else [self.style])
             if not len(styleBands) or (len(styleBands) == 1 and isinstance(
-                    styleBands[0].get('band', 1), int) and styleBands[0].get('band', 1) <= 0):
+                    cast(JSONDict, styleBands[0]).get('band', 1), int) and
+                    cast(JSONDict, styleBands[0]).get('band', 1) <= 0):
                 del self._style
         style = self._styleBands()
         if len(style):

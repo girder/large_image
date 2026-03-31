@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.34.2
+
+### Improvements
+
+- Handle openslide keys in internal metadata with poor names ([#2061](../../pull/2061))
+
 ## 1.34.1
 
 ### Improvements
