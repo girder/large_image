@@ -40,7 +40,7 @@ setup(
     extras_require={
         'tasks': [
             f'large-image-tasks[girder]{limit_version}',
-            'girder-worker[girder]>=0.6.0',
+            'girder-worker[girder]>=0.6.0,<5',
         ],
     },
     include_package_data=True,
