@@ -133,6 +133,19 @@ Transforms can be applied to scale the individual sources:
 Note that the zero values from the previous example have been omitted as they
 are unnecessary.
 
+Controlling Axis Values
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Each frame can have a specific value per axis.  For each axis (e.g., ``t``) there are four controlling parameters, many of which only are applied when the source contains multiple frames.  For instance, suppose you have a source that contains 5 frames at ``t == [0, 1, 2, 3, 4]``.
+
+Specifying ``<axis>Set`` (e.g., ``tSet``) with the source will set the value of that axis for all frames of that source.  In our example, ``tSet: 3`` will result in ``t == [3, 3, 3, 3, 3]``.  This can be useful if those frames are arranged on another axis.
+
+If ``<axis>Set`` is not specified, specifying ``<axis>`` (e.g., ``t``) with the source will be a direct offset.  In our example, ``t: 3`` will add to the source;s t-values, such that ``t == [3, 4, 5, 6, 7]``.
+
+If ``<axis>Set`` is not specified, specifying ``<axis>Values`` (e.g., ``tValues``) with the source will add the positional value to the frame value.  If ``<axis>Values`` is an array of length 1, this is functionally just added to ``<axis>``.  If ``<axis>Values`` is shorter than the number of frames, the last two values in the array are used as a stride.  In our example, if ``t: 3`` and ``tValues: [2]`` we end up with ``t == [5, 6, 7, 8, 9]``.  If ``t: 3`` and ``tValues: [2, 4]``, we end up with ``t == [5, 7, 9, 11, 13]``.  If ``t: 3`` and ``tValues: [0, 1, 3, 6, 10]``, we end up with ``t == [3, 5, 8, 12, 17``.
+
+``<axis>Step`` (e.g., ``tStep``) is used with ``pathPattern`` to add a value to each separate source path.  The other parameters all affect a single source file with multiple frames.  For instance, if ``pathPattern`` includes 3 source files and ``tStep: 1``, then those three source files functionally have ``t: 0``, ``t: 1``, ``t: 2``.
+
 Full Schema
 -----------
 

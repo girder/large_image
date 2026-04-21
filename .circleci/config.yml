@@ -113,7 +113,7 @@ commands:
       - run:
           name: start redis
           command: |
-            docker run --rm -d -p 6379:6379 redis
+            docker run --rm -d -p 6379:6379 redis --maxmemory 64mb
             echo "export REDIS_TEST_URL=127.0.01:6379" >> $BASH_ENV
       - run:
           name: Use nvm
@@ -292,12 +292,15 @@ jobs:
           root: build
           paths: docs
   compare:
-    executor: toxandnode
+    machine:
+      image: ubuntu-2204:current
     resource_class: large
     steps:
       - checkout
+      - switchpython:
+          version: "3.14"
       - tox:
-          toxenv: compare-py313
+          toxenv: compare-py314
       - store_artifacts:
           path: build/tox/compare.txt
       - store_artifacts:
@@ -432,6 +435,15 @@ workflows:
                 - master
                 # Create a branch of this name to push to docker hub
                 - testdocker
+                - girder-3
+      - testdocker-lts:
+          filters:
+            branches:
+              only:
+                - master
+                # Create a branch of this name to push to docker hub
+                - testdocker
+                - girder-3
       - py310:
           filters:
             tags:

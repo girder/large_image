@@ -1,5 +1,32 @@
 # Change Log
 
+## 1.34.2
+
+### Improvements
+
+- Handle openslide keys in internal metadata with poor names ([#2061](../../pull/2061))
+
+### Bug Fixes
+
+- Fix handling single file DICOM files in Girder ([#2066](../../pull/2066))
+- DICOM tile reads were not thread safe ([#2067](../../pull/2067))
+
+## 1.34.1
+
+### Improvements
+
+- Allow passing redis protocol as part of the redis cache url ([#2060](../../pull/2060))
+
+### Changes
+
+- Mark for girder < 5 ([#2054](../../pull/2054))
+
+### Bug Fixes
+
+- Reading a small region from a large tile could be wrong ([#2049](../../pull/2049))
+- Fix a type in the histogram signature ([#2051](../../pull/2051))
+- Don't fail when trying to read files pandas can't handle for plots ([#2059](../../pull/2059))
+
 ## 1.34.0
 
 ### Improvements
