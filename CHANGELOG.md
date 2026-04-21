@@ -5,6 +5,7 @@
 ### Improvements
 
 - Handle openslide keys in internal metadata with poor names ([#2061](../../pull/2061))
+- Fix handling single file DICOM files in Girder ([#2066](../../pull/2066))
 
 ## 1.34.1
 
