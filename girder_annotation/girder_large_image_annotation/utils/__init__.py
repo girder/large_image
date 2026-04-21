@@ -44,7 +44,7 @@ def _dfFromFile(fileid, full=False):
     file = File().load(fileid, force=True)
     ext = os.path.splitext(file['name'])[1]
     reader = dataFileExtReaders.get(
-        ext, dataFileExtReaders.get(file.get('mimeType'), None))
+        ext, dataFileExtReaders.get(file.get('mimeType')))
     if reader == 'read_excel':
         params = {
             'sheet_name': None,
@@ -1208,7 +1208,7 @@ class PlottableItemData:
                     except Exception:
                         logger.info(
                             f'Cannot process file {file["_id"]}: {file["name"]} as a dataframe')
-                        raise
+                        continue
                 if not iidx:
                     countsPerDataFile[dfidx] = count - startcount
         return count

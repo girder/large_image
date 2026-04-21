@@ -36,6 +36,10 @@ class RedisCache(BaseCache):
             username: str | None = None, password: str | None = None,
             getsizeof: Callable[[_VT], float] | None = None,
             mustBeAvailable: bool = False) -> None:
+        """
+        For compatibility reasons, this can take a list of urls, but if passed,
+        only the first value of the list is used.
+        """
         import redis
         from redis.client import Redis
 
@@ -43,7 +47,10 @@ class RedisCache(BaseCache):
         self._redisCls = Redis
         super().__init__(0, getsizeof=getsizeof)
         self._cache_key_prefix = 'large_image_'
-        self._clientParams = (f'redis://{url}', dict(
+        urlstr = url if isinstance(url, str) else url[0]
+        if '://' not in urlstr:
+            urlstr = f'redis://{urlstr}'
+        self._clientParams = (urlstr, dict(
             username=username, password=password, db=0, retry_on_timeout=1))
         self._client: Redis = Redis.from_url(self._clientParams[0], **self._clientParams[1])
         if mustBeAvailable:

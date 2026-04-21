@@ -307,7 +307,9 @@ class TileIterator:
 
         offset_x = kwargs.get('tile_offset', {}).get('left', 0)
         offset_y = kwargs.get('tile_offset', {}).get('top', 0)
-        if kwargs.get('tile_offset', {}).get('auto'):
+        if (kwargs.get('tile_offset', {}).get('auto') and
+                regionWidth >= tile_size['width'] and
+                regionHeight >= tile_size['height']):
             offset_x = left
             offset_y = top
         offset_x = (left - left % tile_size['width']) if offset_x > left else offset_x

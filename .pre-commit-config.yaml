@@ -59,7 +59,7 @@ repos:
     hooks:
       - id: circleci-config-validate
   - repo: https://github.com/ThisIsManta/stylus-supremacy
-    rev: v5.0.0
+    rev: v5.0.1
     hooks:
       - id: stylus-supremacy
         args:
@@ -73,7 +73,7 @@ repos:
           - --py310-plus
           - --keep-percent-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.11
+    rev: v0.15.0
     hooks:
       - id: ruff
         args:
