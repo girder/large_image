@@ -84,10 +84,8 @@ class RedisCache(BaseCache):
     def __getitem__(self, key: str) -> Any:
         _key = self._cache_key_prefix + self._hashKey(key)
         try:
-            # must determine if tke key exists , otherwise cache_test can not be passed.
-            if not self.__contains__(key):
-                raise KeyError
-            return pickle.loads(cast(Buffer, self._client.get(_key)))
+            # must determine if tke key exists, otherwise cache_test can not be passed.
+            return pickle.loads(cast(Buffer, self._client[_key]))
         except KeyError:
             return self.__missing__(key)
         except self.redis.ConnectionError:
@@ -119,6 +117,9 @@ class RedisCache(BaseCache):
             self.logError(self.redis.ConnectionError, config.getLogger('logprint').info,
                           'redis ConnectionError')
             self._reconnect()
+        except self.redis.RedisError:
+            self.logError(self.redis.RedisError, config.getLogger('logprint').info,
+                          'redis ConnectionError')
 
     @property
     def curritems(self) -> int:
