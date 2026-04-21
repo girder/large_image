@@ -66,7 +66,7 @@ class DICOMGirderTileSource(DICOMFileTileSource, GirderTileSource):
             raise TileSourceError(msg)
         filepath = filelist[0]
         for file in Item().collection.aggregate([
-            {'$match': {'folderId': self.item['folderId']}},
+            {'$match': {'folderId': self.item['folderId'], '_id': {'$ne': self.item['_id']}}},
             {'$lookup': {
                 'from': 'file', 'localField': '_id', 'foreignField': 'itemId', 'as': 'files',
             }},

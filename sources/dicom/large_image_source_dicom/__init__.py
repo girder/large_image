@@ -4,12 +4,14 @@ import importlib.metadata
 import math
 import os
 import re
+import threading
 import warnings
 
 import numpy as np
 from large_image_source_dicom.dicom_metadata import extract_dicom_metadata
 from large_image_source_dicom.dicomweb_utils import get_dicomweb_metadata
 
+import large_image
 from large_image.cache_util import LruCacheMetaclass, methodcache
 from large_image.constants import TILE_FORMAT_PIL, SourcePriority
 from large_image.exceptions import TileSourceError, TileSourceFileNotFoundError
@@ -187,6 +189,7 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.levels = int(max(1, math.ceil(math.log(
             max(self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
         self._populatedLevels = len(self._dicom.pyramids[0])
+        self._tileLock = threading.RLock()
         # We need to detect which levels are functionally present if we want to
         # return a sensible _nonemptyLevelsList
 
@@ -370,8 +373,10 @@ class DICOMFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         y1f = min(int(math.ceil(y1 / levelfactor)), self._dicom.pyramids[0][level].size.height)
         bw = int(bw // levelfactor)
         bh = int(bh // levelfactor)
-        tile = self._dicom.read_region(
-            (x0f, y0f), self._dicom.pyramids[0][level].level, (x1f - x0f, y1f - y0f))
+        with self._tileLock:
+            tile = self._dicom.read_region(
+                (x0f, y0f), self._dicom.pyramids[0][level].level, (x1f - x0f, y1f - y0f),
+                threads=large_image.config.cpu_count())
         format = TILE_FORMAT_PIL
         if tile.width < bw or tile.height < bh:
             tile = _imageToNumpy(tile)[0]
