@@ -53,7 +53,9 @@ repos:
           - --ignore-regex
           - '(^\s*"image/\S+": ".*)'
           - --ignore-words-list
-          - "hist,indext,pixelx,thex,subtile,slippy,fram,thet"
+          - "hist,indext,pixelx,thex,subtile,slippy,fram,thet,afterAll"
+          - -S
+          - '**/package-lock.json'
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.18
     hooks:
