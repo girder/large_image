@@ -103,7 +103,7 @@ commands:
       - run:
           name: start rabbitmq
           command: |
-            docker run --rm -d -p 5672:5672 rabbitmq
+            docker run --rm -d -p 5672:5672 rabbitmq:4.2
       - run:
           name: start memcached
           command: |
