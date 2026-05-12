@@ -70,6 +70,7 @@ RUN apt-get update && \
       && \
     locale-gen en_US.UTF-8 && \
     apt-get remove -y locales && \
+    rm -rf /usr/bin/pebble && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /etc/ssh/ssh_host* && \

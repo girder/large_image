@@ -164,8 +164,12 @@ jobs:
       - run:
           name: Publish the images to Docker Hub
           command: |
+            if [[ "$CIRCLE_BRANCH" =~ ^(master|girder-3|testdocker)$ ]]; then
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push girder/tox-and-node:latest
+            else
+            echo Skipped
+            fi
   testdocker-lts:
     machine:
       image: ubuntu-2204:current
@@ -178,8 +182,12 @@ jobs:
       - run:
           name: Publish the images to Docker Hub
           command: |
+            if [[ "$CIRCLE_BRANCH" =~ ^(master|girder-3|testdocker)$ ]]; then
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push girder/tox-and-node-lts:latest
+            else
+            echo Skipped
+            fi
   py310:
     machine:
       image: ubuntu-2204:current
@@ -371,6 +379,8 @@ workflows:
                 # Create a branch of this name to push to docker hub
                 - testdocker
                 - girder-3
+                # build but don't push
+                - /.*docker.*/
       - testdocker-lts:
           filters:
             branches:
@@ -379,6 +389,8 @@ workflows:
                 # Create a branch of this name to push to docker hub
                 - testdocker
                 - girder-3
+                # build but don't push
+                - /.*docker.*/
       - py310:
           filters:
             tags:
