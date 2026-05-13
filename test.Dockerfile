@@ -49,6 +49,7 @@ RUN apt-get update && \
       ca-certificates \
       # girder convenience \
       fuse \
+      libfuse2 \
       libldap2-dev \
       libsasl2-dev \
       # developer convenience \
@@ -69,7 +70,8 @@ RUN apt-get update && \
       universal-ctags \
       && \
     locale-gen en_US.UTF-8 && \
-    apt-get remove -y locales && \
+    find /usr/share/X11/locale -mindepth 1 -maxdepth 1 ! -name 'en_US*' ! -name 'C' ! -name 'en' -type d -exec rm -rf {} + && \
+    find /usr/share/i18n -mindepth 1 ! -name 'en_US*' ! -name 'C' -type f -exec rm -f {} + && \
     rm -rf /usr/bin/pebble && \
     curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
