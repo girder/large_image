@@ -9,13 +9,16 @@ _eager_iter_transform_scale: Optional[Callable] = None
 
 
 def set_transform(fn: Callable) -> None:
-    setattr(sys.modules[__name__], '_eager_iter_transform', fn)
+    sys.modules[__name__]._eager_iter_transform = fn
+
 
 def get_transform() -> Optional[Callable]:
     return getattr(sys.modules[__name__], '_eager_iter_transform', None)
 
+
 def set_transform_scale(fn: Callable) -> None:
-    setattr(sys.modules[__name__], '_eager_iter_transform_scale', fn)
+    sys.modules[__name__]._eager_iter_transform_scale = fn
+
 
 def get_transform_scale() -> Optional[Callable]:
     return getattr(sys.modules[__name__], '_eager_iter_transform_scale', None)

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torchvision import io
 
 def make_sobel_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
     model = SobelFilter()
@@ -16,6 +15,7 @@ def make_sobel_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
         model.compile()
 
     return model
+
 
 class SobelFilter(nn.Module):
     def __init__(self_, max_channels: int = 3):
@@ -38,12 +38,13 @@ class SobelFilter(nn.Module):
     def forward(self_, x):
         # Apply convolution for horizontal and vertical gradients
         if x.dim() != 4:
-            raise ValueError(f"Expected input to be a 4D tensor, got shape {tuple(x.shape)}")
+            raise ValueError(f'Expected input to be a 4D tensor, got shape {tuple(x.shape)}')
 
         channels = x.shape[1]
         if channels > self_.max_channels:
-            raise ValueError(f"Expected input to have {self_.max_channels} channels, got {channels}")
-        
+            raise ValueError(
+                f'Expected input to have {self_.max_channels} channels, got {channels}')
+
         kernel_x = self_.kernel_x[:channels]
         kernel_y = self_.kernel_y[:channels]
 

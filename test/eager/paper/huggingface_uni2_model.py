@@ -1,23 +1,24 @@
-import torch
 import timm
+import torch
+
 
 def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
     # pretrained=True needed to load UNI2-h weights (and download weights for the first time)
     timm_kwargs = {
-                'img_size': 224, 
-                'patch_size': 14, 
-                'depth': 24,
-                'num_heads': 24,
-                'init_values': 1e-5, 
-                'embed_dim': 1536,
-                'mlp_ratio': 2.66667*2,
-                'num_classes': 0, 
-                'no_embed_class': True,
-                'mlp_layer': timm.layers.SwiGLUPacked, 
-                'act_layer': torch.nn.SiLU, 
-                'reg_tokens': 8, 
-                'dynamic_img_size': True
-            }
+        'img_size': 224,
+        'patch_size': 14,
+        'depth': 24,
+        'num_heads': 24,
+        'init_values': 1e-5,
+        'embed_dim': 1536,
+        'mlp_ratio': 2.66667 * 2,
+        'num_classes': 0,
+        'no_embed_class': True,
+        'mlp_layer': timm.layers.SwiGLUPacked,
+        'act_layer': torch.nn.SiLU,
+        'reg_tokens': 8,
+        'dynamic_img_size': True,
+    }
 
     # def wrap_dinov2_model(model):
     #     from torch import nn
@@ -39,7 +40,8 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
     #     def interpolate_pos_encoding(self, embeddings: torch.Tensor, height: int, width: int) -> torch.Tensor:
     #         """
     #         This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher resolution
-    #         images. This method is also adapted to support torch.jit tracing and interpolation at torch.float32 precision.
+    # images. This method is also adapted to support torch.jit tracing and
+    # interpolation at torch.float32 precision.
 
     #         Adapted from:
     #         - https://github.com/facebookresearch/dino/blob/de9ee3df6cf39fac952ab558447af1fa1365362a/vision_transformer.py#L174-L194, and
@@ -86,13 +88,13 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
     #             interpolate_pos_encoding_func_type = type(self.model.embeddings.interpolate_pos_encoding)
     #             self.model.embeddings.patch_embeddings.forward = patch_embeddings_func_type(patch_embeddings_forward, self.model.embeddings.patch_embeddings)
     #             self.model.embeddings.interpolate_pos_encoding = interpolate_pos_encoding_func_type(interpolate_pos_encoding, self.model.embeddings)
-            
-    #         def forward(self, x):           
-    #             return self.model.forward(x) 
+
+    #         def forward(self, x):
+    #             return self.model.forward(x)
 
     #     return WrappedDinoV2(model)
 
-    model = timm.create_model("hf-hub:MahmoodLab/UNI2-h", pretrained=True, **timm_kwargs)
+    model = timm.create_model('hf-hub:MahmoodLab/UNI2-h', pretrained=True, **timm_kwargs)
 
     from timm.layers.patch_embed import PatchEmbed
     from timm.models import VisionTransformer
@@ -100,17 +102,17 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
     for name, module in named_modules:
         if isinstance(module, PatchEmbed):
             # Make the image size strict
-            setattr(module, 'strict_img_size', True)
+            module.strict_img_size = True
             # Make the image size non-dynamic
-            setattr(module, 'dynamic_img_pad', False)
+            module.dynamic_img_pad = False
         if isinstance(module, VisionTransformer):
             # Make the image size non-dynamic
-            setattr(module, 'dynamic_img_size', False)
+            module.dynamic_img_size = False
             # Pos embed is not needed for a static image size
-            setattr(module, 'pos_embed', None)
+            module.pos_embed = None
 
     # model = wrap_dinov2_model(model)
-    
+
     model.eval()
 
     model.to(cuda_device)
@@ -121,8 +123,13 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
 
     return model
 
+
 def make_huggingface_uni_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
-    model = timm.create_model("hf-hub:MahmoodLab/uni", pretrained=True, init_values=1e-5, dynamic_img_size=False)
+    model = timm.create_model(
+        'hf-hub:MahmoodLab/uni',
+        pretrained=True,
+        init_values=1e-5,
+        dynamic_img_size=False)
 
     model.eval()
 

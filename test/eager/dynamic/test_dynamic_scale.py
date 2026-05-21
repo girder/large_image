@@ -1,10 +1,12 @@
-import large_image
 import os
-import numpy as np
+from test.eager.eager_helpers import (get_tissue_mask_with_background_elimination)
 from typing import Optional
-import matplotlib.pyplot as plt
 
-from test.eager.eager_helpers import generate_random_tile_indexes, get_tissue_mask_with_background_elimination
+import matplotlib.pyplot as plt
+import numpy as np
+
+import large_image
+
 
 def dynamic_transform_scale(read_kwargs: np.ndarray, slide_dimensions: dict):
     xlt = read_kwargs[:, 6]
@@ -18,7 +20,7 @@ def dynamic_transform_scale(read_kwargs: np.ndarray, slide_dimensions: dict):
     scale_range = [0.35, 1]
 
     # Randomly zoom out by increasing mm-per-pixel
-    scale_multi = 1/(np.random.random() * (scale_range[1] - scale_range[0]) + scale_range[0])
+    scale_multi = 1 / (np.random.random() * (scale_range[1] - scale_range[0]) + scale_range[0])
 
     # Needs to give dictionary for scaling region
     dynamic_scale = {
@@ -62,7 +64,9 @@ def dynamic_transform_scale(read_kwargs: np.ndarray, slide_dimensions: dict):
 
     return xlt, ytt, xrt, ybt, mm_x, mm_y, dynamic_scale, conv_mm_x, conv_mm_y
 
-def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict, min_mm: float = 0.00025, max_mm: float = 0.0005, anchor_mm: float = 0.0001):
+
+def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict,
+                               min_mm: float = 0.00025, max_mm: float = 0.0005, anchor_mm: float = 0.0001):
     xlt = read_kwargs[:, 6]
     ytt = read_kwargs[:, 4]
     xrt = read_kwargs[:, 7]
@@ -87,14 +91,18 @@ def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict, 
     center_x = np.round((xlt + xrt) / 2)
     center_y = np.round((ytt + ybt) / 2)
 
-    # If dynamic mm is less than anchor mm, we need to define a new region based on the anchor region
+    # If dynamic mm is less than anchor mm, we need to define a new region
+    # based on the anchor region
     if dynamic_mm < anchor_mm:
         # define anchor region based on center from read_kwargs
         anchor_conv_mm_x = slide_dimensions['base_mm_x'] / anchor_mm
         anchor_conv_mm_y = slide_dimensions['base_mm_y'] / anchor_mm
 
         anchor_width = np.ceil(slide_dimensions['tile_size'][0] * anchor_conv_mm_x).astype(np.int64)
-        anchor_height = np.ceil(slide_dimensions['tile_size'][1] * anchor_conv_mm_y).astype(np.int64)
+        anchor_height = np.ceil(
+            slide_dimensions['tile_size'][1] *
+            anchor_conv_mm_y).astype(
+            np.int64)
 
         anchor_xlt = np.round(center_x - (anchor_width / 2)).astype(np.int64)
         anchor_ytt = np.round(center_y - (anchor_height / 2)).astype(np.int64)
@@ -124,7 +132,7 @@ def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict, 
         xrt = xlt + width
         ybt = ytt + height
     else:
-        # If dynamic mm is greater than anchor mm, we need to define a new region based 
+        # If dynamic mm is greater than anchor mm, we need to define a new region based
         # on the original center region which should always be within the bounds of the slide
         xlt = np.round(center_x - (width / 2)).astype(np.int64)
         ytt = np.round(center_y - (height / 2)).astype(np.int64)
@@ -153,8 +161,11 @@ def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict, 
 
     return xlt, ytt, xrt, ybt, mm_x, mm_y, dynamic_scale, conv_mm_x, conv_mm_y
 
-def get_mask_from_region(slide_dimensions, mask, xlt: np.ndarray, ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
-    scaled_xlt, scaled_ytt, scaled_xrt, scaled_ybt = scale_region_coordinates(slide_dimensions, mask, xlt, ytt, xrt, ybt)
+
+def get_mask_from_region(slide_dimensions, mask, xlt: np.ndarray,
+                         ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
+    scaled_xlt, scaled_ytt, scaled_xrt, scaled_ybt = scale_region_coordinates(
+        slide_dimensions, mask, xlt, ytt, xrt, ybt)
     if np.ndim(scaled_xlt) == 0:
         return mask[int(scaled_ytt):int(scaled_ybt), int(scaled_xlt):int(scaled_xrt)]
 
@@ -166,7 +177,9 @@ def get_mask_from_region(slide_dimensions, mask, xlt: np.ndarray, ytt: np.ndarra
         ]
     return regions
 
-def scale_region_coordinates(slide_dimensions, mask, xlt: np.ndarray, ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
+
+def scale_region_coordinates(slide_dimensions, mask, xlt: np.ndarray,
+                             ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
     base_w = float(slide_dimensions['base_size_x'])
     base_h = float(slide_dimensions['base_size_y'])
     mask_h, mask_w = mask.shape[:2]
@@ -177,8 +190,8 @@ def scale_region_coordinates(slide_dimensions, mask, xlt: np.ndarray, ytt: np.nd
 
     if xlt.shape != ytt.shape or xlt.shape != xrt.shape or xlt.shape != ybt.shape:
         raise ValueError(
-            "scale_region_coordinates expects matching shapes for xlt/ytt/xrt/ybt, "
-            f"got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}"
+            'scale_region_coordinates expects matching shapes for xlt/ytt/xrt/ybt, '
+            f'got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}',
         )
 
     # Convert full-resolution coordinates into mask-space coordinates.
@@ -194,7 +207,9 @@ def scale_region_coordinates(slide_dimensions, mask, xlt: np.ndarray, ytt: np.nd
 
     return scaled_xlt, scaled_ytt, scaled_xrt, scaled_ybt
 
-def limit_anchor_region_with_mask(slide_dimensions, mask, xlt: np.ndarray, ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
+
+def limit_anchor_region_with_mask(
+        slide_dimensions, mask, xlt: np.ndarray, ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
     xlt = np.asarray(xlt, dtype=np.float64)
     ytt = np.asarray(ytt, dtype=np.float64)
     xrt = np.asarray(xrt, dtype=np.float64)
@@ -202,11 +217,12 @@ def limit_anchor_region_with_mask(slide_dimensions, mask, xlt: np.ndarray, ytt: 
 
     if xlt.shape != ytt.shape or xlt.shape != xrt.shape or xlt.shape != ybt.shape:
         raise ValueError(
-            "limit_anchor_region_with_mask expects ndarray inputs with matching shapes, "
-            f"got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}"
+            'limit_anchor_region_with_mask expects ndarray inputs with matching shapes, '
+            f'got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}',
         )
 
-    scaled_xlt, scaled_ytt, scaled_xrt, scaled_ybt = scale_region_coordinates(slide_dimensions, mask, xlt, ytt, xrt, ybt)
+    scaled_xlt, scaled_ytt, scaled_xrt, scaled_ybt = scale_region_coordinates(
+        slide_dimensions, mask, xlt, ytt, xrt, ybt)
     out_xlt = np.round(xlt).astype(np.int64)
     out_ytt = np.round(ytt).astype(np.int64)
     out_xrt = np.round(xrt).astype(np.int64)
@@ -266,7 +282,9 @@ def limit_anchor_region_with_mask(slide_dimensions, mask, xlt: np.ndarray, ytt: 
 
     return out_xlt, out_ytt, out_xrt, out_ybt
 
-def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, tile_size: dict, anchor_mm: float = 0.0001, min_mm: float = 0.00025, max_mm: float = 0.0005, mask: Optional[np.ndarray] = None):
+
+def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, tile_size: dict,
+                               anchor_mm: float = 0.0001, min_mm: float = 0.00025, max_mm: float = 0.0005, mask: Optional[np.ndarray] = None):
     xlt = read_kwargs[:, 6]
     ytt = read_kwargs[:, 4]
     xrt = read_kwargs[:, 7]
@@ -291,14 +309,18 @@ def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, 
     center_x = np.round((xlt + xrt) / 2)
     center_y = np.round((ytt + ybt) / 2)
 
-    # If dynamic mm is less than anchor mm, we need to define a new region based on the anchor region
+    # If dynamic mm is less than anchor mm, we need to define a new region
+    # based on the anchor region
     if dynamic_mm < anchor_mm:
         # define anchor region based on center from read_kwargs
         anchor_conv_mm_x = slide_dimensions['base_mm_x'] / anchor_mm
         anchor_conv_mm_y = slide_dimensions['base_mm_y'] / anchor_mm
 
         anchor_width = np.ceil(slide_dimensions['tile_size'][0] * anchor_conv_mm_x).astype(np.int64)
-        anchor_height = np.ceil(slide_dimensions['tile_size'][1] * anchor_conv_mm_y).astype(np.int64)
+        anchor_height = np.ceil(
+            slide_dimensions['tile_size'][1] *
+            anchor_conv_mm_y).astype(
+            np.int64)
 
         anchor_xlt = np.round(center_x - (anchor_width / 2)).astype(np.int64)
         anchor_ytt = np.round(center_y - (anchor_height / 2)).astype(np.int64)
@@ -306,7 +328,8 @@ def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, 
         anchor_ybt = anchor_ytt + anchor_height
 
         if mask is not None:
-            anchor_xlt, anchor_ytt, anchor_xrt, anchor_ybt = limit_anchor_region_with_mask(slide_dimensions, mask, anchor_xlt, anchor_ytt, anchor_xrt, anchor_ybt)
+            anchor_xlt, anchor_ytt, anchor_xrt, anchor_ybt = limit_anchor_region_with_mask(
+                slide_dimensions, mask, anchor_xlt, anchor_ytt, anchor_xrt, anchor_ybt)
 
         center_x_min = anchor_xlt + (width / 2)
         center_y_min = anchor_ytt + (height / 2)
@@ -323,15 +346,17 @@ def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, 
         center_x_max = center_x_max - center_dx_right
         center_y_max = center_y_max - center_dy_bottom
 
-        random_center_x_range = np.floor(np.random.random() * (center_x_max - center_x_min) + center_x_min)
-        random_center_y_range = np.floor(np.random.random() * (center_y_max - center_y_min) + center_y_min)
+        random_center_x_range = np.floor(
+            np.random.random() * (center_x_max - center_x_min) + center_x_min)
+        random_center_y_range = np.floor(
+            np.random.random() * (center_y_max - center_y_min) + center_y_min)
 
         xlt = np.floor(random_center_x_range - (width / 2)).astype(np.int64)
         ytt = np.floor(random_center_y_range - (height / 2)).astype(np.int64)
         xrt = xlt + width
         ybt = ytt + height
     else:
-        # If dynamic mm is greater than anchor mm, we need to define a new region based 
+        # If dynamic mm is greater than anchor mm, we need to define a new region based
         # on the original center region which should always be within the bounds of the slide
         xlt = np.round(center_x - (width / 2)).astype(np.int64)
         ytt = np.round(center_y - (height / 2)).astype(np.int64)
@@ -360,32 +385,45 @@ def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, 
 
     return xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size, dynamic_scale, conv_mm_x, conv_mm_y
 
+
 def dynamic_transform_scale_v2_wrapper(read_kwargs: np.ndarray, slide_dimensions: dict):
     return dynamic_transform_scale_v2(read_kwargs, slide_dimensions)
 
+
 def main():
-    test_image_path = "/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs"
+    test_image_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
     source = large_image.open(test_image_path)
 
-    os.makedirs("/scr/arosado/performance/eager/dynamic/images", exist_ok=True)
+    os.makedirs('/scr/arosado/performance/eager/dynamic/images', exist_ok=True)
 
     def save_image(images: np.ndarray, x: int, y: int):
         if x > -1 and y > -1:
-            plt.imsave(f"/scr/arosado/performance/eager/dynamic/images/image_{x}_{y}.png", images)
+            plt.imsave(f'/scr/arosado/performance/eager/dynamic/images/image_{x}_{y}.png', images)
         return images
 
     size_random = 1500
 
     count = 0
 
-    thumbnail, _  = source.getThumbnail(width=1024, format='numpy')
+    thumbnail, _ = source.getThumbnail(width=1024, format='numpy')
 
     mask, _ = get_tissue_mask_with_background_elimination(thumbnail)
 
     def dynamic_transform_scale_v3_wrapper(read_kwargs: np.ndarray, slide_dimensions: dict):
-        return dynamic_transform_scale_v3(read_kwargs, slide_dimensions,  tile_size={'width': 256, 'height': 256}, mask=mask)
+        return dynamic_transform_scale_v3(read_kwargs, slide_dimensions, tile_size={
+                                          'width': 256, 'height': 256}, mask=mask)
 
-    eager_iterator = source.eagerIterator(tile_size={'width': 224, 'height': 224}, scale={'mm_x': 0.0007, 'mm_y': 0.0007}, mask=mask, transform_scale=dynamic_transform_scale_v3_wrapper, transform=save_image, batch=1000)
+    eager_iterator = source.eagerIterator(
+        tile_size={
+            'width': 224,
+            'height': 224},
+        scale={
+            'mm_x': 0.0007,
+            'mm_y': 0.0007},
+        mask=mask,
+        transform_scale=dynamic_transform_scale_v3_wrapper,
+        transform=save_image,
+        batch=1000)
     # eager_iterator = source.eagerIterator(scale={'mm_x': 0.0025, 'mm_y': 0.0025})
     for batch in eager_iterator:
         mm = batch['tile'].mm_view()
@@ -395,11 +433,10 @@ def main():
         # print("mm: %s" % mm)
         # print(batch)
 
-    print(f"Final count: {count}")
-    print(f"Expected count: {size_random}")
+    print(f'Final count: {count}')
+    print(f'Expected count: {size_random}')
 
-    pass
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
-    pass
