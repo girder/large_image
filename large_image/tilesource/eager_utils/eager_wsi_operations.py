@@ -1,18 +1,19 @@
+"""Whole-slide geometry and scaling helpers for eager reads."""
+
 import math
 import warnings
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 
-
 from ..base import TileSource
 
 
 def get_smallest_bounding_box(roi):
-    """
+    """Return the smallest bounding box that contains an ROI polygon.
 
-    :param points: numpy array featuring points from an annotation given coordinates from an entire slide
-    :return: ROI from the whole slide image (x1, y1), (x2, y2)
+    :param roi: ROI dictionary with a points sequence containing x and y coordinates.
+    :returns: The top-left and bottom-right coordinate pairs.
     """
     points = np.array(roi['points'])[:, :2]
     roi_x1, roi_y1 = points.min(axis=0)
@@ -21,15 +22,20 @@ def get_smallest_bounding_box(roi):
 
 
 def return_tile_slides_meeting_area_threshold(
-        mask: np.ndarray, slide_dim: dict, tiles: Union[List, np.ndarray], area_threshold: float = 0.25, threshold_mask: float = 100):
-    """
-    A function that uses a mask generated from a whole slide image thumbnail to determine which tiles have enough content
-    for being included in a set of evaluated tiles given a list of all possible tiles at a specific desired scaling.
-    :param mask: An mask image derived from the whole slide image thumbnail
-    :param slide_dim: A slide dimensions dictionary defining the image properties of a desired image and its' output
-    :param area_threshold: A threshold of area to consider a tile useful.
-    :param threshold_mask: A intensity of the pixel value in the image mask to determine if a tile is useful or not
-    :return: Returns tiles in the form [(y, x)] where y is the row in the image and x is the column
+    mask: np.ndarray,
+    slide_dim: dict,
+    tiles: Union[List, np.ndarray],
+    area_threshold: float = 0.25,
+    threshold_mask: float = 100,
+):
+    """Filter tile indexes by the amount of mask signal they contain.
+
+    :param mask: Whole-slide mask image used to score candidate tiles.
+    :param slide_dim: Slide dimension metadata from calculate_slide_dimensions.
+    :param tiles: Candidate tile indexes in row, column order.
+    :param area_threshold: Minimum mask-signal fraction required for a tile.
+    :param threshold_mask: Minimum mask pixel value considered signal.
+    :returns: A list of tile indexes that meet the threshold.
     """
     return_tiles = []
 
@@ -42,22 +48,24 @@ def return_tile_slides_meeting_area_threshold(
             return_tiles.append(tile)
 
     if len(return_tiles) == 0:
-        raise ValueError(
-            'No tiles found in the mask that meets parameters. Please ensure your mask is for the entire whole slide image and your scale and region parameters are correct.')
+        msg = (
+            'No tiles found in the mask that meets parameters. Please ensure your mask '
+            'is for the entire whole slide image and your scale and region parameters '
+            'are correct.'
+        )
+        raise ValueError(msg)
 
     return return_tiles
 
 
 def return_relevant_tile_indexes_for_slide_dim(
-        slide_dimensions: dict, tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None):
-    """
-    A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
-    and returns a list of possible tiles given a desired output scaling.
-    :param range_x: The range of the x dimension of the image
-    :param range_y: The range of the y dimension of the image
-    :param overlap: The amount of overlap between tiles.  A float from 0 to 1.0 or an integer corresponding to the number of
-    pixels of overlap for the target tile size.  A minimum overlap is 0 pixels.
-    :return: a list of tiles in the form of [(y, x)]
+    slide_dimensions: dict, tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None,
+):
+    """Return tile indexes covering the target slide dimensions.
+
+    :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.
+    :param tile_overlap: Optional x and y tile overlap as pixels or fractions.
+    :returns: A numpy array of tile indexes in row, column order.
     """
     range_x = slide_dimensions['tile_target_range_x']
     range_y = slide_dimensions['tile_target_range_y']
@@ -68,9 +76,11 @@ def return_relevant_tile_indexes_for_slide_dim(
         elif isinstance(tile_overlap['x'], float):
             overlap_x = tile_overlap['x']
             if overlap_x >= 1:
-                raise ValueError('Tile overlap must be less than the tile size')
+                msg = 'Tile overlap must be less than the tile size'
+                raise ValueError(msg)
         else:
-            raise ValueError('Tile overlap must be an integer or float')
+            msg = 'Tile overlap must be an integer or float'
+            raise ValueError(msg)
     else:
         overlap_x = 0
 
@@ -78,11 +88,13 @@ def return_relevant_tile_indexes_for_slide_dim(
         if isinstance(tile_overlap['y'], int):
             overlap_y = tile_overlap['y'] / slide_dimensions['tile_size'][1]
             if overlap_y >= 1:
-                raise ValueError('Tile overlap must be less than the tile size')
+                msg = 'Tile overlap must be less than the tile size'
+                raise ValueError(msg)
         elif isinstance(tile_overlap['y'], float):
             overlap_y = tile_overlap['y']
         else:
-            raise ValueError('Tile overlap must be an integer or float')
+            msg = 'Tile overlap must be an integer or float'
+            raise ValueError(msg)
     else:
         overlap_y = 0
 
@@ -103,12 +115,12 @@ def return_relevant_tile_indexes_for_slide_dim(
 
 
 def get_patch_from_mask_for_tile(mask: np.ndarray, slide_dimensions: dict, tile: list):
-    """
-    A function that returns a patch from the mask for a given tile.
-    :param mask: The mask for the entire whole slide image.
-    :param slide_dimensions: The slide dimensions dictionary determined by calculate_slide_dimensions.
-    :param tile: The tile in the form of (y, x).
-    :returns: The appropriate patch from the mask.
+    """Return the mask patch corresponding to a tile index.
+
+    :param mask: Whole-slide mask image.
+    :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.
+    :param tile: Tile index in row, column order.
+    :returns: A mask patch for the requested tile.
     """
     # todo: needs update for region
     tile_y, tile_x = tile
@@ -119,29 +131,23 @@ def get_patch_from_mask_for_tile(mask: np.ndarray, slide_dimensions: dict, tile:
     conv_x_base_to_mask = mask_size_x / slide_dimensions['base_size_x']
     conv_y_base_to_mask = mask_size_y / slide_dimensions['base_size_y']
 
-    bound_x1 = round(conv_x_base_to_mask *
-                     tile_x *
-                     slide_dimensions['tile_width_before_scaling'] +
-                     (slide_dimensions['region_left'] *
-                      conv_x_base_to_mask))
-    bound_x2 = round(conv_x_base_to_mask *
-                     (tile_x +
-                      1) *
-                     slide_dimensions['tile_width_before_scaling'] +
-                     (slide_dimensions['region_left'] *
-                      conv_x_base_to_mask))
+    bound_x1 = round(
+        conv_x_base_to_mask * tile_x * slide_dimensions['tile_width_before_scaling'] +
+        (slide_dimensions['region_left'] * conv_x_base_to_mask),
+    )
+    bound_x2 = round(
+        conv_x_base_to_mask * (tile_x + 1) * slide_dimensions['tile_width_before_scaling'] +
+        (slide_dimensions['region_left'] * conv_x_base_to_mask),
+    )
 
-    bound_y1 = round(conv_y_base_to_mask *
-                     tile_y *
-                     slide_dimensions['tile_height_before_scaling'] +
-                     (slide_dimensions['region_top'] *
-                      conv_y_base_to_mask))
-    bound_y2 = round(conv_y_base_to_mask *
-                     (tile_y +
-                      1) *
-                     slide_dimensions['tile_height_before_scaling'] +
-                     (slide_dimensions['region_top'] *
-                      conv_y_base_to_mask))
+    bound_y1 = round(
+        conv_y_base_to_mask * tile_y * slide_dimensions['tile_height_before_scaling'] +
+        (slide_dimensions['region_top'] * conv_y_base_to_mask),
+    )
+    bound_y2 = round(
+        conv_y_base_to_mask * (tile_y + 1) * slide_dimensions['tile_height_before_scaling'] +
+        (slide_dimensions['region_top'] * conv_y_base_to_mask),
+    )
 
     patch_mask = mask[bound_y1:bound_y2, bound_x1:bound_x2]
 
@@ -149,10 +155,10 @@ def get_patch_from_mask_for_tile(mask: np.ndarray, slide_dimensions: dict, tile:
 
 
 def get_base_mm_from_meta(source_meta):
-    """
-    A function that returns the base mm from the source metadata.
-    :param source_meta: The source metadata.
-    :returns: The base mm.
+    """Return base pixel sizes from source metadata.
+
+    :param source_meta: Metadata dictionary from a tile source.
+    :returns: The base mm_x and mm_y values.
     """
     mm_x = None
     mm_y = None
@@ -163,36 +169,34 @@ def get_base_mm_from_meta(source_meta):
         mm_y = source_meta['mm_y']
 
     if mm_x is None or mm_y is None:
-        raise Exception('Tile source does not define pixel size in mm')
+        msg = 'Tile source does not define pixel size in mm'
+        raise Exception(msg)
     return (mm_x, mm_y)
 
 
 def return_target_scaling_feature(feature):
-    """
-    A function that returns the target scaling feature.
-    :param feature: The feature.
-    :returns: The target scaling feature.
+    """Normalize a target scaling value to a float.
+
+    :param feature: Scaling value as a string, integer, float, or None.
+    :returns: The scaling value as a float, or None if it cannot be converted.
     """
     out = None
-    if isinstance(feature, str):
-        out = float(feature)
-    elif isinstance(feature, int):
-        out = float(feature)
-    elif isinstance(feature, float):
+    if isinstance(feature, (str, int, float)):
         out = float(feature)
     return out
 
 
 def generate_assumptions_for_x_y_given_mag(x, y, z):
-    """
-    A function that generates assumptions for the x and y dimensions given a magnification.
-    :param x: The x dimension.
-    :param y: The y dimension.
-    :param z: The magnification.
-    :returns: The x and y dimensions.
+    """Estimate pixel sizes from magnification when metadata is incomplete.
+
+    :param x: Existing horizontal pixel size, or None.
+    :param y: Existing vertical pixel size, or None.
+    :param z: Magnification used to estimate missing pixel sizes.
+    :returns: Estimated x, y, and z values.
     """
     if z is None:
-        raise Exception('Unable to assume using magnification is not defined')
+        msg = 'Unable to assume using magnification is not defined'
+        raise Exception(msg)
     # Prefer scaling using base dimensions
     if x is None:
         x = 0.00025 * z / 40
@@ -200,18 +204,18 @@ def generate_assumptions_for_x_y_given_mag(x, y, z):
         y = 0.00025 * z / 40
 
     if x is None or y is None or z is None:
-        raise Exception('Assumption for dimensions failed')
+        msg = 'Assumption for dimensions failed'
+        raise Exception(msg)
 
     return x, y, z
 
 
 def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, Any]] = None):
-    """
-    A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
-    :param source_meta: A large image source metadata.
-    :param mode: The mode used for scaling. Should be either 'mag' or 'mm'.
-    :param target_scale: The desired target scale as an int for magnification in 'mag' mode or a tuple of (x, y) in 'mm' mode.
-    :returns: A dictionary defining scaling.
+    """Calculate base and target scaling values from source metadata.
+
+    :param source_meta: Metadata dictionary from a tile source.
+    :param scale: Scale request with either magnification or mm_x and mm_y values.
+    :returns: A dictionary with base and target mm and magnification values.
     """
     # Define none for both target (i, j, k) and base (x, y, z) values
     i, j, k, x, y, z = None, None, None, None, None, None
@@ -222,23 +226,24 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
             z = source_meta['magnification']
             i, j = get_base_mm_from_meta(source_meta)
             x, y = i, j
-        elif isinstance(scale['magnification'], int) or isinstance(scale['magnification'], float):
+        elif isinstance(scale['magnification'], (int, float)):
             k = return_target_scaling_feature(scale['magnification'])
             z = source_meta['magnification']
 
             if k is None:
-                raise Exception(
-                    'Unable to determine a target magnification with the provided value')
+                msg = 'Unable to determine a target magnification with the provided value'
+                raise Exception(msg)
 
             try:
                 x, y = get_base_mm_from_meta(source_meta)
                 i = x * (z / k)
                 j = y * (z / k)
-            except BaseException:
-                warnings.warn('Unable to define scaling from mm to mag', UserWarning)
+            except Exception:
+                warnings.warn('Unable to define scaling from mm to mag', UserWarning, stacklevel=2)
 
         if k is None:
-            raise Exception('Not a valid scale for the selected mode')
+            msg = 'Not a valid scale for the selected mode'
+            raise Exception(msg)
 
     if 'mm_x' in scale or 'mm_y' in scale:
         if scale['mm_x'] is None and scale['mm_y'] is None:
@@ -255,9 +260,12 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
             zoom_y = z * (y / j)
             if zoom_x != zoom_y:
                 warnings.warn(
-                    'Pixel dimensions for x and y are not the same. X = {}, Y = {}, Zoom X = {}, Zoom Y = {}'
-                    .format(x, y, zoom_x, zoom_y),
+                    (
+                        'Pixel dimensions for x and y are not the same. '
+                        'X = {}, Y = {}, Zoom X = {}, Zoom Y = {}'
+                    ).format(x, y, zoom_x, zoom_y),
                     UserWarning,
+                    stacklevel=2,
                 )
             else:
                 k = zoom_x
@@ -266,10 +274,12 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
                 x, y, z = generate_assumptions_for_x_y_given_mag(x, y, z)
 
         else:
-            raise Exception('Scale for mm mode must be a tuple of (x, y)')
+            msg = 'Scale for mm mode must be a tuple of (x, y)'
+            raise Exception(msg)
 
         if i is None or j is None:
-            raise Exception('Not a valid scale for the selected mode')
+            msg = 'Not a valid scale for the selected mode'
+            raise Exception(msg)
 
     out = {
         'base_mm_x': x,
@@ -283,333 +293,317 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
     return out
 
 
-def calculate_slide_dimensions(source: TileSource, region: Optional[Dict[str, int]] = None, scale: Optional[Dict[str, Any]]
-                               = None, tile_size: Optional[Dict[str, int]] = None, source_scale: Optional[Dict[str, Any]] = None, **kwargs):
+def _normalize_region_bounds(region: Dict[str, Any]) -> None:
+    """Normalize right/bottom region bounds into width and height.
+
+    :param region: Mutable region dictionary supplied by the caller.
+    :returns: None.
     """
-    A function that takes a dictionary containing parameters defining a whole slide image in terms of pixels, scaling, etc.
-    :param source: A large image tile source.
-    :param region: A dictionary with 'left', 'top', 'width', and 'height' and 'units' defining the region in pixels.
-    :param scale: A dictionary with 'magnification' or 'mm_x' and 'mm_y' defining the scale for the image in 'mm' or 'mag' mode.
-    :param tile_size: A dictionary with 'width' and 'height' defining the tile size in pixels.
-    :param source_scale: A dictionary with 'magnification' or 'mm_x' and 'mm_y' defining the scale for the source region in 'mm' or 'mag' mode.
-    :returns: A slide dimensions dictionary that can be used for scaling any tile/region created using the source/iterator.
+    if 'bottom' in region:
+        region['height'] = region['bottom'] - region['top']
+    if 'right' in region:
+        region['width'] = region['right'] - region['left']
+
+
+def _validate_region(region: Dict[str, Any], source_meta: Dict[str, Any], source_scale) -> None:
+    """Validate an eager source region.
+
+    :param region: Region with left, top, width, height, and units.
+    :param source_meta: Tile-source metadata used for image bounds.
+    :param source_scale: Scale required when the region is in mag pixels.
+    :returns: None.
     """
-    # Use base scale pixel size to calculate conversion to get a region of a target size
-    # todo: use large image convert scale to replace as many values here as possible
-    slide_dimensions = {}
+    if 'units' not in region:
+        msg = (
+            "Region must be a dictionary with 'units' which can be "
+            "'base_pixels', 'mag_pixels', or 'mm'"
+        )
+        raise ValueError(msg)
+    if any(key not in region for key in ('left', 'top', 'width', 'height')):
+        msg = "Region must be a dictionary with 'left', 'top', 'width', and 'height'"
+        raise ValueError(msg)
+    if region['width'] <= 0 or region['height'] <= 0:
+        msg = 'Region width and height must be greater than 0'
+        raise ValueError(msg)
+    if region['left'] < 0 or region['top'] < 0:
+        msg = 'Region left and top must be greater than 0'
+        raise ValueError(msg)
+    if (
+        region['left'] + region['width'] > source_meta['sizeX'] or
+        region['top'] + region['height'] > source_meta['sizeY']
+    ):
+        msg = 'Region left and top must be less than the image size'
+        raise ValueError(msg)
+    if region['units'] not in {'base_pixels', 'mag_pixels', 'mm'}:
+        msg = "Region units must be either 'base_pixels' or 'mag_pixels' or 'mm'"
+        raise ValueError(msg)
+    if region['units'] == 'mag_pixels' and source_scale is None:
+        msg = "Source scale must be provided if region units are 'mag_pixels'"
+        raise ValueError(msg)
 
-    source_meta = source.getMetadata()
 
-    if region is not None:
-        if 'bottom' in region:
-            region['height'] = region['bottom'] - region['top']
-        if 'right' in region:
-            region['width'] = region['right'] - region['left']
+def _region_slide_dimensions(
+    source_meta: Dict[str, Any],
+    region: Optional[Dict[str, Any]],
+    source_scale,
+) -> Dict[str, Any]:
+    """Return slide-dimension fields describing the requested source region.
 
-        if 'units' not in region:
-            raise ValueError(
-                "Region must be a dictionary with 'units' which can be 'base_pixels', 'mag_pixels', or 'mm'")
-
-        if 'left' not in region or 'top' not in region or 'width' not in region or 'height' not in region:
-            raise ValueError(
-                "Region must be a dictionary with 'left', 'top', 'width', and 'height'")
-        if region['width'] <= 0 or region['height'] <= 0:
-            raise ValueError('Region width and height must be greater than 0')
-        if region['left'] < 0 or region['top'] < 0:
-            raise ValueError('Region left and top must be greater than 0')
-        if region['left'] + region['width'] > source_meta['sizeX'] or region['top'] + region['height'] > source_meta['sizeY']:
-            raise ValueError('Region left and top must be less than the image size')
-        if not (region['units'] == 'base_pixels' or region['units'] == 'mag_pixels' or region['units'] == 'mm'):
-            raise ValueError("Region units must be either 'base_pixels' or 'mag_pixels' or 'mm'")
-        if region['units'] == 'mag_pixels' and source_scale is None:
-            raise ValueError("Source scale must be provided if region units are 'mag_pixels'")
-        slide_dimensions['region_left'] = region['left']
-        slide_dimensions['region_top'] = region['top']
-        slide_dimensions['region_right'] = region['left'] + region['width']
-        slide_dimensions['region_bottom'] = region['top'] + region['height']
-        slide_dimensions['region_width'] = region['width']
-        slide_dimensions['region_height'] = region['height']
-        slide_dimensions['region_units'] = region['units']
+    :param source_meta: Tile-source metadata used for the full-image fallback.
+    :param region: Optional source region with left, top, width, height, and units.
+    :param source_scale: Scale required when the region is in mag pixels.
+    :returns: Region-related slide-dimension fields.
+    """
+    if region is None:
+        region = dict(
+            left=0,
+            top=0,
+            width=source_meta['sizeX'],
+            height=source_meta['sizeY'],
+            units='base_pixels',
+        )
     else:
-        slide_dimensions['region_left'] = 0
-        slide_dimensions['region_top'] = 0
-        slide_dimensions['region_right'] = source_meta['sizeX']
-        slide_dimensions['region_bottom'] = source_meta['sizeY']
-        slide_dimensions['region_width'] = source_meta['sizeX']
-        slide_dimensions['region_height'] = source_meta['sizeY']
-        slide_dimensions['region_units'] = 'base_pixels'
+        _normalize_region_bounds(region)
+        _validate_region(region, source_meta, source_scale)
 
-    if scale is not None:
-        if 'magnification' in scale:
-            slide_dimensions['scale_mode'] = 'mag'
-        elif 'mm_x' in scale and 'mm_y' in scale:
-            slide_dimensions['scale_mode'] = 'mm'
-        else:
-            raise ValueError(
-                "Scale must be a dictionary with either 'magnification' or 'mm_x' and 'mm_y'")
-    else:
-        scale = {'magnification': None}
-        slide_dimensions['scale_mode'] = 'mag'
+    return {
+        'region_left': region['left'],
+        'region_top': region['top'],
+        'region_right': region['left'] + region['width'],
+        'region_bottom': region['top'] + region['height'],
+        'region_width': region['width'],
+        'region_height': region['height'],
+        'region_units': region['units'],
+    }
 
-    if tile_size is not None:
-        if 'width' not in tile_size and 'height' not in tile_size:
-            raise ValueError("Tile size must be a dictionary with both 'width' and 'height'")
-        if tile_size['width'] <= 0 or tile_size['height'] <= 0:
-            raise ValueError('Tile size width and height must be greater than 0')
-        slide_dimensions['tile_size'] = (tile_size['width'], tile_size['height'])
-    else:
-        slide_dimensions['tile_size'] = (source_meta['tileWidth'], source_meta['tileHeight'])
 
-    slide_dimensions['base_magnification'] = source_meta['magnification']
+def _normalize_scale(scale: Optional[Dict[str, Any]]) -> tuple[Dict[str, Any], str]:
+    """Return a usable scale dictionary and eager scale mode.
 
+    :param scale: Optional target scale using magnification or mm_x and mm_y.
+    :returns: A scale dictionary and either 'mag' or 'mm'.
+    """
+    if scale is None:
+        return {'magnification': None}, 'mag'
+    if 'magnification' in scale:
+        return scale, 'mag'
+    if 'mm_x' in scale and 'mm_y' in scale:
+        return scale, 'mm'
+    msg = "Scale must be a dictionary with either 'magnification' or 'mm_x' and 'mm_y'"
+    raise ValueError(msg)
+
+
+def _tile_size_from_meta(
+    source_meta: Dict[str, Any], tile_size: Optional[Dict[str, int]],
+) -> tuple[int, int]:
+    """Return the requested eager tile size.
+
+    :param source_meta: Tile-source metadata used for the default size.
+    :param tile_size: Optional output tile size with width and height.
+    :returns: Tile width and height.
+    """
+    if tile_size is None:
+        return source_meta['tileWidth'], source_meta['tileHeight']
+    if 'width' not in tile_size or 'height' not in tile_size:
+        msg = "Tile size must be a dictionary with both 'width' and 'height'"
+        raise ValueError(msg)
+    if tile_size['width'] <= 0 or tile_size['height'] <= 0:
+        msg = 'Tile size width and height must be greater than 0'
+        raise ValueError(msg)
+    return tile_size['width'], tile_size['height']
+
+
+def _add_base_slide_dimensions(
+    slide_dimensions: Dict[str, Any], source_meta: Dict[str, Any], scale: Dict[str, Any],
+) -> None:
+    """Populate base metadata and target scaling fields.
+
+    :param slide_dimensions: Slide-dimension dictionary to update.
+    :param source_meta: Tile-source metadata.
+    :param scale: Normalized target scale dictionary.
+    :returns: None.
+    """
     scaling_values = get_scaling_values_from_meta(source_meta, scale)
+    slide_dimensions['base_magnification'] = source_meta['magnification']
     slide_dimensions['target_magnification'] = scaling_values['target_mag']
     slide_dimensions['base_size_x'] = source_meta['sizeX']
     slide_dimensions['base_size_y'] = source_meta['sizeY']
-
-    # slide dimensions should also include sizes of original sizes
     slide_dimensions['base_tile_width'] = source_meta['tileWidth']
     slide_dimensions['base_tile_height'] = source_meta['tileHeight']
-
-    # base tiles
     slide_dimensions['base_tile_range_x'] = math.ceil(
-        source_meta['sizeX'] / source_meta['tileWidth'])
+        source_meta['sizeX'] / source_meta['tileWidth'],
+    )
     slide_dimensions['base_tile_range_y'] = math.ceil(
-        source_meta['sizeY'] / source_meta['tileHeight'])
+        source_meta['sizeY'] / source_meta['tileHeight'],
+    )
+    _add_mm_scaling_values(slide_dimensions, scaling_values)
 
-    if 'target_mm_x' in scaling_values and scaling_values['target_mm_x'] is not None:
-        slide_dimensions['target_mm_x'] = scaling_values['target_mm_x']
-        slide_dimensions['base_mm_x'] = scaling_values['base_mm_x']
-    else:
-        raise Exception(
-            'Unable to generate scale dimensions for the selected mode. Failure in the x dimension')
 
-    if 'target_mm_y' in scaling_values and scaling_values['target_mm_y'] is not None:
-        slide_dimensions['target_mm_y'] = scaling_values['target_mm_y']
-        slide_dimensions['base_mm_y'] = scaling_values['base_mm_y']
-    else:
-        raise Exception(
-            'Unable to generate scale dimensions for the selected mode. Failure in the y dimension')
+def _add_mm_scaling_values(
+    slide_dimensions: Dict[str, Any], scaling_values: Dict[str, Any],
+) -> None:
+    """Populate millimeter scaling values.
 
+    :param slide_dimensions: Slide-dimension dictionary to update.
+    :param scaling_values: Scale values returned from metadata conversion.
+    :returns: None.
+    """
+    if 'target_mm_x' not in scaling_values or scaling_values['target_mm_x'] is None:
+        msg = (
+            'Unable to generate scale dimensions for the selected mode. Failure in the x dimension'
+        )
+        raise Exception(msg)
+    if 'target_mm_y' not in scaling_values or scaling_values['target_mm_y'] is None:
+        msg = (
+            'Unable to generate scale dimensions for the selected mode. Failure in the y dimension'
+        )
+        raise Exception(msg)
+    slide_dimensions['target_mm_x'] = scaling_values['target_mm_x']
+    slide_dimensions['target_mm_y'] = scaling_values['target_mm_y']
+    slide_dimensions['base_mm_x'] = scaling_values['base_mm_x']
+    slide_dimensions['base_mm_y'] = scaling_values['base_mm_y']
+
+
+def _source_region_from_slide_dimensions(slide_dimensions: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a convertRegionScale source region from slide dimensions.
+
+    :param slide_dimensions: Slide dimension metadata.
+    :returns: Region dictionary accepted by Large Image scale conversion.
+    """
+    return dict(
+        left=slide_dimensions['region_left'],
+        top=slide_dimensions['region_top'],
+        width=slide_dimensions['region_width'],
+        height=slide_dimensions['region_height'],
+        units=slide_dimensions['region_units'],
+    )
+
+
+def _target_scale_from_slide_dimensions(slide_dimensions: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a convertRegionScale target scale from slide dimensions.
+
+    :param slide_dimensions: Slide dimension metadata.
+    :returns: Target scale dictionary for the active scale mode.
+    """
     if slide_dimensions['scale_mode'] == 'mag':
-        if region is not None:
-            if slide_dimensions['region_units'] == 'mag_pixels':
-                if source_scale is None:
-                    raise ValueError(
-                        "source_scale parameter must be provided if region units are 'mag_pixels'")
-                convert_scale_px = source.convertRegionScale(
-                    sourceRegion=dict(
-                        left=slide_dimensions['region_left'],
-                        top=slide_dimensions['region_top'],
-                        width=slide_dimensions['region_width'],
-                        height=slide_dimensions['region_height'], units=slide_dimensions['region_units'],
-                    ),
-                    targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                    sourceScale=source_scale,
-                    targetUnits='mag_pixels',
-                )
+        return {'magnification': slide_dimensions['target_magnification']}
+    if slide_dimensions['scale_mode'] == 'mm':
+        return {'mm_x': slide_dimensions['target_mm_x'], 'mm_y': slide_dimensions['target_mm_y']}
+    msg = 'Mode is not valid for creating slide dimensions'
+    raise ValueError(msg)
 
-                convert_scale_mm = source.convertRegionScale(
-                    sourceRegion=dict(
-                        left=slide_dimensions['region_left'],
-                        top=slide_dimensions['region_top'],
-                        width=slide_dimensions['region_width'],
-                        height=slide_dimensions['region_height'], units=slide_dimensions['region_units']),
-                    targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                    sourceScale=source_scale,
-                    targetUnits='mm',
-                )
 
-                base_scale_px = source.convertRegionScale(
-                    sourceRegion=dict(
-                        left=slide_dimensions['region_left'],
-                        top=slide_dimensions['region_top'],
-                        width=slide_dimensions['region_width'],
-                        height=slide_dimensions['region_height'], units=slide_dimensions['region_units'],
-                    ),
-                    targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                    sourceScale=source_scale,
-                    targetUnits='base_pixels',
-                )
+def _convert_region_scales(
+    source: TileSource, slide_dimensions: Dict[str, Any], source_scale: Optional[Dict[str, Any]],
+) -> tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    """Convert the requested eager source region into output scales.
 
-            else:
-                convert_scale_px = source.convertRegionScale(
-                    sourceRegion=dict(
-                        left=slide_dimensions['region_left'],
-                        top=slide_dimensions['region_top'],
-                        width=slide_dimensions['region_width'],
-                        height=slide_dimensions['region_height'], units=slide_dimensions['region_units'],
-                    ),
-                    targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                    targetUnits='mag_pixels',
-                )
+    :param source: Tile source used for scale conversion.
+    :param slide_dimensions: Slide dimension metadata.
+    :param source_scale: Source scale required for mag-pixel regions.
+    :returns: Pixel, millimeter, and base-pixel converted regions.
+    """
+    convert_kwargs = dict(
+        sourceRegion=_source_region_from_slide_dimensions(slide_dimensions),
+        targetScale=_target_scale_from_slide_dimensions(slide_dimensions),
+    )
+    if slide_dimensions['region_units'] == 'mag_pixels':
+        if source_scale is None:
+            msg = "source_scale parameter must be provided if region units are 'mag_pixels'"
+            raise ValueError(msg)
+        convert_kwargs['sourceScale'] = source_scale
+    return (
+        source.convertRegionScale(**convert_kwargs, targetUnits='mag_pixels'),
+        source.convertRegionScale(**convert_kwargs, targetUnits='mm'),
+        source.convertRegionScale(**convert_kwargs, targetUnits='base_pixels'),
+    )
 
-                convert_scale_mm = source.convertRegionScale(
-                    sourceRegion=dict(
-                        left=slide_dimensions['region_left'],
-                        top=slide_dimensions['region_top'],
-                        width=slide_dimensions['region_width'],
-                        height=slide_dimensions['region_height'], units=slide_dimensions['region_units']),
-                    targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                    targetUnits='mm',
-                )
 
-                base_scale_px = source.convertRegionScale(
-                    sourceRegion=dict(
-                        left=slide_dimensions['region_left'],
-                        top=slide_dimensions['region_top'],
-                        width=slide_dimensions['region_width'],
-                        height=slide_dimensions['region_height'], units=slide_dimensions['region_units'],
-                    ),
-                    targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                    targetUnits='base_pixels',
-                )
+def _add_level(source: TileSource, slide_dimensions: Dict[str, Any]) -> None:
+    """Populate the tile-source level for the active scale mode.
 
-        else:
-            convert_scale_px = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=0,
-                    top=0,
-                    width=slide_dimensions['base_size_x'],
-                    height=slide_dimensions['base_size_y'],
-                    units='base_pixels'),
-                targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                targetUnits='mag_pixels',
-            )
-
-            convert_scale_mm = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=0,
-                    top=0,
-                    width=slide_dimensions['base_size_x'],
-                    height=slide_dimensions['base_size_y'],
-                    units='base_pixels'),
-                targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                targetUnits='mm',
-            )
-
-            base_scale_px = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=0,
-                    top=0,
-                    width=slide_dimensions['base_size_x'],
-                    height=slide_dimensions['base_size_y'],
-                    units='base_pixels'),
-                targetScale=dict(magnification=slide_dimensions['target_magnification']),
-                targetUnits='base_pixels',
-            )
-
+    :param source: Tile source used for level selection.
+    :param slide_dimensions: Slide dimension metadata to update.
+    :returns: None.
+    """
+    if slide_dimensions['scale_mode'] == 'mag':
         slide_dimensions['level'] = source.getLevelForMagnification(
-            slide_dimensions['target_magnification'])
-
-    elif slide_dimensions['scale_mode'] == 'mm':
-        if region is not None:
-            convert_scale_px = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=slide_dimensions['region_left'],
-                    top=slide_dimensions['region_top'],
-                    width=slide_dimensions['region_width'],
-                    height=slide_dimensions['region_height'], units=slide_dimensions['region_units']),
-                targetScale=dict(
-                    mm_x=slide_dimensions['target_mm_x'],
-                    mm_y=slide_dimensions['target_mm_y']),
-                targetUnits='mag_pixels',
-            )
-
-            convert_scale_mm = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=slide_dimensions['region_left'],
-                    top=slide_dimensions['region_top'],
-                    width=slide_dimensions['region_width'],
-                    height=slide_dimensions['region_height'], units=slide_dimensions['region_units']),
-                targetScale=dict(
-                    mm_x=slide_dimensions['target_mm_x'],
-                    mm_y=slide_dimensions['target_mm_y']),
-                targetUnits='mm',
-            )
-
-            base_scale_px = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=slide_dimensions['region_left'],
-                    top=slide_dimensions['region_top'],
-                    width=slide_dimensions['region_width'],
-                    height=slide_dimensions['region_height'], units=slide_dimensions['region_units']),
-                targetScale=dict(
-                    mm_x=slide_dimensions['target_mm_x'],
-                    mm_y=slide_dimensions['target_mm_y']),
-                targetUnits='base_pixels',
-            )
-        else:
-            convert_scale_px = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=0,
-                    top=0,
-                    width=slide_dimensions['base_size_x'],
-                    height=slide_dimensions['base_size_y'],
-                    units='base_pixels'),
-                targetScale=dict(
-                    mm_x=slide_dimensions['target_mm_x'],
-                    mm_y=slide_dimensions['target_mm_y']),
-                targetUnits='mag_pixels',
-            )
-
-            convert_scale_mm = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=0,
-                    top=0,
-                    width=slide_dimensions['base_size_x'],
-                    height=slide_dimensions['base_size_y'],
-                    units='base_pixels'),
-                targetScale=dict(
-                    mm_x=slide_dimensions['target_mm_x'],
-                    mm_y=slide_dimensions['target_mm_y']),
-                targetUnits='mm',
-            )
-
-            base_scale_px = source.convertRegionScale(
-                sourceRegion=dict(
-                    left=0,
-                    top=0,
-                    width=slide_dimensions['base_size_x'],
-                    height=slide_dimensions['base_size_y'],
-                    units='base_pixels'),
-                targetScale=dict(
-                    mm_x=slide_dimensions['target_mm_x'],
-                    mm_y=slide_dimensions['target_mm_y']),
-                targetUnits='base_pixels',
-            )
-
+            slide_dimensions['target_magnification'],
+        )
+        return
+    if slide_dimensions['scale_mode'] == 'mm':
         slide_dimensions['level'] = source.getLevelForMagnification(
-            mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'])
+            mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'],
+        )
+        return
+    msg = 'Mode is not valid for creating slide dimensions'
+    raise ValueError(msg)
 
-    else:
-        raise ValueError('Mode is not valid for creating slide dimensions')
 
+def _add_output_dimensions(
+    slide_dimensions: Dict[str, Any],
+    convert_scale_px: Dict[str, Any],
+    convert_scale_mm: Dict[str, Any],
+    base_scale_px: Dict[str, Any],
+) -> None:
+    """Populate output dimensions derived from converted region scales.
+
+    :param slide_dimensions: Slide dimension metadata to update.
+    :param convert_scale_px: Region converted into target pixels.
+    :param convert_scale_mm: Region converted into millimeters.
+    :param base_scale_px: Region converted into base pixels.
+    :returns: None.
+    """
     slide_dimensions['conv_mm_x'] = slide_dimensions['target_mm_x'] / slide_dimensions['base_mm_x']
     slide_dimensions['conv_mm_y'] = slide_dimensions['target_mm_y'] / slide_dimensions['base_mm_y']
-
-    if tile_size is not None:
-        slide_dimensions['tile_width_before_scaling'] = math.ceil(
-            slide_dimensions['conv_mm_x'] * slide_dimensions['tile_size'][0])
-        slide_dimensions['tile_height_before_scaling'] = math.ceil(
-            slide_dimensions['conv_mm_y'] * slide_dimensions['tile_size'][1])
-    else:
-        slide_dimensions['tile_width_before_scaling'] = math.ceil(
-            slide_dimensions['conv_mm_x'] * source_meta['tileWidth'])
-        slide_dimensions['tile_height_before_scaling'] = math.ceil(
-            slide_dimensions['conv_mm_y'] * source_meta['tileHeight'])
-
+    slide_dimensions['tile_width_before_scaling'] = math.ceil(
+        slide_dimensions['conv_mm_x'] * slide_dimensions['tile_size'][0],
+    )
+    slide_dimensions['tile_height_before_scaling'] = math.ceil(
+        slide_dimensions['conv_mm_y'] * slide_dimensions['tile_size'][1],
+    )
     slide_dimensions['base_size_x_mm'] = convert_scale_mm['width']
     slide_dimensions['base_size_y_mm'] = convert_scale_mm['height']
-
-    # use convert scale to get output size, make sure to use ceil to avoid
-    # missing pixels on outer edges bottom and right
     slide_dimensions['target_width'] = convert_scale_px['width']
     slide_dimensions['target_height'] = convert_scale_px['height']
-
     slide_dimensions['tile_target_range_x'] = math.ceil(
-        base_scale_px['width'] / slide_dimensions['tile_width_before_scaling'])
+        base_scale_px['width'] / slide_dimensions['tile_width_before_scaling'],
+    )
     slide_dimensions['tile_target_range_y'] = math.ceil(
-        base_scale_px['height'] / slide_dimensions['tile_height_before_scaling'])
+        base_scale_px['height'] / slide_dimensions['tile_height_before_scaling'],
+    )
 
+
+def calculate_slide_dimensions(
+    source: TileSource,
+    region: Optional[Dict[str, int]] = None,
+    scale: Optional[Dict[str, Any]] = None,
+    tile_size: Optional[Dict[str, int]] = None,
+    source_scale: Optional[Dict[str, Any]] = None,
+    **kwargs,
+):
+    """Calculate slide geometry for eager reads.
+
+    :param source: Large Image tile source used for metadata and scale conversion.
+    :param region: Optional region with left, top, width, height, and units.
+    :param scale: Optional target scale using magnification or mm_x and mm_y.
+    :param tile_size: Optional output tile size with width and height in pixels.
+    :param source_scale: Source scale used when region units are mag_pixels.
+    :param kwargs: Additional options reserved for compatibility.
+    :returns: A slide dimension dictionary used by eager read planning and workers.
+    """
+    source_meta = source.getMetadata()
+    normalized_scale, scale_mode = _normalize_scale(scale)
+    slide_dimensions = _region_slide_dimensions(source_meta, region, source_scale)
+    slide_dimensions['scale_mode'] = scale_mode
+    slide_dimensions['tile_size'] = _tile_size_from_meta(source_meta, tile_size)
+
+    _add_base_slide_dimensions(slide_dimensions, source_meta, normalized_scale)
+    convert_scale_px, convert_scale_mm, base_scale_px = _convert_region_scales(
+        source, slide_dimensions, source_scale,
+    )
+    _add_level(source, slide_dimensions)
+    _add_output_dimensions(
+        slide_dimensions, convert_scale_px, convert_scale_mm, base_scale_px,
+    )
     return slide_dimensions

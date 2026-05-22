@@ -14,6 +14,10 @@ slide_dimensions = calculate_slide_dimensions(source)
 n_possible_tiles = slide_dimensions['tile_target_range_x'] * slide_dimensions['tile_target_range_y']
 
 read_args = gen_read_args_for_tiles(
-    n_possible_tiles, slide_dimensions, tiles=[[0, 0]], chunk_mult=2)
+    n_possible_tiles,
+    slide_dimensions,
+    tiles=[[0, 0]],
+    chunk_mult=2,
+)
 
 print(read_args)

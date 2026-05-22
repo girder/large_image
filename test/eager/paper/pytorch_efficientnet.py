@@ -13,8 +13,11 @@ from torchvision.models.efficientnet import (EfficientNet_B0_Weights,
                                              EfficientNet_B7_Weights)
 
 
-def make_efficientnet_model(model_name: str = 'efficientnetb0',
-                            compile_model: bool = True, cuda_device: str = 'cuda:0'):
+def make_efficientnet_model(
+    model_name: str = 'efficientnetb0',
+    compile_model: bool = True,
+    cuda_device: str = 'cuda:0',
+):
     if model_name == 'efficientnetb0':
         model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
     elif model_name == 'efficientnetb1':

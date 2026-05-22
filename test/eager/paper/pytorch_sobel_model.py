@@ -38,12 +38,15 @@ class SobelFilter(nn.Module):
     def forward(self_, x):
         # Apply convolution for horizontal and vertical gradients
         if x.dim() != 4:
-            raise ValueError(f'Expected input to be a 4D tensor, got shape {tuple(x.shape)}')
+            msg = f'Expected input to be a 4D tensor, got shape {tuple(x.shape)}'
+            raise ValueError(msg)
 
         channels = x.shape[1]
         if channels > self_.max_channels:
+            msg = f'Expected input to have {self_.max_channels} channels, got {channels}'
             raise ValueError(
-                f'Expected input to have {self_.max_channels} channels, got {channels}')
+                msg,
+            )
 
         kernel_x = self_.kernel_x[:channels]
         kernel_y = self_.kernel_y[:channels]

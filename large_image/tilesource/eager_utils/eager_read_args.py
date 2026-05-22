@@ -1,3 +1,5 @@
+"""Read argument planning helpers for eager tile and region batches."""
+
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
@@ -7,6 +9,12 @@ from pykdtree.kdtree import KDTree
 def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
     # todo: add documentation
     # Calculate group indices using grid structure
+    """Group tile read arguments for a complete rectangular grid.
+
+    :param sorted_tiles: Tile read argument array sorted by tile row and column.
+    :param chunk_mult: Width and height, in tiles, of each grouped read chunk.
+    :returns: A list of numpy arrays, one per read chunk.
+    """
     group_rows = sorted_tiles[:, 0] // chunk_mult
     group_cols = sorted_tiles[:, 1] // chunk_mult
 
@@ -26,11 +34,29 @@ def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
     return chunks
 
 
-def sparse_chunks(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray,
-                  tree: KDTree, chunks: List, chunk_size: int, k_mod: int = 1):
+def sparse_chunks(
+    sorted_in: np.ndarray,
+    used: np.ndarray,
+    points: np.ndarray,
+    tree: KDTree,
+    chunks: List,
+    chunk_size: int,
+    k_mod: int = 1,
+):
     # Use while loop to handle cases where many desired regions are close/overlapping
+    """Build read chunks for sparse or incomplete tile and region grids.
+
+    :param sorted_in: Sorted tile or region read argument array.
+    :param used: Boolean mask tracking rows already assigned to a chunk.
+    :param points: Coordinate points used for nearest-neighbor grouping.
+    :param tree: KD-tree built from points.
+    :param chunks: Existing list of chunks to append to.
+    :param chunk_size: Target number of read arguments per chunk.
+    :param k_mod: Multiplier used when widening nearest-neighbor searches.
+    :returns: The updated list of read argument chunks.
+    """
     usage_count = 0
-    while (usage_count < sorted_in.shape[0]):
+    while usage_count < sorted_in.shape[0]:
         chunks = chunks_from_kd_tree(sorted_in, used, points, tree, chunks, chunk_size, k_mod)
         usage_count = np.sum(used)
 
@@ -43,14 +69,11 @@ def sparse_chunks(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray,
 
 
 def gen_read_args_incomplete_grid(sorted_in: np.ndarray, chunk_size: int):
-    """A function that generates read arguments for an incomplete grid.
+    """Generate read argument chunks for a sparse or incomplete grid.
 
-    :param sorted_in: _description_
-    :type sorted_in: np.ndarray
-    :param chunk_size: _description_
-    :type chunk_size: int
-    :returns: A list of chunks.
-    :rtype: list
+    :param sorted_in: Sorted tile or region read argument array.
+    :param chunk_size: Target number of read arguments per chunk.
+    :returns: A list of numpy arrays, one per read chunk.
     """
     points = sorted_in[:, :2].astype(float)
     used = np.zeros(sorted_in.shape[0], dtype=bool)
@@ -65,33 +88,32 @@ def gen_read_args_incomplete_grid(sorted_in: np.ndarray, chunk_size: int):
     return chunks
 
 
-def chunks_from_kd_tree(sorted_in: np.ndarray, used: np.ndarray, points: np.ndarray,
-                        tree: KDTree, chunks: list, chunk_size: int, k_mod: int = 1):
-    """A function that generates chunks from a kd tree.
+def chunks_from_kd_tree(
+    sorted_in: np.ndarray,
+    used: np.ndarray,
+    points: np.ndarray,
+    tree: KDTree,
+    chunks: list,
+    chunk_size: int,
+    k_mod: int = 1,
+):
+    """Append unused nearest-neighbor read arguments to sparse chunks.
 
-    :param sorted_in: The sorted regions or tiles to check for edges
-    :type sorted_in: np.ndarray
-    :param used: The used regions or tiles
-    :type used: np.ndarray
-    :param points: The points to check for edges
-    :type points: np.ndarray
-    :param tree: The kd tree
-    :type tree: KDTree
-    :param chunks: The chunks to generate
-    :type chunks: list
-    :param chunk_size: The chunk size
-    :type chunk_size: int
-    :param k_mod: The k mod
-    :type k_mod: int
-    :returns: A sorted list of chunks.
-    :rtype: _type_
+    :param sorted_in: Sorted tile or region read argument array.
+    :param used: Boolean mask tracking rows already assigned to a chunk.
+    :param points: Coordinate points used for nearest-neighbor grouping.
+    :param tree: KD-tree built from points.
+    :param chunks: Existing list of chunks to append to.
+    :param chunk_size: Target number of read arguments per chunk.
+    :param k_mod: Multiplier used when widening nearest-neighbor searches.
+    :returns: The updated list of read argument chunks.
     """
     # version for grouped by tiles
     chunk = []
 
     for i in range(sorted_in.shape[0]):
         if not used[i]:
-            query_points = points[i:i + 1]
+            query_points = points[i: i + 1]
             _, neighbors = tree.query(query_points, k=chunk_size * k_mod)
 
             if not isinstance(neighbors, np.ndarray):
@@ -122,18 +144,24 @@ def chunks_from_kd_tree(sorted_in: np.ndarray, used: np.ndarray, points: np.ndar
     return chunks
 
 
-def check_edge_condition(base_size_x: int, base_size_y: int,
-                         sorted_in: np.ndarray, edge: bool = False):
-    """
-    :param base_size_x: The base image's size in the x dimension
-    :param base_size_y: The base image's size in the y dimension
-    :param sorted_in: The sorted regions or tiles to check for edges
+def check_edge_condition(
+    base_size_x: int, base_size_y: int, sorted_in: np.ndarray, edge: bool = False,
+):
+    """Optionally discard read arguments that cross image boundaries.
 
-    :returns: A soreted list of chunks.
+    :param base_size_x: Base image width in pixels.
+    :param base_size_y: Base image height in pixels.
+    :param sorted_in: Sorted tile or region read argument array.
+    :param edge: If True, discard entries that extend beyond the base image.
+    :returns: A tuple of filtered read arguments and the number discarded.
     """
     if edge:
-        condition = (sorted_in[:, 7] < base_size_x) & (sorted_in[:, 5] <
-                                                       base_size_y) & (sorted_in[:, 6] >= 0) & (sorted_in[:, 4] >= 0)
+        condition = (
+            (sorted_in[:, 7] < base_size_x) &
+            (sorted_in[:, 5] < base_size_y) &
+            (sorted_in[:, 6] >= 0) &
+            (sorted_in[:, 4] >= 0)
+        )
         sorted_out = sorted_in[condition]
         diff_from_edge = np.sum(~condition)
     else:
@@ -144,17 +172,22 @@ def check_edge_condition(base_size_x: int, base_size_y: int,
 
 
 def gen_read_args_for_regions(
-        slide_dimensions: dict, regions: Union[list, np.ndarray], edge: bool = False, chunk_mult: int = 2):
+    slide_dimensions: dict,
+    regions: Union[list, np.ndarray],
+    edge: bool = False,
+    chunk_mult: int = 2,
+):
     # todo: update documentation
     # todo: version for grouping regions by tile
+    """Generate grouped read arguments for explicit output regions.
+
+    :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.
+    :param regions: Regions in top, left, height, width order.
+    :param edge: If True, discard regions that extend beyond the base image.
+    :param chunk_mult: Chunk side length multiplier; chunk size is chunk_mult squared.
+    :returns: A list of numpy arrays containing grouped region read arguments.
     """
-    :param org_wsi_size_x: The original base image's size in the x dimension
-    :param org_wsi_size_y: The original base image's size in the y dimension
-    :param regions: A numpy array of regions to read defined as top, left, height, and width
-    :return: read_args: A list of lists containing the chunked arguments for reading tiles in the form
-    of center_y, center_x, top, bottom, left, right
-    """
-    chunk_size = chunk_mult ** 2
+    chunk_size = chunk_mult**2
 
     if isinstance(regions, list):
         regions = np.array(regions)
@@ -183,17 +216,30 @@ def gen_read_args_for_regions(
     mm_x = np.full(regions.shape[0], slide_dimensions['target_mm_x'])
 
     # Regions of form (center_y, center_x, top, bottom, left, right)
-    regions = np.column_stack((org_tile_y, org_tile_x, center_y, center_x,
-                              regions[:, 0], yb, regions[:, 1], xr, mm_y, mm_x)).astype(np.float32)
+    regions = np.column_stack(
+        (
+            org_tile_y,
+            org_tile_x,
+            center_y,
+            center_x,
+            regions[:, 0],
+            yb,
+            regions[:, 1],
+            xr,
+            mm_y,
+            mm_x,
+        ),
+    ).astype(np.float32)
     # Distance from 0, 0
-    dist = (center_y ** 2 + center_x ** 2) ** 0.5
+    dist = (center_y**2 + center_x**2) ** 0.5
     # Sort regions by distance from 0, 0
     idx = np.argsort(dist)
     sorted_regions = regions[idx]
 
     # Use new sorted regions to determine if edges should b thrown out
     sorted_regions, diff_from_edge = check_edge_condition(
-        slide_dimensions['base_size_x'], slide_dimensions['base_size_y'], sorted_regions, edge)
+        slide_dimensions['base_size_x'], slide_dimensions['base_size_y'], sorted_regions, edge,
+    )
 
     # Determine if the grid is complete or incomplete even in the case of edges being removed
     chunks = gen_read_args_incomplete_grid(sorted_regions, chunk_size)
@@ -201,19 +247,25 @@ def gen_read_args_for_regions(
     return chunks
 
 
-def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict,
-                            tiles: Union[list, np.ndarray], edge: bool = False, chunk_mult: int = 2, region: Optional[Dict[str, Any]] = None):
+def gen_read_args_for_tiles(
+    n_possible_tiles: int,
+    slide_dimensions: dict,
+    tiles: Union[list, np.ndarray],
+    edge: bool = False,
+    chunk_mult: int = 2,
+    region: Optional[Dict[str, Any]] = None,
+):
+    """Generate grouped read arguments for output tiles.
+
+    :param n_possible_tiles: Number of tiles in the full target grid.
+    :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.
+    :param tiles: Tile indexes in row, column order.
+    :param edge: If True, discard tiles that extend beyond the base image.
+    :param chunk_mult: Chunk side length multiplier; chunk size is chunk_mult squared.
+    :param region: Optional region used to clip tile coordinates to region bounds.
+    :returns: A list of numpy arrays containing grouped tile read arguments.
     """
-    # todo: update documentation
-    :param n_possible_tiles: The number of possible tiles in a complete grid made using the slide dimensions
-    :param slide_dimensions: A dictionary containing slide dimensions
-    :param tiles: A listing of tiles to read defined as (column, row)
-    :param edge: A boolean indicating whether to throw out tiles that are out of bounds. False = keep all tiles is default.
-    :param chunk_mult: A multiplier for the chunk size. Default is 2 which equals a chunk size of 4.
-    :return: read_args: A list of lists containing the chunked arguments for reading tiles in the form
-    of center_y, center_x, top, bottom, left, right
-    """
-    chunk_size = chunk_mult ** 2
+    chunk_size = chunk_mult**2
 
     # Sort tiles by row and column to maintain order
     sorted_tiles = sorted(tiles, key=lambda x: (x[0], x[1]))
@@ -225,13 +277,17 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict,
 
     # Calculate coordinates in the original image
     # Use rounding to avoid floating point precision issues
-    sx = np.round(sorted_tiles[:, 1] *
-                  slide_dimensions['tile_width_before_scaling'] +
-                  slide_dimensions['region_left'], decimals=0)
+    sx = np.round(
+        sorted_tiles[:, 1] * slide_dimensions['tile_width_before_scaling'] +
+        slide_dimensions['region_left'],
+        decimals=0,
+    )
     spx = np.round(sx + slide_dimensions['tile_width_before_scaling'], decimals=0)
-    sy = np.round(sorted_tiles[:, 0] *
-                  slide_dimensions['tile_height_before_scaling'] +
-                  slide_dimensions['region_top'], decimals=0)
+    sy = np.round(
+        sorted_tiles[:, 0] * slide_dimensions['tile_height_before_scaling'] +
+        slide_dimensions['region_top'],
+        decimals=0,
+    )
     spy = np.round(sy + slide_dimensions['tile_height_before_scaling'], decimals=0)
 
     mm_x = np.full(sorted_tiles.shape[0], slide_dimensions['target_mm_x'])
@@ -249,23 +305,16 @@ def gen_read_args_for_tiles(n_possible_tiles: int, slide_dimensions: dict,
 
     # Combine into the sorted_tiles array
     sorted_tiles = np.column_stack(
-        (org_tile_y,
-         org_tile_x,
-         sorted_tiles,
-         sy,
-         spy,
-         sx,
-         spx,
-         mm_y,
-         mm_x)).astype(
-        np.float32)
+        (org_tile_y, org_tile_x, sorted_tiles, sy, spy, sx, spx, mm_y, mm_x),
+    ).astype(np.float32)
 
     # Keep track of whether edges are thrown out, if thrown out they can still form a complete grid
     diff_from_edge = 0
 
     # If edge is True, remove tiles that are out of bounds of the original image
     sorted_tiles, diff_from_edge = check_edge_condition(
-        slide_dimensions['base_size_x'], slide_dimensions['base_size_y'], sorted_tiles, edge)
+        slide_dimensions['base_size_x'], slide_dimensions['base_size_y'], sorted_tiles, edge,
+    )
 
     # Determine if the grid is complete or incomplete even in the case of edges being removed
     if (sorted_tiles.shape[0] + diff_from_edge) == n_possible_tiles:
@@ -281,6 +330,13 @@ def default_region_coords_and_target_scale_from_read_args(
     slide_dimensions: dict,
     include_mm: bool = True,
 ):
+    """Extract read coordinates and target scale from read arguments.
+
+    :param read_kwargs: Read argument array produced by eager read argument generators.
+    :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.
+    :param include_mm: If True, include per-read mm scale columns in the output.
+    :returns: Coordinates, mm metadata, tile size, target scale, and conversion factors.
+    """
     xlt = read_kwargs[:, 6]
     ytt = read_kwargs[:, 4]
     xrt = read_kwargs[:, 7]
@@ -298,18 +354,29 @@ def default_region_coords_and_target_scale_from_read_args(
 
     if tile_size_dict is None:
         tile_size_dict = dict(
-            width=slide_dimensions['tile_size'][0],
-            height=slide_dimensions['tile_size'][1])
+            width=slide_dimensions['tile_size'][0], height=slide_dimensions['tile_size'][1],
+        )
 
     if scale_dict is None:
         if slide_dimensions['scale_mode'] == 'mm':
             scale_dict = dict(
-                mm_x=slide_dimensions['target_mm_x'],
-                mm_y=slide_dimensions['target_mm_y'])
+                mm_x=slide_dimensions['target_mm_x'], mm_y=slide_dimensions['target_mm_y'],
+            )
         elif slide_dimensions['scale_mode'] == 'mag':
             scale_dict = dict(magnification=slide_dimensions['target_magnification'])
         else:
-            raise ValueError('Invalid scale mode')
+            msg = 'Invalid scale mode'
+            raise ValueError(msg)
 
-    return xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, scale_dict, slide_dimensions[
-        'conv_mm_x'], slide_dimensions['conv_mm_y']
+    return (
+        xlt,
+        ytt,
+        xrt,
+        ybt,
+        mm_x,
+        mm_y,
+        tile_size_dict,
+        scale_dict,
+        slide_dimensions['conv_mm_x'],
+        slide_dimensions['conv_mm_y'],
+    )

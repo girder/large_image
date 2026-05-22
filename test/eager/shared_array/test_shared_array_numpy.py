@@ -9,11 +9,11 @@ def test_numpy_shared_array(shared_array_shape: tuple[int, int, int]):
     shared_array = build_numpy_shared_array(shared_array_shape)
     assert shared_array.view().shape == shared_array_shape
     assert shared_array.view().dtype == np.uint8
-    assert shared_array.view().flags.owndata == False
-    assert shared_array.view().flags.writeable == True
-    assert shared_array.view().flags.aligned == True
-    assert shared_array.view().flags.c_contiguous == True
-    assert shared_array.view().flags.f_contiguous == False
+    assert not shared_array.view().flags.owndata
+    assert shared_array.view().flags.writeable
+    assert shared_array.view().flags.aligned
+    assert shared_array.view().flags.c_contiguous
+    assert not shared_array.view().flags.f_contiguous
 
 
 # Test shared array default

@@ -1,5 +1,5 @@
 import os
-from test.eager.eager_helpers import (get_tissue_mask_with_background_elimination)
+from test.eager.eager_helpers import get_tissue_mask_with_background_elimination
 from typing import Optional
 
 import matplotlib.pyplot as plt
@@ -65,8 +65,13 @@ def dynamic_transform_scale(read_kwargs: np.ndarray, slide_dimensions: dict):
     return xlt, ytt, xrt, ybt, mm_x, mm_y, dynamic_scale, conv_mm_x, conv_mm_y
 
 
-def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict,
-                               min_mm: float = 0.00025, max_mm: float = 0.0005, anchor_mm: float = 0.0001):
+def dynamic_transform_scale_v2(
+    read_kwargs: np.ndarray,
+    slide_dimensions: dict,
+    min_mm: float = 0.00025,
+    max_mm: float = 0.0005,
+    anchor_mm: float = 0.0001,
+):
     xlt = read_kwargs[:, 6]
     ytt = read_kwargs[:, 4]
     xrt = read_kwargs[:, 7]
@@ -99,10 +104,9 @@ def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict,
         anchor_conv_mm_y = slide_dimensions['base_mm_y'] / anchor_mm
 
         anchor_width = np.ceil(slide_dimensions['tile_size'][0] * anchor_conv_mm_x).astype(np.int64)
-        anchor_height = np.ceil(
-            slide_dimensions['tile_size'][1] *
-            anchor_conv_mm_y).astype(
-            np.int64)
+        anchor_height = np.ceil(slide_dimensions['tile_size'][1] * anchor_conv_mm_y).astype(
+            np.int64,
+        )
 
         anchor_xlt = np.round(center_x - (anchor_width / 2)).astype(np.int64)
         anchor_ytt = np.round(center_y - (anchor_height / 2)).astype(np.int64)
@@ -162,24 +166,42 @@ def dynamic_transform_scale_v2(read_kwargs: np.ndarray, slide_dimensions: dict,
     return xlt, ytt, xrt, ybt, mm_x, mm_y, dynamic_scale, conv_mm_x, conv_mm_y
 
 
-def get_mask_from_region(slide_dimensions, mask, xlt: np.ndarray,
-                         ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
+def get_mask_from_region(
+    slide_dimensions,
+    mask,
+    xlt: np.ndarray,
+    ytt: np.ndarray,
+    xrt: np.ndarray,
+    ybt: np.ndarray,
+):
     scaled_xlt, scaled_ytt, scaled_xrt, scaled_ybt = scale_region_coordinates(
-        slide_dimensions, mask, xlt, ytt, xrt, ybt)
+        slide_dimensions,
+        mask,
+        xlt,
+        ytt,
+        xrt,
+        ybt,
+    )
     if np.ndim(scaled_xlt) == 0:
-        return mask[int(scaled_ytt):int(scaled_ybt), int(scaled_xlt):int(scaled_xrt)]
+        return mask[int(scaled_ytt): int(scaled_ybt), int(scaled_xlt): int(scaled_xrt)]
 
     regions = np.empty(np.shape(scaled_xlt), dtype=object)
     for idx in np.ndindex(np.shape(scaled_xlt)):
         regions[idx] = mask[
-            int(scaled_ytt[idx]):int(scaled_ybt[idx]),
-            int(scaled_xlt[idx]):int(scaled_xrt[idx]),
+            int(scaled_ytt[idx]): int(scaled_ybt[idx]),
+            int(scaled_xlt[idx]): int(scaled_xrt[idx]),
         ]
     return regions
 
 
-def scale_region_coordinates(slide_dimensions, mask, xlt: np.ndarray,
-                             ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
+def scale_region_coordinates(
+    slide_dimensions,
+    mask,
+    xlt: np.ndarray,
+    ytt: np.ndarray,
+    xrt: np.ndarray,
+    ybt: np.ndarray,
+):
     base_w = float(slide_dimensions['base_size_x'])
     base_h = float(slide_dimensions['base_size_y'])
     mask_h, mask_w = mask.shape[:2]
@@ -189,9 +211,12 @@ def scale_region_coordinates(slide_dimensions, mask, xlt: np.ndarray,
     ybt = np.asarray(ybt, dtype=np.float64)
 
     if xlt.shape != ytt.shape or xlt.shape != xrt.shape or xlt.shape != ybt.shape:
-        raise ValueError(
+        msg = (
             'scale_region_coordinates expects matching shapes for xlt/ytt/xrt/ybt, '
-            f'got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}',
+            f'got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}'
+        )
+        raise ValueError(
+            msg,
         )
 
     # Convert full-resolution coordinates into mask-space coordinates.
@@ -209,20 +234,35 @@ def scale_region_coordinates(slide_dimensions, mask, xlt: np.ndarray,
 
 
 def limit_anchor_region_with_mask(
-        slide_dimensions, mask, xlt: np.ndarray, ytt: np.ndarray, xrt: np.ndarray, ybt: np.ndarray):
+    slide_dimensions,
+    mask,
+    xlt: np.ndarray,
+    ytt: np.ndarray,
+    xrt: np.ndarray,
+    ybt: np.ndarray,
+):
     xlt = np.asarray(xlt, dtype=np.float64)
     ytt = np.asarray(ytt, dtype=np.float64)
     xrt = np.asarray(xrt, dtype=np.float64)
     ybt = np.asarray(ybt, dtype=np.float64)
 
     if xlt.shape != ytt.shape or xlt.shape != xrt.shape or xlt.shape != ybt.shape:
-        raise ValueError(
+        msg = (
             'limit_anchor_region_with_mask expects ndarray inputs with matching shapes, '
-            f'got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}',
+            f'got {xlt.shape=}, {ytt.shape=}, {xrt.shape=}, {ybt.shape=}'
+        )
+        raise ValueError(
+            msg,
         )
 
     scaled_xlt, scaled_ytt, scaled_xrt, scaled_ybt = scale_region_coordinates(
-        slide_dimensions, mask, xlt, ytt, xrt, ybt)
+        slide_dimensions,
+        mask,
+        xlt,
+        ytt,
+        xrt,
+        ybt,
+    )
     out_xlt = np.round(xlt).astype(np.int64)
     out_ytt = np.round(ytt).astype(np.int64)
     out_xrt = np.round(xrt).astype(np.int64)
@@ -236,8 +276,8 @@ def limit_anchor_region_with_mask(
 
     for idx in np.ndindex(xlt.shape):
         mask_region = mask[
-            int(scaled_ytt[idx]):int(scaled_ybt[idx]),
-            int(scaled_xlt[idx]):int(scaled_xrt[idx]),
+            int(scaled_ytt[idx]): int(scaled_ybt[idx]),
+            int(scaled_xlt[idx]): int(scaled_xrt[idx]),
         ]
 
         # No overlap with mask grid or empty region: keep original region.
@@ -283,8 +323,15 @@ def limit_anchor_region_with_mask(
     return out_xlt, out_ytt, out_xrt, out_ybt
 
 
-def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, tile_size: dict,
-                               anchor_mm: float = 0.0001, min_mm: float = 0.00025, max_mm: float = 0.0005, mask: Optional[np.ndarray] = None):
+def dynamic_transform_scale_v3(
+    read_kwargs: np.ndarray,
+    slide_dimensions: dict,
+    tile_size: dict,
+    anchor_mm: float = 0.0001,
+    min_mm: float = 0.00025,
+    max_mm: float = 0.0005,
+    mask: Optional[np.ndarray] = None,
+):
     xlt = read_kwargs[:, 6]
     ytt = read_kwargs[:, 4]
     xrt = read_kwargs[:, 7]
@@ -317,10 +364,9 @@ def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, 
         anchor_conv_mm_y = slide_dimensions['base_mm_y'] / anchor_mm
 
         anchor_width = np.ceil(slide_dimensions['tile_size'][0] * anchor_conv_mm_x).astype(np.int64)
-        anchor_height = np.ceil(
-            slide_dimensions['tile_size'][1] *
-            anchor_conv_mm_y).astype(
-            np.int64)
+        anchor_height = np.ceil(slide_dimensions['tile_size'][1] * anchor_conv_mm_y).astype(
+            np.int64,
+        )
 
         anchor_xlt = np.round(center_x - (anchor_width / 2)).astype(np.int64)
         anchor_ytt = np.round(center_y - (anchor_height / 2)).astype(np.int64)
@@ -329,7 +375,13 @@ def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, 
 
         if mask is not None:
             anchor_xlt, anchor_ytt, anchor_xrt, anchor_ybt = limit_anchor_region_with_mask(
-                slide_dimensions, mask, anchor_xlt, anchor_ytt, anchor_xrt, anchor_ybt)
+                slide_dimensions,
+                mask,
+                anchor_xlt,
+                anchor_ytt,
+                anchor_xrt,
+                anchor_ybt,
+            )
 
         center_x_min = anchor_xlt + (width / 2)
         center_y_min = anchor_ytt + (height / 2)
@@ -347,9 +399,11 @@ def dynamic_transform_scale_v3(read_kwargs: np.ndarray, slide_dimensions: dict, 
         center_y_max = center_y_max - center_dy_bottom
 
         random_center_x_range = np.floor(
-            np.random.random() * (center_x_max - center_x_min) + center_x_min)
+            np.random.random() * (center_x_max - center_x_min) + center_x_min,
+        )
         random_center_y_range = np.floor(
-            np.random.random() * (center_y_max - center_y_min) + center_y_min)
+            np.random.random() * (center_y_max - center_y_min) + center_y_min,
+        )
 
         xlt = np.floor(random_center_x_range - (width / 2)).astype(np.int64)
         ytt = np.floor(random_center_y_range - (height / 2)).astype(np.int64)
@@ -391,7 +445,11 @@ def dynamic_transform_scale_v2_wrapper(read_kwargs: np.ndarray, slide_dimensions
 
 
 def main():
-    test_image_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+    test_image_path = (
+        '/scr/arosado/tcga/acc/'
+        '5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-'
+        '4CDD-B945-251315EFF5C0.svs'
+    )
     source = large_image.open(test_image_path)
 
     os.makedirs('/scr/arosado/performance/eager/dynamic/images', exist_ok=True)
@@ -410,23 +468,24 @@ def main():
     mask, _ = get_tissue_mask_with_background_elimination(thumbnail)
 
     def dynamic_transform_scale_v3_wrapper(read_kwargs: np.ndarray, slide_dimensions: dict):
-        return dynamic_transform_scale_v3(read_kwargs, slide_dimensions, tile_size={
-                                          'width': 256, 'height': 256}, mask=mask)
+        return dynamic_transform_scale_v3(
+            read_kwargs,
+            slide_dimensions,
+            tile_size={'width': 256, 'height': 256},
+            mask=mask,
+        )
 
     eager_iterator = source.eagerIterator(
-        tile_size={
-            'width': 224,
-            'height': 224},
-        scale={
-            'mm_x': 0.0007,
-            'mm_y': 0.0007},
+        tile_size={'width': 224, 'height': 224},
+        scale={'mm_x': 0.0007, 'mm_y': 0.0007},
         mask=mask,
         transform_scale=dynamic_transform_scale_v3_wrapper,
         transform=save_image,
-        batch=1000)
+        batch=1000,
+    )
     # eager_iterator = source.eagerIterator(scale={'mm_x': 0.0025, 'mm_y': 0.0025})
     for batch in eager_iterator:
-        mm = batch['tile'].mm_view()
+        batch['tile'].mm_view()
         images = batch['tile'].view()
 
         count += images.shape[0]
@@ -435,7 +494,6 @@ def main():
 
     print(f'Final count: {count}')
     print(f'Expected count: {size_random}')
-
 
 
 if __name__ == '__main__':

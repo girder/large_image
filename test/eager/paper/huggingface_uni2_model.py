@@ -31,27 +31,32 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
     #         # num_channels = pixel_values.shape[1]
     #         # if num_channels != self.num_channels:
     #         #     raise ValueError(
-    #         #         "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
+    # #         "Make sure that the channel dimension of the pixel values match with the one set in
+    # the configuration."
     #         #         f" Expected {self.num_channels} but got {num_channels}."
     #         #     )
     #         embeddings = self.projection(pixel_values).flatten(2).transpose(1, 2)
     #         return embeddings
 
-    #     def interpolate_pos_encoding(self, embeddings: torch.Tensor, height: int, width: int) -> torch.Tensor:
+    # def interpolate_pos_encoding(self, embeddings: torch.Tensor, height: int, width: int) ->
+    # torch.Tensor:
     #         """
-    #         This method allows to interpolate the pre-trained position encodings, to be able to use the model on higher resolution
+    # This method allows to interpolate the pre-trained position encodings, to be able to use the
+    # model on higher resolution
     # images. This method is also adapted to support torch.jit tracing and
     # interpolation at torch.float32 precision.
 
     #         Adapted from:
-    #         - https://github.com/facebookresearch/dino/blob/de9ee3df6cf39fac952ab558447af1fa1365362a/vision_transformer.py#L174-L194, and
-    #         - https://github.com/facebookresearch/dinov2/blob/e1277af2ba9496fbadf7aec6eba56e8d882d1e35/dinov2/models/vision_transformer.py#L179-L211
+    # - https://github.com/facebookresearch/dino/blob/de9ee3df6cf39fac952ab558447af1fa1365362a/visio
+    # n_transformer.py#L174-L194, and
+    # - https://github.com/facebookresearch/dinov2/blob/e1277af2ba9496fbadf7aec6eba56e8d882d1e35/din
+    # ov2/models/vision_transformer.py#L179-L211
     #         """
 
     #         num_patches = embeddings.shape[1] - 1
     #         num_positions = self.position_embeddings.shape[1] - 1
 
-    #         # always interpolate when tracing to ensure the exported model works for dynamic input shapes
+    # # always interpolate when tracing to ensure the exported model works for dynamic input shapes
     #         # if not torch.jit.is_tracing() and num_patches == num_positions and height == width:
     #         #     return self.position_embeddings
 
@@ -65,7 +70,7 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
 
     #         # Updated to use math.floor and math.sqrt to be compatible with proxy for tracing
     #         sqrt_num_positions = math.floor(math.sqrt(num_positions))
-    #         patch_pos_embed = patch_pos_embed.reshape(1, sqrt_num_positions, sqrt_num_positions, dim)
+    # patch_pos_embed = patch_pos_embed.reshape(1, sqrt_num_positions, sqrt_num_positions, dim)
     #         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
     #         target_dtype = patch_pos_embed.dtype
     #         patch_pos_embed = nn.functional.interpolate(
@@ -85,9 +90,11 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
     #             self.model = model
     #             # self.model.config._attn_implementation = 'eager'
     #             patch_embeddings_func_type = type(self.model.embeddings.patch_embeddings.forward)
-    #             interpolate_pos_encoding_func_type = type(self.model.embeddings.interpolate_pos_encoding)
-    #             self.model.embeddings.patch_embeddings.forward = patch_embeddings_func_type(patch_embeddings_forward, self.model.embeddings.patch_embeddings)
-    #             self.model.embeddings.interpolate_pos_encoding = interpolate_pos_encoding_func_type(interpolate_pos_encoding, self.model.embeddings)
+    # interpolate_pos_encoding_func_type = type(self.model.embeddings.interpolate_pos_encoding)
+    # self.model.embeddings.patch_embeddings.forward =
+    # patch_embeddings_func_type(patch_embeddings_forward, self.model.embeddings.patch_embeddings)
+    # self.model.embeddings.interpolate_pos_encoding =
+    # interpolate_pos_encoding_func_type(interpolate_pos_encoding, self.model.embeddings)
 
     #         def forward(self, x):
     #             return self.model.forward(x)
@@ -98,8 +105,9 @@ def make_huggingface_uni2_model(compile_model: bool = True, cuda_device: str = '
 
     from timm.layers.patch_embed import PatchEmbed
     from timm.models import VisionTransformer
+
     named_modules = list(model.named_modules())
-    for name, module in named_modules:
+    for _name, module in named_modules:
         if isinstance(module, PatchEmbed):
             # Make the image size strict
             module.strict_img_size = True
@@ -129,7 +137,8 @@ def make_huggingface_uni_model(compile_model: bool = True, cuda_device: str = 'c
         'hf-hub:MahmoodLab/uni',
         pretrained=True,
         init_values=1e-5,
-        dynamic_img_size=False)
+        dynamic_img_size=False,
+    )
 
     model.eval()
 

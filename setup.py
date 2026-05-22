@@ -68,7 +68,7 @@ extraReqs['common'] = list(set(itertools.chain.from_iterable(extraReqs[key] for 
     f'large-image-source-rasterio[all]{limit_version}',
 })
 extraReqs['eager'] = list(set(itertools.chain.from_iterable(extraReqs[key] for key in {
-    'pykdtree'
+    'pykdtree',
 })))
 
 setup(

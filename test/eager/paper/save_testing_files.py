@@ -17,26 +17,33 @@ def save_image_function(image: np.ndarray, tile_x: int, tile_y: int):
 
 def save_testing_file(file_path: str, output_dir: str, **kwargs: Any):
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f'File not found: {file_path}')
+        msg = f'File not found: {file_path}'
+        raise FileNotFoundError(msg)
 
     if not os.path.exists(output_dir):
-        raise FileNotFoundError(f'Output directory not found: {output_dir}')
+        msg = f'Output directory not found: {output_dir}'
+        raise FileNotFoundError(msg)
 
     if not os.path.isdir(output_dir):
-        raise ValueError(f'Output directory is not a directory: {output_dir}')
+        msg = f'Output directory is not a directory: {output_dir}'
+        raise ValueError(msg)
 
     source = large_image.open(file_path)
 
     eager_iter = source.eagerIterator(transform=save_image_function, **kwargs)
 
-    for batch in eager_iter:
+    for _batch in eager_iter:
         print('Retrieved batch of tiles...')
 
     print('Saved all batches')
 
 
 if __name__ == '__main__':
-    input_path = '/scr/arosado/tcga/acc/5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-4CDD-B945-251315EFF5C0.svs'
+    input_path = (
+        '/scr/arosado/tcga/acc/'
+        '5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-'
+        '4CDD-B945-251315EFF5C0.svs'
+    )
     output_dir = '/scr/arosado/large_image/svs_test_tiles'
 
     save_testing_file(input_path, output_dir, transform_save_mode='tile_x_y')

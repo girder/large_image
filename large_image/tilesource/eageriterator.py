@@ -1,3 +1,6 @@
+"""Eager iterator implementation for batched tile and region reads."""
+
+import contextlib
 import logging
 import math
 import multiprocessing
@@ -14,175 +17,268 @@ from PIL import Image
 
 from .. import tilesource
 from .eager_utils import eager_fn
-from .eager_utils.eager_image_modifications import (pad_chunk_if_necessary,
-                                                    pad_tile,
-                                                    rgba2rgb)
+from .eager_utils.eager_image_modifications import pad_chunk_if_necessary, pad_tile, rgba2rgb
 from .eager_utils.eager_pytorch_threading_context import _PyTorchThreadingContext
-from .eager_utils.eager_read_args import default_region_coords_and_target_scale_from_read_args
+from .eager_utils.eager_read_args import (default_region_coords_and_target_scale_from_read_args,
+                                          gen_read_args_for_regions,
+                                          gen_read_args_for_tiles)
 from .eager_utils.eager_shared_array import SharedArray
+from .eager_utils.eager_wsi_operations import (calculate_slide_dimensions,
+                                               return_relevant_tile_indexes_for_slide_dim,
+                                               return_tile_slides_meeting_area_threshold)
 
 _EAGER_FN_TRANSFORM_SENTINEL = '__large_image_eager_fn__'
 _EAGER_FN_TRANSFORM_SCALE_SENTINEL = '__large_image_eager_fn_transform_scale__'
 
 
 class EagerIterator:
+    """Iterator that prefetches batched Large Image tile or region reads."""
+
     def __init__(
-            self,
-            source: 'tilesource.TileSource',
-            output_mode: str = 'tiles',
-            tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None,
-            mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
-            region: Optional[Dict[str, Any]] = None,
-            scale: Optional[Dict[str, Any]] = None,
-            tile_size: Optional[Dict[str, int]] = None,
-            region_size: Optional[Dict[str, int]] = None,
-            source_scale: Optional[Union[int, float]] = None,
-            dtype: np.typing.DTypeLike = np.uint8,
-            chunk_mult: int = 2,
-            edge: bool = False,
-            pad_mode: str = 'wsi_edge',
-            pad_fill_mode: str = 'default',
-            nchw: bool = False,
-            batch: int = 64,
-            prefetch: int = 16,
-            workers: int = 16,
-            tiles: Optional[Union[list, np.ndarray]] = None,
-            regions: Optional[Union[list, np.ndarray]] = None,
-            transform: Optional[Callable] = None,
-            randomize_chunks: bool = False,
-            seed: int = 42,
-            area_threshold: float = 0.25,
-            threshold_mask: float = 100,
-            transform_save_mode: Optional[str] = 'tile_x_y',
-            transform_scale: Optional[Callable] = None,
+        self,
+        source: 'tilesource.TileSource',
+        output_mode: str = 'tiles',
+        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None,
+        mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
+        region: Optional[Dict[str, Any]] = None,
+        scale: Optional[Dict[str, Any]] = None,
+        tile_size: Optional[Dict[str, int]] = None,
+        region_size: Optional[Dict[str, int]] = None,
+        source_scale: Optional[Union[int, float]] = None,
+        dtype: np.typing.DTypeLike = np.uint8,
+        chunk_mult: int = 2,
+        edge: bool = False,
+        pad_mode: str = 'wsi_edge',
+        pad_fill_mode: str = 'default',
+        nchw: bool = False,
+        batch: int = 64,
+        prefetch: int = 16,
+        workers: int = 16,
+        tiles: Optional[Union[list, np.ndarray]] = None,
+        regions: Optional[Union[list, np.ndarray]] = None,
+        transform: Optional[Callable] = None,
+        randomize_chunks: bool = False,
+        seed: int = 42,
+        area_threshold: float = 0.25,
+        threshold_mask: float = 100,
+        transform_save_mode: Optional[str] = 'tile_x_y',
+        transform_scale: Optional[Callable] = None,
     ):
+        """Initialize an eager iterator for batched tile or region reads.
+
+        :param source: Tile source used to read image data.
+        :param output_mode: Output mode, either 'tiles' or 'regions'.
+        :param tile_overlap: Optional x and y tile overlap as pixels or fractions.
+        :param mask: Optional whole-slide mask array or mask image path used to filter tiles.
+        :param region: Optional source region with left, top, width, height, and units.
+        :param scale: Optional target scale using magnification or mm_x and mm_y.
+        :param tile_size: Optional output tile size with width and height in pixels.
+        :param region_size: Optional output region size with width and height in pixels.
+        :param source_scale: Source scale used when region units are mag_pixels.
+        :param dtype: Numpy or torch dtype for the output image batch.
+        :param chunk_mult: Chunk side length multiplier; chunk size is chunk_mult squared.
+        :param edge: If True, discard reads that cross image boundaries.
+        :param pad_mode: Padding mode used when reads are smaller than the requested output.
+        :param pad_fill_mode: Fill mode used for padded pixels.
+        :param nchw: If True, output batches use NCHW layout; otherwise NHWC layout.
+        :param batch: Number of tiles or regions returned in each batch.
+        :param prefetch: Number of batches to keep queued ahead of iteration.
+        :param workers: Number of worker processes used for image reads.
+        :param tiles: Optional tile indexes in row, column order for tile output mode.
+        :param regions: Optional regions in top, left, height, width order for region mode.
+        :param transform: Optional transform applied to each tile or region.
+        :param randomize_chunks: If True, randomize chunk order before reading.
+        :param seed: Random seed used when randomize_chunks is True.
+        :param area_threshold: Minimum mask-signal fraction required for a tile.
+        :param threshold_mask: Minimum mask pixel value considered signal.
+        :param transform_save_mode: Coordinate mode passed to three-argument transforms.
+        :param transform_scale: Optional callable that customizes read coordinates and scale.
+        :returns: None. Iteration yields dictionaries containing image data and metadata.
         """
-        Initialize the EagerIterator class.  The EagerIterator class is an iterator intended for use in AI/ML applications.
-        The eager iterator uses large_image source object which creates this iterator to read tiles or regions. The iterator
-        provides numpy arrays of the requested tiles or regions.  The goal of this iterator is to simplify operations such
-        as tiling and region extraction at specific resolutions/scales.  The format of output batches will always be numpy.
-
-
-        :param source: the tile source to use. this object should be provided a large_image tile source and will be provided
-            by the large image library if you use the tile source's eagerIterator method.
-        :param output_mode: A string corresponding to the output mode of the iterator. Can be either 'tiles' or 'regions'.  Defaults to 'tiles'.
-        :param tile_overlap: A float or integer defining the tile_overlap in percentage between tiles.  If float, must be in range of 0 and 1.  Cannot be 1.
-            If integer, must be in range of 0 and the smallest dimension of the tile size.  Defaults to 0.
-        :param mask: An optional numpy array or path to a 1 channel image that will be used to filter the tiles (only useful in tile mode).  This mask image is interpreted
-            based on two additional optional parameters: area_threshold and threshold_mask.  area_threshold is used to determine if a patch acquired from the mask
-            contains enough signal to be used for a tile to be included in the output.  threshold_mask is used to determine if a pixel value within the mask corresponds to
-            signal.  If the mask is a uint8 array with values 0 to 1, then area_threshold will effectively be 1 instead of the default 100.  If the mask is a boolean array,
-            then any True value will be considered signal.  Defaults to None.
-        :param scale: An optional dictionary defining the scale produced for the iterator. If scale can be configured for both magnification and mm.
-            If 'magnification' is defined in dictionary then it will be in magnification scaling mode.  If 'mm_x' and 'mm_y' then it will use a mm/px scaling mode.  Defaults to None.
-        :param tile_size: An optional dictionary specifying the desired width and height in pixels of the output tiles.  If provided, width and height must be provided as integers If None, will use the default tile size of the slide.  Defaults to None.
-        :param region_size: An optional tuple of integers (x, y) defining the desired size in pixels of output regions. If None, will use the default region size of the slide.  Defaults to None.
-        :param dtype: An optional numpy data type for the output image batch. Defaults to np.uint8.
-        :param chunk_mult: An integer shaping the number regions/tiles to be grouped in a single read. Defaults to 2.
-            Chunk size is this number squared. i.e. chunk_multi of 2 = chunk_size of 2^2.
-        :param edge: A boolean controlling whether to include (False) or discard (True) tiles with incomplete regions at the image boundaries. Defaults to False.
-        :param pad_mode: A string defining the padding mode to be used.  Can be either 'equal' or 'wsi_edge'.  Defaults to 'wsi_edge'.
-        :param pad_fill_mode: A string defining the padding fill mode to be used.  Can be either 'default', 'max', integer for value in all RGB channels,
-            or tuple of int with respective values in RGB channels (R, G, B).  Defaults to 'default'.
-        :param nchw: A boolean controlling whether to return the output in NCHW format (True) or NHWC format (False). Defaults to False.
-            Will transpose transformed output as well.
-        :param batch: An integer for number of regions/tiles to be retrieved in a single batch. Defaults to 64.
-        :param prefetch: An integer for number of batches to be prefetched. Defaults to 16.
-        :param workers: An integer for number of worker processes to use. Defaults to 16.
-        :param tiles: A list of tiles in the form [[y/column, x/row], ...] to be used in output_mode 'tiles'.  Defaults to None.
-        :param regions: A numpy array in the shape of [n, 4]  where top = [:,0], left = [:,1], height = [:,2], width = [:,3]. Only used in output_mode 'regions'.
-            Defaults to None.
-        :param transform: An optional callable.  If provided an albumentations compose object it will apply the transform as the image keywordargument.  If provided a
-            torchvision.transforms.v2._container it will apply the transform as a callable.  For albumentations or torchvision v2 transforms, this must be a compose object rather
-            than a callable.  Torchvision v2 transforms requires a limiting number of threads to 1 during the read operation.
-            Otherwise, will apply the transform by calling the transform with the tile as a positional argument. Defaults to None.
-        :param randomize_chunks: A boolean controlling whether to randomize order of the chunks to make the output batches more random. Defaults to False.
-        :param seed: A seed for the random number generator that will be used for randomizing the chunks. Defaults to 42.
-        :param area_threshold: A float defining the area threshold for the mask to be used to filter the tiles.  It is a value between 0 and 1 defining the portion
-            of the tile that must be signal defined in the mask to be included in the output.  Defaults to 0.25.
-        :param threshold_mask: An integer defining the pixel value threshold for for a pixel to contribute to signal as defined in the mask.  Defaults to 100.
-
-        :returns: An iterator that returns a dictionary with keys defined below. The image key is 'tile' which returns a SharedArray of the images.  The SharedArray can be accessed for use by using .view() (for example, batch['tile'].view())
-            Keys that are not-consistent between tiles (such as tile, gx, gy, level_x, level_y, etc.) will return a numpy array of values
-              with values specific for tiles or regions returned in a batch.  The dictionary has the following keys:
-            'format': 'numpy',
-            'gx': left,
-            'gy': top,
-            'level_x': level_x,
-            'level_y': level_y,
-            'tile': tile images in the form of a SharedArray,
-            'tile_position': {'level_x': level_x, 'level_y': level_y, 'region_x': region_x, 'region_y': region_y},
-            'width': width,
-            'height': height,
-            'level': level,
-            'magnification': magnification,
-            'mm_x': mm_x,
-            'mm_y': mm_y,
-            'gwidth': gwidth,
-            'gheight': gheight
-
-        Given its specific use case, the eager iterator does not support all of the options available in the tileIterator.
-        The eager iterator does not support the following options:
-            - format
-
-        This iterator is experimental and may not work with all tile sources.  Please consider the different expected inputs when attempting to use the eager iterator.
-        """
-        # Import eager_utils here to avoid attempting to load pykdtree when not needed
-        from .eager_utils.eager_read_args import gen_read_args_for_regions, gen_read_args_for_tiles
-        from .eager_utils.eager_wsi_operations import (calculate_slide_dimensions,
-                                                       return_relevant_tile_indexes_for_slide_dim,
-                                                       return_tile_slides_meeting_area_threshold)
-
         logging.getLogger('tifftools').setLevel(logging.WARNING)
-
-        # Tile source becomes the source for the iterator allowing its options to be used
         self.source = source
+        self._validate_init_args(
+            output_mode, regions, scale, tile_size, tile_overlap, pad_mode, workers,
+        )
+        self._set_init_options(
+            dtype, nchw, edge, batch, output_mode, scale, pad_fill_mode, pad_mode,
+            chunk_mult, randomize_chunks, seed, tile_overlap, region, transform,
+            transform_save_mode, transform_scale,
+        )
 
+        tiles, regions = self._setup_input_selection(
+            output_mode, mask, region, scale, tile_size, region_size, source_scale,
+            tiles, regions, area_threshold, threshold_mask,
+        )
+        self._cache_worker_dimension_args()
+        self._worker_transform = self._prepare_worker_transform(self.transform)
+        self._worker_transform_scale = self._prepare_worker_transform_scale(self.transform_scale)
+        self._enable_dynamic_mm = self._worker_transform_scale is not None
+        self.read_kwargs = self._build_read_kwargs(output_mode, tiles, regions, edge, chunk_mult)
+
+        if randomize_chunks:
+            random.seed(seed)
+            random.shuffle(self.read_kwargs)
+
+        self._configure_transform_scale(transform_scale)
+        self._setup_out_dims()
+
+        from concurrent.futures import ProcessPoolExecutor
+
+        self.pool = ProcessPoolExecutor(
+            max_workers=workers, mp_context=multiprocessing.get_context('fork'),
+        )
+        self._initialize(batch, prefetch)
+
+    def _validate_init_args(
+        self,
+        output_mode: str,
+        regions: Optional[Union[list, np.ndarray]],
+        scale: Optional[Dict[str, Any]],
+        tile_size: Optional[Dict[str, int]],
+        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]],
+        pad_mode: str,
+        workers: int,
+    ) -> None:
+        """Validate constructor arguments that do not need source metadata.
+
+        :param output_mode: Output mode, either 'tiles' or 'regions'.
+        :param regions: Optional regions in top, left, height, width order.
+        :param scale: Optional target scale using magnification or mm_x and mm_y.
+        :param tile_size: Optional output tile size with width and height in pixels.
+        :param tile_overlap: Optional x and y tile overlap as pixels or fractions.
+        :param pad_mode: Padding mode used when reads are smaller than requested output.
+        :param workers: Number of worker processes used for image reads.
+        :returns: None.
+        """
+        self._validate_worker_count(workers)
+        self._validate_output_mode(output_mode, regions, pad_mode)
+        self._validate_scale(scale)
+        self._validate_tile_size(tile_size)
+        self._validate_tile_overlap(tile_overlap)
+
+    @staticmethod
+    def _validate_worker_count(workers: int) -> None:
+        """Validate the worker count.
+
+        :param workers: Number of worker processes used for image reads.
+        :returns: None.
+        """
         if workers <= 1:
-            raise ValueError('Eager iterator requires at least 2 workers')
+            msg = 'Eager iterator requires at least 2 workers'
+            raise ValueError(msg)
 
-        # Check for valid output mode
-        if output_mode == 'regions' and not (isinstance(
-                regions, list) or isinstance(regions, np.ndarray)):
-            raise ValueError(
-                "output_mode set to 'regions'.  Regions must be a numpy array of the form  [[left, top, width, height], ...]")
+    @staticmethod
+    def _validate_output_mode(
+        output_mode: str, regions: Optional[Union[list, np.ndarray]], pad_mode: str,
+    ) -> None:
+        """Validate output-mode compatibility with related arguments.
+
+        :param output_mode: Output mode, either 'tiles' or 'regions'.
+        :param regions: Optional regions in top, left, height, width order.
+        :param pad_mode: Padding mode used when reads are smaller than requested output.
+        :returns: None.
+        """
+        if output_mode == 'regions' and not isinstance(regions, (list, np.ndarray)):
+            msg = (
+                "output_mode set to 'regions'.  Regions must be a numpy array "
+                'of the form [[left, top, width, height], ...]'
+            )
+            raise ValueError(msg)
         if output_mode == 'tiles' and regions is not None:
-            raise ValueError("output_mode set to 'tiles' but regions provided")
-
+            msg = "output_mode set to 'tiles' but regions provided"
+            raise ValueError(msg)
         if output_mode == 'regions' and pad_mode == 'wsi_edge':
-            raise ValueError(
-                "pad_mode cannot be wsi_edge if output_mode is regions.  Please use pad_mode='equal' instead")
+            msg = (
+                'pad_mode cannot be wsi_edge if output_mode is regions. '
+                "Please use pad_mode='equal' instead"
+            )
+            raise ValueError(msg)
 
-        if scale is not None:
-            if 'magnification' not in scale and ('mm_x' not in scale and 'mm_y' not in scale):
-                raise ValueError(
-                    "scale must be a dictionary with either 'magnification' or 'mm_x' and 'mm_y'")
-            if 'magnification' in scale and ('mm_x' in scale or 'mm_y' in scale):
-                raise ValueError("scale cannot have both 'magnification' and 'mm_x' or 'mm_y'")
-            if 'mm_x' in scale and 'mm_y' not in scale:
-                raise ValueError("scale must have both 'mm_x' and 'mm_y'")
-            if 'mm_x' not in scale and 'mm_y' in scale:
-                raise ValueError("scale must have both 'mm_x' and 'mm_y'")
+    @staticmethod
+    def _validate_scale(scale: Optional[Dict[str, Any]]) -> None:
+        """Validate the requested target scale.
 
-        if tile_size is not None:
-            if 'width' not in tile_size or 'height' not in tile_size:
-                raise ValueError("tile_size must be a dictionary with both 'width' and 'height'")
-            if tile_size['width'] <= 0 or tile_size['height'] <= 0:
-                raise ValueError('tile_size width and height must be greater than 0')
+        :param scale: Optional target scale using magnification or mm_x and mm_y.
+        :returns: None.
+        """
+        if scale is None:
+            return
+        has_mag = 'magnification' in scale
+        has_mm_x = 'mm_x' in scale
+        has_mm_y = 'mm_y' in scale
+        if not has_mag and not (has_mm_x and has_mm_y):
+            msg = "scale must be a dictionary with either 'magnification' or 'mm_x' and 'mm_y'"
+            raise ValueError(msg)
+        if has_mag and (has_mm_x or has_mm_y):
+            msg = "scale cannot have both 'magnification' and 'mm_x' or 'mm_y'"
+            raise ValueError(msg)
+        if has_mm_x != has_mm_y:
+            msg = "scale must have both 'mm_x' and 'mm_y'"
+            raise ValueError(msg)
 
-        if tile_overlap is not None:
-            if 'x' in tile_overlap and 'y' in tile_overlap:
-                if isinstance(tile_overlap['x'], int) and isinstance(tile_overlap['y'], int):
-                    if tile_overlap['x'] < 0 or tile_overlap['y'] < 0:
-                        raise ValueError('tile_overlap x and y must be greater than or equal to 0')
-                elif isinstance(tile_overlap['x'], float) and isinstance(tile_overlap['y'], float):
-                    if tile_overlap['x'] < 0 or tile_overlap['y'] < 0:
-                        raise ValueError('tile_overlap x and y must be greater than or equal to 0')
-                else:
-                    raise ValueError('tile_overlap x and y must be both integers or both floats')
-            else:
-                raise ValueError("tile_overlap must be a dictionary with both 'x' and 'y'")
+    @staticmethod
+    def _validate_tile_size(tile_size: Optional[Dict[str, int]]) -> None:
+        """Validate the requested output tile size.
 
+        :param tile_size: Optional output tile size with width and height in pixels.
+        :returns: None.
+        """
+        if tile_size is None:
+            return
+        if 'width' not in tile_size or 'height' not in tile_size:
+            msg = "tile_size must be a dictionary with both 'width' and 'height'"
+            raise ValueError(msg)
+        if tile_size['width'] <= 0 or tile_size['height'] <= 0:
+            msg = 'tile_size width and height must be greater than 0'
+            raise ValueError(msg)
+
+    @staticmethod
+    def _validate_tile_overlap(
+        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]],
+    ) -> None:
+        """Validate the requested tile overlap.
+
+        :param tile_overlap: Optional x and y tile overlap as pixels or fractions.
+        :returns: None.
+        """
+        if tile_overlap is None:
+            return
+        if 'x' not in tile_overlap or 'y' not in tile_overlap:
+            msg = "tile_overlap must be a dictionary with both 'x' and 'y'"
+            raise ValueError(msg)
+        x_overlap = tile_overlap['x']
+        y_overlap = tile_overlap['y']
+        if type(x_overlap) is not type(y_overlap) or not isinstance(x_overlap, (int, float)):
+            msg = 'tile_overlap x and y must be both integers or both floats'
+            raise ValueError(msg)
+        if x_overlap < 0 or y_overlap < 0:
+            msg = 'tile_overlap x and y must be greater than or equal to 0'
+            raise ValueError(msg)
+
+    def _set_init_options(
+        self,
+        dtype: np.typing.DTypeLike,
+        nchw: bool,
+        edge: bool,
+        batch: int,
+        output_mode: str,
+        scale: Optional[Dict[str, Any]],
+        pad_fill_mode: str,
+        pad_mode: str,
+        chunk_mult: int,
+        randomize_chunks: bool,
+        seed: int,
+        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]],
+        region: Optional[Dict[str, Any]],
+        transform: Optional[Callable],
+        transform_save_mode: Optional[str],
+        transform_scale: Optional[Callable],
+    ) -> None:
+        """Store constructor options on this iterator.
+
+        :returns: None.
+        """
         self.dtype = dtype
         self.nchw = nchw
         self.edge = edge
@@ -203,56 +299,141 @@ class EagerIterator:
         self._worker_transform = None
         self.transform_scale = transform_scale
 
-        # Use the mask to determine the tiles if in tile mode
+    def _setup_input_selection(
+        self,
+        output_mode: str,
+        mask: Optional[Union[np.ndarray, str, os.PathLike]],
+        region: Optional[Dict[str, Any]],
+        scale: Optional[Dict[str, Any]],
+        tile_size: Optional[Dict[str, int]],
+        region_size: Optional[Dict[str, int]],
+        source_scale: Optional[Union[int, float]],
+        tiles: Optional[Union[list, np.ndarray]],
+        regions: Optional[Union[list, np.ndarray]],
+        area_threshold: float,
+        threshold_mask: float,
+    ) -> tuple[Optional[Union[list, np.ndarray]], Optional[Union[list, np.ndarray]]]:
+        """Prepare tile or region selection and slide dimensions.
+
+        :returns: The normalized tiles and regions selections.
+        """
         if output_mode == 'tiles':
-            # Use default tile source to determine slide dimensions
-            self.slide_dimensions = calculate_slide_dimensions(
-                self.source, region, scale, tile_size, source_scale)
-            if tiles is None:
-                tiles = return_relevant_tile_indexes_for_slide_dim(
-                    self.slide_dimensions, tile_overlap)
-            if mask is not None:
-                # If mask is a path, check if the path exists, attempt to open the image
-                # with PIL and convert to numpy array
-                if isinstance(mask, str) and os.path.exists(mask):
-                    mask = np.array(Image.open(mask))
-                elif isinstance(mask, np.ndarray):
-                    tiles = return_tile_slides_meeting_area_threshold(
-                        mask, self.slide_dimensions, tiles, area_threshold=area_threshold, threshold_mask=threshold_mask)
-                else:
-                    raise ValueError('Mask must be a file path that exists or a numpy array')
-        elif output_mode == 'regions' and regions is not None:
-            if isinstance(regions, list):
-                regions = np.array(regions)
-            # Use default region source to determine slide dimensions
-            if region_size is not None:
-                # Regions of form (left, top, width, height)
-                if source_scale is not None:
-                    raise ValueError('source_scale parammter must be None for regions mode')
-                if region is not None:
-                    raise ValueError('region parameter must be None for regions mode')
+            tiles = self._setup_tile_inputs(
+                mask, region, scale, tile_size, source_scale, tiles, area_threshold, threshold_mask,
+            )
+            return tiles, regions
+        if output_mode == 'regions' and regions is not None:
+            regions = self._setup_region_inputs(regions, region, scale, region_size, source_scale)
+            return tiles, regions
+        msg = 'output mode must be either tiles or regions, If regions, regions must be provided'
+        raise ValueError(msg)
 
-                self.slide_dimensions = calculate_slide_dimensions(
-                    self.source, region, scale, region_size, source_scale)
+    def _setup_tile_inputs(
+        self,
+        mask: Optional[Union[np.ndarray, str, os.PathLike]],
+        region: Optional[Dict[str, Any]],
+        scale: Optional[Dict[str, Any]],
+        tile_size: Optional[Dict[str, int]],
+        source_scale: Optional[Union[int, float]],
+        tiles: Optional[Union[list, np.ndarray]],
+        area_threshold: float,
+        threshold_mask: float,
+    ) -> Union[list, np.ndarray]:
+        """Prepare tile-mode slide dimensions and tile indexes.
 
-                # Check if region size is appropriate
-                h_max = regions[:, 2].max()
-                w_max = regions[:, 3].max()
+        :returns: Tile indexes in row, column order.
+        """
+        self.slide_dimensions = calculate_slide_dimensions(
+            self.source, region, scale, tile_size, source_scale,
+        )
+        if tiles is None:
+            tiles = return_relevant_tile_indexes_for_slide_dim(
+                self.slide_dimensions, self.tile_overlap,
+            )
+        if mask is None:
+            return tiles
+        return self._filter_tiles_with_mask(mask, tiles, area_threshold, threshold_mask)
 
-                if h_max > self.slide_dimensions['tile_height_before_scaling'] or w_max > self.slide_dimensions['tile_width_before_scaling']:
-                    raise ValueError(
-                        'Desired region_size is smaller than needed for the regions provided \n Height, width max {}, {} \n Region height, width before scaling {}, {}'.format(
-                            h_max,
-                            w_max,
-                            self.slide_dimensions['tile_height_before_scaling'],
-                            self.slide_dimensions['tile_width_before_scaling']))
-            else:
-                raise ValueError('region_size must be provided if output_mode is regions')
-        else:
-            raise ValueError(
-                'output mode must be either tiles or regions, If regions, regions must be provided')
+    def _filter_tiles_with_mask(
+        self,
+        mask: Optional[Union[np.ndarray, str, os.PathLike]],
+        tiles: Union[list, np.ndarray],
+        area_threshold: float,
+        threshold_mask: float,
+    ) -> Union[list, np.ndarray]:
+        """Filter tile indexes by an optional mask.
 
-        # Cache a stable targetScale payload used by workers.
+        :returns: Tile indexes that pass the mask threshold, or the original tile indexes.
+        """
+        if isinstance(mask, str) and os.path.exists(mask):
+            np.array(Image.open(mask))
+            return tiles
+        if isinstance(mask, np.ndarray):
+            return return_tile_slides_meeting_area_threshold(
+                mask, self.slide_dimensions, tiles, area_threshold=area_threshold,
+                threshold_mask=threshold_mask,
+            )
+        msg = 'Mask must be a file path that exists or a numpy array'
+        raise ValueError(msg)
+
+    def _setup_region_inputs(
+        self,
+        regions: Union[list, np.ndarray],
+        region: Optional[Dict[str, Any]],
+        scale: Optional[Dict[str, Any]],
+        region_size: Optional[Dict[str, int]],
+        source_scale: Optional[Union[int, float]],
+    ) -> np.ndarray:
+        """Prepare region-mode slide dimensions and read regions.
+
+        :returns: Regions as a numpy array.
+        """
+        regions_array = np.array(regions) if isinstance(regions, list) else regions
+        if region_size is None:
+            msg = 'region_size must be provided if output_mode is regions'
+            raise ValueError(msg)
+        if source_scale is not None:
+            msg = 'source_scale parammter must be None for regions mode'
+            raise ValueError(msg)
+        if region is not None:
+            msg = 'region parameter must be None for regions mode'
+            raise ValueError(msg)
+        self.slide_dimensions = calculate_slide_dimensions(
+            self.source, region, scale, region_size, source_scale,
+        )
+        self._validate_region_size(regions_array)
+        return regions_array
+
+    def _validate_region_size(self, regions: np.ndarray) -> None:
+        """Validate that region_size can contain all requested regions.
+
+        :param regions: Regions in top, left, height, width order.
+        :returns: None.
+        """
+        h_max = regions[:, 2].max()
+        w_max = regions[:, 3].max()
+        if (
+            h_max <= self.slide_dimensions['tile_height_before_scaling'] and
+            w_max <= self.slide_dimensions['tile_width_before_scaling']
+        ):
+            return
+        msg = (
+            'Desired region_size is smaller than needed for the regions provided\n'
+            'Height, width max {}, {}\n'
+            'Region height, width before scaling {}, {}'
+        ).format(
+            h_max,
+            w_max,
+            self.slide_dimensions['tile_height_before_scaling'],
+            self.slide_dimensions['tile_width_before_scaling'],
+        )
+        raise ValueError(msg)
+
+    def _cache_worker_dimension_args(self) -> None:
+        """Cache stable scale and tile-size payloads for workers.
+
+        :returns: None.
+        """
         if self.slide_dimensions['scale_mode'] == 'mm':
             self.slide_dimensions['_target_scale'] = {
                 'mm_x': self.slide_dimensions['target_mm_x'],
@@ -263,108 +444,168 @@ class EagerIterator:
                 'magnification': self.slide_dimensions['target_magnification'],
             }
         else:
-            raise ValueError('Invalid scale mode')
-
-        # Create a stable tile size dictionary for workers to use
+            msg = 'Invalid scale mode'
+            raise ValueError(msg)
         self.slide_dimensions['_tile_size'] = dict(
             width=self.slide_dimensions['tile_size'][0],
-            height=self.slide_dimensions['tile_size'][1])
+            height=self.slide_dimensions['tile_size'][1],
+        )
 
-        # Determine if the output changes based on the transform
-        self._worker_transform = self._prepare_worker_transform(self.transform)
-        self._worker_transform_scale = self._prepare_worker_transform_scale(self.transform_scale)
-        self._enable_dynamic_mm = self._worker_transform_scale is not None
+    def _build_read_kwargs(
+        self,
+        output_mode: str,
+        tiles: Optional[Union[list, np.ndarray]],
+        regions: Optional[Union[list, np.ndarray]],
+        edge: bool,
+        chunk_mult: int,
+    ) -> list:
+        """Build worker read argument chunks for the selected output mode.
 
-        n_possible_tiles = self.slide_dimensions['tile_target_range_x'] * \
-            self.slide_dimensions['tile_target_range_y']
-
+        :returns: Read argument chunks for worker submission.
+        """
         if output_mode == 'regions':
-            assert isinstance(
-                regions, list) or isinstance(
-                regions, np.ndarray), 'Regions must be a list or numpy array'
-            self.read_kwargs = gen_read_args_for_regions(
-                self.slide_dimensions, regions, edge=edge, chunk_mult=chunk_mult)
-        elif output_mode == 'tiles':
-            assert isinstance(
-                tiles, list) or isinstance(
-                tiles, np.ndarray), 'Tiles must be a list or numpy array'
-            self.read_kwargs = gen_read_args_for_tiles(
-                n_possible_tiles,
-                self.slide_dimensions,
-                tiles,
-                edge=edge,
-                chunk_mult=chunk_mult,
-                region=self.region)
-        else:
-            raise ValueError('Supplied output mode must be either tiles or regions')
+            assert isinstance(regions, (list, np.ndarray)), 'Regions must be a list or numpy array'
+            return gen_read_args_for_regions(
+                self.slide_dimensions, regions, edge=edge, chunk_mult=chunk_mult,
+            )
+        if output_mode == 'tiles':
+            assert isinstance(tiles, (list, np.ndarray)), 'Tiles must be a list or numpy array'
+            n_possible_tiles = (
+                self.slide_dimensions['tile_target_range_x'] *
+                self.slide_dimensions['tile_target_range_y']
+            )
+            return gen_read_args_for_tiles(
+                n_possible_tiles, self.slide_dimensions, tiles, edge=edge,
+                chunk_mult=chunk_mult, region=self.region,
+            )
+        msg = 'Supplied output mode must be either tiles or regions'
+        raise ValueError(msg)
 
-        if randomize_chunks:
-            random.seed(seed)
-            random.shuffle(self.read_kwargs)
+    def _configure_transform_scale(self, transform_scale: Optional[Callable]) -> None:
+        """Validate and register a transform-scale callable.
 
-        # Test transform scale
-        if transform_scale is not None:
-            import inspect
-            transform_scale_signature = inspect.signature(transform_scale)
-            transform_scale_parameters = transform_scale_signature.parameters
-            if len(transform_scale_parameters) != 2:
-                raise ValueError(
-                    'transform_scale must have two parameters for read_kwargs which is a list of and slide_dimensions')
-            try:
-                xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = transform_scale(
-                    self.read_kwargs[0], self.slide_dimensions)
-                # transform scale can resize the tile size, so we need to update the
-                # slide_dimensions
-                self.slide_dimensions['_tile_size'] = tile_size_dict
+        :param transform_scale: Optional callable that customizes read coordinates and scale.
+        :returns: None.
+        """
+        if transform_scale is None:
+            return
+        transform_scale_result = self._call_transform_scale_probe(transform_scale)
+        self._validate_transform_scale_result(transform_scale_result)
+        eager_fn.set_transform_scale(transform_scale)
 
-            except Exception as e:
-                raise ValueError('Provided transform_scale test call failed.  Error: {}'.format(e))
+    def _call_transform_scale_probe(self, transform_scale: Callable) -> tuple:
+        """Call transform_scale once to validate its signature and output.
 
-            if not isinstance(xlt, np.ndarray) or not isinstance(ytt, np.ndarray) or not isinstance(xrt, np.ndarray) or not isinstance(
-                    ybt, np.ndarray) or not isinstance(mm_x, np.ndarray) or not isinstance(mm_y, np.ndarray) or not isinstance(target_scale, dict):
-                raise ValueError(
-                    """
-                    transform_scale must return 9 values in the following order:
-                    xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = transform_scale(read_kwargs, slide_dimensions)
-                    xlt: numpy array of left coordinates
-                    ytt: numpy array of top coordinates
-                    xrt: numpy array of right coordinates
-                    ybt: numpy array of bottom coordinates
-                    mm_x: numpy array of mm_x values
-                    mm_y: numpy array of mm_y values
-                    """)
-            if self.slide_dimensions['scale_mode'] == 'mm' and 'mm_x' not in target_scale and 'mm_y' not in target_scale:
-                raise ValueError(
-                    "transform_scale must return a dictionary with units 'mm' if scale_mode is 'mm'")
-            if self.slide_dimensions['scale_mode'] == 'mag' and 'magnification' not in target_scale:
-                raise ValueError(
-                    "transform_scale must return a dictionary with 'magnification' if scale_mode is 'mag'")
-            eager_fn.set_transform_scale(transform_scale)
+        :param transform_scale: Callable that computes custom read coordinates and scale.
+        :returns: The transform_scale probe result.
+        """
+        import inspect
 
-        # Setup the output dimensions after transform and transform_scale are registered
-        self._setup_out_dims()
+        if len(inspect.signature(transform_scale).parameters) != 2:
+            msg = (
+                'transform_scale must have two parameters for read_kwargs, '
+                'which is a list, and slide_dimensions'
+            )
+            raise ValueError(msg)
+        try:
+            return transform_scale(self.read_kwargs[0], self.slide_dimensions)
+        except Exception as e:
+            msg = 'Provided transform_scale test call failed.  Error: {}'.format(e)
+            raise ValueError(msg) from e
 
-        # Setup the process pool after transform is registered
-        from concurrent.futures import ProcessPoolExecutor
-        self.pool = ProcessPoolExecutor(
-            max_workers=workers,
-            mp_context=multiprocessing.get_context('fork'))
-        self._initialize(batch, prefetch)
+    def _validate_transform_scale_result(self, transform_scale_result: tuple) -> None:
+        """Validate transform-scale probe output.
+
+        :param transform_scale_result: Result returned by a transform_scale probe call.
+        :returns: None.
+        """
+        (
+            xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y,
+        ) = transform_scale_result
+        self.slide_dimensions['_tile_size'] = tile_size_dict
+        if not self._has_valid_transform_scale_output(xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale):
+            msg = """
+                transform_scale must return 9 values in the following order:
+                xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = (
+                    transform_scale(read_kwargs, slide_dimensions)
+                )
+                xlt: numpy array of left coordinates
+                ytt: numpy array of top coordinates
+                xrt: numpy array of right coordinates
+                ybt: numpy array of bottom coordinates
+                mm_x: numpy array of mm_x values
+                mm_y: numpy array of mm_y values
+                """
+            raise ValueError(msg)
+        self._validate_transform_scale_mode(target_scale)
+
+    @staticmethod
+    def _has_valid_transform_scale_output(
+        xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale,
+    ) -> bool:
+        """Return whether transform-scale outputs have expected types.
+
+        :returns: True when coordinates are arrays and target_scale is a dictionary.
+        """
+        return (
+            isinstance(xlt, np.ndarray) and
+            isinstance(ytt, np.ndarray) and
+            isinstance(xrt, np.ndarray) and
+            isinstance(ybt, np.ndarray) and
+            isinstance(mm_x, np.ndarray) and
+            isinstance(mm_y, np.ndarray) and
+            isinstance(target_scale, dict)
+        )
+
+    def _validate_transform_scale_mode(self, target_scale: Dict[str, Any]) -> None:
+        """Validate transform-scale target scale for the active scale mode.
+
+        :param target_scale: Target scale returned by transform_scale.
+        :returns: None.
+        """
+        if self.slide_dimensions['scale_mode'] == 'mm' and 'mm_x' not in target_scale:
+            msg = "transform_scale must return a dictionary with units 'mm' if scale_mode is 'mm'"
+            raise ValueError(msg)
+        if self.slide_dimensions['scale_mode'] == 'mm' and 'mm_y' not in target_scale:
+            msg = "transform_scale must return a dictionary with units 'mm' if scale_mode is 'mm'"
+            raise ValueError(msg)
+        if self.slide_dimensions['scale_mode'] == 'mag' and 'magnification' not in target_scale:
+            msg = (
+                "transform_scale must return a dictionary with 'magnification' "
+                "if scale_mode is 'mag'"
+            )
+            raise ValueError(msg)
 
     def _setup_out_dims(self):
-        self.out_dims = [self.batch, self.slide_dimensions['_tile_size']
-                         ['height'], self.slide_dimensions['_tile_size']['width'], 3]
+        """Configure the output batch shape for untransformed reads.
+
+        :returns: None.
+        """
+        self.out_dims = [
+            self.batch,
+            self.slide_dimensions['_tile_size']['height'],
+            self.slide_dimensions['_tile_size']['width'],
+            3,
+        ]
 
         if self.transform is not None:
             if self.transform_save_mode is not None and self.transform_save_mode not in [
-                    'tile_x_y', 'region_x_y']:
-                raise ValueError("transform_save_mode must be either 'tile_x_y' or 'region_x_y'")
+                'tile_x_y',
+                'region_x_y',
+            ]:
+                msg = "transform_save_mode must be either 'tile_x_y' or 'region_x_y'"
+                raise ValueError(msg)
             self._setup_out_dims_for_transform()
 
         if self.nchw:
             self.out_dims = [self.out_dims[0], self.out_dims[3], self.out_dims[1], self.out_dims[2]]
 
     def _prepare_worker_transform(self, transform: Optional[Callable]):
+        """Register a transform callable for worker processes.
+
+        :param transform: Transform callable or supported compose object.
+        :returns: A worker-safe transform reference.
+        """
         if transform is None:
             return None
         try:
@@ -372,10 +613,16 @@ class EagerIterator:
             return transform
         except Exception:
             from .eager_utils import eager_fn
+
             eager_fn.set_transform(transform)
             return _EAGER_FN_TRANSFORM_SENTINEL
 
     def _prepare_worker_transform_scale(self, transform_scale: Optional[Callable]):
+        """Register a transform-scale callable for worker processes.
+
+        :param transform_scale: Callable that computes custom read coordinates and scale.
+        :returns: A worker-safe transform-scale reference.
+        """
         if transform_scale is None:
             return None
         try:
@@ -383,17 +630,24 @@ class EagerIterator:
             return transform_scale
         except Exception:
             from .eager_utils import eager_fn
+
             eager_fn.set_transform_scale(transform_scale)
             return _EAGER_FN_TRANSFORM_SCALE_SENTINEL
 
     def _setup_out_dims_for_transform(self):
+        """Infer output shape and dtype after applying a transform.
+
+        :returns: None.
+        """
         test_data = np.zeros(self.out_dims[1:], dtype=self.dtype)
         if 'albumentations.core.composition.Compose' in str(type(self.transform)):
             test_out = self.transform(image=test_data)
             self.dtype = test_out['image'].dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out['image'].shape))
             self.is_torch = False
-        elif 'torchvision.transforms' in str(type(self.transform)) or 'torchvision.transforms.v2' in str(type(self.transform)):
+        elif 'torchvision.transforms' in str(
+            type(self.transform),
+        ) or 'torchvision.transforms.v2' in str(type(self.transform)):
             test_out = self.transform(test_data)
             self.dtype = test_out.dtype
             self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
@@ -410,7 +664,8 @@ class EagerIterator:
                 elif torch is not None and isinstance(test_out, torch.Tensor):
                     self.is_torch = True
                 else:
-                    raise ValueError('Transform callable must return a numpy array or torch.Tensor')
+                    msg = 'Transform callable must return a numpy array or torch.Tensor'
+                    raise ValueError(msg)
 
                 self.dtype = test_out.dtype
                 self.out_dims = tuple([self.out_dims[0]] + list(test_out.shape))
@@ -428,17 +683,29 @@ class EagerIterator:
                 except Exception as exc:
                     probe_errors.append(f'{arg_num}-arg probe failed: {exc}')
             else:
-                raise ValueError(
+                msg = (
                     'Transform callable must accept either (image) or (image, x, y) '
                     'and return a numpy array or torch.Tensor. Errors: {}'.format(
                         '; '.join(probe_errors),
-                    ),
+                    )
+                )
+                raise ValueError(
+                    msg,
                 )
         else:
-            raise ValueError(
-                'Transform must be a albumentations.core.composition.Compose or torchvision.transforms.v2._container.Compose object or a callable')
+            msg = (
+                'Transform must be a albumentations.core.composition.Compose or '
+                'torchvision.transforms.v2._container.Compose object or a callable'
+            )
+            raise ValueError(msg)
 
     def _initialize(self, batch: int, prefetch: int):
+        """Initialize queue state and prefetch the first reads.
+
+        :param batch: Number of tiles or regions returned in each batch.
+        :param prefetch: Number of batches to keep queued ahead of iteration.
+        :returns: None.
+        """
         self.prefetch = prefetch
         self.batch = batch
         self.queue = deque([])  # hold futures defining read operations
@@ -447,30 +714,45 @@ class EagerIterator:
         self._fill()
 
     def __iter__(self):
+        """Return this iterator.
+
+        :returns: The eager iterator instance.
+        """
         return self
 
     def __enter__(self):
+        """Enter a context manager for this iterator.
+
+        :returns: The eager iterator instance.
+        """
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit a context manager and clean up worker resources.
+
+        :param exc_type: Exception type raised inside the context, if any.
+        :param exc_val: Exception value raised inside the context, if any.
+        :param exc_tb: Traceback raised inside the context, if any.
+        :returns: None.
+        """
         try:
             self.cleanup()
         except Exception as cleanup_exc:
             # Shared-memory cleanup can race across workers/processes; ignore
             # expected contention errors during teardown.
-            is_shm_race = (
-                isinstance(cleanup_exc, (FileNotFoundError, BufferError)) or
-                (
-                    isinstance(cleanup_exc, OSError) and
-                    'No such file or directory' in str(cleanup_exc)
-                )
+            is_shm_race = isinstance(cleanup_exc, (FileNotFoundError, BufferError)) or (
+                isinstance(cleanup_exc, OSError) and 'No such file or directory' in str(cleanup_exc)
             )
             if not is_shm_race and exc_type is None:
                 raise
         return False
 
     def cleanup(self, wait=True):
-        """Clean up resources including the process pool and any remaining shared memory."""
+        """Shut down worker processes and release queued shared-memory buffers.
+
+        :param wait: If True, wait for submitted worker tasks to finish before shutdown.
+        :returns: None.
+        """
         if hasattr(self, 'pool'):
             self.pool.shutdown(wait=wait, cancel_futures=True)
         # Clear any remaining shared arrays in the queue
@@ -490,17 +772,19 @@ class EagerIterator:
                 pass  # Ignore cleanup errors
 
     def __del__(self):
-        """Destructor to ensure cleanup on garbage collection."""
-        try:
-            # Use wait false to avoid waiting for submitted processes to execute
-            # causing immediate exiting and returning to the main thread
+        """Clean up worker resources during object destruction.
+
+        :returns: None.
+        """
+        # Use wait false to avoid waiting for submitted processes to execute
+        # causing immediate exiting and returning to the main thread.
+        with contextlib.suppress(Exception):
             self.cleanup(wait=False)
-        except Exception:
-            pass  # Ignore cleanup errors during garbage collection
 
     def get_output_image_count(self):
-        """
-        Return the number of tiles that the eager iterator will yield.
+        """Return the number of output images planned by this iterator.
+
+        :returns: Number of tiles or regions available from the iterator.
         """
         count = 0
         for read_kwargs in self.read_kwargs:
@@ -508,8 +792,9 @@ class EagerIterator:
         return count
 
     def __next__(self):
-        """
-        Return the next batch of tiles as a dictionary with keys defined below.
+        """Return the next eager batch.
+
+        :returns: A dictionary containing a SharedArray under 'tile' and read metadata arrays.
         """
         # TODO: develop method for random batch retrieval
         if self.pos >= len(self.read_kwargs) and not len(self.queue):
@@ -540,11 +825,11 @@ class EagerIterator:
                 future.result()  # This will raise any exception that occurred in the worker process
             self._fill()
         except Exception as e:
-            # Add exception for read operation in multiprocessing pool to allow user to be aware of potential issues
-            # with their callable transform
-            print('Exception in __next__: {}'.format(e))
+            # Add exception for read operation in multiprocessing pool to allow user to be aware
+            # of potential issues with their callable transform
             self.pool.shutdown(wait=False, cancel_futures=True)
-            raise Exception('Exception in __next__: {}'.format(e))
+            msg = 'Exception in __next__: {}'.format(e)
+            raise Exception(msg) from e
 
         # last batch may only have partial size
         if self.pos == len(self.read_kwargs) and not len(self.queue):
@@ -555,29 +840,11 @@ class EagerIterator:
         return self._tiles_and_read_kwargs_to_dict(tiles, batch_read_kwargs)
 
     def _tiles_and_read_kwargs_to_dict(self, tiles: SharedArray, read_kwargs: np.ndarray):
-        """
-        Convert the read_kwargs list to a dictionary for simplified access to the relevant read arguments in a way that is more consistent with the original tileIterator.
-        The dictionary is returned with the following keys:
-            'format': 'numpy',
-            'gx': left,
-            'gy': top,
-            'level_x': level_x,
-            'level_y': level_y,
-            'tile_position': {'level_x': level_x, 'level_y': level_y, 'region_x': region_x, 'region_y': region_y},
-            'width': width,
-            'height': height,
-            'level': level,
-            'magnification': magnification,
-            'mm_x': mm_x,
-            'mm_y': mm_y,
-            'gwidth': gwidth,
-            'gheight': gheight,
+        """Convert batch tiles and read arguments into iterator output metadata.
 
-        Certain keys such as gx, gy, level_x, level_y, tile_position['level_x'], tile_position['level_y'], tile_position['base_x'], tile_position['base_y']
-            are arrays of the same length as the number of tiles in the batch.
-
-        :param read_kwargs: A list of read arguments used to produce the SharedNumpyArray.
-        :return: A dictionary with the read arguments.
+        :param tiles: SharedArray containing the image batch.
+        :param read_kwargs: Read argument rows used to produce the batch.
+        :returns: A dictionary with tile data and metadata arrays for the batch.
         """
         # np_read_kwargs = np.array(read_kwargs)
 
@@ -623,232 +890,414 @@ class EagerIterator:
         transform_save_mode: Optional[str] = 'tile_x_y',
         worker_transform_scale: Optional[Callable] = None,
     ):
-        """
-        A static method used for reading regions from a tile source and filling the SharedNumpyArray with the results.
+        """Read one eager chunk into shared-memory output buffers.
 
-        :param source: A tile source object.
-        :param dtype: The data type of the output array.
-        :param nchw: A boolean controlling whether to return the output in NCHW format (True) or NHWC format (False).
-            Will transpose transformed output as well.
-        :param read_kwargs: A list of read arguments used to produce the SharedNumpyArray.
-        :param sharrs: A list of SharedNumpyArray objects to be filled.
-        :param offset: The offset of the current batch.
+        :param source: Tile source used to read image data.
+        :param dtype: Numpy or torch dtype for output images.
+        :param nchw: If True, write transformed numpy tiles in NCHW layout.
+        :param read_kwargs: Read argument rows for this worker task.
+        :param sharrs: SharedArray buffers filled by this worker task.
+        :param offset: Batch offset for the first output tile in this task.
+        :param output_mode: Output mode, either 'tiles' or 'regions'.
+        :param batch: Number of tiles or regions in each output batch.
+        :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.
+        :param region: Optional source region used for tile clipping.
+        :param transform: Optional transform applied to each tile or region.
+        :param pad_mode: Padding mode used when reads are smaller than requested output.
+        :param pad_fill_mode: Fill mode used for padded pixels.
+        :param callable_arg_num: Number of positional arguments expected by transform.
+        :param transform_save_mode: Coordinate mode passed to three-argument transforms.
+        :param worker_transform_scale: Optional worker-safe transform-scale callable.
+        :returns: None. The shared arrays are filled in place.
         """
         read_kwargs = np.asarray(read_kwargs)
-
-        if worker_transform_scale == _EAGER_FN_TRANSFORM_SCALE_SENTINEL:
-            _worker_transform_scale = eager_fn.get_transform_scale()
-            xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = _worker_transform_scale(
-                read_kwargs, slide_dimensions)
-        elif worker_transform_scale is not None:
-            xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = worker_transform_scale(
-                read_kwargs, slide_dimensions)
-        else:
-            xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = default_region_coords_and_target_scale_from_read_args(
-                read_kwargs,
-                slide_dimensions,
-                include_mm=False,
-            )
-
+        scale_data = EagerIterator._resolve_worker_scale_data(
+            read_kwargs, slide_dimensions, worker_transform_scale,
+        )
+        xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size_dict, target_scale, conv_mm_x, conv_mm_y = (
+            scale_data
+        )
         tile_y = read_kwargs[:, 2]
         tile_x = read_kwargs[:, 3]
+        bounds = EagerIterator._read_bounds(xlt, ytt, xrt, ybt)
+        EagerIterator._validate_worker_bounds(output_mode, bounds, slide_dimensions, read_kwargs)
+        xlo, yto, ho, wo = EagerIterator._output_slices(
+            output_mode, xlt, ytt, xrt, ybt, bounds['xr'], bounds['yr'], conv_mm_x, conv_mm_y,
+        )
+        chunk = EagerIterator._read_chunk(source, slide_dimensions, target_scale, bounds)
+        tiles = EagerIterator._extract_worker_tiles(
+            output_mode, chunk, slide_dimensions, xlt, xrt, ytt, ybt, xlo, wo, yto, ho,
+            tile_size_dict, region, pad_mode, pad_fill_mode,
+        )
+        tiles = EagerIterator._apply_worker_transform(
+            tiles, transform, dtype, callable_arg_num, transform_save_mode,
+            tile_x, tile_y, xlt, ytt,
+        )
+        EagerIterator._insert_worker_tiles(
+            sharrs, tiles, offset, batch, nchw, worker_transform_scale, mm_x, mm_y,
+        )
+
+    @staticmethod
+    def _resolve_worker_scale_data(
+        read_kwargs: np.ndarray, slide_dimensions: dict, worker_transform_scale: Optional[Callable],
+    ) -> tuple:
+        """Resolve worker read coordinates and target scale.
+
+        :param read_kwargs: Read argument rows for this worker task.
+        :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.
+        :param worker_transform_scale: Optional worker-safe transform-scale callable.
+        :returns: Coordinate arrays, scale metadata, tile size, and conversion factors.
+        """
+        if worker_transform_scale == _EAGER_FN_TRANSFORM_SCALE_SENTINEL:
+            _worker_transform_scale = eager_fn.get_transform_scale()
+            return _worker_transform_scale(read_kwargs, slide_dimensions)
+        if worker_transform_scale is not None:
+            return worker_transform_scale(read_kwargs, slide_dimensions)
+        return default_region_coords_and_target_scale_from_read_args(
+            read_kwargs, slide_dimensions, include_mm=False,
+        )
+
+    @staticmethod
+    def _read_bounds(xlt, ytt, xrt, ybt) -> Dict[str, Any]:
+        """Return the source bounds needed for one worker chunk read.
+
+        :returns: Bounds and maximum output dimensions for the chunk.
+        """
         xr = np.min(xlt)
         yr = np.min(ytt)
+        return {
+            'xr': xr,
+            'yr': yr,
+            'w': np.max(xrt - xr),
+            'h': np.max(ybt - yr),
+            'ybmax': np.max(ybt - yr),
+            'xrmax': np.max(xrt - xr),
+        }
 
-        w = np.max(xrt - xr)
-        h = np.max(ybt - yr)
+    @staticmethod
+    def _validate_worker_bounds(
+        output_mode: str, bounds: Dict[str, Any], slide_dimensions: dict, read_kwargs: np.ndarray,
+    ) -> None:
+        """Validate worker read bounds against the whole-slide image.
 
-        ybmax = np.max(ybt - yr)
-        xrmax = np.max(xrt - xr)
-
-        # Handle cases where supplied coordinates are not within margins of the image
-        if xr < 0 or yr < 0:
-            xlt = np.where(xlt > 0, xlt, 0)
-            ytt = np.where(ytt > 0, ytt, 0)
-            raise UserWarning(
-                'Negative coordinates.\n Defaulting to 0.\n Please check your input tiles/regions.\n  Read_kwargs {}'.format(read_kwargs))
-            # print("Negative coordinates.\n Defaulting to 0.\n Please check your input tiles/regions.\n  Read_kwargs {}".format(read_kwargs))
+        :returns: None.
+        """
+        if bounds['xr'] < 0 or bounds['yr'] < 0:
+            msg = (
+                'Negative coordinates.\n Defaulting to 0.\n '
+                'Please check your input tiles/regions.\n  Read_kwargs {}'
+            ).format(read_kwargs)
+            raise UserWarning(msg)
         if output_mode == 'regions' and (
-                xrmax > slide_dimensions['base_size_x'] or ybmax > slide_dimensions['base_size_y']):
-            ybt = np.where(
-                ybt < slide_dimensions['base_size_y'],
-                ybt,
-                slide_dimensions['base_size_y'])
-            xrt = np.where(
-                xrt < slide_dimensions['base_size_x'],
-                xrt,
-                slide_dimensions['base_size_x'])
-            raise UserWarning(
-                'Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}'.format(read_kwargs))
-            # print("Coordinates > image size.\n Defaulting to image boundaries.\n Please check your input tiles/regions. read_kwargs {}".format(read_kwargs))
+            bounds['xrmax'] > slide_dimensions['base_size_x'] or
+            bounds['ybmax'] > slide_dimensions['base_size_y']
+        ):
+            msg = (
+                'Coordinates > image size.\n Defaulting to image boundaries.\n '
+                'Please check your input tiles/regions. read_kwargs {}'
+            ).format(read_kwargs)
+            raise UserWarning(msg)
 
-        if output_mode == 'tiles':  # tile size (x, y)
-            xlo = np.floor(np.divide((xlt - xr), conv_mm_x)).astype(np.uint64)
-            yto = np.floor(np.divide((ytt - yr), conv_mm_y)).astype(np.uint64)
-            ho = yto + np.floor(np.divide((ybt - ytt), conv_mm_y)).astype(np.uint64)
-            wo = xlo + np.floor(np.divide((xrt - xlt), conv_mm_x)).astype(np.uint64)
-        elif output_mode == 'regions':
-            xlo = np.floor(np.divide((xlt - xr), conv_mm_x)).astype(np.uint64)
-            yto = np.floor(np.divide((ytt - yr), conv_mm_y)).astype(np.uint64)
-            ho = yto + np.floor(np.divide((ybt - ytt), conv_mm_y)).astype(np.uint64)
-            wo = xlo + np.floor(np.divide((xrt - xlt), conv_mm_x)).astype(np.uint64)
-        else:
-            raise ValueError('Output mode not supported by read method.')
+    @staticmethod
+    def _output_slices(
+        output_mode: str, xlt, ytt, xrt, ybt, xr, yr, conv_mm_x, conv_mm_y,
+    ) -> tuple:
+        """Return output slice coordinates for tiles or regions.
 
-        h_max = np.max(ho).item()
-        w_max = np.max(wo).item()
+        :returns: Left, top, bottom, and right output slice arrays.
+        """
+        if output_mode not in {'tiles', 'regions'}:
+            msg = 'Output mode not supported by read method.'
+            raise ValueError(msg)
+        xlo = np.floor(np.divide((xlt - xr), conv_mm_x)).astype(np.uint64)
+        yto = np.floor(np.divide((ytt - yr), conv_mm_y)).astype(np.uint64)
+        ho = yto + np.floor(np.divide((ybt - ytt), conv_mm_y)).astype(np.uint64)
+        wo = xlo + np.floor(np.divide((xrt - xlt), conv_mm_x)).astype(np.uint64)
+        return xlo, yto, ho, wo
 
-        no_scale = False
-        #
-        if slide_dimensions['scale_mode'] == 'mm':
-            if slide_dimensions['base_mm_x'] == target_scale['mm_x'] and slide_dimensions['base_mm_y'] == target_scale['mm_y']:
-                # no scaling needed
-                no_scale = True
-                kwargs = dict(
-                    region=dict(
-                        left=xr.item(),
-                        top=yr.item(),
-                        height=h.item(),
-                        width=w.item(),
-                        units='base_pixels'),
-                    format='numpy',
-                )
-            else:
-                kwargs = dict(
-                    sourceRegion=dict(
-                        left=xr.item(),
-                        top=yr.item(),
-                        height=h.item(),
-                        width=w.item(),
-                        units='base_pixels'),
-                    targetScale=target_scale,
-                    format='numpy',
-                )
-        elif slide_dimensions['scale_mode'] == 'mag':
-            if slide_dimensions['base_magnification'] == slide_dimensions['target_magnification']:
-                # no scaling needed
-                no_scale = True
-                kwargs = dict(
-                    region=dict(
-                        left=xr.item(),
-                        top=yr.item(),
-                        height=h.item(),
-                        width=w.item(),
-                        units='base_pixels'),
-                    format='numpy',
-                )
-            else:
-                kwargs = dict(
-                    sourceRegion=dict(
-                        left=xr.item(),
-                        top=yr.item(),
-                        height=h.item(),
-                        width=w.item(),
-                        units='base_pixels'),
-                    targetScale=target_scale,
-                    format='numpy',
-                )
-        else:
-            raise ValueError('Invalid mode provided')
+    @staticmethod
+    def _read_chunk(
+        source: 'tilesource.TileSource', slide_dimensions: dict, target_scale: dict, bounds: dict,
+    ) -> np.ndarray:
+        """Read and normalize one worker chunk from the tile source.
 
+        :returns: RGB numpy chunk data.
+        """
+        no_scale, kwargs = EagerIterator._chunk_read_kwargs(slide_dimensions, target_scale, bounds)
         if no_scale:
             chunk, _ = source.getRegion(**kwargs)  # type: ignore
         else:
-            chunk, _ = source.getRegionAtAnotherScale(
-                **kwargs,  # type: ignore
-            )
-
+            chunk, _ = source.getRegionAtAnotherScale(**kwargs)  # type: ignore
         assert isinstance(chunk, np.ndarray), 'Returned chunk must be a numpy array'
-        chunk = rgba2rgb(chunk)
+        return rgba2rgb(chunk)
 
+    @staticmethod
+    def _chunk_read_kwargs(
+        slide_dimensions: dict, target_scale: dict, bounds: dict,
+    ) -> tuple[bool, dict]:
+        """Return source read kwargs and whether scaling can be skipped.
+
+        :returns: A no-scale flag and keyword arguments for the source read.
+        """
+        source_region = dict(
+            left=bounds['xr'].item(),
+            top=bounds['yr'].item(),
+            height=bounds['h'].item(),
+            width=bounds['w'].item(),
+            units='base_pixels',
+        )
+        if EagerIterator._is_no_scale_read(slide_dimensions, target_scale):
+            return True, dict(region=source_region, format='numpy')
+        return False, dict(sourceRegion=source_region, targetScale=target_scale, format='numpy')
+
+    @staticmethod
+    def _is_no_scale_read(slide_dimensions: dict, target_scale: dict) -> bool:
+        """Return whether a worker chunk can be read without scale conversion.
+
+        :returns: True when the requested target scale matches the base scale.
+        """
+        if slide_dimensions['scale_mode'] == 'mm':
+            return (
+                slide_dimensions['base_mm_x'] == target_scale['mm_x'] and
+                slide_dimensions['base_mm_y'] == target_scale['mm_y']
+            )
+        if slide_dimensions['scale_mode'] == 'mag':
+            return (
+                slide_dimensions['base_magnification'] ==
+                slide_dimensions['target_magnification']
+            )
+        msg = 'Invalid mode provided'
+        raise ValueError(msg)
+
+    @staticmethod
+    def _extract_worker_tiles(
+        output_mode: str,
+        chunk: np.ndarray,
+        slide_dimensions: dict,
+        xlt,
+        xrt,
+        ytt,
+        ybt,
+        xlo,
+        wo,
+        yto,
+        ho,
+        tile_size_dict: dict,
+        region: Optional[Dict[str, Any]],
+        pad_mode: str,
+        pad_fill_mode: str,
+    ) -> list:
+        """Extract individual tiles or regions from a worker chunk.
+
+        :returns: List of extracted tile arrays.
+        """
         if output_mode == 'tiles':
-            chunk = pad_chunk_if_necessary(
-                slide_dimensions,
-                chunk,
-                xlt,
-                xrt,
-                ytt,
-                ybt,
-                w_max,
-                h_max,
-                pad_mode,
-                pad_fill_mode)
-            if region is not None:
-                tiles = [
-                    chunk[yt: h, xl: w, :].astype(chunk.dtype) if h == tile_size_dict['height'] and w == tile_size_dict['width'] else pad_tile(
-                        chunk[yt: h, xl: w, :].astype(
-                            chunk.dtype), tile_size_dict['height'], tile_size_dict['width'], 'right_bottom', pad_fill_mode,
-                    )
-                    for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
-                ]
-            else:
-                tiles = [
-                    chunk[yt: h, xl: w, :].astype(chunk.dtype)
-                    for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
-                ]
-        elif output_mode == 'regions':
-            tiles = [
-                pad_tile(chunk[yt:h,
-                               xl:w,
-                               :].astype(chunk.dtype),
-                         tile_size_dict['height'],
-                         tile_size_dict['width'],
-                         pad_mode,
-                         pad_fill_mode)
-                for (xl, w, yt, h) in zip(xlo, wo, yto, ho)
+            return EagerIterator._extract_tile_mode_outputs(
+                chunk, slide_dimensions, xlt, xrt, ytt, ybt, xlo, wo, yto, ho,
+                tile_size_dict, region, pad_mode, pad_fill_mode,
+            )
+        if output_mode == 'regions':
+            return EagerIterator._extract_region_mode_outputs(
+                chunk, xlo, wo, yto, ho, tile_size_dict, pad_mode, pad_fill_mode,
+            )
+        msg = 'Output mode not supported by read method.'
+        raise ValueError(msg)
+
+    @staticmethod
+    def _extract_tile_mode_outputs(
+        chunk: np.ndarray,
+        slide_dimensions: dict,
+        xlt,
+        xrt,
+        ytt,
+        ybt,
+        xlo,
+        wo,
+        yto,
+        ho,
+        tile_size_dict: dict,
+        region: Optional[Dict[str, Any]],
+        pad_mode: str,
+        pad_fill_mode: str,
+    ) -> list:
+        """Extract tile-mode outputs from a worker chunk.
+
+        :returns: List of tile arrays.
+        """
+        h_max = np.max(ho).item()
+        w_max = np.max(wo).item()
+        chunk = pad_chunk_if_necessary(
+            slide_dimensions, chunk, xlt, xrt, ytt, ybt, w_max, h_max, pad_mode, pad_fill_mode,
+        )
+        if region is None:
+            return [
+                chunk[yt:h, xl:w, :].astype(chunk.dtype)
+                for (xl, w, yt, h) in zip(xlo, wo, yto, ho, strict=False)
             ]
+        return [
+            EagerIterator._pad_tile_if_needed(
+                chunk[yt:h, xl:w, :].astype(chunk.dtype), h, w, tile_size_dict, pad_fill_mode,
+            )
+            for (xl, w, yt, h) in zip(xlo, wo, yto, ho, strict=False)
+        ]
 
-        # Don't change to target dtype until after transform
-        if transform:
-            if transform == _EAGER_FN_TRANSFORM_SENTINEL:
-                transform = eager_fn.get_transform()
-                if transform is None:
-                    raise ValueError('Eager transform not set in eager_utils.eager_fn')
-            if 'albumentations.core.composition.Compose' in str(type(transform)):
-                tiles = [
-                    transform(image=tile)['image'].astype(dtype)
-                    for tile in tiles
-                ]
-            elif 'torchvision.transforms' in str(type(transform)):
-                tiles = [
-                    transform(tile)
-                    for tile in tiles
-                ]
-            else:
-                # raise(Exception("Reached callable case"))
-                try:
-                    import torch
-                except Exception:
-                    torch = None
+    @staticmethod
+    def _pad_tile_if_needed(
+        tile: np.ndarray, height: int, width: int, tile_size_dict: dict, pad_fill_mode: str,
+    ):
+        """Pad a tile when it is smaller than the requested output size.
 
-                def _cast_callable_output(tile_out):
-                    if isinstance(tile_out, np.ndarray):
-                        return tile_out.astype(dtype)
-                    if torch is not None and isinstance(tile_out, torch.Tensor):
-                        return tile_out.to(dtype=dtype) if dtype is not None else tile_out
-                    raise ValueError('Transform callable must return a numpy array or torch.Tensor')
+        :returns: The original or padded tile array.
+        """
+        if height == tile_size_dict['height'] and width == tile_size_dict['width']:
+            return tile
+        return pad_tile(
+            tile, tile_size_dict['height'], tile_size_dict['width'], 'right_bottom', pad_fill_mode,
+        )
 
-                if callable_arg_num == 1:
-                    tiles = [
-                        _cast_callable_output(transform(tile))
-                        for tile in tiles
-                    ]
-                elif callable_arg_num == 3:
-                    if transform_save_mode == 'tile_x_y':
-                        tiles = [
-                            _cast_callable_output(transform(tile, x, y))
-                            for tile, x, y in zip(tiles, tile_x, tile_y)
-                        ]
-                    elif transform_save_mode == 'region_x_y':
-                        tiles = [
-                            _cast_callable_output(transform(tile, x, y))
-                            for tile, x, y in zip(tiles, xlt, ytt)
-                        ]
+    @staticmethod
+    def _extract_region_mode_outputs(
+        chunk: np.ndarray,
+        xlo,
+        wo,
+        yto,
+        ho,
+        tile_size_dict: dict,
+        pad_mode: str,
+        pad_fill_mode: str,
+    ) -> list:
+        """Extract region-mode outputs from a worker chunk.
 
+        :returns: List of padded region arrays.
+        """
+        return [
+            pad_tile(
+                chunk[yt:h, xl:w, :].astype(chunk.dtype),
+                tile_size_dict['height'],
+                tile_size_dict['width'],
+                pad_mode,
+                pad_fill_mode,
+            )
+            for (xl, w, yt, h) in zip(xlo, wo, yto, ho, strict=False)
+        ]
+
+    @staticmethod
+    def _apply_worker_transform(
+        tiles: list,
+        transform: Optional[Callable],
+        dtype: np.dtype,
+        callable_arg_num: Optional[int],
+        transform_save_mode: Optional[str],
+        tile_x,
+        tile_y,
+        xlt,
+        ytt,
+    ) -> list:
+        """Apply an optional transform to worker tile outputs.
+
+        :returns: Transformed tile outputs.
+        """
+        if not transform:
+            return tiles
+        transform = EagerIterator._resolve_worker_transform(transform)
+        if 'albumentations.core.composition.Compose' in str(type(transform)):
+            return [transform(image=tile)['image'].astype(dtype) for tile in tiles]
+        if 'torchvision.transforms' in str(type(transform)):
+            return [transform(tile) for tile in tiles]
+        return EagerIterator._apply_callable_worker_transform(
+            tiles, transform, dtype, callable_arg_num, transform_save_mode,
+            tile_x, tile_y, xlt, ytt,
+        )
+
+    @staticmethod
+    def _resolve_worker_transform(transform: Callable) -> Callable:
+        """Resolve a sentinel transform into the process-local callable.
+
+        :returns: Transform callable for this worker.
+        """
+        if transform != _EAGER_FN_TRANSFORM_SENTINEL:
+            return transform
+        transform = eager_fn.get_transform()
+        if transform is None:
+            msg = 'Eager transform not set in eager_utils.eager_fn'
+            raise ValueError(msg)
+        return transform
+
+    @staticmethod
+    def _apply_callable_worker_transform(
+        tiles: list,
+        transform: Callable,
+        dtype: np.dtype,
+        callable_arg_num: Optional[int],
+        transform_save_mode: Optional[str],
+        tile_x,
+        tile_y,
+        xlt,
+        ytt,
+    ) -> list:
+        """Apply a user callable transform to worker tile outputs.
+
+        :returns: Transformed tile outputs.
+        """
+        torch = EagerIterator._optional_torch_module()
+        if callable_arg_num == 1:
+            return [
+                EagerIterator._cast_callable_output(transform(tile), dtype, torch) for tile in tiles
+            ]
+        if callable_arg_num == 3 and transform_save_mode == 'tile_x_y':
+            return [
+                EagerIterator._cast_callable_output(transform(tile, x, y), dtype, torch)
+                for tile, x, y in zip(tiles, tile_x, tile_y, strict=False)
+            ]
+        if callable_arg_num == 3 and transform_save_mode == 'region_x_y':
+            return [
+                EagerIterator._cast_callable_output(transform(tile, x, y), dtype, torch)
+                for tile, x, y in zip(tiles, xlt, ytt, strict=False)
+            ]
+        return tiles
+
+    @staticmethod
+    def _optional_torch_module():
+        """Return torch if available for transform output checks.
+
+        :returns: The torch module or None.
+        """
+        try:
+            import torch
+        except Exception:
+            return None
+        return torch
+
+    @staticmethod
+    def _cast_callable_output(tile_out, dtype: np.dtype, torch):
+        """Cast a callable transform output to the requested dtype.
+
+        :returns: A numpy array or torch tensor transform output.
+        """
+        if isinstance(tile_out, np.ndarray):
+            return tile_out.astype(dtype)
+        if torch is not None and isinstance(tile_out, torch.Tensor):
+            return tile_out.to(dtype=dtype) if dtype is not None else tile_out
+        msg = 'Transform callable must return a numpy array or torch.Tensor'
+        raise ValueError(msg)
+
+    @staticmethod
+    def _insert_worker_tiles(
+        sharrs: list,
+        tiles: list,
+        offset: int,
+        batch: int,
+        nchw: bool,
+        worker_transform_scale: Optional[Callable],
+        mm_x,
+        mm_y,
+    ) -> None:
+        """Insert worker tile outputs into shared arrays.
+
+        :returns: None.
+        """
         for i, tile in enumerate(tiles):
             sharr_index, slice_index = divmod(offset + i, batch)
-
-            # Expect transformer to control shape of output
             if nchw and isinstance(tile, np.ndarray):
                 sharrs[sharr_index].insert(np.transpose(tile, [2, 0, 1]), slice_index)
             else:
@@ -857,8 +1306,12 @@ class EagerIterator:
                 sharrs[sharr_index].insert_mm(mm_x[i], mm_y[i], slice_index)
 
     def _submitfn(self, read_kwargs: list, sharrs: list, offset: int):
-        """
-        Submit a read operation to the process pool.
+        """Submit one eager read task to the process pool.
+
+        :param read_kwargs: Read argument rows for the worker task.
+        :param sharrs: SharedArray buffers filled by the worker task.
+        :param offset: Batch offset for the first output tile in this task.
+        :returns: A Future for the submitted worker task.
         """
         return self.pool.submit(
             EagerIterator.read,
@@ -881,17 +1334,18 @@ class EagerIterator:
         )
 
     def _fill(self):
+        """Fill the prefetch queue with eager read tasks.
+
+        :returns: None.
         """
-        Fill the queue with read operations to be processed by the process pool.
-        """
+
         def _fill_while():
-            """
-            A while loop used by the _fill method to fill the queue with read operations to be processed by the process pool.
-            """
+            """Fill the queue with read operations for the process pool."""
             while len(self.queue) < self.prefetch and self.pos < len(self.read_kwargs):
                 """if the last read from the prior batch spanned batch boundaries then
                 the leftmost element in self.queue contains the futures, shared array,
-                and read_kwargs to start the current batch"""
+                and read_kwargs to start the current batch
+                """
                 if self.overflow:
                     while len(self.queue) == 0:
                         time.sleep(0.01)
@@ -900,24 +1354,24 @@ class EagerIterator:
                         batch_kwargs = np.expand_dims(batch_kwargs, axis=0)
                 else:
                     """last read aligned with batch boundary, create new shared array,
-                    and read_kwargs, futures containers"""
+                    and read_kwargs, futures containers
+                    """
                     tiles = SharedArray(
-                        self.out_dims,
-                        self.dtype,
-                        self.is_torch,
-                        enable_mm=self._enable_dynamic_mm)
+                        self.out_dims, self.dtype, self.is_torch, enable_mm=self._enable_dynamic_mm,
+                    )
                     futures = []
                     # batch_kwargs = []
                     batch_kwargs = np.empty((0, self.read_kwargs[0].shape[1]))
 
                 """submit enough jobs to fill at least one batch - a single job may
                 fill multiple batches - or multiple jobs may be needed to fill one
-                batch"""
+                batch
+                """
                 offset = self.overflow
                 batches = 1
                 tiles = [tiles]
                 while len(batch_kwargs) < self.batch and self.pos < len(
-                        self.read_kwargs,
+                    self.read_kwargs,
                 ):
                     # number of batches spanned by this read
                     reads = self.read_kwargs[self.pos]
@@ -938,7 +1392,8 @@ class EagerIterator:
                                 self.out_dims,
                                 self.dtype,
                                 self.is_torch,
-                                enable_mm=self._enable_dynamic_mm)
+                                enable_mm=self._enable_dynamic_mm,
+                            )
                             for _ in range(batches - 1)
                         ],
                     ]
@@ -946,7 +1401,8 @@ class EagerIterator:
                     """submit job - read into first array in `tiles` at slice `offset`.
                     overflow to subsequent arrays if this read spans multiple batches.
                     if multiple reads are required to fill this batch then increment
-                    the offset and submit another job on the next iteration"""
+                    the offset and submit another job on the next iteration
+                    """
                     futures.append(self._submitfn(reads, tiles, offset))
                     offset = offset + len(reads)
                     batch_kwargs = np.concatenate([batch_kwargs, reads], axis=0)
@@ -963,8 +1419,9 @@ class EagerIterator:
                 ]
 
                 # enqueue batches
-                for f, t, b in zip(futures, tiles, batch_kwargs_batches):
+                for f, t, b in zip(futures, tiles, batch_kwargs_batches, strict=False):
                     self.queue.appendleft((f, t, b))
+
         try:
             if self.is_torch:
                 with _PyTorchThreadingContext():
@@ -973,6 +1430,6 @@ class EagerIterator:
                 _fill_while()
 
         except Exception as error:
-            print('Exception in _fill: {}'.format(error))
             self.pool.shutdown(wait=False, cancel_futures=True)
-            raise Exception('Exception in _fill: {}'.format(error))
+            msg = 'Exception in _fill: {}'.format(error)
+            raise Exception(msg) from error
