@@ -76,6 +76,10 @@ html_permalinks_icon = '&#128279'
 
 autoclass_content = 'both'
 
+autodoc_type_aliases = {
+    'TileSource': 'large_image.tilesource.base.TileSource',
+}
+
 mermaid_version = '10.6.0'
 mermaid_init_js = 'mermaid.initialize({startOnLoad:true});'
 mermaid_width = '50%'
