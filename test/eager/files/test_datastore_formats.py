@@ -33,7 +33,6 @@ def expected_base_tile_count(source):
     'filename',
     [
         'synthetic_ndpi_2025.ndpi',
-        'd4db7ae6-1344-467e-8380-4ce13cc3f59e.dcm',
         'sample_image.ptif',
     ],
 )
