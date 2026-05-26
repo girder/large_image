@@ -154,7 +154,7 @@ commands:
 jobs:
   testdocker:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     steps:
       - checkout
       - run:
@@ -172,7 +172,7 @@ jobs:
             fi
   testdocker-lts:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     steps:
       - checkout
       - run:
@@ -190,7 +190,7 @@ jobs:
             fi
   py310:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -204,7 +204,7 @@ jobs:
           path: build/test/artifacts
   py311:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -218,7 +218,7 @@ jobs:
           path: build/test/artifacts
   py312:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -232,7 +232,7 @@ jobs:
           path: build/test/artifacts
   py313:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -247,7 +247,7 @@ jobs:
           path: build/test/artifacts
   py314:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -279,7 +279,7 @@ jobs:
           paths: docs
   compare:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
