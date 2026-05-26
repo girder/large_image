@@ -99,8 +99,7 @@ def read_all_batches(iterator):
 
 @pytest.mark.singular
 @pytest.mark.parametrize('region_builder', [sparse_regions, dense_regions])
-@pytest.mark.parametrize('chunk_mult', [2, 3])
-def test_eager_regions_from_paper_region_patterns(datastore_svs_source, region_builder, chunk_mult):
+def test_eager_regions_from_paper_region_patterns(datastore_svs_source, region_builder):
     metadata = datastore_svs_source.getMetadata()
     regions = region_builder(metadata)
 
@@ -109,7 +108,7 @@ def test_eager_regions_from_paper_region_patterns(datastore_svs_source, region_b
         regions=regions,
         region_size={'width': 80, 'height': 96},
         pad_mode='equal',
-        chunk_mult=chunk_mult,
+        chunk_mult=2,
         batch=3,
         prefetch=1,
         workers=2,

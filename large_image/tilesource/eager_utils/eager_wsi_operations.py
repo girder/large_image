@@ -213,6 +213,76 @@ def generate_assumptions_for_x_y_given_mag(x, y, z):
     return x, y, z
 
 
+def _scale_values_from_magnification(source_meta: dict, scale: Dict[str, Any]) -> tuple:
+    """Calculate scaling values for a magnification scale request."""
+    i, j, k, x, y, z = None, None, None, None, None, None
+    if scale['magnification'] is None:
+        k = source_meta['magnification']
+        z = source_meta['magnification']
+        i, j = get_base_mm_from_meta(source_meta)
+        x, y = i, j
+    elif isinstance(scale['magnification'], (int, float)):
+        k = return_target_scaling_feature(scale['magnification'])
+        z = source_meta['magnification']
+
+        if k is None:
+            msg = 'Unable to determine a target magnification with the provided value'
+            raise Exception(msg)
+
+        try:
+            x, y = get_base_mm_from_meta(source_meta)
+            i = x * (z / k)
+            j = y * (z / k)
+        except Exception:
+            warnings.warn('Unable to define scaling from mm to mag', UserWarning, stacklevel=2)
+
+    if k is None:
+        msg = 'Not a valid scale for the selected mode'
+        raise Exception(msg)
+
+    return i, j, k, x, y, z
+
+
+def _scale_values_from_mm(source_meta: dict, scale: Dict[str, Any], values: tuple) -> tuple:
+    """Calculate scaling values for a millimeter pixel-size scale request."""
+    i, j, k, x, y, z = values
+    if scale['mm_x'] is None and scale['mm_y'] is None:
+        z = source_meta['magnification']
+        k = source_meta['magnification']
+        i, j = get_base_mm_from_meta(source_meta)
+    elif isinstance(scale['mm_x'], float) and isinstance(scale['mm_y'], float):
+        i = return_target_scaling_feature(scale['mm_x'])
+        j = return_target_scaling_feature(scale['mm_y'])
+        z = source_meta['magnification']
+        x, y = get_base_mm_from_meta(source_meta)
+        zoom_x = z * (x / i)
+        zoom_y = z * (y / j)
+        if zoom_x != zoom_y:
+            warnings.warn(
+                (
+                    'Pixel dimensions for x and y are not the same. '
+                    'X = {}, Y = {}, Zoom X = {}, Zoom Y = {}'
+                ).format(x, y, zoom_x, zoom_y),
+                UserWarning,
+                stacklevel=2,
+            )
+        else:
+            k = zoom_x
+
+        if 'assume' in scale and scale['assume'] and x is None and y is None:
+            x, y, z = generate_assumptions_for_x_y_given_mag(x, y, z)
+
+    else:
+        msg = 'Scale for mm mode must be a tuple of (x, y)'
+        raise Exception(msg)
+
+    if i is None or j is None:
+        msg = 'Not a valid scale for the selected mode'
+        raise Exception(msg)
+
+    return i, j, k, x, y, z
+
+
 def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, Any]] = None):
     """Calculate base and target scaling values from source metadata.
 
@@ -220,73 +290,17 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
     :param scale: Scale request with either magnification or mm_x and mm_y values.
     :returns: A dictionary with base and target mm and magnification values.
     """
-    # Define none for both target (i, j, k) and base (x, y, z) values
-    i, j, k, x, y, z = None, None, None, None, None, None
+    values = (None, None, None, None, None, None)
     if scale is None:
         scale = {'magnification': None}
 
     if 'magnification' in scale:
-        if scale['magnification'] is None:
-            k = source_meta['magnification']
-            z = source_meta['magnification']
-            i, j = get_base_mm_from_meta(source_meta)
-            x, y = i, j
-        elif isinstance(scale['magnification'], (int, float)):
-            k = return_target_scaling_feature(scale['magnification'])
-            z = source_meta['magnification']
-
-            if k is None:
-                msg = 'Unable to determine a target magnification with the provided value'
-                raise Exception(msg)
-
-            try:
-                x, y = get_base_mm_from_meta(source_meta)
-                i = x * (z / k)
-                j = y * (z / k)
-            except Exception:
-                warnings.warn('Unable to define scaling from mm to mag', UserWarning, stacklevel=2)
-
-        if k is None:
-            msg = 'Not a valid scale for the selected mode'
-            raise Exception(msg)
-
+        values = _scale_values_from_magnification(source_meta, scale)
     if 'mm_x' in scale or 'mm_y' in scale:
-        if scale['mm_x'] is None and scale['mm_y'] is None:
-            z = source_meta['magnification']
-            k = source_meta['magnification']
-            i, j = get_base_mm_from_meta(source_meta)
-        elif isinstance(scale['mm_x'], float) and isinstance(scale['mm_y'], float):
-            i, j = scale['mm_x'], scale['mm_y']
-            i = return_target_scaling_feature(i)
-            j = return_target_scaling_feature(j)
-            z = source_meta['magnification']
-            x, y = get_base_mm_from_meta(source_meta)
-            zoom_x = z * (x / i)
-            zoom_y = z * (y / j)
-            if zoom_x != zoom_y:
-                warnings.warn(
-                    (
-                        'Pixel dimensions for x and y are not the same. '
-                        'X = {}, Y = {}, Zoom X = {}, Zoom Y = {}'
-                    ).format(x, y, zoom_x, zoom_y),
-                    UserWarning,
-                    stacklevel=2,
-                )
-            else:
-                k = zoom_x
+        values = _scale_values_from_mm(source_meta, scale, values)
 
-            if 'assume' in scale and scale['assume'] and x is None and y is None:
-                x, y, z = generate_assumptions_for_x_y_given_mag(x, y, z)
-
-        else:
-            msg = 'Scale for mm mode must be a tuple of (x, y)'
-            raise Exception(msg)
-
-        if i is None or j is None:
-            msg = 'Not a valid scale for the selected mode'
-            raise Exception(msg)
-
-    out = {
+    i, j, k, x, y, z = values
+    return {
         'base_mm_x': x,
         'base_mm_y': y,
         'base_mag': z,
@@ -294,8 +308,6 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
         'target_mm_y': j,
         'target_mag': k,
     }
-
-    return out
 
 
 def _normalize_region_bounds(region: Dict[str, Any]) -> None:
