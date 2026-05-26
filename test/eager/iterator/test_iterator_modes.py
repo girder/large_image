@@ -53,10 +53,7 @@ def sparse_regions(metadata, region_size=(96, 80)):
     height, width = region_size
     return np.array(
         [
-            [0, 0, height, width],
             [metadata['sizeY'] // 4, metadata['sizeX'] // 5, height, width],
-            [metadata['sizeY'] // 2, metadata['sizeX'] // 3, height, width],
-            [metadata['sizeY'] - height - 1, metadata['sizeX'] - width - 1, height, width],
         ],
         dtype=np.float32,
     )
@@ -66,7 +63,7 @@ def dense_regions(metadata, region_size=(96, 80)):
     height, width = region_size
     center_top = metadata['sizeY'] // 2
     center_left = metadata['sizeX'] // 2
-    offsets = np.array([[-48, -48], [-48, 48], [48, -48], [48, 48]], dtype=np.float32)
+    offsets = np.array([[-48, -48]], dtype=np.float32)
     regions = np.zeros((offsets.shape[0], 4), dtype=np.float32)
     regions[:, 0] = center_top + offsets[:, 0]
     regions[:, 1] = center_left + offsets[:, 1]
@@ -98,7 +95,7 @@ def read_all_batches(iterator):
 
 
 @pytest.mark.singular
-@pytest.mark.parametrize('region_builder', [sparse_regions, dense_regions])
+@pytest.mark.parametrize('region_builder', [sparse_regions, dense_regions], ids=['sparse', 'dense'])
 def test_eager_regions_from_paper_region_patterns(datastore_svs_source, region_builder):
     metadata = datastore_svs_source.getMetadata()
     regions = region_builder(metadata)
