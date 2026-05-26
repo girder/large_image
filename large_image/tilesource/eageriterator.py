@@ -946,7 +946,9 @@ class EagerIterator:
 
     @staticmethod
     def _resolve_worker_scale_data(
-        read_kwargs: np.ndarray, slide_dimensions: dict, worker_transform_scale: Optional[Union[Callable, str]],
+        read_kwargs: np.ndarray,
+        slide_dimensions: dict,
+        worker_transform_scale: Optional[Union[Callable, str]],
     ) -> tuple:
         """Resolve worker read coordinates and target scale.
 
