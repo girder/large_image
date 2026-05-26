@@ -222,6 +222,8 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
     """
     # Define none for both target (i, j, k) and base (x, y, z) values
     i, j, k, x, y, z = None, None, None, None, None, None
+    if scale is None:
+        scale = {'magnification': None}
 
     if 'magnification' in scale:
         if scale['magnification'] is None:
@@ -506,7 +508,7 @@ def _convert_region_scales(
     :param source_scale: Source scale required for mag-pixel regions.
     :returns: Pixel, millimeter, and base-pixel converted regions.
     """
-    convert_kwargs = dict(
+    convert_kwargs: Dict[str, Any] = dict(
         sourceRegion=_source_region_from_slide_dimensions(slide_dimensions),
         targetScale=_target_scale_from_slide_dimensions(slide_dimensions),
     )

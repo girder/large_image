@@ -5,7 +5,7 @@ import functools
 import multiprocessing.shared_memory
 import operator
 import weakref
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 
@@ -20,10 +20,10 @@ class SharedArray:
     def __init__(
         self,
         shape: Union[tuple, list],
-        dtype: Union[np.dtype, 'torch.dtype'],
+        dtype: Any,
         is_torch: bool = False,
         enable_mm: bool = False,
-    ):  # type: ignore
+    ):
         """Create a shared-memory array.
 
         :param shape: Shape of the image batch buffer.
@@ -35,19 +35,22 @@ class SharedArray:
         self.shape = shape
         self.is_torch = is_torch
         self.dtype = dtype
+        self.buf: Any
         self.enable_mm = enable_mm
         self.mm_dtype = np.float32
         # Per-item runtime scale metadata in [mm_y, mm_x] order
         self.mm_shape = (shape[0], 2)
 
         if is_torch:
-            import torch.multiprocessing  # type: ignore
+            import torch.multiprocessing
 
             self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype.itemsize
             self.shm_array = multiprocessing.shared_memory.SharedMemory(
                 create=True, size=self.shm_size,
             )
-            self.buf = torch.frombuffer(self.shm_array.buf, dtype=self.dtype).reshape(self.shape)
+            self.buf = torch.frombuffer(
+                self.shm_array.buf, dtype=self.dtype,
+            ).reshape(self.shape)
         else:
             if callable(self.dtype):
                 self.shm_size = functools.reduce(operator.mul, shape, 1) * self.dtype().itemsize
@@ -169,7 +172,7 @@ class SharedArray:
             functools.reduce(operator.mul, self.mm_shape, 1) * np.dtype(self.mm_dtype).itemsize
         )
 
-    def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int):  # type: ignore
+    def insert(self, arr: Union[np.ndarray, 'torch.Tensor'], i: int):
         """Insert an array into a batch slot.
 
         :param arr: Numpy array or torch tensor to insert.
@@ -192,7 +195,7 @@ class SharedArray:
         self.mm_buf[i, 0] = mm_y
         self.mm_buf[i, 1] = mm_x
 
-    def copy(self, arr: Union[np.ndarray, 'torch.Tensor']):  # type: ignore
+    def copy(self, arr: Union[np.ndarray, 'torch.Tensor']):
         """Copy an array into the shared-memory buffer.
 
         :param arr: Numpy array or torch tensor to copy.
@@ -200,7 +203,7 @@ class SharedArray:
         """
         self.shape = arr.shape
         if self.is_torch:
-            import torch  # type: ignore
+            import torch
 
             self.buf = torch.frombuffer(self.shm_array.buf, dtype=self.dtype).reshape(self.shape)
         else:
@@ -220,15 +223,16 @@ class SharedArray:
         :returns: A numpy array or torch tensor backed by shared memory.
         """
         if self.is_torch:
-            import torch  # type: ignore
+            import torch
 
+            shm_buf = cast(Any, self.shm_array.buf)
             view_buf = torch.frombuffer(
-                self.shm_array.buf[: self.shm_size], dtype=self.dtype,
+                shm_buf[: self.shm_size], dtype=self.dtype,
             ).reshape(self.shape)
             return view_buf
         # copy bytes for view
-        view_buf = np.ndarray(self.shape, self.dtype, buffer=self.shm_array.buf)
-        return view_buf
+        np_view_buf = np.ndarray(self.shape, self.dtype, buffer=self.shm_array.buf)
+        return np_view_buf
 
     def mm_view(self):
         """Return a view of the shared mm scale metadata buffer.
@@ -251,7 +255,7 @@ class SharedArray:
         """
         return self.buf[idx]
 
-    def __array__(self, dtype: Union[np.dtype, 'torch.dtype'] = None):  # type: ignore
+    def __array__(self, dtype: Any = None):
         """Return a numpy copy of the shared image buffer.
 
         :param dtype: Optional dtype for the returned numpy array.
@@ -284,13 +288,13 @@ class SharedArray:
         mm_shm_name = state.pop('mm_shm_name')
         self.__dict__.update(state)
         self._closed = False  # Reset closed state when unpickling
-        self._exported_refs = weakref.WeakSet()  # Initialize reference tracking
+        self._exported_refs: weakref.WeakSet[Any] = weakref.WeakSet()
         self.shm_array = multiprocessing.shared_memory.SharedMemory(shm_name)
         if self.enable_mm:
             self.mm_shm_array = multiprocessing.shared_memory.SharedMemory(mm_shm_name)
 
         if self.is_torch:
-            import torch  # type: ignore
+            import torch
 
             self.buf = torch.frombuffer(self.shm_array.buf, dtype=self.dtype).reshape(self.shape)
         else:

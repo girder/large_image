@@ -21,7 +21,7 @@ class _PyTorchThreadingContext:
         :returns: This context manager instance.
         """
         try:
-            import torch  # type: ignore
+            import torch
 
             self.torch_available = True
             # Save current settings
@@ -42,7 +42,7 @@ class _PyTorchThreadingContext:
         """
         if self.torch_available:
             try:
-                import torch  # type: ignore
+                import torch
 
                 # Restore original settings
                 if self.original_num_threads is not None:

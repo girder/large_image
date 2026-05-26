@@ -1,6 +1,5 @@
 """Share eager iterator callables with worker processes."""
 
-import sys
 from typing import Callable, Optional
 
 _eager_iter_transform: Optional[Callable] = None
@@ -13,7 +12,8 @@ def set_transform(fn: Callable) -> None:
     :param fn: Callable to apply to eager tiles in worker processes.
     :returns: None.
     """
-    sys.modules[__name__]._eager_iter_transform = fn
+    global _eager_iter_transform
+    _eager_iter_transform = fn
 
 
 def get_transform() -> Optional[Callable]:
@@ -21,7 +21,7 @@ def get_transform() -> Optional[Callable]:
 
     :returns: The callable set by set_transform, or None if unset.
     """
-    return getattr(sys.modules[__name__], '_eager_iter_transform', None)
+    return _eager_iter_transform
 
 
 def set_transform_scale(fn: Callable) -> None:
@@ -30,7 +30,8 @@ def set_transform_scale(fn: Callable) -> None:
     :param fn: Callable that computes read coordinates and target scale metadata.
     :returns: None.
     """
-    sys.modules[__name__]._eager_iter_transform_scale = fn
+    global _eager_iter_transform_scale
+    _eager_iter_transform_scale = fn
 
 
 def get_transform_scale() -> Optional[Callable]:
@@ -38,4 +39,4 @@ def get_transform_scale() -> Optional[Callable]:
 
     :returns: The callable set by set_transform_scale, or None if unset.
     """
-    return getattr(sys.modules[__name__], '_eager_iter_transform_scale', None)
+    return _eager_iter_transform_scale

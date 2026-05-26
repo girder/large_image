@@ -137,7 +137,7 @@ def return_constant_color(image: np.ndarray, pad_fill_mode: Any):
     elif isinstance(pad_fill_mode, tuple):
         constant_color = pad_fill_mode
     elif isinstance(pad_fill_mode, list):
-        constant_color = pad_fill_mode
+        constant_color = tuple(pad_fill_mode)
     else:
         msg = "Invalid pad_fill_mode.  Must be 'default', 'max', int or tuple."
         raise ValueError(msg)

@@ -28,7 +28,7 @@ def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
 
     # Split into chunks using group boundaries
     split_indices = np.where(np.diff(group_ids) != 0)[0] + 1
-    chunks = np.split(sorted_tiles, split_indices)
+    chunks: List[np.ndarray] = np.split(sorted_tiles, split_indices)
     chunks = [np.array(chunk) for chunk in chunks]
 
     return chunks
@@ -77,7 +77,7 @@ def gen_read_args_incomplete_grid(sorted_in: np.ndarray, chunk_size: int):
     """
     points = sorted_in[:, :2].astype(float)
     used = np.zeros(sorted_in.shape[0], dtype=bool)
-    chunks = []
+    chunks: List[np.ndarray] = []
 
     ok_chunk_size = int(chunk_size)
 
@@ -109,7 +109,7 @@ def chunks_from_kd_tree(
     :returns: The updated list of read argument chunks.
     """
     # version for grouped by tiles
-    chunk = []
+    chunk = np.empty((0, sorted_in.shape[1]), dtype=sorted_in.dtype)
 
     for i in range(sorted_in.shape[0]):
         if not used[i]:
@@ -155,6 +155,7 @@ def check_edge_condition(
     :param edge: If True, discard entries that extend beyond the base image.
     :returns: A tuple of filtered read arguments and the number discarded.
     """
+    diff_from_edge: Any
     if edge:
         condition = (
             (sorted_in[:, 7] < base_size_x) &
@@ -166,7 +167,7 @@ def check_edge_condition(
         diff_from_edge = np.sum(~condition)
     else:
         sorted_out = sorted_in
-        diff_from_edge = 0
+        diff_from_edge = np.int64(0)
 
     return sorted_out, diff_from_edge
 
@@ -268,8 +269,8 @@ def gen_read_args_for_tiles(
     chunk_size = chunk_mult**2
 
     # Sort tiles by row and column to maintain order
-    sorted_tiles = sorted(tiles, key=lambda x: (x[0], x[1]))
-    sorted_tiles = np.array(sorted_tiles, dtype=np.float32)
+    sorted_tile_list = sorted(tiles, key=lambda x: (x[0], x[1]))
+    sorted_tiles = np.array(sorted_tile_list, dtype=np.float32)
 
     # Make sure sorted tiles the right shape
     if len(sorted_tiles.shape) == 1:
