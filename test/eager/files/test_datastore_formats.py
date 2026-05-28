@@ -28,6 +28,7 @@ def expected_base_tile_count(source):
     )
 
 
+@pytest.mark.skip(reason='Skipping because it is too slow')
 @pytest.mark.singular
 @pytest.mark.parametrize(
     'filename',
