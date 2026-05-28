@@ -123,7 +123,7 @@ class RedisCache(BaseCache):
 
     @property
     def curritems(self) -> int:
-        return cast(int, self._client.dbsize())
+        return self._client.dbsize()
 
     @property
     def currsize(self) -> int:
