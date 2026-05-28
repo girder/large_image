@@ -67,7 +67,6 @@ RUN apt-get update && \
       # core girder \
       iptables \
       dnsutils \
-      universal-ctags \
       && \
     locale-gen en_US.UTF-8 && \
     find /usr/share/X11/locale -mindepth 1 -maxdepth 1 ! -name 'en_US*' ! -name 'C' ! -name 'en' -type d -exec rm -rf {} + && \
@@ -77,6 +76,9 @@ RUN apt-get update && \
     find / -xdev -name __pycache__ -type d -exec rm -r {} \+ && \
     rm -rf /etc/ssh/ssh_host* && \
     rm -rf /usr/share/vim/vim91/doc/* /usr/share/vim/vim91/tutor/* /usr/share/doc && \
+    curl -sSL "https://github.com/universal-ctags/ctags-nightly-build/releases/download/$(curl -s https://api.github.com/repos/universal-ctags/ctags-nightly-build/releases/latest | grep '"tag_name"' | head -1 | cut -d '"' -f 4)/uctags-$(curl -s https://api.github.com/repos/universal-ctags/ctags-nightly-build/releases/latest | grep '"tag_name"' | head -1 | cut -d '"' -f 4 | cut -d '+' -f 1)-linux-x86_64.deb" -o /tmp/uctags.deb && \
+    dpkg -i /tmp/uctags.deb && \
+    rm /tmp/uctags.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/cache/* && \
     rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /usr && \
     rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /var
