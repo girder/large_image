@@ -5,7 +5,7 @@ import torchvision.transforms.v2 as v2
 import large_image
 
 from ...datastore import datastore
-from ..eager_helpers import run_eager_iterator_with_pytorch_transform
+from ..eager_helpers import EAGER_TEST_REGION, run_eager_iterator_with_pytorch_transform
 
 
 @pytest.mark.singular
@@ -37,6 +37,7 @@ def test_pytorch_v2_transform(transform: v2.Compose):
     output_image_count, tile_image_count, count = run_eager_iterator_with_pytorch_transform(
         source,
         transform,
+        region=dict(EAGER_TEST_REGION),
     )
     assert output_image_count == tile_image_count
     assert count == tile_image_count

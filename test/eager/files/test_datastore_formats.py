@@ -1,11 +1,10 @@
-import math
-
 import numpy as np
 import pytest
 
 import large_image
 
 from ...datastore import datastore
+from ..eager_helpers import EAGER_TEST_REGION, get_output_image_count
 
 JAVA_RUNTIME_ERROR_TERMS = ('javahome', 'java -version', 'javabridge')
 
@@ -20,12 +19,8 @@ def open_datastore_source(filename):
         raise
 
 
-def expected_base_tile_count(source):
-    metadata = source.getMetadata()
-    return (
-        math.ceil(metadata['sizeX'] / metadata['tileWidth']) *
-        math.ceil(metadata['sizeY'] / metadata['tileHeight'])
-    )
+def expected_region_tile_count(source, region):
+    return get_output_image_count(source, region)
 
 
 @pytest.mark.skip(reason='Skipping because it is too slow')
@@ -37,16 +32,19 @@ def expected_base_tile_count(source):
         'sample_image.ptif',
     ],
 )
-def test_eager_iterator_reads_all_base_pyramidal_tiles(filename):
+def test_eager_iterator_reads_all_base_pyramidal_tiles_in_region(filename):
     source = open_datastore_source(filename)
-    expected_tiles = expected_base_tile_count(source)
+    region = dict(EAGER_TEST_REGION)
+    expected_tiles = expected_region_tile_count(source, region)
     retrieved_tiles = 0
 
     iterator = source.eagerIterator(
+        region=region,
         batch=64,
         prefetch=16,
         workers=16,
     )
+    assert iterator.get_output_image_count() == expected_tiles
     with iterator as eager_iterator:
         for batch in eager_iterator:
             shared_tiles = batch['tile']

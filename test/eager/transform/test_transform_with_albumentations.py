@@ -4,7 +4,7 @@ import pytest
 import large_image
 
 from ...datastore import datastore
-from ..eager_helpers import run_eager_iterator_with_albumentations_transform
+from ..eager_helpers import EAGER_TEST_REGION, run_eager_iterator_with_albumentations_transform
 
 
 @pytest.mark.singular
@@ -26,6 +26,7 @@ def test_albumentations_transform(transform: A.Compose):
     output_image_count, tile_image_count, count = run_eager_iterator_with_albumentations_transform(
         source,
         transform,
+        region=dict(EAGER_TEST_REGION),
     )
     assert output_image_count == tile_image_count
     assert count == tile_image_count

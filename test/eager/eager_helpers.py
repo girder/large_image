@@ -37,6 +37,14 @@ DATASET_UNIMPLEMENTED_PERFORMANCE_TYPES = {
     'write_transform': 'Write transform task is not implemented for dataset tasks',
 }
 
+EAGER_TEST_REGION = {
+    'left': 0,
+    'top': 0,
+    'width': 1000,
+    'height': 1000,
+    'units': 'base_pixels',
+}
+
 
 def matplotlib_save_image(image_path: str, image: np.ndarray):
     start_save_time = time.time()
@@ -201,6 +209,19 @@ def make_performance_write_directory(performance_type: str, runner_name: str):
 
 def make_tile_write_path(write_directory: str, region_x, region_y):
     return f'{write_directory}/image_{int(region_x)}_{int(region_y)}.png'
+
+
+def copy_eager_test_region() -> dict[str, Any]:
+    return dict(EAGER_TEST_REGION)
+
+
+def get_output_image_count(source: large_image.tilesource, region: dict[str, Any] | None = None):
+    region = region or EAGER_TEST_REGION
+    slide_dimensions = calculate_slide_dimensions(source, region)
+    return (
+        slide_dimensions['tile_target_range_x'] *
+        slide_dimensions['tile_target_range_y']
+    )
 
 
 def perform_pytorch_dataset_inference(
@@ -1411,10 +1432,15 @@ def build_torch_shared_array(
 def run_eager_iterator_with_albumentations_transform(
     tile_source: large_image.tilesource,
     transform: A.Compose,
+    region: dict[str, Any] | None = None,
 ):
     try:
         start_time = time.time()
-        iterator = tile_source.eagerIterator(output_mode='tiles', transform=transform)
+        if region is None:
+            region = copy_eager_test_region()
+        iterator = tile_source.eagerIterator(
+            output_mode='tiles', transform=transform, region=region,
+        )
         # Count output images provided by the iterator
         output_image_count = iterator.get_output_image_count()
         # Count tiles provided by the iterator based on the slide dimensions if a
@@ -1536,9 +1562,14 @@ def test_eager_iterator_image(
 def run_eager_iterator_with_pytorch_transform(
     tile_source: large_image.tilesource,
     transform: Callable,
+    region: dict[str, Any] | None = None,
 ):
     start_time = time.time()
-    iterator = tile_source.eagerIterator(output_mode='tiles', transform=transform)
+    if region is None:
+        region = copy_eager_test_region()
+    iterator = tile_source.eagerIterator(
+        output_mode='tiles', transform=transform, region=region,
+    )
 
     # Count output images provided by the iterator
     output_image_count = iterator.get_output_image_count()
