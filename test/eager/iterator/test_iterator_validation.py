@@ -3,12 +3,9 @@ import pytest
 from PIL import Image
 
 from large_image.tilesource.eager_utils import eager_fn
-from large_image.tilesource.eageriterator import (
-    _EAGER_FN_TRANSFORM_SCALE_SENTINEL,
-    _EAGER_FN_TRANSFORM_SENTINEL,
-    EagerIterator,
-)
-
+from large_image.tilesource.eageriterator import (_EAGER_FN_TRANSFORM_SCALE_SENTINEL,
+                                                  _EAGER_FN_TRANSFORM_SENTINEL,
+                                                  EagerIterator)
 
 pytestmark = pytest.mark.singular
 
