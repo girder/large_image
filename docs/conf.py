@@ -16,6 +16,14 @@ import sys
 docs_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.abspath(os.path.join(docs_dir, '..', '..')))
 
+try:
+    import pypandoc
+except ImportError:
+    pass
+else:
+    pandoc_dir = os.path.dirname(pypandoc.get_pandoc_path())
+    os.environ['PATH'] = pandoc_dir + os.pathsep + os.environ.get('PATH', '')
+
 # -- Project information -----------------------------------------------------
 
 project = 'large_image'
