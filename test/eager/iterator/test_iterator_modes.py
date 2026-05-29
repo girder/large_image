@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 import pytest
+from PIL import Image
 
 
 def identity_with_position(image, x, y):
@@ -210,6 +211,40 @@ def test_eager_mask_filters_explicit_tile_candidates(datastore_svs_source):
     iterator = datastore_svs_source.eagerIterator(
         tiles=np.array([[0, 0], [0, 1]], dtype=np.float32),
         mask=mask,
+        area_threshold=0.5,
+        threshold_mask=1,
+        batch=2,
+        prefetch=1,
+        workers=2,
+    )
+
+    count, shapes, positions = read_all_batches(iterator)
+    del iterator
+
+    assert count == 1
+    assert shapes == [(1, metadata['tileHeight'], metadata['tileWidth'], 3)]
+    assert positions == [(0, 0)]
+
+
+@pytest.mark.singular
+def test_eager_mask_path_filters_explicit_tile_candidates(datastore_svs_source, tmp_path):
+    metadata = datastore_svs_source.getMetadata()
+    mask = np.zeros((4096, 4096), dtype=np.uint8)
+    first_tile_mask_width = max(
+        1,
+        round(mask.shape[1] * metadata['tileWidth'] / metadata['sizeX']),
+    )
+    first_tile_mask_height = max(
+        1,
+        round(mask.shape[0] * metadata['tileHeight'] / metadata['sizeY']),
+    )
+    mask[:first_tile_mask_height, :first_tile_mask_width] = 255
+    mask_path = tmp_path / 'mask.png'
+    Image.fromarray(mask).save(mask_path)
+
+    iterator = datastore_svs_source.eagerIterator(
+        tiles=np.array([[0, 0], [0, 1]], dtype=np.float32),
+        mask=mask_path,
         area_threshold=0.5,
         threshold_mask=1,
         batch=2,

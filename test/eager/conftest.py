@@ -1,6 +1,28 @@
 import pytest
 
 
+def pytest_addoption(parser):
+    group = parser.getgroup('eager')
+    group.addoption(
+        '--eager-image-file',
+        action='store',
+        default=None,
+        help='Image file to use for the eager mask thumbnail overlay test.',
+    )
+    group.addoption(
+        '--eager-mask-file',
+        action='store',
+        default=None,
+        help='Mask image file to use for the eager mask thumbnail overlay test.',
+    )
+    group.addoption(
+        '--eager-overlay-output',
+        action='store',
+        default='build/eager_mask_thumbnail_overlay.png',
+        help='Output figure path for the eager mask thumbnail overlay test.',
+    )
+
+
 @pytest.fixture(autouse=True)
 def python_tile_cache_for_eager_workers():
     import large_image.cache_util.cache as large_image_cache
