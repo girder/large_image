@@ -73,33 +73,22 @@ def return_relevant_tile_indexes_for_slide_dim(
     range_x = slide_dimensions['tile_target_range_x']
     range_y = slide_dimensions['tile_target_range_y']
 
-    if tile_overlap is not None and 'x' in tile_overlap:
-        if isinstance(tile_overlap['x'], int):
-            overlap_x = tile_overlap['x'] / slide_dimensions['tile_size'][0]
-        elif isinstance(tile_overlap['x'], float):
-            overlap_x = tile_overlap['x']
-            if overlap_x >= 1:
-                msg = 'Tile overlap must be less than the tile size'
-                raise ValueError(msg)
-        else:
+    def _normalized_overlap(axis: str, tile_axis: int) -> float:
+        if tile_overlap is None or axis not in tile_overlap:
+            return 0
+        overlap = tile_overlap[axis]
+        if isinstance(overlap, int):
+            overlap = overlap / tile_axis
+        elif not isinstance(overlap, float):
             msg = 'Tile overlap must be an integer or float'
             raise ValueError(msg)
-    else:
-        overlap_x = 0
+        if overlap >= 1:
+            msg = 'Tile overlap must be less than the tile size'
+            raise ValueError(msg)
+        return overlap
 
-    if tile_overlap is not None and 'y' in tile_overlap:
-        if isinstance(tile_overlap['y'], int):
-            overlap_y = tile_overlap['y'] / slide_dimensions['tile_size'][1]
-            if overlap_y >= 1:
-                msg = 'Tile overlap must be less than the tile size'
-                raise ValueError(msg)
-        elif isinstance(tile_overlap['y'], float):
-            overlap_y = tile_overlap['y']
-        else:
-            msg = 'Tile overlap must be an integer or float'
-            raise ValueError(msg)
-    else:
-        overlap_y = 0
+    overlap_x = _normalized_overlap('x', slide_dimensions['tile_size'][0])
+    overlap_y = _normalized_overlap('y', slide_dimensions['tile_size'][1])
 
     offset_x = 1 - overlap_x
     offset_y = 1 - overlap_y

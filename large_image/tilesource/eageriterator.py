@@ -208,14 +208,14 @@ class EagerIterator:
         has_mag = 'magnification' in scale
         has_mm_x = 'mm_x' in scale
         has_mm_y = 'mm_y' in scale
-        if not has_mag and not (has_mm_x and has_mm_y):
-            msg = "scale must be a dictionary with either 'magnification' or 'mm_x' and 'mm_y'"
-            raise ValueError(msg)
         if has_mag and (has_mm_x or has_mm_y):
             msg = "scale cannot have both 'magnification' and 'mm_x' or 'mm_y'"
             raise ValueError(msg)
         if has_mm_x != has_mm_y:
             msg = "scale must have both 'mm_x' and 'mm_y'"
+            raise ValueError(msg)
+        if not has_mag and not (has_mm_x and has_mm_y):
+            msg = "scale must be a dictionary with either 'magnification' or 'mm_x' and 'mm_y'"
             raise ValueError(msg)
 
     @staticmethod
@@ -527,8 +527,8 @@ class EagerIterator:
         self.slide_dimensions['_tile_size'] = tile_size_dict
         if not self._has_valid_transform_scale_output(xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale):
             msg = """
-                transform_scale must return 9 values in the following order:
-                xlt, ytt, xrt, ybt, mm_x, mm_y, target_scale, conv_mm_x, conv_mm_y = (
+                transform_scale must return 10 values in the following order:
+                xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size, target_scale, conv_mm_x, conv_mm_y = (
                     transform_scale(read_kwargs, slide_dimensions)
                 )
                 xlt: numpy array of left coordinates
