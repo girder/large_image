@@ -368,7 +368,7 @@ class EagerIterator:
         :returns: Tile indexes that pass the mask threshold, or the original tile indexes.
         """
         if isinstance(mask, (str, os.PathLike)) and os.path.exists(mask):
-            mask = np.array(Image.open(mask).convert('L'))
+            mask = np.array(Image.open(os.fspath(mask)).convert('L'))
         if isinstance(mask, np.ndarray):
             return return_tile_slides_meeting_area_threshold(
                 mask, self.slide_dimensions, tiles, area_threshold=area_threshold,
