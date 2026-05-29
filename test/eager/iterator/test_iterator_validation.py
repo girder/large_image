@@ -395,7 +395,7 @@ def test_eager_iterator_rejects_additional_transform_scale_validation_args(
 
 def test_eager_iterator_accepts_existing_mask_path(datastore_svs_source, tmp_path):
     mask_path = tmp_path / 'mask.png'
-    Image.fromarray(np.ones((8, 8), dtype=np.uint8) * 255).save(mask_path)
+    Image.fromarray(np.ones((4096, 4096), dtype=np.uint8) * 255).save(mask_path)
 
     iterator = datastore_svs_source.eagerIterator(
         tiles=np.array([[0, 0], [0, 1]], dtype=np.float32),
