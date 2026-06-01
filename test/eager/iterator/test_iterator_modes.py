@@ -326,6 +326,32 @@ def test_eager_randomized_chunks_are_seed_reproducible(datastore_svs_source):
 
 
 @pytest.mark.singular
+@pytest.mark.parametrize('magnification_type', [int, float], ids=['int', 'float'])
+def test_eager_scale_accepts_numeric_magnification(datastore_svs_source, magnification_type):
+    metadata = datastore_svs_source.getMetadata()
+    magnification = magnification_type(metadata['magnification'])
+
+    iterator = datastore_svs_source.eagerIterator(
+        scale={'magnification': magnification},
+        tiles=np.array([[0, 0]], dtype=np.float32),
+        tile_size={'width': 64, 'height': 64},
+        batch=1,
+        prefetch=1,
+        workers=2,
+    )
+
+    count, shapes, positions = read_all_batches(iterator)
+
+    assert iterator.slide_dimensions['scale_mode'] == 'mag'
+    assert iterator.slide_dimensions['target_magnification'] == float(magnification)
+    assert count == 1
+    assert shapes == [(1, 64, 64, 3)]
+    assert positions == [(0, 0)]
+
+    del iterator
+
+
+@pytest.mark.singular
 def test_eager_transform_scale_populates_runtime_mm_metadata(datastore_svs_source):
     metadata = datastore_svs_source.getMetadata()
     iterator = datastore_svs_source.eagerIterator(
