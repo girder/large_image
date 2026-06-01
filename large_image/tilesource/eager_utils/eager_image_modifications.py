@@ -66,6 +66,10 @@ def pad_color(image: np.ndarray, top: int, bottom: int, left: int, right: int, c
     :param color: RGB color tuple used for the padded pixels.
     :returns: The padded image array.
     """
+    top = max(int(top), 0)
+    bottom = max(int(bottom), 0)
+    left = max(int(left), 0)
+    right = max(int(right), 0)
     r = np.pad(
         image[:, :, 0], ((top, bottom), (left, right)), mode='constant', constant_values=color[0],
     )
@@ -195,9 +199,9 @@ def return_needed_padding_right_bottom(image: np.ndarray, w: int, h: int):
     top = 0
     bottom = 0
 
-    if image.shape[1] != w:
+    if image.shape[1] != w and x_pad > 0:
         right = x_pad
-    if image.shape[0] != h:
+    if image.shape[0] != h and y_pad > 0:
         bottom = y_pad
 
     return top, bottom, left, right
@@ -219,14 +223,14 @@ def return_needed_padding_equal(image: np.ndarray, w: int, h: int):
     top = 0
     bottom = 0
 
-    if image.shape[1] != w:
+    if image.shape[1] != w and x_pad > 0:
         if x_pad % 2 != 0:
             left = math.floor(x_pad / 2)
             right = math.ceil(x_pad / 2)
         else:
             left = x_pad // 2
             right = x_pad // 2
-    if image.shape[0] != h:
+    if image.shape[0] != h and y_pad > 0:
         if y_pad % 2 != 0:
             top = math.floor(y_pad / 2)
             bottom = math.ceil(y_pad / 2)
