@@ -126,9 +126,15 @@ def chunks_from_kd_tree(
             else:
                 possible_neighbors = neighbors[0]
 
-            # Fix for case where the amount of read arguments is less the pykdtree k
-            # parameter (chunk_size * k_mod)
-            possible_neighbors = possible_neighbors[possible_neighbors < sorted_in.shape[0]]
+            # Fix for case where pykdtree returns neighbors outside the valid
+            # row range. Negative sentinels must be removed before NumPy
+            # indexing; otherwise -1 selects the final row or can trigger
+            # downstream negative-index errors.
+            possible_neighbors = possible_neighbors[
+                (possible_neighbors >= 0) & (possible_neighbors < sorted_in.shape[0])
+            ]
+            if possible_neighbors.shape[0] == 0:
+                continue
 
             not_used_neighbors = np.logical_not(used[possible_neighbors])
             values_neighbors = sorted_in[possible_neighbors]
