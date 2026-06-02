@@ -41,6 +41,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinxcontrib.jquery',
     'sphinxcontrib.mermaid',
+    'sphinx_llm.txt',
     'IPython.sphinxext.ipython_console_highlighting',
     'nbsphinx',
 ]
