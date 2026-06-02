@@ -105,7 +105,7 @@ commands:
       - run:
           name: start rabbitmq
           command: |
-            docker run --rm -d -p 5672:5672 rabbitmq
+            docker run --rm -d -p 5672:5672 rabbitmq:4.2
       - run:
           name: start memcached
           command: |
@@ -181,7 +181,7 @@ commands:
 jobs:
   testdocker:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     steps:
       - checkout
       - run:
@@ -191,11 +191,15 @@ jobs:
       - run:
           name: Publish the images to Docker Hub
           command: |
+            if [[ "$CIRCLE_BRANCH" =~ ^(master|girder-3|testdocker)$ ]]; then
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push girder/tox-and-node:latest
+            else
+            echo Skipped
+            fi
   testdocker-lts:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     steps:
       - checkout
       - run:
@@ -205,11 +209,15 @@ jobs:
       - run:
           name: Publish the images to Docker Hub
           command: |
+            if [[ "$CIRCLE_BRANCH" =~ ^(master|girder-3|testdocker)$ ]]; then
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push girder/tox-and-node-lts:latest
+            else
+            echo Skipped
+            fi
   py310:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -222,7 +230,7 @@ jobs:
           path: build/test/artifacts
   py311:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -235,7 +243,7 @@ jobs:
           path: build/test/artifacts
   py312:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -248,7 +256,7 @@ jobs:
           path: build/test/artifacts
   py313:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -262,7 +270,7 @@ jobs:
           path: build/test/artifacts
   py314:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -293,7 +301,7 @@ jobs:
           paths: docs
   compare:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2204:2025.09.1
     resource_class: large
     steps:
       - checkout
@@ -436,6 +444,8 @@ workflows:
                 # Create a branch of this name to push to docker hub
                 - testdocker
                 - girder-3
+                # build but don't push
+                - /.*docker.*/
       - testdocker-lts:
           filters:
             branches:
@@ -444,6 +454,8 @@ workflows:
                 # Create a branch of this name to push to docker hub
                 - testdocker
                 - girder-3
+                # build but don't push
+                - /.*docker.*/
       - py310:
           filters:
             tags:
