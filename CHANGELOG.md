@@ -10,6 +10,7 @@
 
 - Fix handling single file DICOM files in Girder ([#2066](../../pull/2066))
 - DICOM tile reads were not thread safe ([#2067](../../pull/2067))
+- Handle more Redis errors ([#2068](../../pull/2068))
 
 ## 1.34.1
 
