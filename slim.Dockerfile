@@ -23,7 +23,8 @@ FROM python:3.14-slim AS geo
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
-# NOTE: this does not install any girder3 packages
+# NOTE: this does not install any girder packages
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1
 RUN pip install \
     --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
@@ -31,6 +32,7 @@ RUN pip install \
     -r /opt/wheels/requirements.txt \
     /opt/wheels/large_image-*.whl \
     /opt/wheels/large_image_source_gdal*.whl \
+    /opt/wheels/large_image_source_rasterio*.whl \
     /opt/wheels/large_image_source_mapnik*.whl \
     /opt/wheels/large_image_source_tiff*.whl \
     /opt/wheels/large_image_source_pil*.whl \
@@ -43,8 +45,8 @@ COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
 # Needs for 3.14 to install older zarr and numcodecs
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc
-# NOTE: this does not install any girder3 packages
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc libexpat1
+# NOTE: this does not install any girder packages
 RUN pip install \
     --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
@@ -60,7 +62,7 @@ FROM python:3.14-slim AS girder
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
-# NOTE: this does not install any girder3 packages
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc libexpat1
 RUN pip install \
     --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
@@ -102,6 +104,7 @@ RUN pip install \
     -r /opt/wheels/requirements.txt \
     /opt/wheels/large_image-*.whl \
     /opt/wheels/large_image_source_gdal*.whl \
+    /opt/wheels/large_image_source_rasterio*.whl \
     /opt/wheels/large_image_source_mapnik*.whl \
     /opt/wheels/large_image_source_tiff*.whl \
     /opt/wheels/large_image_source_pil*.whl \

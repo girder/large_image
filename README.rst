@@ -66,10 +66,10 @@ Conda makes dependency management a bit easier if not on Linux. The base module,
     conda install -c conda-forge large-image-converter
 
 
-Docker Image
-~~~~~~~~~~~~
+Docker Images
+~~~~~~~~~~~~~
 
-Included in this repository’s packages is a pre-built Docker image that has all
+Included in this repository’s packages are pre-built Docker images that have all
 of the dependencies to read any supported image format.
 
 This is particularly useful if you do not want to install some of the heavier
@@ -81,6 +81,13 @@ imagery is stored::
 
     docker pull ghcr.io/girder/large_image:latest
     docker run -v /path/to/images:/opt/images ghcr.io/girder/large_image:latest
+
+There are some additional Docker images:
+
+- ghcr.io/girder/large_image:latest-geo: this just includes the geospatial image format readers
+- ghcr.io/girder/large_image:latest-girder: this has all image sources and girder installed
+- ghcr.io/girder/large_image:latest-jupyter: this is the base jupyter notebook docker image with all image sources installed.
+- ghcr.io/girder/large_image:latest-jupyter-geo: this is the base jupyter notebook docker image with geospatial image sources installed.
 
 
 Modules
