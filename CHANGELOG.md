@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.34.3
+
+### Improvements
+
+- In Girder, by default include Updated in lists; do not show controls in dialog lists ([#2078](../../pull/2078))
+
 ## 1.34.2
 
 ### Improvements
