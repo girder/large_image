@@ -1,7 +1,17 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { lookup as dnsLookup } from 'node:dns/promises';
 import { expect, test } from '@playwright/test';
 
-const mongoUri = process.env.GIRDER_CLIENT_TESTING_MONGO_URI ?? 'mongodb://mongodb:27017';
+let defaultMongoHost = 'mongodb';
+if (!process.env.GIRDER_CLIENT_TESTING_MONGO_URI) {
+  try {
+    await dnsLookup(defaultMongoHost);
+  } catch {
+    defaultMongoHost = '127.0.0.1';
+  }
+}
+
+const mongoUri = process.env.GIRDER_CLIENT_TESTING_MONGO_URI ?? `mongodb://${defaultMongoHost}:27017`;
 
 const startServer = async (port: number) => {
   const database = `${mongoUri}/girder-${port}`;
