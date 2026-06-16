@@ -67,7 +67,7 @@ SourceEntrySchema = {
         'name': {'type': 'string'},
         'description': {'type': 'string'},
         'path': {
-            'decription':
+            'description':
                 'The relative path, including file name if pathPattern is not '
                 'specified.  The relative path excluding file name if '
                 'pathPattern is specified.  Or, girder://id for Girder '
@@ -417,7 +417,7 @@ MultiSourceSchema = {
             'items': {'type': 'number'},
         },
         'basePath': {
-            'decription':
+            'description':
                 'A relative path that is used as a base for all paths in '
                 'sources.  Defaults to the directory of the main file.',
             'type': 'string',

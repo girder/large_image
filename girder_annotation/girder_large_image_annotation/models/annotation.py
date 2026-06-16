@@ -278,8 +278,8 @@ class AnnotationSchema:
             'fillColor': colorSchema,
             'pattern': patternSchema,
         },
-        'decription': 'normal is the positive z-axis unless otherwise '
-                      'specified',
+        'description': 'normal is the positive z-axis unless otherwise '
+                       'specified',
         'required': ['type', 'center', 'width', 'height'],
     })
 
@@ -498,7 +498,7 @@ class AnnotationSchema:
             'description': {
                 'type': 'string',
                 'description': 'A more detailed explanation of the '
-                               'meaining of this category.',
+                               'meaning of this category.',
             },
         },
         'required': ['fillColor'],
