@@ -62,7 +62,7 @@ commands:
         type: string
       node:
         type: string
-        default: v20
+        default: v22
     steps:
       - switchpython:
           version: << parameters.version >>
@@ -325,7 +325,7 @@ jobs:
     parameters:
       node:
         type: string
-        default: v20
+        default: v22
     steps:
       - checkout
       - run:
@@ -371,7 +371,7 @@ jobs:
     parameters:
       node:
         type: string
-        default: v20
+        default: v22
     steps:
       - checkout
       - run:
