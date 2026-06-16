@@ -36,6 +36,18 @@ jobs:
           context: .
           file: slim.Dockerfile
           target: all
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Test the Docker image
+        run: docker run --rm ${{ steps.meta.outputs.tags }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
+          >= 6"'
+      - name: Push the Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: slim.Dockerfile
+          target: all
           push: ${{ github.actor != 'dependabot[bot]' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -47,6 +59,7 @@ jobs:
       matrix:
         target:
           - "geo"
+          - "girder"
           - "jupyter"
           - "jupyter-geo"
     steps:
@@ -69,12 +82,24 @@ jobs:
           flavor: |
             latest=auto
             suffix=-${{ matrix.target }},onlatest=true
-      - name: Build and push the geosptial Docker image
+      - name: Build the Docker image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: slim.Dockerfile
+          load: true
           target: ${{ matrix.target }}
+          tags: ${{ steps.meta_target.outputs.tags }}
+          labels: ${{ steps.meta_target.outputs.labels }}
+      - name: Test the Docker image
+        run: docker run --rm ${{ steps.meta_target.outputs.tags }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
+          >= 6"'
+      - name: Push the Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: slim.Dockerfile
           push: ${{ github.actor != 'dependabot[bot]' }}
+          target: ${{ matrix.target }}
           tags: ${{ steps.meta_target.outputs.tags }}
           labels: ${{ steps.meta_target.outputs.labels }}
