@@ -69,7 +69,8 @@ FROM python:3.14-slim AS girder
 COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
-# NOTE: this does not install any girder packages
+# hadolint ignore=DL3009
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc libexpat1
 RUN pip install \
     --no-cache-dir \
     --find-links https://girder.github.io/large_image_wheels \
@@ -104,7 +105,7 @@ COPY --from=build /opt/build-context/wheels /opt/wheels
 LABEL maintainer="Kitware, Inc. <kitware@kitware.com>"
 LABEL repo="https://github.com/girder/large_image"
 # hadolint ignore=DL3009
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc libexpat1
+# RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc libexpat1
 # NOTE: this does not install any girder3 packages
 RUN pip install \
     --no-cache-dir \
