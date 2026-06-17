@@ -3,3 +3,5 @@ test
 docs/format_examples
 large_image*dev*
 .github
+slim.Dockerfile
+test.Dockerfile
