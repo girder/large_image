@@ -73,8 +73,6 @@ def testCheckCacheRedis():
 
 
 def testBadMemcachedUrl():
-    # go though and check if all 100 fib numbers are in cache
-    # it is stored in cache as ('fib', #)
     cache = MemCache(url=['192.0.2.254', '192.0.2.253'])
 
     cache_test(cache, 3)
