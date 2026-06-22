@@ -271,7 +271,12 @@ jobs:
           name: Permissions for link checker
           command: find /root -type d -exec chmod 755 {} \+
       - tox:
-          toxenv: docs,lint,lintclient,notebook
+          toxenv: lint,lintclient,notebook
+      - run:
+          name: flatten symlinks
+          command: find . -type l -print0 | while IFS= read -r -d '' l; do target=$(realpath -m --relative-to=$(dirname "$l") "$(readlink "$l")") && rm -f "$l" && ln -s "$target" "$l"; done
+      - tox:
+          toxenv: docs
       - store_artifacts:
           path: build/docs
       - persist_to_workspace:
