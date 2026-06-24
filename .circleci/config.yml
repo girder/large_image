@@ -62,7 +62,7 @@ commands:
         type: string
       node:
         type: string
-        default: v20
+        default: v22
     steps:
       - switchpython:
           version: << parameters.version >>
@@ -132,23 +132,8 @@ commands:
             NODE_DIR=$(dirname $(which node))
             echo "export PATH=$NODE_DIR:\$PATH" >> $BASH_ENV
       - run:
-          name: Install and build large_image plugin
-          command: |
-            npm ci
-            npm run build
-          working_directory: girder/girder_large_image/web_client
-      - run:
-          name: Install and build large_image_annotation plugin
-          command: |
-            npm ci
-            npm run build
-          working_directory: girder_annotation/girder_large_image_annotation/web_client
-      - run:
-          name: Install and build large_image_source_dicom plugin
-          command: |
-            npm ci
-            npm run build
-          working_directory: sources/dicom/large_image_source_dicom/web_client
+          name: Install and build girder plugins
+          command: python .circleci/build_plugins.py .
       - save_cache:
           name: Save nvm cache
           key: v1-nvm-cache-<< parameters.node >>
@@ -293,7 +278,12 @@ jobs:
           name: Permissions for link checker
           command: find /root -type d -exec chmod 755 {} \+
       - tox:
-          toxenv: docs,lint,lintclient,notebook
+          toxenv: lint,lintclient,notebook
+      - run:
+          name: flatten symlinks
+          command: find . -type l -print0 | while IFS= read -r -d '' l; do target=$(realpath -m --relative-to=$(dirname "$l") "$(readlink "$l")") && rm -f "$l" && ln -s "$target" "$l"; done
+      - tox:
+          toxenv: docs
       - store_artifacts:
           path: build/docs
       - persist_to_workspace:
@@ -325,7 +315,7 @@ jobs:
     parameters:
       node:
         type: string
-        default: v20
+        default: v22
     steps:
       - checkout
       - run:
@@ -371,7 +361,7 @@ jobs:
     parameters:
       node:
         type: string
-        default: v20
+        default: v22
     steps:
       - checkout
       - run:

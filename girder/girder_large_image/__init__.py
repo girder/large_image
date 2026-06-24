@@ -261,13 +261,14 @@ def addSettingsToConfig(config, user, name=None):
                 columns.append({'type': 'image', 'value': value, 'title': value.title()})
 
     columns.append({'type': 'record', 'value': 'name', 'title': 'Name'})
-    columns.append({'type': 'record', 'value': 'controls', 'title': 'Controls'})
+    columns.append({'type': 'record', 'value': 'updated', 'title': 'Updated'})
     columns.append({'type': 'record', 'value': 'size', 'title': 'Size'})
+    columns.append({'type': 'record', 'value': 'controls', 'title': 'Controls'})
 
     if 'itemList' not in config:
         config['itemList'] = {'columns': columns}
     if 'itemListDialog' not in config:
-        config['itemListDialog'] = {'columns': columns}
+        config['itemListDialog'] = {'columns': columns[:-1]}
 
 
 def yamlConfigFile(folder, name, user):

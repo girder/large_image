@@ -699,7 +699,7 @@ def getPaletteColors(value: str | list[str | float | tuple[float, ...]]) -> np.n
             else:
                 cmap = (mpl.colormaps.get_cmap(str(value)) if hasattr(getattr(
                     mpl, 'colormaps', None), 'get_cmap') else
-                    mpl.cm.get_cmap(str(value)))
+                    mpl.cm.get_cmap(str(value)))  # type: ignore
                 palette = _mpl_lsc_to_palette(cmap)  # type: ignore
     if palette is None:
         raise ValueError('cannot be used as a color palette.: %r.' % value)

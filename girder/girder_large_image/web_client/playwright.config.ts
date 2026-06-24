@@ -1,5 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isHeadless = () => {
+  if (process.env.HEADLESS?.toLowerCase() === 'false') {
+    return false;
+  }
+  const envVars = [ 'CI', 'CONTINUOUS_INTEGRATION', 'GITLAB_CI', 'GITHUB_ACTIONS', 'HEADLESS', 'DOCKER', 'KUBERNETES', 'LXC', 'LXD', 'SYSTEMD_IS_SYSTEMD'];
+  const noDisplay = !process.env.DISPLAY;
+  return envVars.some(env => process.env[env]) || noDisplay;
+};
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
@@ -11,7 +20,7 @@ export default defineConfig({
   use: {
     actionTimeout: 30000,
     trace: 'on-first-retry',
-    headless: !!process.env.HEADLESS,
+    headless: isHeadless(),
     screenshot: 'only-on-failure',
   },
 

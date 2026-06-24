@@ -93,6 +93,7 @@ docstring-code-format = true
 # allow "useless expressions" as it shows output
 # allow non-top level imports
 # allow long lines
+".circleci/build_plugins.py" = ["T201"]
 ".circleci/dcm4chee/*.py" = ["T201", "T203"]
 "docs/*.ipynb" = ["B018", "E402", "E501", "T201", "T203"]
 "docs/*.py" = ["E501", "T201", "T203"]
