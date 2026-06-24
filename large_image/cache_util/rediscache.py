@@ -44,6 +44,11 @@ class RedisCache(BaseCache):
         from redis.client import Redis
 
         self.redis = redis
+        # The expiry_ttl is in seconds.  If redis is started with
+        # maxmemory-policy set to volatile-lru, tiles will be evicted under
+        # memory pressure.  This should be an arbitrarily high value unless
+        # actual TTL is desired.
+        self.expiry_ttl = 86400 * 100
         self._redisCls = Redis
         super().__init__(0, getsizeof=getsizeof)
         self._cache_key_prefix = 'large_image_'
@@ -101,7 +106,7 @@ class RedisCache(BaseCache):
     def __setitem__(self, key: str, value: Any) -> None:
         _key = self._cache_key_prefix + self._hashKey(key)
         try:
-            self._client.set(_key, pickle.dumps(value))
+            self._client.set(_key, pickle.dumps(value), ex=self.expiry_ttl)
         except (TypeError, KeyError) as exc:
             valueSize = value.shape if hasattr(value, 'shape') else (
                 value.size if hasattr(value, 'size') else (
