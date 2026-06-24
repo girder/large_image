@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository )
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Log into the Container registry
@@ -63,7 +63,7 @@ jobs:
           - "jupyter"
           - "jupyter-geo"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Log into the Container registry

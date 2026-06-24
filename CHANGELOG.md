@@ -6,6 +6,9 @@
 
 - In Girder, by default include Updated in lists; do not show controls in dialog lists ([#2078](../../pull/2078))
 
+### Changes
+- Set an expiry duration on redis cache entries ([#2092](../../pull/2092))
+
 ### Bug Fixes
 
 - Fixed a typo in the word "description" in the multi-source and annotation schemas ([#2082](../../pull/2082))

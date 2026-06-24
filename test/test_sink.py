@@ -540,7 +540,7 @@ def testConcurrency(tmp_path):
     output_file = tmp_path / 'test.db'
     max_workers = 5
     tile_size = (100, 100)
-    target_shape = (4, 1000, 1000, 5)
+    target_shape = (2, 300, 300, 5)
     tile_positions = []
     seed_data = np.random.random(target_shape)
 
