@@ -1,4 +1,5 @@
 import math
+import os
 import pathlib
 from collections.abc import Callable
 from typing import Any, cast
@@ -21,6 +22,11 @@ CacheProperties['tilesource']['itemExpectedSize'] = max(
 # Used to cache pixel size for projections
 ProjUnitsAcrossLevel0: dict[str, float] = {}
 ProjUnitsAcrossLevel0_MaxSize = 100
+
+# Prevent GDAL or rasterio from creating aux.xml files unless the system is
+# specifically requesting them
+if 'GDAL_PAM_ENABLED' not in os.environ:
+    os.environ['GDAL_PAM_ENABLED'] = 'NO'
 
 
 def make_vsi(url: str | pathlib.Path | dict[Any, Any], **options) -> str:
