@@ -8,6 +8,7 @@ from ...datastore import datastore
 from ..eager_helpers import run_eager_iterator_with_pytorch_transform
 
 
+@pytest.mark.singular
 @pytest.mark.parametrize(
     'transform',
     [

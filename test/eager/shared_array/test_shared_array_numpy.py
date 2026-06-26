@@ -4,6 +4,7 @@ import pytest
 from ..eager_helpers import build_numpy_shared_array
 
 
+@pytest.mark.singular
 @pytest.mark.parametrize('shared_array_shape', [(256, 256, 3), (512, 512, 4)])
 def test_numpy_shared_array(shared_array_shape: tuple[int, int, int]):
     shared_array = build_numpy_shared_array(shared_array_shape)

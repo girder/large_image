@@ -35,6 +35,8 @@ def save_testing_file(file_path: str, output_dir: str, **kwargs: Any):
     for _batch in eager_iter:
         print('Retrieved batch of tiles...')
 
+    del eager_iter
+
     print('Saved all batches')
 
 

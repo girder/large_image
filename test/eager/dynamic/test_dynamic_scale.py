@@ -1,11 +1,7 @@
 import os
-from test.eager.eager_helpers import get_tissue_mask_with_background_elimination
 from typing import Optional
 
-import matplotlib.pyplot as plt
 import numpy as np
-
-import large_image
 
 
 def dynamic_transform_scale(read_kwargs: np.ndarray, slide_dimensions: dict):
@@ -128,8 +124,8 @@ def dynamic_transform_scale_v2(
         center_x_max = center_x_max - center_dx_right
         center_y_max = center_y_max - center_dy_bottom
 
-        random_center_x_range = np.random() * (center_x_max - center_x_min) + center_x_min
-        random_center_y_range = np.random() * (center_y_max - center_y_min) + center_y_min
+        random_center_x_range = np.random.random() * (center_x_max - center_x_min) + center_x_min
+        random_center_y_range = np.random.random() * (center_y_max - center_y_min) + center_y_min
 
         xlt = np.round(random_center_x_range - (width / 2)).astype(np.int64)
         ytt = np.round(random_center_y_range - (height / 2)).astype(np.int64)
@@ -444,13 +440,133 @@ def dynamic_transform_scale_v2_wrapper(read_kwargs: np.ndarray, slide_dimensions
     return dynamic_transform_scale_v2(read_kwargs, slide_dimensions)
 
 
-def main():
-    test_image_path = (
-        '/scr/arosado/tcga/acc/'
-        '5b9efa00e62914002e94791c_TCGA-OR-A5LL-01Z-00-DX1.08588029-C532-'
-        '4CDD-B945-251315EFF5C0.svs'
+def test_scale_region_coordinates_clips_to_mask_bounds():
+    slide_dimensions = {'base_size_x': 1000, 'base_size_y': 500}
+    mask = np.zeros((50, 100), dtype=np.uint8)
+
+    xlt, ytt, xrt, ybt = scale_region_coordinates(
+        slide_dimensions,
+        mask,
+        np.array([-10, 500]),
+        np.array([0, 250]),
+        np.array([100, 1100]),
+        np.array([100, 600]),
     )
-    source = large_image.open(test_image_path)
+
+    np.testing.assert_array_equal(xlt, [0, 50])
+    np.testing.assert_array_equal(ytt, [0, 25])
+    np.testing.assert_array_equal(xrt, [10, 100])
+    np.testing.assert_array_equal(ybt, [10, 50])
+
+
+def test_limit_anchor_region_with_mask_tightens_to_nonzero_mask():
+    slide_dimensions = {'base_size_x': 1000, 'base_size_y': 1000}
+    mask = np.zeros((100, 100), dtype=np.uint8)
+    mask[40:50, 30:60] = 255
+
+    xlt, ytt, xrt, ybt = limit_anchor_region_with_mask(
+        slide_dimensions,
+        mask,
+        np.array([0]),
+        np.array([0]),
+        np.array([1000]),
+        np.array([1000]),
+    )
+
+    assert xlt[0] == 300
+    assert ytt[0] == 400
+    assert xrt[0] == 600
+    assert ybt[0] == 500
+
+
+def test_dynamic_transform_scale_v2_zoom_in_branch_returns_valid_bounds(datastore_svs_source):
+    from large_image.tilesource.eager_utils.eager_read_args import gen_read_args_for_tiles
+    from large_image.tilesource.eager_utils.eager_wsi_operations import calculate_slide_dimensions
+
+    slide_dimensions = calculate_slide_dimensions(
+        datastore_svs_source,
+        tile_size={'width': 64, 'height': 64},
+    )
+    n_possible_tiles = (
+        slide_dimensions['tile_target_range_x'] * slide_dimensions['tile_target_range_y']
+    )
+    read_kwargs = gen_read_args_for_tiles(
+        n_possible_tiles,
+        slide_dimensions,
+        tiles=[[2, 2]],
+    )[0]
+
+    np.random.seed(3)
+    xlt, ytt, xrt, ybt, mm_x, mm_y, dynamic_scale, conv_mm_x, conv_mm_y = (
+        dynamic_transform_scale_v2(
+            read_kwargs,
+            slide_dimensions,
+            min_mm=0.00005,
+            max_mm=0.00006,
+            anchor_mm=0.0001,
+        )
+    )
+
+    assert np.all(xlt >= 0)
+    assert np.all(ytt >= 0)
+    assert np.all(xrt <= slide_dimensions['base_size_x'])
+    assert np.all(ybt <= slide_dimensions['base_size_y'])
+    assert np.all(xrt > xlt)
+    assert np.all(ybt > ytt)
+    assert np.allclose(mm_x, dynamic_scale['mm_x'])
+    assert np.allclose(mm_y, dynamic_scale['mm_y'])
+    assert conv_mm_x > 0
+    assert conv_mm_y > 0
+
+
+def test_dynamic_transform_scale_v3_returns_worker_scale_payload(datastore_svs_source):
+    from large_image.tilesource.eager_utils.eager_read_args import gen_read_args_for_tiles
+    from large_image.tilesource.eager_utils.eager_wsi_operations import calculate_slide_dimensions
+
+    slide_dimensions = calculate_slide_dimensions(
+        datastore_svs_source,
+        tile_size={'width': 64, 'height': 64},
+    )
+    n_possible_tiles = (
+        slide_dimensions['tile_target_range_x'] * slide_dimensions['tile_target_range_y']
+    )
+    read_kwargs = gen_read_args_for_tiles(
+        n_possible_tiles,
+        slide_dimensions,
+        tiles=[[2, 2], [2, 3]],
+    )[0]
+    mask = np.ones((128, 128), dtype=np.uint8)
+
+    np.random.seed(5)
+    result = dynamic_transform_scale_v3(
+        read_kwargs,
+        slide_dimensions,
+        tile_size={'width': 64, 'height': 64},
+        mask=mask,
+    )
+
+    assert len(result) == 10
+    xlt, ytt, xrt, ybt, mm_x, mm_y, tile_size, dynamic_scale, conv_mm_x, conv_mm_y = result
+    assert tile_size == {'width': 64, 'height': 64}
+    assert dynamic_scale['mm_x'] == dynamic_scale['mm_y']
+    assert np.all(mm_x == dynamic_scale['mm_x'])
+    assert np.all(mm_y == dynamic_scale['mm_y'])
+    assert np.all(xrt > xlt)
+    assert np.all(ybt > ytt)
+    assert conv_mm_x > 0
+    assert conv_mm_y > 0
+
+
+def main():
+    from test.datastore import datastore
+    from test.eager.eager_helpers import get_tissue_mask_with_background_elimination
+
+    import matplotlib.pyplot as plt
+
+    import large_image
+
+    test_file = datastore.fetch('TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs')
+    source = large_image.open(test_file)
 
     os.makedirs('/scr/arosado/performance/eager/dynamic/images', exist_ok=True)
 
@@ -491,6 +607,8 @@ def main():
         count += images.shape[0]
         # print("mm: %s" % mm)
         # print(batch)
+
+    del eager_iterator
 
     print(f'Final count: {count}')
     print(f'Expected count: {size_random}')

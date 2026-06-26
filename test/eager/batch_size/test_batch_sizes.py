@@ -6,6 +6,7 @@ from ...datastore import datastore
 from ..eager_helpers import run_batch_size
 
 
+@pytest.mark.singular
 @pytest.mark.parametrize('batch_size', [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024])
 def test_batch_size(batch_size: int):
     test_file = datastore.fetch('TCGA-AA-A02O-11A-01-BS1.8b76f05c-4a8b-44ba-b581-6b8b4f437367.svs')

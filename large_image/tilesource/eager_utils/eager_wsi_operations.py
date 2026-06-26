@@ -1,12 +1,15 @@
 """Whole-slide geometry and scaling helpers for eager reads."""
 
+from __future__ import annotations
+
 import math
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import numpy as np
 
-from ..base import TileSource
+if TYPE_CHECKING:
+    from ..base import TileSource
 
 
 def get_smallest_bounding_box(roi):

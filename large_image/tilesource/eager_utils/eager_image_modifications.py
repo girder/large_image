@@ -295,7 +295,7 @@ def pad_chunk_if_necessary(
     :param pad_fill_mode: Fill mode passed to return_constant_color.
     :returns: The padded chunk, or the original chunk if padding is unnecessary.
     """
-    if chunk.shape[0] != w or chunk.shape[1] != h:
+    if chunk.shape[1] != w or chunk.shape[0] != h:
         out = chunk.copy()
 
         constant_color = return_constant_color(chunk, pad_fill_mode)

@@ -9,7 +9,8 @@ import pickle
 import random
 import time
 from collections import deque
-from concurrent.futures import ALL_COMPLETED, wait
+from concurrent.futures import ALL_COMPLETED
+from concurrent.futures import wait as wait_futures
 from typing import Any, Callable, Dict, Optional, Union
 
 import numpy as np
@@ -761,7 +762,7 @@ class EagerIterator:
                 futures, tiles, batch_kwargs = self.queue.pop()
                 # Wait for futures to complete before cleanup
                 if futures:
-                    wait(futures, timeout=5, return_when=ALL_COMPLETED)
+                    wait_futures(futures, timeout=5, return_when=ALL_COMPLETED)
                 try:
                     # Prefer explicit close to avoid BufferError on shutdown
                     if hasattr(tiles, 'close'):
@@ -819,7 +820,7 @@ class EagerIterator:
                         futures_flat.append(future_list)
             else:
                 futures_flat = futures if isinstance(futures, list) else [futures]
-            wait(futures_flat, timeout=None, return_when=ALL_COMPLETED)
+            wait_futures(futures_flat, timeout=None, return_when=ALL_COMPLETED)
             # Check for exceptions in futures - this will raise if any future had an exception
             for future in futures_flat:
                 future.result()  # This will raise any exception that occurred in the worker process
@@ -1152,7 +1153,7 @@ class EagerIterator:
         if height == tile_size_dict['height'] and width == tile_size_dict['width']:
             return tile
         return pad_tile(
-            tile, tile_size_dict['height'], tile_size_dict['width'], 'right_bottom', pad_fill_mode,
+            tile, tile_size_dict['width'], tile_size_dict['height'], 'right_bottom', pad_fill_mode,
         )
 
     @staticmethod
@@ -1173,8 +1174,8 @@ class EagerIterator:
         return [
             pad_tile(
                 chunk[yt:h, xl:w, :].astype(chunk.dtype),
-                tile_size_dict['height'],
                 tile_size_dict['width'],
+                tile_size_dict['height'],
                 pad_mode,
                 pad_fill_mode,
             )

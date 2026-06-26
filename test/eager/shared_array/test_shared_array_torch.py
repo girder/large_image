@@ -1,13 +1,16 @@
-import torch
+import pytest
 
-from ..eager_helpers import test_torch_shared_array
 
-if __name__ == '__main__':
-    shared_array = test_torch_shared_array()
-    assert shared_array.view().shape == (256, 256, 3)
-    assert shared_array.view().dtype == torch.uint8
-    assert shared_array.view().flags.owndata
-    assert shared_array.view().flags.writeable
-    assert shared_array.view().flags.aligned
-    assert shared_array.view().flags.c_contiguous
-    assert not shared_array.view().flags.f_contiguous
+def test_torch_shared_array():
+    pytest.importorskip('pykdtree.kdtree', reason='eager read planning requires pykdtree')
+    torch = pytest.importorskip('torch')
+    from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
+
+    shared_array = SharedArray((256, 256, 3), torch.uint8, is_torch=True)
+    view = shared_array.view()
+
+    assert tuple(view.shape) == (256, 256, 3)
+    assert view.dtype == torch.uint8
+    assert view.is_contiguous()
+
+    shared_array.close()

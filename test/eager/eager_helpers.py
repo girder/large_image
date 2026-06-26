@@ -6,10 +6,6 @@ import stat
 import subprocess
 import time
 from pathlib import Path
-from test.eager.paper.huggingface_uni2_model import (make_huggingface_uni2_model,
-                                                     make_huggingface_uni_model)
-from test.eager.paper.pytorch_efficientnet import make_efficientnet_model
-from test.eager.paper.pytorch_sobel_model import make_sobel_model
 from typing import Any, Callable, Iterable, Optional, Union
 
 import albumentations as A
@@ -19,10 +15,7 @@ import numpy as np
 import pytest
 import torch
 from matplotlib import pyplot as plt
-from shapely import affinity, to_geojson
-from shapely.geometry import Polygon
 from torchvision.io import ImageReadMode
-from zeus.monitor import ZeusMonitor
 
 import large_image
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb
@@ -130,12 +123,20 @@ def setup_inference_model(
     model = None
     # Set sobel model if needed
     if performance_type == 'inference_sobel':
+        from test.eager.paper.pytorch_sobel_model import make_sobel_model
+
         model = make_sobel_model(compile_model=compile_model, cuda_device=cuda_device)
     elif performance_type == 'inference_efficientnetb0':
+        from test.eager.paper.pytorch_efficientnet import make_efficientnet_model
+
         model = make_efficientnet_model(compile_model=compile_model, cuda_device=cuda_device)
     elif performance_type == 'inference_uni2':
+        from test.eager.paper.huggingface_uni2_model import make_huggingface_uni2_model
+
         model = make_huggingface_uni2_model(compile_model=compile_model, cuda_device=cuda_device)
     elif performance_type == 'inference_uni':
+        from test.eager.paper.huggingface_uni2_model import make_huggingface_uni_model
+
         model = make_huggingface_uni_model(compile_model=compile_model, cuda_device=cuda_device)
 
     return model
@@ -357,6 +358,8 @@ def run_non_eager_performance_evaluation(
             )
 
     if track_energy:
+        from zeus.monitor import ZeusMonitor
+
         monitor = ZeusMonitor(gpu_indices=[0])
         monitor.begin_window('performance_evaluation')
 
@@ -604,6 +607,7 @@ def generate_random_tile_indexes(
         tile_range_x = int(probe.slide_dimensions['tile_target_range_x'])
     finally:
         probe.cleanup()
+        del probe
 
     total_tiles = tile_range_y * tile_range_x
     if size > total_tiles:
@@ -817,7 +821,7 @@ def run_eager_task_performance_evaluation(
     return setup_time, performance_time, batch_retreival_times, inference_times, write_times
 
 
-def add_energy_data(monitor: ZeusMonitor, performance_data: dict):
+def add_energy_data(monitor: Any, performance_data: dict):
     energy_data = monitor.end_window('performance_evaluation')
     performance_data['energy_data'] = {
         'cpu_energy': energy_data.cpu_energy,
@@ -895,6 +899,8 @@ def run_eager_performance_evaluation(
             )
 
     if track_energy:
+        from zeus.monitor import ZeusMonitor
+
         monitor = ZeusMonitor(gpu_indices=[0])
 
         monitor.begin_window('performance_evaluation')
@@ -958,6 +964,8 @@ def run_dataset_performance_evaluation(
         )
 
     if track_energy:
+        from zeus.monitor import ZeusMonitor
+
         monitor = ZeusMonitor(gpu_indices=[0])
         monitor.begin_window('performance_evaluation')
 
@@ -1343,15 +1351,43 @@ def run_performance_testing_on_directory(
 
 
 def run_batch_size(tile_source: large_image.tilesource, batch_size: int = 64):
-    iterator = tile_source.eagerIterator(output_mode='tiles', batch=batch_size)
-    for batch in iterator:
-        batch_images = batch[0].view()
-        batch_image = batch_images[0]
-        batch_image_copy = batch_image[:]
-        assert batch_images.shape[0] == batch_size
-        assert len(batch_images.shape) == 4
-        assert np.all(batch_image == batch_image_copy)
-        break
+    metadata = tile_source.getMetadata()
+    tile_size = {'width': 16, 'height': 16}
+    tile_range_x = int(np.ceil(metadata['sizeX'] / tile_size['width']))
+    tile_range_y = int(np.ceil(metadata['sizeY'] / tile_size['height']))
+    total_tiles = tile_range_x * tile_range_y
+    assert batch_size <= total_tiles
+    tiles = np.array(
+        [[idx // tile_range_x, idx % tile_range_x] for idx in range(batch_size)],
+        dtype=np.float32,
+    )
+    iterator = tile_source.eagerIterator(
+        output_mode='tiles',
+        tiles=tiles,
+        tile_size=tile_size,
+        chunk_mult=8,
+        batch=batch_size,
+        prefetch=1,
+        workers=2,
+    )
+    try:
+        batch = next(iterator)
+        shared_tiles = batch['tile']
+        batch_images = None
+        try:
+            batch_images = shared_tiles.view()
+            batch_shape = batch_images.shape
+            batch_image = batch_images[0].copy()
+            batch_image_copy = batch_image[:]
+            assert batch_shape[0] == batch_size
+            assert len(batch_shape) == 4
+            assert np.all(batch_image == batch_image_copy)
+        finally:
+            del batch_images
+            shared_tiles.close()
+    finally:
+        iterator.cleanup(wait=True)
+        del iterator
 
 
 def build_numpy_shared_array(
@@ -1391,7 +1427,7 @@ def run_eager_iterator_with_albumentations_transform(
         # Count tiles provided by the iterator
         count = 0
         for batch in iterator:
-            batch_images = batch['tile']
+            batch_images = batch['tile'].view()
             count += batch_images.shape[0]
 
         del iterator
@@ -1407,17 +1443,20 @@ def run_eager_iterator_with_albumentations_transform(
 
 def run_eager_iterator_numpy_dtype(test_file: Any, dtype: np.dtype):
     source, iterator = build_eager_iterator(test_file, dtype=dtype)
-    for batch in iterator:
-        batch_images = batch[0].view()
-        assert batch_images.dtype == dtype, f'Expected {dtype}, got {batch_images.dtype}'
+    try:
+        for batch in iterator:
+            batch_images = batch['tile'].view()
+            assert batch_images.dtype == dtype, f'Expected {dtype}, got {batch_images.dtype}'
+    finally:
+        del iterator
 
 
 def build_eager_iterator(
     test_file: Any,
     scale_mode: str = 'mag',
-    target_scale: int = 20,
+    target_scale: Union[float, tuple[float, float]] = 20,
     tile_size: tuple[int, int] = (224, 224),
-    overlap: int = 0,
+    overlap: float = 0,
     chunk_mult: int = 4,
     mask: str = None,
     output_mode: str = 'tiles',
@@ -1426,11 +1465,21 @@ def build_eager_iterator(
     batch: int = 64,
 ):
     source = large_image.open(test_file)
+    if scale_mode == 'mag':
+        scale = {'magnification': target_scale}
+    elif scale_mode == 'mm':
+        if isinstance(target_scale, tuple):
+            scale = {'mm_x': target_scale[0], 'mm_y': target_scale[1]}
+        else:
+            scale = {'mm_x': target_scale, 'mm_y': target_scale}
+    else:
+        msg = "scale_mode must be either 'mag' or 'mm'"
+        raise ValueError(msg)
+
     iterator = source.eagerIterator(
-        scale_mode=scale_mode,
-        target_scale=target_scale,
-        tile_size=tile_size,
-        overlap=overlap,
+        scale=scale,
+        tile_size={'width': tile_size[0], 'height': tile_size[1]},
+        tile_overlap={'x': overlap, 'y': overlap},
         chunk_mult=chunk_mult,
         mask=mask,
         output_mode=output_mode,
@@ -1467,8 +1516,8 @@ def test_eager_iterator_image(
         dtype=np.uint8,
     )
     for batch in iterator:
-        batch_images = batch[0].view()
-        batch_read_kwargs = batch[1]
+        batch_images = batch['tile'].view()
+        batch_read_kwargs = batch
         for i in range(batch_images.shape[0]):
             x = int(batch_read_kwargs['tile_position']['region_x'][i].item())
             y = int(batch_read_kwargs['tile_position']['region_y'][i].item())
@@ -1481,6 +1530,7 @@ def test_eager_iterator_image(
 
     large_image_output_path = os.path.join(output_dir_path, 'large_image.png')
     plt.imsave(large_image_output_path, test_large_image)
+    del iterator
 
 
 def run_eager_iterator_with_pytorch_transform(
@@ -1501,7 +1551,7 @@ def run_eager_iterator_with_pytorch_transform(
     # Count tiles provided by the iterator
     count = 0
     for batch in iterator:
-        batch_images = batch[0].view()
+        batch_images = batch['tile'].view()
         count += batch_images.shape[0]
 
     del iterator
@@ -1608,6 +1658,9 @@ def get_tissue_mask_with_background_elimination(
                     cv2.drawContours(contour_mask, [contour], 0, 0, -1)
 
                 if return_polygons:
+                    from shapely import affinity, to_geojson
+                    from shapely.geometry import Polygon
+
                     polygon = Polygon(np.squeeze(contour))
                     if slide_dimensions is not None:
                         polygon = affinity.scale(
