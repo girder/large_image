@@ -1477,7 +1477,7 @@ def run_eager_iterator_numpy_dtype(test_file: Any, dtype: np.dtype):
         'units': 'base_pixels',
     }
     source, iterator = build_eager_iterator(
-        test_file, dtype=dtype, region=region, workers=1, prefetch=1,
+        test_file, dtype=dtype, region=region, workers=2, prefetch=1,
     )
     try:
         for batch in iterator:
