@@ -1468,7 +1468,17 @@ def run_eager_iterator_with_albumentations_transform(
 
 
 def run_eager_iterator_numpy_dtype(test_file: Any, dtype: np.dtype):
-    source, iterator = build_eager_iterator(test_file, dtype=dtype)
+    metadata = large_image.open(test_file).getMetadata()
+    region = {
+        'left': 0,
+        'top': 0,
+        'width': min(metadata['sizeX'], metadata['tileWidth']),
+        'height': min(metadata['sizeY'], metadata['tileHeight']),
+        'units': 'base_pixels',
+    }
+    source, iterator = build_eager_iterator(
+        test_file, dtype=dtype, region=region, workers=1, prefetch=1,
+    )
     try:
         for batch in iterator:
             batch_images = batch['tile'].view()
@@ -1489,6 +1499,9 @@ def build_eager_iterator(
     transform: Callable = None,
     dtype: np.dtype = np.uint8,
     batch: int = 64,
+    region: dict = None,
+    workers: int = 16,
+    prefetch: int = 16,
 ):
     source = large_image.open(test_file)
     if scale_mode == 'mag':
@@ -1512,6 +1525,9 @@ def build_eager_iterator(
         transform=transform,
         batch=batch,
         dtype=dtype,
+        region=region,
+        workers=workers,
+        prefetch=prefetch,
     )
     return source, iterator
 

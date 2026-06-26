@@ -114,7 +114,6 @@ def pad_tile(tile: np.ndarray, w: int, h: int, pad_mode: str, pad_fill_mode: str
 
 
 def return_constant_color(image: np.ndarray, pad_fill_mode: Any):
-    # Determine the color that will be used for paadding
     """Resolve the RGB color used for padding.
 
     :param image: Source image used by data-dependent fill modes.
