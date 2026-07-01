@@ -1,6 +1,10 @@
 # Change Log
 
-## 1.34.4
+## 1.35.0
+
+### Features
+
+- Eager iterator ([#2072](../../pull/2072))
 
 ### Changes
 
