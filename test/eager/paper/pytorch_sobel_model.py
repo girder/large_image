@@ -19,7 +19,7 @@ def make_sobel_model(compile_model: bool = True, cuda_device: str = 'cuda:0'):
 
 class SobelFilter(nn.Module):
     def __init__(self_, max_channels: int = 3):
-        super(SobelFilter, self_).__init__()
+        super().__init__()
         # Define Sobel kernels
         sobel_x = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=torch.float32)
         sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=torch.float32)

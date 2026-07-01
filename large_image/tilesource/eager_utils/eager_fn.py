@@ -1,8 +1,8 @@
 """Share eager iterator callables with worker processes."""
 
-from typing import Callable, Dict, Optional
+from collections.abc import Callable
 
-_eager_fns: Dict[str, Optional[Callable]] = {
+_eager_fns: dict[str, Callable | None] = {
     'transform': None,
     'transform_scale': None,
 }
@@ -23,7 +23,7 @@ def set_transform(fn: Callable) -> None:
     _eager_fns['transform'] = fn
 
 
-def get_transform() -> Optional[Callable]:
+def get_transform() -> Callable | None:
     """Return the process-local eager transform callable.
 
     :returns: The callable set by set_transform, or None if unset.
@@ -45,7 +45,7 @@ def set_transform_scale(fn: Callable) -> None:
     _eager_fns['transform_scale'] = fn
 
 
-def get_transform_scale() -> Optional[Callable]:
+def get_transform_scale() -> Callable | None:
     """Return the process-local eager transform-scale callable.
 
     :returns: The callable set by set_transform_scale, or None if unset.

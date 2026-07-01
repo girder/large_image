@@ -4,7 +4,7 @@
 
 ### Features
 
-- Eager iterator ([#2072](../../pull/2072))
+- Eager iterator ([#2072](../../pull/2072), [#2073](../../pull/2073))
 
 ### Changes
 

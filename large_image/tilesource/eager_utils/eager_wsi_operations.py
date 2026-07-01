@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import warnings
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -27,7 +27,7 @@ def get_smallest_bounding_box(roi):
 def return_tile_slides_meeting_area_threshold(
     mask: np.ndarray,
     slide_dim: dict,
-    tiles: Union[List, np.ndarray],
+    tiles: list | np.ndarray,
     area_threshold: float = 0.25,
     threshold_mask: float = 100,
 ):
@@ -62,7 +62,7 @@ def return_tile_slides_meeting_area_threshold(
 
 
 def return_relevant_tile_indexes_for_slide_dim(
-    slide_dimensions: dict, tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None,
+    slide_dimensions: dict, tile_overlap: dict[str, int] | dict[str, float] | None = None,
 ):
     """Return tile indexes covering the target slide dimensions.
 
@@ -202,7 +202,7 @@ def generate_assumptions_for_x_y_given_mag(x, y, z):
     return x, y, z
 
 
-def _scale_values_from_magnification(source_meta: dict, scale: Dict[str, Any]) -> tuple:
+def _scale_values_from_magnification(source_meta: dict, scale: dict[str, Any]) -> tuple:
     """Calculate scaling values for a magnification scale request."""
     i, j, k, x, y, z = None, None, None, None, None, None
     if scale['magnification'] is None:
@@ -232,7 +232,7 @@ def _scale_values_from_magnification(source_meta: dict, scale: Dict[str, Any]) -
     return i, j, k, x, y, z
 
 
-def _scale_values_from_mm(source_meta: dict, scale: Dict[str, Any], values: tuple) -> tuple:
+def _scale_values_from_mm(source_meta: dict, scale: dict[str, Any], values: tuple) -> tuple:
     """Calculate scaling values for a millimeter pixel-size scale request."""
     i, j, k, x, y, z = values
     if scale['mm_x'] is None and scale['mm_y'] is None:
@@ -272,7 +272,7 @@ def _scale_values_from_mm(source_meta: dict, scale: Dict[str, Any], values: tupl
     return i, j, k, x, y, z
 
 
-def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, Any]] = None):
+def get_scaling_values_from_meta(source_meta: dict, scale: dict[str, Any] | None = None):
     """Calculate base and target scaling values from source metadata.
 
     :param source_meta: Metadata dictionary from a tile source.
@@ -299,7 +299,7 @@ def get_scaling_values_from_meta(source_meta: dict, scale: Optional[Dict[str, An
     }
 
 
-def _normalize_region_bounds(region: Dict[str, Any]) -> None:
+def _normalize_region_bounds(region: dict[str, Any]) -> None:
     """Normalize right/bottom region bounds into width and height.
 
     :param region: Mutable region dictionary supplied by the caller.
@@ -311,7 +311,7 @@ def _normalize_region_bounds(region: Dict[str, Any]) -> None:
         region['width'] = region['right'] - region['left']
 
 
-def _validate_region(region: Dict[str, Any], source_meta: Dict[str, Any], source_scale) -> None:
+def _validate_region(region: dict[str, Any], source_meta: dict[str, Any], source_scale) -> None:
     """Validate an eager source region.
 
     :param region: Region with left, top, width, height, and units.
@@ -349,10 +349,10 @@ def _validate_region(region: Dict[str, Any], source_meta: Dict[str, Any], source
 
 
 def _region_slide_dimensions(
-    source_meta: Dict[str, Any],
-    region: Optional[Dict[str, Any]],
+    source_meta: dict[str, Any],
+    region: dict[str, Any] | None,
     source_scale,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Return slide-dimension fields describing the requested source region.
 
     :param source_meta: Tile-source metadata used for the full-image fallback.
@@ -383,7 +383,7 @@ def _region_slide_dimensions(
     }
 
 
-def _normalize_scale(scale: Optional[Dict[str, Any]]) -> tuple[Dict[str, Any], str]:
+def _normalize_scale(scale: dict[str, Any] | None) -> tuple[dict[str, Any], str]:
     """Return a usable scale dictionary and eager scale mode.
 
     :param scale: Optional target scale using magnification or mm_x and mm_y.
@@ -400,7 +400,7 @@ def _normalize_scale(scale: Optional[Dict[str, Any]]) -> tuple[Dict[str, Any], s
 
 
 def _tile_size_from_meta(
-    source_meta: Dict[str, Any], tile_size: Optional[Dict[str, int]],
+    source_meta: dict[str, Any], tile_size: dict[str, int] | None,
 ) -> tuple[int, int]:
     """Return the requested eager tile size.
 
@@ -420,7 +420,7 @@ def _tile_size_from_meta(
 
 
 def _add_base_slide_dimensions(
-    slide_dimensions: Dict[str, Any], source_meta: Dict[str, Any], scale: Dict[str, Any],
+    slide_dimensions: dict[str, Any], source_meta: dict[str, Any], scale: dict[str, Any],
 ) -> None:
     """Populate base metadata and target scaling fields.
 
@@ -446,7 +446,7 @@ def _add_base_slide_dimensions(
 
 
 def _add_mm_scaling_values(
-    slide_dimensions: Dict[str, Any], scaling_values: Dict[str, Any],
+    slide_dimensions: dict[str, Any], scaling_values: dict[str, Any],
 ) -> None:
     """Populate millimeter scaling values.
 
@@ -470,7 +470,7 @@ def _add_mm_scaling_values(
     slide_dimensions['base_mm_y'] = scaling_values['base_mm_y']
 
 
-def _source_region_from_slide_dimensions(slide_dimensions: Dict[str, Any]) -> Dict[str, Any]:
+def _source_region_from_slide_dimensions(slide_dimensions: dict[str, Any]) -> dict[str, Any]:
     """Return a convertRegionScale source region from slide dimensions.
 
     :param slide_dimensions: Slide dimension metadata.
@@ -485,7 +485,7 @@ def _source_region_from_slide_dimensions(slide_dimensions: Dict[str, Any]) -> Di
     )
 
 
-def _target_scale_from_slide_dimensions(slide_dimensions: Dict[str, Any]) -> Dict[str, Any]:
+def _target_scale_from_slide_dimensions(slide_dimensions: dict[str, Any]) -> dict[str, Any]:
     """Return a convertRegionScale target scale from slide dimensions.
 
     :param slide_dimensions: Slide dimension metadata.
@@ -500,8 +500,8 @@ def _target_scale_from_slide_dimensions(slide_dimensions: Dict[str, Any]) -> Dic
 
 
 def _convert_region_scales(
-    source: TileSource, slide_dimensions: Dict[str, Any], source_scale: Optional[Dict[str, Any]],
-) -> tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    source: TileSource, slide_dimensions: dict[str, Any], source_scale: dict[str, Any] | None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Convert the requested eager source region into output scales.
 
     :param source: Tile source used for scale conversion.
@@ -509,7 +509,7 @@ def _convert_region_scales(
     :param source_scale: Source scale required for mag-pixel regions.
     :returns: Pixel, millimeter, and base-pixel converted regions.
     """
-    convert_kwargs: Dict[str, Any] = dict(
+    convert_kwargs: dict[str, Any] = dict(
         sourceRegion=_source_region_from_slide_dimensions(slide_dimensions),
         targetScale=_target_scale_from_slide_dimensions(slide_dimensions),
     )
@@ -525,7 +525,7 @@ def _convert_region_scales(
     )
 
 
-def _add_level(source: TileSource, slide_dimensions: Dict[str, Any]) -> None:
+def _add_level(source: TileSource, slide_dimensions: dict[str, Any]) -> None:
     """Populate the tile-source level for the active scale mode.
 
     :param source: Tile source used for level selection.
@@ -547,10 +547,10 @@ def _add_level(source: TileSource, slide_dimensions: Dict[str, Any]) -> None:
 
 
 def _add_output_dimensions(
-    slide_dimensions: Dict[str, Any],
-    convert_scale_px: Dict[str, Any],
-    convert_scale_mm: Dict[str, Any],
-    base_scale_px: Dict[str, Any],
+    slide_dimensions: dict[str, Any],
+    convert_scale_px: dict[str, Any],
+    convert_scale_mm: dict[str, Any],
+    base_scale_px: dict[str, Any],
 ) -> None:
     """Populate output dimensions derived from converted region scales.
 
@@ -582,10 +582,10 @@ def _add_output_dimensions(
 
 def calculate_slide_dimensions(
     source: TileSource,
-    region: Optional[Dict[str, int]] = None,
-    scale: Optional[Dict[str, Any]] = None,
-    tile_size: Optional[Dict[str, int]] = None,
-    source_scale: Optional[Dict[str, Any]] = None,
+    region: dict[str, int] | None = None,
+    scale: dict[str, Any] | None = None,
+    tile_size: dict[str, int] | None = None,
+    source_scale: dict[str, Any] | None = None,
     **kwargs,
 ):
     """Calculate slide geometry for eager reads.

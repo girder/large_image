@@ -9,9 +9,10 @@ import pickle
 import random
 import time
 from collections import deque
+from collections.abc import Callable
 from concurrent.futures import ALL_COMPLETED
 from concurrent.futures import wait as wait_futures
-from typing import Any, Callable, Dict, Optional, Union, cast
+from typing import Any, cast
 
 import numpy as np
 from PIL import Image
@@ -39,13 +40,13 @@ class EagerIterator:
         self,
         source: 'tilesource.TileSource',
         output_mode: str = 'tiles',
-        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]] = None,
-        mask: Optional[Union[np.ndarray, str, os.PathLike]] = None,
-        region: Optional[Dict[str, Any]] = None,
-        scale: Optional[Dict[str, Any]] = None,
-        tile_size: Optional[Dict[str, int]] = None,
-        region_size: Optional[Dict[str, int]] = None,
-        source_scale: Optional[Dict[str, Any]] = None,
+        tile_overlap: dict[str, int] | dict[str, float] | None = None,
+        mask: np.ndarray | str | os.PathLike | None = None,
+        region: dict[str, Any] | None = None,
+        scale: dict[str, Any] | None = None,
+        tile_size: dict[str, int] | None = None,
+        region_size: dict[str, int] | None = None,
+        source_scale: dict[str, Any] | None = None,
         dtype: np.typing.DTypeLike = np.uint8,
         chunk_mult: int = 2,
         edge: bool = False,
@@ -55,15 +56,15 @@ class EagerIterator:
         batch: int = 64,
         prefetch: int = 16,
         workers: int = 16,
-        tiles: Optional[Union[list, np.ndarray]] = None,
-        regions: Optional[Union[list, np.ndarray]] = None,
-        transform: Optional[Callable] = None,
+        tiles: list | np.ndarray | None = None,
+        regions: list | np.ndarray | None = None,
+        transform: Callable | None = None,
         randomize_chunks: bool = False,
         seed: int = 42,
         area_threshold: float = 0.25,
         threshold_mask: float = 100,
-        transform_save_mode: Optional[str] = 'tile_x_y',
-        transform_scale: Optional[Callable] = None,
+        transform_save_mode: str | None = 'tile_x_y',
+        transform_scale: Callable | None = None,
     ):
         """Initialize an eager iterator for batched tile or region reads.
 
@@ -134,10 +135,10 @@ class EagerIterator:
     def _validate_init_args(
         self,
         output_mode: str,
-        regions: Optional[Union[list, np.ndarray]],
-        scale: Optional[Dict[str, Any]],
-        tile_size: Optional[Dict[str, int]],
-        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]],
+        regions: list | np.ndarray | None,
+        scale: dict[str, Any] | None,
+        tile_size: dict[str, int] | None,
+        tile_overlap: dict[str, int] | dict[str, float] | None,
         pad_mode: str,
         workers: int,
     ) -> None:
@@ -171,7 +172,7 @@ class EagerIterator:
 
     @staticmethod
     def _validate_output_mode(
-        output_mode: str, regions: Optional[Union[list, np.ndarray]], pad_mode: str,
+        output_mode: str, regions: list | np.ndarray | None, pad_mode: str,
     ) -> None:
         """Validate output-mode compatibility with related arguments.
 
@@ -197,7 +198,7 @@ class EagerIterator:
             raise ValueError(msg)
 
     @staticmethod
-    def _validate_scale(scale: Optional[Dict[str, Any]]) -> None:
+    def _validate_scale(scale: dict[str, Any] | None) -> None:
         """Validate the requested target scale.
 
         :param scale: Optional target scale using magnification or mm_x and mm_y.
@@ -219,7 +220,7 @@ class EagerIterator:
             raise ValueError(msg)
 
     @staticmethod
-    def _validate_tile_size(tile_size: Optional[Dict[str, int]]) -> None:
+    def _validate_tile_size(tile_size: dict[str, int] | None) -> None:
         """Validate the requested output tile size.
 
         :param tile_size: Optional output tile size with width and height in pixels.
@@ -236,7 +237,7 @@ class EagerIterator:
 
     @staticmethod
     def _validate_tile_overlap(
-        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]],
+        tile_overlap: dict[str, int] | dict[str, float] | None,
     ) -> None:
         """Validate the requested tile overlap.
 
@@ -264,17 +265,17 @@ class EagerIterator:
         edge: bool,
         batch: int,
         output_mode: str,
-        scale: Optional[Dict[str, Any]],
+        scale: dict[str, Any] | None,
         pad_fill_mode: str,
         pad_mode: str,
         chunk_mult: int,
         randomize_chunks: bool,
         seed: int,
-        tile_overlap: Optional[Union[Dict[str, int] | Dict[str, float]]],
-        region: Optional[Dict[str, Any]],
-        transform: Optional[Callable],
-        transform_save_mode: Optional[str],
-        transform_scale: Optional[Callable],
+        tile_overlap: dict[str, int] | dict[str, float] | None,
+        region: dict[str, Any] | None,
+        transform: Callable | None,
+        transform_save_mode: str | None,
+        transform_scale: Callable | None,
     ) -> None:
         """Store constructor options on this iterator.
 
@@ -299,22 +300,22 @@ class EagerIterator:
         self.transform_save_mode = transform_save_mode
         self._worker_transform = None
         self._worker_transform_scale = None
-        self.transform_scale: Optional[Callable] = transform_scale
+        self.transform_scale: Callable | None = transform_scale
 
     def _setup_input_selection(
         self,
         output_mode: str,
-        mask: Optional[Union[np.ndarray, str, os.PathLike]],
-        region: Optional[Dict[str, Any]],
-        scale: Optional[Dict[str, Any]],
-        tile_size: Optional[Dict[str, int]],
-        region_size: Optional[Dict[str, int]],
-        source_scale: Optional[Dict[str, Any]],
-        tiles: Optional[Union[list, np.ndarray]],
-        regions: Optional[Union[list, np.ndarray]],
+        mask: np.ndarray | str | os.PathLike | None,
+        region: dict[str, Any] | None,
+        scale: dict[str, Any] | None,
+        tile_size: dict[str, int] | None,
+        region_size: dict[str, int] | None,
+        source_scale: dict[str, Any] | None,
+        tiles: list | np.ndarray | None,
+        regions: list | np.ndarray | None,
         area_threshold: float,
         threshold_mask: float,
-    ) -> tuple[Optional[Union[list, np.ndarray]], Optional[Union[list, np.ndarray]]]:
+    ) -> tuple[list | np.ndarray | None, list | np.ndarray | None]:
         """Prepare tile or region selection and slide dimensions.
 
         :returns: The normalized tiles and regions selections.
@@ -332,15 +333,15 @@ class EagerIterator:
 
     def _setup_tile_inputs(
         self,
-        mask: Optional[Union[np.ndarray, str, os.PathLike]],
-        region: Optional[Dict[str, Any]],
-        scale: Optional[Dict[str, Any]],
-        tile_size: Optional[Dict[str, int]],
-        source_scale: Optional[Dict[str, Any]],
-        tiles: Optional[Union[list, np.ndarray]],
+        mask: np.ndarray | str | os.PathLike | None,
+        region: dict[str, Any] | None,
+        scale: dict[str, Any] | None,
+        tile_size: dict[str, int] | None,
+        source_scale: dict[str, Any] | None,
+        tiles: list | np.ndarray | None,
         area_threshold: float,
         threshold_mask: float,
-    ) -> Union[list, np.ndarray]:
+    ) -> list | np.ndarray:
         """Prepare tile-mode slide dimensions and tile indexes.
 
         :returns: Tile indexes in row, column order.
@@ -358,11 +359,11 @@ class EagerIterator:
 
     def _filter_tiles_with_mask(
         self,
-        mask: Optional[Union[np.ndarray, str, os.PathLike]],
-        tiles: Union[list, np.ndarray],
+        mask: np.ndarray | str | os.PathLike | None,
+        tiles: list | np.ndarray,
         area_threshold: float,
         threshold_mask: float,
-    ) -> Union[list, np.ndarray]:
+    ) -> list | np.ndarray:
         """Filter tile indexes by an optional mask.
 
         :returns: Tile indexes that pass the mask threshold, or the original tile indexes.
@@ -379,11 +380,11 @@ class EagerIterator:
 
     def _setup_region_inputs(
         self,
-        regions: Union[list, np.ndarray],
-        region: Optional[Dict[str, Any]],
-        scale: Optional[Dict[str, Any]],
-        region_size: Optional[Dict[str, int]],
-        source_scale: Optional[Dict[str, Any]],
+        regions: list | np.ndarray,
+        region: dict[str, Any] | None,
+        scale: dict[str, Any] | None,
+        region_size: dict[str, int] | None,
+        source_scale: dict[str, Any] | None,
     ) -> np.ndarray:
         """Prepare region-mode slide dimensions and read regions.
 
@@ -455,8 +456,8 @@ class EagerIterator:
     def _build_read_kwargs(
         self,
         output_mode: str,
-        tiles: Optional[Union[list, np.ndarray]],
-        regions: Optional[Union[list, np.ndarray]],
+        tiles: list | np.ndarray | None,
+        regions: list | np.ndarray | None,
         edge: bool,
         chunk_mult: int,
     ) -> list:
@@ -482,7 +483,7 @@ class EagerIterator:
         msg = 'Supplied output mode must be either tiles or regions'
         raise ValueError(msg)
 
-    def _configure_transform_scale(self, transform_scale: Optional[Callable]) -> None:
+    def _configure_transform_scale(self, transform_scale: Callable | None) -> None:
         """Validate and register a transform-scale callable.
 
         :param transform_scale: Optional callable that customizes read coordinates and scale.
@@ -511,7 +512,7 @@ class EagerIterator:
         try:
             return transform_scale(self.read_kwargs[0], self.slide_dimensions)
         except Exception as e:
-            msg = 'Provided transform_scale test call failed.  Error: {}'.format(e)
+            msg = f'Provided transform_scale test call failed.  Error: {e}'
             raise ValueError(msg) from e
 
     def _validate_transform_scale_result(self, transform_scale_result: tuple) -> None:
@@ -558,7 +559,7 @@ class EagerIterator:
             isinstance(target_scale, dict)
         )
 
-    def _validate_transform_scale_mode(self, target_scale: Dict[str, Any]) -> None:
+    def _validate_transform_scale_mode(self, target_scale: dict[str, Any]) -> None:
         """Validate transform-scale target scale for the active scale mode.
 
         :param target_scale: Target scale returned by transform_scale.
@@ -601,7 +602,7 @@ class EagerIterator:
         if self.nchw:
             self.out_dims = (self.out_dims[0], self.out_dims[3], self.out_dims[1], self.out_dims[2])
 
-    def _prepare_worker_transform(self, transform: Optional[Callable]):
+    def _prepare_worker_transform(self, transform: Callable | None):
         """Register a transform callable for worker processes.
 
         :param transform: Transform callable or supported compose object.
@@ -618,7 +619,7 @@ class EagerIterator:
             eager_fn.set_transform(transform)
             return _EAGER_FN_TRANSFORM_SENTINEL
 
-    def _prepare_worker_transform_scale(self, transform_scale: Optional[Callable]):
+    def _prepare_worker_transform_scale(self, transform_scale: Callable | None):
         """Register a transform-scale callable for worker processes.
 
         :param transform_scale: Callable that computes custom read coordinates and scale.
@@ -832,7 +833,7 @@ class EagerIterator:
             # Add exception for read operation in multiprocessing pool to allow user to be aware
             # of potential issues with their callable transform
             self.pool.shutdown(wait=False, cancel_futures=True)
-            msg = 'Exception in __next__: {}'.format(e)
+            msg = f'Exception in __next__: {e}'
             raise Exception(msg) from e
 
         # last batch may only have partial size
@@ -886,13 +887,13 @@ class EagerIterator:
         output_mode: str,
         batch: int,
         slide_dimensions: dict,
-        region: Optional[Dict[str, Any]] = None,
-        transform: Optional[Union[Callable, str]] = None,
+        region: dict[str, Any] | None = None,
+        transform: Callable | str | None = None,
         pad_mode: str = 'wsi_edge',
         pad_fill_mode: str = 'default',
-        callable_arg_num: Optional[int] = None,
-        transform_save_mode: Optional[str] = 'tile_x_y',
-        worker_transform_scale: Optional[Union[Callable, str]] = None,
+        callable_arg_num: int | None = None,
+        transform_save_mode: str | None = 'tile_x_y',
+        worker_transform_scale: Callable | str | None = None,
     ):
         """Read one eager chunk into shared-memory output buffers.
 
@@ -947,7 +948,7 @@ class EagerIterator:
     def _resolve_worker_scale_data(
         read_kwargs: np.ndarray,
         slide_dimensions: dict,
-        worker_transform_scale: Optional[Union[Callable, str]],
+        worker_transform_scale: Callable | str | None,
     ) -> tuple:
         """Resolve worker read coordinates and target scale.
 
@@ -969,7 +970,7 @@ class EagerIterator:
         )
 
     @staticmethod
-    def _read_bounds(xlt, ytt, xrt, ybt) -> Dict[str, Any]:
+    def _read_bounds(xlt, ytt, xrt, ybt) -> dict[str, Any]:
         """Return the source bounds needed for one worker chunk read.
 
         :returns: Bounds and maximum output dimensions for the chunk.
@@ -987,7 +988,7 @@ class EagerIterator:
 
     @staticmethod
     def _validate_worker_bounds(
-        output_mode: str, bounds: Dict[str, Any], slide_dimensions: dict, read_kwargs: np.ndarray,
+        output_mode: str, bounds: dict[str, Any], slide_dimensions: dict, read_kwargs: np.ndarray,
     ) -> None:
         """Validate worker read bounds against the whole-slide image.
 
@@ -1094,7 +1095,7 @@ class EagerIterator:
         yto,
         ho,
         tile_size_dict: dict,
-        region: Optional[Dict[str, Any]],
+        region: dict[str, Any] | None,
         pad_mode: str,
         pad_fill_mode: str,
     ) -> list:
@@ -1127,7 +1128,7 @@ class EagerIterator:
         yto,
         ho,
         tile_size_dict: dict,
-        region: Optional[Dict[str, Any]],
+        region: dict[str, Any] | None,
         pad_mode: str,
         pad_fill_mode: str,
     ) -> list:
@@ -1195,10 +1196,10 @@ class EagerIterator:
     @staticmethod
     def _apply_worker_transform(
         tiles: list,
-        transform: Optional[Union[Callable, str]],
+        transform: Callable | str | None,
         dtype: np.dtype,
-        callable_arg_num: Optional[int],
-        transform_save_mode: Optional[str],
+        callable_arg_num: int | None,
+        transform_save_mode: str | None,
         tile_x,
         tile_y,
         xlt,
@@ -1221,7 +1222,7 @@ class EagerIterator:
         )
 
     @staticmethod
-    def _resolve_worker_transform(transform: Union[Callable, str]) -> Callable:
+    def _resolve_worker_transform(transform: Callable | str) -> Callable:
         """Resolve a sentinel transform into the process-local callable.
 
         :returns: Transform callable for this worker.
@@ -1239,8 +1240,8 @@ class EagerIterator:
         tiles: list,
         transform: Callable,
         dtype: np.dtype,
-        callable_arg_num: Optional[int],
-        transform_save_mode: Optional[str],
+        callable_arg_num: int | None,
+        transform_save_mode: str | None,
         tile_x,
         tile_y,
         xlt,
@@ -1299,7 +1300,7 @@ class EagerIterator:
         offset: int,
         batch: int,
         nchw: bool,
-        worker_transform_scale: Optional[Union[Callable, str]],
+        worker_transform_scale: Callable | str | None,
         mm_x,
         mm_y,
     ) -> None:
@@ -1443,5 +1444,5 @@ class EagerIterator:
 
         except Exception as error:
             self.pool.shutdown(wait=False, cancel_futures=True)
-            msg = 'Exception in _fill: {}'.format(error)
+            msg = f'Exception in _fill: {error}'
             raise Exception(msg) from error
