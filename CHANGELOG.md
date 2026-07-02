@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.1
+
+### Improvements
+
+- Add a few missing type annotations ([#2074](../../pull/2074))
+
 ## 1.35.0
 
 ### Features
