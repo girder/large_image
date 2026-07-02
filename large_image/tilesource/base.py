@@ -28,6 +28,7 @@ from ..constants import (TILE_FORMAT_IMAGE, TILE_FORMAT_NUMPY, TILE_FORMAT_PIL,
                          TileInputUnits, TileOutputMimeTypes,
                          TileOutputPILFormat)
 from . import utilities
+from .eageriterator import EagerIterator
 from .jupyter import IPyLeafletMixin
 from .tiledict import LazyTileDict
 from .tileiterator import TileIterator
@@ -2371,6 +2372,26 @@ class TileSource(IPyLeafletMixin):
         if rounding is not None:
             level = max(0, min(mag['level'] or 0, level))
         return level
+
+    def eagerIterator(self, **kwargs) -> EagerIterator:
+        """Create an eager iterator for batched tile or region reads.
+
+        The eager iterator is intended for AI and machine-learning workflows that need
+        prefetched numpy or torch batches from a Large Image tile source. It supports tile
+        mode and explicit region mode, optional masking, scaling, padding, transforms,
+        and dynamic transform-scale callbacks.
+
+        :param kwargs: EagerIterator options such as output_mode, tile_overlap, mask,
+            region, scale, tile_size, region_size, source_scale, dtype, chunk_mult,
+            edge, pad_mode, pad_fill_mode, nchw, batch, prefetch, workers, tiles,
+            regions, transform, randomize_chunks, seed, area_threshold, threshold_mask,
+            transform_save_mode, and transform_scale.
+        :returns: An EagerIterator. Each iteration returns a dictionary with 'tile' as a
+            SharedArray plus tile metadata including format, gx, gy, level_x, level_y,
+            tile_position, width, height, level, magnification, mm_x, mm_y, gwidth, and
+            gheight.
+        """
+        return EagerIterator(self, **kwargs)
 
     def tileIterator(
             self, format: str | tuple[str] = (TILE_FORMAT_NUMPY, ),

@@ -16,6 +16,14 @@ import sys
 docs_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.abspath(os.path.join(docs_dir, '..', '..')))
 
+try:
+    import pypandoc
+except ImportError:
+    pass
+else:
+    pandoc_dir = os.path.dirname(pypandoc.get_pandoc_path())
+    os.environ['PATH'] = pandoc_dir + os.pathsep + os.environ.get('PATH', '')
+
 # -- Project information -----------------------------------------------------
 
 project = 'large_image'
@@ -75,6 +83,10 @@ html_permalinks = True
 html_permalinks_icon = '&#128279'
 
 autoclass_content = 'both'
+
+autodoc_type_aliases = {
+    'TileSource': 'large_image.tilesource.base.TileSource',
+}
 
 mermaid_version = '10.6.0'
 mermaid_init_js = 'mermaid.initialize({startOnLoad:true});'
