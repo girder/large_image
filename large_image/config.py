@@ -197,7 +197,7 @@ def total_memory() -> int:
     return 8 * 1024 ** 3
 
 
-def minimizeCaching(mode=None):
+def minimizeCaching(mode: str | None = None) -> None:
     """
     Set python cache sizes to very low values.
 

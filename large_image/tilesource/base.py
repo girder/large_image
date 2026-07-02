@@ -2804,7 +2804,7 @@ class FileTileSource(TileSource):
             return False
 
     @classmethod
-    def addKnownMimetypes(cls):
+    def addKnownMimetypes(cls) -> None:
         """
         Based on already listed extensions and a set of common extension-
         mimetype list, add mimetypes if they do not already exist.
