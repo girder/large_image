@@ -34,12 +34,22 @@ redis
 simplejpeg
 ipyvue
 aiohttp
+pykdtree
 
 # External dependencies
 pip>=9
 tox
 twine
 virtualenv
+
+# for eager
+--extra-index-url https://download.pytorch.org/whl/cpu
+pykdtree
+h5py
+torch
+torchvision
+albumentations
+opencv-python
 
 # For Jupyter
 ipyleaflet

@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.35.0
+
+### Features
+
+- Eager iterator ([#2072](../../pull/2072), [#2073](../../pull/2073))
+
+### Changes
+
+- Set GDAL_PAM_ENABLED to NO if it is not set to avoid creating aux.xml files ([#2093](../../pull/2093))
+
 ## 1.34.3
 
 ### Improvements
@@ -7,6 +17,7 @@
 - In Girder, by default include Updated in lists; do not show controls in dialog lists ([#2078](../../pull/2078))
 
 ### Changes
+
 - Set an expiry duration on redis cache entries ([#2092](../../pull/2092))
 
 ### Bug Fixes
