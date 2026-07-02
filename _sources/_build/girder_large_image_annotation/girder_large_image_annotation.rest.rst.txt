@@ -1,0 +1,21 @@
+girder\_large\_image\_annotation.rest package
+=============================================
+
+Submodules
+----------
+
+girder\_large\_image\_annotation.rest.annotation module
+-------------------------------------------------------
+
+.. automodule:: girder_large_image_annotation.rest.annotation
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: girder_large_image_annotation.rest
+   :members:
+   :show-inheritance:
+   :undoc-members:

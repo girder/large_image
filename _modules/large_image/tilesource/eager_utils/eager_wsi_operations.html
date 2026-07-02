@@ -1,0 +1,1193 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>large_image.tilesource.eager_utils.eager_wsi_operations &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=e9af8ede" />
+
+  
+    <link rel="shortcut icon" href="../../../../_static/K.png"/>
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+      <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.6.0/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = `pre.mermaid {
+    /* Same as .mermaid-container > pre */
+    display: block;
+    width: 50%;
+}
+
+pre.mermaid > svg {
+    /* Same as .mermaid-container > pre > svg */
+    height: auto;
+    width: 100%;
+    max-width: 100% !important;
+}`;
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = `.mermaid-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.mermaid-container > pre {
+    display: block;
+    width: 50%;
+}
+
+.mermaid-container > pre > svg {
+    height: auto;
+    width: 100%;
+    max-width: 100% !important;
+}
+
+.mermaid-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #333;
+}
+
+.mermaid-fullscreen-btn:hover {
+    opacity: 100% !important;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-btn.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-btn.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 95vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    padding: 20px;
+    overflow: auto;
+}
+
+.mermaid-fullscreen-modal.dark-theme {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.mermaid-fullscreen-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen {
+    position: relative;
+    width: 95vw;
+    height: 90vh;
+    max-width: 95vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen.dark-theme {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.mermaid-container-fullscreen pre.mermaid {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen .mermaid svg {
+    height: 100% !important;
+    width: 100% !important;
+    cursor: grab;
+}
+
+.mermaid-fullscreen-close {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    font-size: 24px;
+    line-height: 1;
+    color: #333;
+}
+
+.mermaid-fullscreen-close:hover {
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-close.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-close.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal .mermaid-fullscreen-btn {
+    display: none !important;
+}`;
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        all_mermaids.forEach((el) => {
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+        await mermaid.run();
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+
+    if ("False" === "True") {
+        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("");
+            if(all_mermaids.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else if(svgs.size() !== mermaids_to_add_zoom) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else {
+                svgs.each(function() {
+                    var svg = d3.select(this);
+                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+                    var inner = svg.select("g");
+                    var zoom = d3.zoom().on("zoom", function(event) {
+                        inner.attr("transform", event.transform);
+                    });
+                    svg.call(zoom);
+                });
+            }
+        }
+    } else if(all_mermaids.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if ("True" !== "True") return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.style.opacity = '50%';
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scroll, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.sdisplay = 'block';
+
+                if ("False" === "True") {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+const load = async () => {
+    initStyles();
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...JSON.parse(
+                    `{"startOnLoad": false}`
+                ),
+                ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...JSON.parse(
+        `{"startOnLoad": false}`
+    ),
+    ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+    }
+);
+
+window.addEventListener("load", load);
+window.runMermaid = runMermaid;</script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../development.html">Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../girder_index.html">Girder Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../api_index.html">API Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../../tilesource.html">large_image.tilesource</a></li>
+      <li class="breadcrumb-item active">large_image.tilesource.eager_utils.eager_wsi_operations</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for large_image.tilesource.eager_utils.eager_wsi_operations</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Whole-slide geometry and scaling helpers for eager reads.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">..base</span><span class="w"> </span><span class="kn">import</span> <span class="n">TileSource</span>
+
+
+<div class="viewcode-block" id="get_smallest_bounding_box">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.get_smallest_bounding_box">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_smallest_bounding_box</span><span class="p">(</span><span class="n">roi</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the smallest bounding box that contains an ROI polygon.</span>
+
+<span class="sd">    :param roi: ROI dictionary with a points sequence containing x and y coordinates.</span>
+<span class="sd">    :returns: The top-left and bottom-right coordinate pairs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">roi</span><span class="p">[</span><span class="s1">&#39;points&#39;</span><span class="p">])[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">roi_x1</span><span class="p">,</span> <span class="n">roi_y1</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">roi_x2</span><span class="p">,</span> <span class="n">roi_y2</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">roi_x1</span><span class="p">,</span> <span class="n">roi_y1</span><span class="p">),</span> <span class="p">(</span><span class="n">roi_x2</span><span class="p">,</span> <span class="n">roi_y2</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="return_tile_slides_meeting_area_threshold">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.return_tile_slides_meeting_area_threshold">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">return_tile_slides_meeting_area_threshold</span><span class="p">(</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">slide_dim</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">tiles</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">area_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">threshold_mask</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Filter tile indexes by the amount of mask signal they contain.</span>
+
+<span class="sd">    :param mask: Whole-slide mask image used to score candidate tiles.</span>
+<span class="sd">    :param slide_dim: Slide dimension metadata from calculate_slide_dimensions.</span>
+<span class="sd">    :param tiles: Candidate tile indexes in row, column order.</span>
+<span class="sd">    :param area_threshold: Minimum mask-signal fraction required for a tile.</span>
+<span class="sd">    :param threshold_mask: Minimum mask pixel value considered signal.</span>
+<span class="sd">    :returns: A list of tile indexes that meet the threshold.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">return_tiles</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">threshold_mask</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">tile</span> <span class="ow">in</span> <span class="n">tiles</span><span class="p">:</span>
+        <span class="n">mask_patch</span> <span class="o">=</span> <span class="n">get_patch_from_mask_for_tile</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">slide_dim</span><span class="p">,</span> <span class="n">tile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mask_patch</span> <span class="o">&gt;</span> <span class="n">threshold_mask</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">mask_patch</span><span class="p">)</span> <span class="o">*</span> <span class="n">area_threshold</span><span class="p">:</span>
+            <span class="n">return_tiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">return_tiles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s1">&#39;No tiles found in the mask that meets parameters. Please ensure your mask &#39;</span>
+            <span class="s1">&#39;is for the entire whole slide image and your scale and region parameters &#39;</span>
+            <span class="s1">&#39;are correct.&#39;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">return_tiles</span></div>
+
+
+
+<div class="viewcode-block" id="return_relevant_tile_indexes_for_slide_dim">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.return_relevant_tile_indexes_for_slide_dim">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">return_relevant_tile_indexes_for_slide_dim</span><span class="p">(</span>
+    <span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">tile_overlap</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return tile indexes covering the target slide dimensions.</span>
+
+<span class="sd">    :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.</span>
+<span class="sd">    :param tile_overlap: Optional x and y tile overlap as pixels or fractions.</span>
+<span class="sd">    :returns: A numpy array of tile indexes in row, column order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">range_x</span> <span class="o">=</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_target_range_x&#39;</span><span class="p">]</span>
+    <span class="n">range_y</span> <span class="o">=</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_target_range_y&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalized_overlap</span><span class="p">(</span><span class="n">axis</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tile_axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">tile_overlap</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">axis</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tile_overlap</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="n">overlap</span> <span class="o">=</span> <span class="n">tile_overlap</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">overlap</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">overlap</span> <span class="o">=</span> <span class="n">overlap</span> <span class="o">/</span> <span class="n">tile_axis</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">overlap</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Tile overlap must be an integer or float&#39;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">overlap</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Tile overlap must be less than the tile size&#39;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">overlap</span>
+
+    <span class="n">overlap_x</span> <span class="o">=</span> <span class="n">_normalized_overlap</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_size&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">overlap_y</span> <span class="o">=</span> <span class="n">_normalized_overlap</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_size&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">offset_x</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">overlap_x</span>
+    <span class="n">offset_y</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">overlap_y</span>
+
+    <span class="n">range_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">range_x</span><span class="p">,</span> <span class="n">offset_x</span><span class="p">)</span>
+    <span class="n">range_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">range_y</span><span class="p">,</span> <span class="n">offset_y</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">cartesian2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">prod</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ix_</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)):</span>
+            <span class="n">prod</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fliplr</span><span class="p">(</span><span class="n">prod</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># tiles in form y (column), x (row)</span>
+    <span class="k">return</span> <span class="n">cartesian2</span><span class="p">(</span><span class="n">range_x</span><span class="p">,</span> <span class="n">range_y</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_patch_from_mask_for_tile">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.get_patch_from_mask_for_tile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_patch_from_mask_for_tile</span><span class="p">(</span><span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">tile</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the mask patch corresponding to a tile index.</span>
+
+<span class="sd">    :param mask: Whole-slide mask image.</span>
+<span class="sd">    :param slide_dimensions: Slide dimension metadata from calculate_slide_dimensions.</span>
+<span class="sd">    :param tile: Tile index in row, column order.</span>
+<span class="sd">    :returns: A mask patch for the requested tile.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># todo: needs update for region</span>
+    <span class="n">tile_y</span><span class="p">,</span> <span class="n">tile_x</span> <span class="o">=</span> <span class="n">tile</span>
+
+    <span class="n">mask_size_x</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">mask_size_y</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">conv_x_base_to_mask</span> <span class="o">=</span> <span class="n">mask_size_x</span> <span class="o">/</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_size_x&#39;</span><span class="p">]</span>
+    <span class="n">conv_y_base_to_mask</span> <span class="o">=</span> <span class="n">mask_size_y</span> <span class="o">/</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_size_y&#39;</span><span class="p">]</span>
+
+    <span class="n">bound_x1</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
+        <span class="n">conv_x_base_to_mask</span> <span class="o">*</span> <span class="n">tile_x</span> <span class="o">*</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_width_before_scaling&#39;</span><span class="p">]</span> <span class="o">+</span>
+        <span class="p">(</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_left&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">conv_x_base_to_mask</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">bound_x2</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
+        <span class="n">conv_x_base_to_mask</span> <span class="o">*</span> <span class="p">(</span><span class="n">tile_x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_width_before_scaling&#39;</span><span class="p">]</span> <span class="o">+</span>
+        <span class="p">(</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_left&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">conv_x_base_to_mask</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">bound_y1</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
+        <span class="n">conv_y_base_to_mask</span> <span class="o">*</span> <span class="n">tile_y</span> <span class="o">*</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_height_before_scaling&#39;</span><span class="p">]</span> <span class="o">+</span>
+        <span class="p">(</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_top&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">conv_y_base_to_mask</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">bound_y2</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
+        <span class="n">conv_y_base_to_mask</span> <span class="o">*</span> <span class="p">(</span><span class="n">tile_y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_height_before_scaling&#39;</span><span class="p">]</span> <span class="o">+</span>
+        <span class="p">(</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_top&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">conv_y_base_to_mask</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">patch_mask</span> <span class="o">=</span> <span class="n">mask</span><span class="p">[</span><span class="n">bound_y1</span><span class="p">:</span><span class="n">bound_y2</span><span class="p">,</span> <span class="n">bound_x1</span><span class="p">:</span><span class="n">bound_x2</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">patch_mask</span></div>
+
+
+
+<div class="viewcode-block" id="get_base_mm_from_meta">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.get_base_mm_from_meta">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_base_mm_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return base pixel sizes from source metadata.</span>
+
+<span class="sd">    :param source_meta: Metadata dictionary from a tile source.</span>
+<span class="sd">    :returns: The base mm_x and mm_y values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mm_x</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">mm_y</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="s1">&#39;mm_x&#39;</span> <span class="ow">in</span> <span class="n">source_meta</span> <span class="ow">and</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;mm_x&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mm_x</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;mm_x&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s1">&#39;mm_y&#39;</span> <span class="ow">in</span> <span class="n">source_meta</span> <span class="ow">and</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;mm_y&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mm_y</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;mm_y&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">mm_x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">mm_y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Tile source does not define pixel size in mm&#39;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">mm_x</span><span class="p">,</span> <span class="n">mm_y</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="return_target_scaling_feature">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.return_target_scaling_feature">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">return_target_scaling_feature</span><span class="p">(</span><span class="n">feature</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a target scaling value to a float.</span>
+
+<span class="sd">    :param feature: Scaling value as a string, integer, float, or None.</span>
+<span class="sd">    :returns: The scaling value as a float, or None if it cannot be converted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<div class="viewcode-block" id="generate_assumptions_for_x_y_given_mag">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.generate_assumptions_for_x_y_given_mag">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_assumptions_for_x_y_given_mag</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate pixel sizes from magnification when metadata is incomplete.</span>
+
+<span class="sd">    :param x: Existing horizontal pixel size, or None.</span>
+<span class="sd">    :param y: Existing vertical pixel size, or None.</span>
+<span class="sd">    :param z: Magnification used to estimate missing pixel sizes.</span>
+<span class="sd">    :returns: Estimated x, y, and z values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">z</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Unable to assume using magnification is not defined&#39;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="c1"># Prefer scaling using base dimensions</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="mf">0.00025</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="mi">40</span>
+    <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="mf">0.00025</span> <span class="o">*</span> <span class="n">z</span> <span class="o">/</span> <span class="mi">40</span>
+
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">z</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Assumption for dimensions failed&#39;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scale_values_from_magnification</span><span class="p">(</span><span class="n">source_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate scaling values for a magnification scale request.&quot;&quot;&quot;</span>
+    <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">scale</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span>
+        <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">get_base_mm_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scale</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">return_target_scaling_feature</span><span class="p">(</span><span class="n">scale</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">])</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Unable to determine a target magnification with the provided value&#39;</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">get_base_mm_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">)</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">k</span><span class="p">)</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">k</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Unable to define scaling from mm to mag&#39;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Not a valid scale for the selected mode&#39;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scale_values_from_mm</span><span class="p">(</span><span class="n">source_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">values</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate scaling values for a millimeter pixel-size scale request.&quot;&quot;&quot;</span>
+    <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">values</span>
+    <span class="k">if</span> <span class="n">scale</span><span class="p">[</span><span class="s1">&#39;mm_x&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">scale</span><span class="p">[</span><span class="s1">&#39;mm_y&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span>
+        <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">get_base_mm_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scale</span><span class="p">[</span><span class="s1">&#39;mm_x&#39;</span><span class="p">],</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scale</span><span class="p">[</span><span class="s1">&#39;mm_y&#39;</span><span class="p">],</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">return_target_scaling_feature</span><span class="p">(</span><span class="n">scale</span><span class="p">[</span><span class="s1">&#39;mm_x&#39;</span><span class="p">])</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">return_target_scaling_feature</span><span class="p">(</span><span class="n">scale</span><span class="p">[</span><span class="s1">&#39;mm_y&#39;</span><span class="p">])</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">get_base_mm_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">)</span>
+        <span class="n">zoom_x</span> <span class="o">=</span> <span class="n">z</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">zoom_y</span> <span class="o">=</span> <span class="n">z</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">/</span> <span class="n">j</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">zoom_x</span> <span class="o">!=</span> <span class="n">zoom_y</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="s1">&#39;Pixel dimensions for x and y are not the same. &#39;</span>
+                    <span class="s1">&#39;X = </span><span class="si">{}</span><span class="s1">, Y = </span><span class="si">{}</span><span class="s1">, Zoom X = </span><span class="si">{}</span><span class="s1">, Zoom Y = </span><span class="si">{}</span><span class="s1">&#39;</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">zoom_x</span><span class="p">,</span> <span class="n">zoom_y</span><span class="p">),</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">zoom_x</span>
+
+        <span class="k">if</span> <span class="s1">&#39;assume&#39;</span> <span class="ow">in</span> <span class="n">scale</span> <span class="ow">and</span> <span class="n">scale</span><span class="p">[</span><span class="s1">&#39;assume&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">generate_assumptions_for_x_y_given_mag</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Scale for mm mode must be a tuple of (x, y)&#39;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">j</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Not a valid scale for the selected mode&#39;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span>
+
+
+<div class="viewcode-block" id="get_scaling_values_from_meta">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.get_scaling_values_from_meta">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_scaling_values_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate base and target scaling values from source metadata.</span>
+
+<span class="sd">    :param source_meta: Metadata dictionary from a tile source.</span>
+<span class="sd">    :param scale: Scale request with either magnification or mm_x and mm_y values.</span>
+<span class="sd">    :returns: A dictionary with base and target mm and magnification values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;magnification&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="s1">&#39;magnification&#39;</span> <span class="ow">in</span> <span class="n">scale</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">_scale_values_from_magnification</span><span class="p">(</span><span class="n">source_meta</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;mm_x&#39;</span> <span class="ow">in</span> <span class="n">scale</span> <span class="ow">or</span> <span class="s1">&#39;mm_y&#39;</span> <span class="ow">in</span> <span class="n">scale</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">_scale_values_from_mm</span><span class="p">(</span><span class="n">source_meta</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+
+    <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">values</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;base_mm_x&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+        <span class="s1">&#39;base_mm_y&#39;</span><span class="p">:</span> <span class="n">y</span><span class="p">,</span>
+        <span class="s1">&#39;base_mag&#39;</span><span class="p">:</span> <span class="n">z</span><span class="p">,</span>
+        <span class="s1">&#39;target_mm_x&#39;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
+        <span class="s1">&#39;target_mm_y&#39;</span><span class="p">:</span> <span class="n">j</span><span class="p">,</span>
+        <span class="s1">&#39;target_mag&#39;</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_region_bounds</span><span class="p">(</span><span class="n">region</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize right/bottom region bounds into width and height.</span>
+
+<span class="sd">    :param region: Mutable region dictionary supplied by the caller.</span>
+<span class="sd">    :returns: None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s1">&#39;bottom&#39;</span> <span class="ow">in</span> <span class="n">region</span><span class="p">:</span>
+        <span class="n">region</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;bottom&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">region</span><span class="p">:</span>
+        <span class="n">region</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_region</span><span class="p">(</span><span class="n">region</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">source_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">source_scale</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate an eager source region.</span>
+
+<span class="sd">    :param region: Region with left, top, width, height, and units.</span>
+<span class="sd">    :param source_meta: Tile-source metadata used for image bounds.</span>
+<span class="sd">    :param source_scale: Scale required when the region is in mag pixels.</span>
+<span class="sd">    :returns: None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s1">&#39;units&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">region</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Region must be a dictionary with &#39;units&#39; which can be &quot;</span>
+            <span class="s2">&quot;&#39;base_pixels&#39;, &#39;mag_pixels&#39;, or &#39;mm&#39;&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">region</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="s1">&#39;width&#39;</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="p">)):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Region must be a dictionary with &#39;left&#39;, &#39;top&#39;, &#39;width&#39;, and &#39;height&#39;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Region width and height must be greater than 0&#39;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Region left and top must be greater than 0&#39;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">region</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeX&#39;</span><span class="p">]</span> <span class="ow">or</span>
+        <span class="n">region</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Region left and top must be less than the image size&#39;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;base_pixels&#39;</span><span class="p">,</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">,</span> <span class="s1">&#39;mm&#39;</span><span class="p">}:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Region units must be either &#39;base_pixels&#39; or &#39;mag_pixels&#39; or &#39;mm&#39;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;mag_pixels&#39;</span> <span class="ow">and</span> <span class="n">source_scale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Source scale must be provided if region units are &#39;mag_pixels&#39;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_region_slide_dimensions</span><span class="p">(</span>
+    <span class="n">source_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">region</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">source_scale</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return slide-dimension fields describing the requested source region.</span>
+
+<span class="sd">    :param source_meta: Tile-source metadata used for the full-image fallback.</span>
+<span class="sd">    :param region: Optional source region with left, top, width, height, and units.</span>
+<span class="sd">    :param source_scale: Scale required when the region is in mag pixels.</span>
+<span class="sd">    :returns: Region-related slide-dimension fields.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">region</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">region</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">left</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">top</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">width</span><span class="o">=</span><span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeX&#39;</span><span class="p">],</span>
+            <span class="n">height</span><span class="o">=</span><span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">],</span>
+            <span class="n">units</span><span class="o">=</span><span class="s1">&#39;base_pixels&#39;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_normalize_region_bounds</span><span class="p">(</span><span class="n">region</span><span class="p">)</span>
+        <span class="n">_validate_region</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="n">source_meta</span><span class="p">,</span> <span class="n">source_scale</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;region_left&#39;</span><span class="p">:</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;region_top&#39;</span><span class="p">:</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;region_right&#39;</span><span class="p">:</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;region_bottom&#39;</span><span class="p">:</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;region_width&#39;</span><span class="p">:</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;region_height&#39;</span><span class="p">:</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;region_units&#39;</span><span class="p">:</span> <span class="n">region</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">],</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_scale</span><span class="p">(</span><span class="n">scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a usable scale dictionary and eager scale mode.</span>
+
+<span class="sd">    :param scale: Optional target scale using magnification or mm_x and mm_y.</span>
+<span class="sd">    :returns: A scale dictionary and either &#39;mag&#39; or &#39;mm&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;magnification&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="s1">&#39;mag&#39;</span>
+    <span class="k">if</span> <span class="s1">&#39;magnification&#39;</span> <span class="ow">in</span> <span class="n">scale</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">scale</span><span class="p">,</span> <span class="s1">&#39;mag&#39;</span>
+    <span class="k">if</span> <span class="s1">&#39;mm_x&#39;</span> <span class="ow">in</span> <span class="n">scale</span> <span class="ow">and</span> <span class="s1">&#39;mm_y&#39;</span> <span class="ow">in</span> <span class="n">scale</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">scale</span><span class="p">,</span> <span class="s1">&#39;mm&#39;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Scale must be a dictionary with either &#39;magnification&#39; or &#39;mm_x&#39; and &#39;mm_y&#39;&quot;</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tile_size_from_meta</span><span class="p">(</span>
+    <span class="n">source_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">tile_size</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the requested eager tile size.</span>
+
+<span class="sd">    :param source_meta: Tile-source metadata used for the default size.</span>
+<span class="sd">    :param tile_size: Optional output tile size with width and height.</span>
+<span class="sd">    :returns: Tile width and height.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">tile_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;tileWidth&#39;</span><span class="p">],</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;tileHeight&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s1">&#39;width&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tile_size</span> <span class="ow">or</span> <span class="s1">&#39;height&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tile_size</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Tile size must be a dictionary with both &#39;width&#39; and &#39;height&#39;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tile_size</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">tile_size</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Tile size width and height must be greater than 0&#39;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tile_size</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span> <span class="n">tile_size</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_base_slide_dimensions</span><span class="p">(</span>
+    <span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">source_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate base metadata and target scaling fields.</span>
+
+<span class="sd">    :param slide_dimensions: Slide-dimension dictionary to update.</span>
+<span class="sd">    :param source_meta: Tile-source metadata.</span>
+<span class="sd">    :param scale: Normalized target scale dictionary.</span>
+<span class="sd">    :returns: None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">scaling_values</span> <span class="o">=</span> <span class="n">get_scaling_values_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_magnification&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;magnification&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_magnification&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scaling_values</span><span class="p">[</span><span class="s1">&#39;target_mag&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_size_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeX&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_size_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_tile_width&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;tileWidth&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_tile_height&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;tileHeight&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_tile_range_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+        <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeX&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;tileWidth&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_tile_range_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+        <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;sizeY&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">source_meta</span><span class="p">[</span><span class="s1">&#39;tileHeight&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">_add_mm_scaling_values</span><span class="p">(</span><span class="n">slide_dimensions</span><span class="p">,</span> <span class="n">scaling_values</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_mm_scaling_values</span><span class="p">(</span>
+    <span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">scaling_values</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate millimeter scaling values.</span>
+
+<span class="sd">    :param slide_dimensions: Slide-dimension dictionary to update.</span>
+<span class="sd">    :param scaling_values: Scale values returned from metadata conversion.</span>
+<span class="sd">    :returns: None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s1">&#39;target_mm_x&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scaling_values</span> <span class="ow">or</span> <span class="n">scaling_values</span><span class="p">[</span><span class="s1">&#39;target_mm_x&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s1">&#39;Unable to generate scale dimensions for the selected mode. Failure in the x dimension&#39;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;target_mm_y&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scaling_values</span> <span class="ow">or</span> <span class="n">scaling_values</span><span class="p">[</span><span class="s1">&#39;target_mm_y&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s1">&#39;Unable to generate scale dimensions for the selected mode. Failure in the y dimension&#39;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scaling_values</span><span class="p">[</span><span class="s1">&#39;target_mm_x&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scaling_values</span><span class="p">[</span><span class="s1">&#39;target_mm_y&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_mm_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scaling_values</span><span class="p">[</span><span class="s1">&#39;base_mm_x&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_mm_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scaling_values</span><span class="p">[</span><span class="s1">&#39;base_mm_y&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_source_region_from_slide_dimensions</span><span class="p">(</span><span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a convertRegionScale source region from slide dimensions.</span>
+
+<span class="sd">    :param slide_dimensions: Slide dimension metadata.</span>
+<span class="sd">    :returns: Region dictionary accepted by Large Image scale conversion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">left</span><span class="o">=</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_left&#39;</span><span class="p">],</span>
+        <span class="n">top</span><span class="o">=</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_top&#39;</span><span class="p">],</span>
+        <span class="n">width</span><span class="o">=</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_width&#39;</span><span class="p">],</span>
+        <span class="n">height</span><span class="o">=</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_height&#39;</span><span class="p">],</span>
+        <span class="n">units</span><span class="o">=</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_units&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_target_scale_from_slide_dimensions</span><span class="p">(</span><span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a convertRegionScale target scale from slide dimensions.</span>
+
+<span class="sd">    :param slide_dimensions: Slide dimension metadata.</span>
+<span class="sd">    :returns: Target scale dictionary for the active scale mode.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;scale_mode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;mag&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;magnification&#39;</span><span class="p">:</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_magnification&#39;</span><span class="p">]}</span>
+    <span class="k">if</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;scale_mode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;mm&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;mm_x&#39;</span><span class="p">:</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_x&#39;</span><span class="p">],</span> <span class="s1">&#39;mm_y&#39;</span><span class="p">:</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_y&#39;</span><span class="p">]}</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Mode is not valid for creating slide dimensions&#39;</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_region_scales</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">TileSource</span><span class="p">,</span> <span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">source_scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert the requested eager source region into output scales.</span>
+
+<span class="sd">    :param source: Tile source used for scale conversion.</span>
+<span class="sd">    :param slide_dimensions: Slide dimension metadata.</span>
+<span class="sd">    :param source_scale: Source scale required for mag-pixel regions.</span>
+<span class="sd">    :returns: Pixel, millimeter, and base-pixel converted regions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">convert_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">sourceRegion</span><span class="o">=</span><span class="n">_source_region_from_slide_dimensions</span><span class="p">(</span><span class="n">slide_dimensions</span><span class="p">),</span>
+        <span class="n">targetScale</span><span class="o">=</span><span class="n">_target_scale_from_slide_dimensions</span><span class="p">(</span><span class="n">slide_dimensions</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;region_units&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;mag_pixels&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">source_scale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;source_scale parameter must be provided if region units are &#39;mag_pixels&#39;&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">convert_kwargs</span><span class="p">[</span><span class="s1">&#39;sourceScale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_scale</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">convertRegionScale</span><span class="p">(</span><span class="o">**</span><span class="n">convert_kwargs</span><span class="p">,</span> <span class="n">targetUnits</span><span class="o">=</span><span class="s1">&#39;mag_pixels&#39;</span><span class="p">),</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">convertRegionScale</span><span class="p">(</span><span class="o">**</span><span class="n">convert_kwargs</span><span class="p">,</span> <span class="n">targetUnits</span><span class="o">=</span><span class="s1">&#39;mm&#39;</span><span class="p">),</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">convertRegionScale</span><span class="p">(</span><span class="o">**</span><span class="n">convert_kwargs</span><span class="p">,</span> <span class="n">targetUnits</span><span class="o">=</span><span class="s1">&#39;base_pixels&#39;</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_level</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">TileSource</span><span class="p">,</span> <span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate the tile-source level for the active scale mode.</span>
+
+<span class="sd">    :param source: Tile source used for level selection.</span>
+<span class="sd">    :param slide_dimensions: Slide dimension metadata to update.</span>
+<span class="sd">    :returns: None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;scale_mode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;mag&#39;</span><span class="p">:</span>
+        <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;level&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">getLevelForMagnification</span><span class="p">(</span>
+            <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_magnification&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;scale_mode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;mm&#39;</span><span class="p">:</span>
+        <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;level&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">getLevelForMagnification</span><span class="p">(</span>
+            <span class="n">mm_x</span><span class="o">=</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_x&#39;</span><span class="p">],</span> <span class="n">mm_y</span><span class="o">=</span><span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_y&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Mode is not valid for creating slide dimensions&#39;</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_output_dimensions</span><span class="p">(</span>
+    <span class="n">slide_dimensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">convert_scale_px</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">convert_scale_mm</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">base_scale_px</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate output dimensions derived from converted region scales.</span>
+
+<span class="sd">    :param slide_dimensions: Slide dimension metadata to update.</span>
+<span class="sd">    :param convert_scale_px: Region converted into target pixels.</span>
+<span class="sd">    :param convert_scale_mm: Region converted into millimeters.</span>
+<span class="sd">    :param base_scale_px: Region converted into base pixels.</span>
+<span class="sd">    :returns: None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;conv_mm_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_x&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_mm_x&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;conv_mm_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_mm_y&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_mm_y&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_width_before_scaling&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+        <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;conv_mm_x&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_size&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_height_before_scaling&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+        <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;conv_mm_y&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_size&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_size_x_mm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">convert_scale_mm</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;base_size_y_mm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">convert_scale_mm</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_width&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">convert_scale_px</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;target_height&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">convert_scale_px</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_target_range_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+        <span class="n">base_scale_px</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_width_before_scaling&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_target_range_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span>
+        <span class="n">base_scale_px</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_height_before_scaling&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="calculate_slide_dimensions">
+<a class="viewcode-back" href="../../../../_build/large_image/large_image.tilesource.eager_utils.html#large_image.tilesource.eager_utils.eager_wsi_operations.calculate_slide_dimensions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_slide_dimensions</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">TileSource</span><span class="p">,</span>
+    <span class="n">region</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tile_size</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">source_scale</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate slide geometry for eager reads.</span>
+
+<span class="sd">    :param source: Large Image tile source used for metadata and scale conversion.</span>
+<span class="sd">    :param region: Optional region with left, top, width, height, and units.</span>
+<span class="sd">    :param scale: Optional target scale using magnification or mm_x and mm_y.</span>
+<span class="sd">    :param tile_size: Optional output tile size with width and height in pixels.</span>
+<span class="sd">    :param source_scale: Source scale used when region units are mag_pixels.</span>
+<span class="sd">    :param kwargs: Additional options reserved for compatibility.</span>
+<span class="sd">    :returns: A slide dimension dictionary used by eager read planning and workers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">source_meta</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">getMetadata</span><span class="p">()</span>
+    <span class="n">normalized_scale</span><span class="p">,</span> <span class="n">scale_mode</span> <span class="o">=</span> <span class="n">_normalize_scale</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
+    <span class="n">slide_dimensions</span> <span class="o">=</span> <span class="n">_region_slide_dimensions</span><span class="p">(</span><span class="n">source_meta</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">source_scale</span><span class="p">)</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;scale_mode&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scale_mode</span>
+    <span class="n">slide_dimensions</span><span class="p">[</span><span class="s1">&#39;tile_size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_tile_size_from_meta</span><span class="p">(</span><span class="n">source_meta</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">)</span>
+
+    <span class="n">_add_base_slide_dimensions</span><span class="p">(</span><span class="n">slide_dimensions</span><span class="p">,</span> <span class="n">source_meta</span><span class="p">,</span> <span class="n">normalized_scale</span><span class="p">)</span>
+    <span class="n">convert_scale_px</span><span class="p">,</span> <span class="n">convert_scale_mm</span><span class="p">,</span> <span class="n">base_scale_px</span> <span class="o">=</span> <span class="n">_convert_region_scales</span><span class="p">(</span>
+        <span class="n">source</span><span class="p">,</span> <span class="n">slide_dimensions</span><span class="p">,</span> <span class="n">source_scale</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_add_level</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">slide_dimensions</span><span class="p">)</span>
+    <span class="n">_add_output_dimensions</span><span class="p">(</span>
+        <span class="n">slide_dimensions</span><span class="p">,</span> <span class="n">convert_scale_px</span><span class="p">,</span> <span class="n">convert_scale_mm</span><span class="p">,</span> <span class="n">base_scale_px</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">slide_dimensions</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
