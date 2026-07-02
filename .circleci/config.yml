@@ -28,11 +28,14 @@ commands:
             PYTEST_ADDOPTS: "--reruns=3"
             HEADLESS: "true"
             _JAVA_OPTIONS: "-Xmx2g"
+            LD_PRELOAD: /lib/x86_64-linux-gnu/libstdc++.so.6
           # Piping through cat does less buffering of the output but can
           # consume the exit code
           # command: PYTEST_ADDOPTS=--forked tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
-          command: << parameters.environ >> tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
+          command: |
+            (while true; do date; sleep 60; done) &
+            << parameters.environ >> tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
     description: "Upgrade python"
     parameters:

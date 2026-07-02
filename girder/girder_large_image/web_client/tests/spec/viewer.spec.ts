@@ -9,7 +9,7 @@ test.describe('Test image viewer', () => {
   test('Upload SVS large image and ensure thumbnail renders', async ({ page }) => {
     await createUser(page);
     await page.locator('#g-app-header-container').getByText('firstlast').click();
-    await page.getByRole('link', { name: ' My folders' }).click();
+    await page.locator('a.g-my-folders').click();
     await page.getByRole('link', { name: ' Private ' }).click();
     await uploadSampleFile(page, 'sample_svs_image.TCGA-DU-6399-01A-01-TS1.e8eb65de-d63e-42db-af6f-14fefbbdf7bd.svs');
 

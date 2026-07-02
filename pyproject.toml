@@ -80,6 +80,7 @@ lint.select = [
     "Q",  # flake8-quotes
     "RET",
     "RSE",
+    "S102",
     "SIM",
     "T",  # print statements
     "W",  # pycodestyle warnings
