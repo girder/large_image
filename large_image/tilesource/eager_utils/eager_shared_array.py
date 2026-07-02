@@ -19,7 +19,7 @@ class SharedArray:
 
     def __init__(
         self,
-        shape: Union[tuple, list],
+        shape: tuple | list,
         dtype: Any,
         is_torch: bool = False,
         enable_mm: bool = False,
@@ -155,7 +155,7 @@ class SharedArray:
         if self.enable_mm:
             self.mm_shm_array.unlink()
 
-    def resize_shm(self, shape: Union[tuple, list]):
+    def resize_shm(self, shape: tuple | list):
         """Update the logical shape and byte size for the shared buffer.
 
         :param shape: New shape for the shared image batch buffer.

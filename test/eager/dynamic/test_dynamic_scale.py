@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import numpy as np
 
@@ -326,7 +325,7 @@ def dynamic_transform_scale_v3(
     anchor_mm: float = 0.0001,
     min_mm: float = 0.00025,
     max_mm: float = 0.0005,
-    mask: Optional[np.ndarray] = None,
+    mask: np.ndarray | None = None,
 ):
     xlt = read_kwargs[:, 6]
     ytt = read_kwargs[:, 4]

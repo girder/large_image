@@ -1,9 +1,11 @@
 """Read argument planning helpers for eager tile and region batches."""
 
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from pykdtree.kdtree import KDTree
+
+if TYPE_CHECKING:
+    from pykdtree.kdtree import KDTree
 
 
 def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
@@ -28,7 +30,7 @@ def gen_read_args_complete_grid(sorted_tiles: np.ndarray, chunk_mult: int):
 
     # Split into chunks using group boundaries
     split_indices = np.where(np.diff(group_ids) != 0)[0] + 1
-    chunks: List[np.ndarray] = np.split(sorted_tiles, split_indices)
+    chunks: list[np.ndarray] = np.split(sorted_tiles, split_indices)
     chunks = [np.array(chunk) for chunk in chunks]
 
     return chunks
@@ -38,8 +40,8 @@ def sparse_chunks(
     sorted_in: np.ndarray,
     used: np.ndarray,
     points: np.ndarray,
-    tree: KDTree,
-    chunks: List,
+    tree: 'KDTree',
+    chunks: list,
     chunk_size: int,
     k_mod: int = 1,
 ):
@@ -75,12 +77,13 @@ def gen_read_args_incomplete_grid(sorted_in: np.ndarray, chunk_size: int):
     :param chunk_size: Target number of read arguments per chunk.
     :returns: A list of numpy arrays, one per read chunk.
     """
+    from pykdtree.kdtree import KDTree
+
     points = sorted_in[:, :2].astype(float)
     used = np.zeros(sorted_in.shape[0], dtype=bool)
-    chunks: List[np.ndarray] = []
+    chunks: list[np.ndarray] = []
 
     ok_chunk_size = int(chunk_size)
-
     tree = KDTree(points)
     k_mod = 1
     chunks = sparse_chunks(sorted_in, used, points, tree, chunks, ok_chunk_size, k_mod)
@@ -92,7 +95,7 @@ def chunks_from_kd_tree(
     sorted_in: np.ndarray,
     used: np.ndarray,
     points: np.ndarray,
-    tree: KDTree,
+    tree: 'KDTree',
     chunks: list,
     chunk_size: int,
     k_mod: int = 1,
@@ -180,7 +183,7 @@ def check_edge_condition(
 
 def gen_read_args_for_regions(
     slide_dimensions: dict,
-    regions: Union[list, np.ndarray],
+    regions: list | np.ndarray,
     edge: bool = False,
     chunk_mult: int = 2,
 ):
@@ -257,10 +260,10 @@ def gen_read_args_for_regions(
 def gen_read_args_for_tiles(
     n_possible_tiles: int,
     slide_dimensions: dict,
-    tiles: Union[list, np.ndarray],
+    tiles: list | np.ndarray,
     edge: bool = False,
     chunk_mult: int = 2,
-    region: Optional[Dict[str, Any]] = None,
+    region: dict[str, Any] | None = None,
 ):
     """Generate grouped read arguments for output tiles.
 

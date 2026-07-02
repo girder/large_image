@@ -2,7 +2,6 @@ import json
 import os
 import random
 import shutil
-from typing import Optional
 
 import large_image
 from large_image.tilesource.eager_utils.eager_wsi_operations import calculate_slide_dimensions
@@ -11,8 +10,8 @@ from large_image.tilesource.eager_utils.eager_wsi_operations import calculate_sl
 def print_directory_slide_dimensions(
     file_dir: str,
     file_extensions: list[str] = None,
-    scale: Optional[dict] = None,
-    tile_size: Optional[dict] = None,
+    scale: dict | None = None,
+    tile_size: dict | None = None,
 ):
     if file_extensions is None:
         file_extensions = ['.tif', '.svs', '.mrxs', '.ndpi']
@@ -41,7 +40,7 @@ def iter_candidate_slide_paths(file_dir: str, file_extensions: list[str]):
                 yield os.path.join(root, file)
 
 
-def metadata_matches(source, large_image_meta_match: Optional[dict] = None):
+def metadata_matches(source, large_image_meta_match: dict | None = None):
     if large_image_meta_match is None:
         return True
 
@@ -77,7 +76,7 @@ def copy_random_files_from_file_directory(
     n_files: int = 10,
     file_extensions: list[str] = None,
     destination_dir: str = './test_files',
-    large_image_meta_match: Optional[dict] = None,
+    large_image_meta_match: dict | None = None,
 ):
     if file_extensions is None:
         file_extensions = ['.tif', '.svs', '.mrxs', '.ndpi']

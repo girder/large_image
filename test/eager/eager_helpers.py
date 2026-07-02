@@ -5,8 +5,9 @@ import os
 import stat
 import subprocess
 import time
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any
 
 import albumentations as A
 import cv2
@@ -53,12 +54,12 @@ def matplotlib_save_image(image_path: str, image: np.ndarray):
     return end_save_time - start_save_time
 
 
-def make_pytorch_dataset(input_image_dir: str, transform: Optional[Callable] = None):
+def make_pytorch_dataset(input_image_dir: str, transform: Callable | None = None):
     from torch.utils.data import Dataset
     from torchvision.io import read_image
 
     class ImageDataset(Dataset):
-        def __init__(self, image_dir: str, transform: Optional[Callable] = None):
+        def __init__(self, image_dir: str, transform: Callable | None = None):
             self.image_dir = image_dir
             self.image_paths = [
                 os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.endswith('.png')
@@ -1163,9 +1164,9 @@ def add_performance_data(
     performance_type: str,
     setup_time: float,
     process_time: float,
-    batch_retreival_times: Optional[list[float]] = None,
-    inference_times: Optional[list[float]] = None,
-    write_times: Optional[list[float]] = None,
+    batch_retreival_times: list[float] | None = None,
+    inference_times: list[float] | None = None,
+    write_times: list[float] | None = None,
 ):
     if write_times is None:
         write_times = []
@@ -1211,7 +1212,7 @@ def add_performance_data(
 def run_reproducible_performance_evaluation(
     file_path: str,
     n_runs: int = 3,
-    file_dir: Optional[str] = None,
+    file_dir: str | None = None,
     track_memory: bool = False,
     track_energy: bool = False,
     output_dir: str = './performance',
@@ -1490,7 +1491,7 @@ def run_eager_iterator_numpy_dtype(test_file: Any, dtype: np.dtype):
 def build_eager_iterator(
     test_file: Any,
     scale_mode: str = 'mag',
-    target_scale: Union[float, tuple[float, float]] = 20,
+    target_scale: float | tuple[float, float] = 20,
     tile_size: tuple[int, int] = (224, 224),
     overlap: float = 0,
     chunk_mult: int = 4,
@@ -1535,7 +1536,7 @@ def build_eager_iterator(
 @pytest.fixture(scope='module')
 def test_eager_iterator_image(
     test_file: Any,
-    output_dir_path: Union[str, Path],
+    output_dir_path: str | Path,
     target_scale: int,
     tile_size: tuple[int, int],
 ):
@@ -1721,43 +1722,43 @@ def get_tissue_mask_with_background_elimination(
     blur = cv2.GaussianBlur(contour_mask, (5, 5), sigmaX=0, sigmaY=0, borderType=cv2.BORDER_DEFAULT)
 
     if debug_output_path is not None:
-        print('Saving original image {}'.format(img.shape))
+        print(f'Saving original image {img.shape}')
         img_out_path = os.path.join(debug_output_path, 'test_original.png')
         plt.imsave(img_out_path, img)
 
-        print('Saving threshold before {}'.format(thresh.shape))
+        print(f'Saving threshold before {thresh.shape}')
         img_out_path = os.path.join(debug_output_path, 'test_threshold_before.png')
         plt.imsave(img_out_path, thresh)
 
-        print('Saving thresh hue {}'.format(thresh[:, :, 0].shape))
+        print(f'Saving thresh hue {thresh[:, :, 0].shape}')
         img_out_path = os.path.join(debug_output_path, 'test_threshold_hue.png')
         plt.imsave(img_out_path, thresh[:, :, 0])
 
-        print('Saving thresh lightness {}'.format(thresh[:, :, 1].shape))
+        print(f'Saving thresh lightness {thresh[:, :, 1].shape}')
         img_out_path = os.path.join(debug_output_path, 'test_threshold_lightness.png')
         plt.imsave(img_out_path, thresh[:, :, 1])
 
-        print('Saving thresh sat {}'.format(thresh[:, :, 2].shape))
+        print(f'Saving thresh sat {thresh[:, :, 2].shape}')
         img_out_path = os.path.join(debug_output_path, 'test_threshold_saturation.png')
         plt.imsave(img_out_path, thresh[:, :, 2])
 
-        print('Saving grayscale after {}'.format(gray.shape))
+        print(f'Saving grayscale after {gray.shape}')
         img_out_path = os.path.join(debug_output_path, 'test_gray.png')
         plt.imsave(img_out_path, gray)
 
-        print('Saving threshold after {}'.format(thresh_after.shape))
+        print(f'Saving threshold after {thresh_after.shape}')
         img_out_path = os.path.join(debug_output_path, 'test_threshold_after.png')
         plt.imsave(img_out_path, thresh_after)
 
-        print('Saving morph {}'.format(morph.shape))
+        print(f'Saving morph {morph.shape}')
         img_out_path = os.path.join(debug_output_path, 'test_morph.png')
         plt.imsave(img_out_path, morph)
 
-        print('Saving contour mask {}'.format(contour_mask.shape))
+        print(f'Saving contour mask {contour_mask.shape}')
         img_out_path = os.path.join(debug_output_path, 'test_contour_mask.png')
         plt.imsave(img_out_path, contour_mask)
 
-        print('Saving blur {}'.format(blur.shape))
+        print(f'Saving blur {blur.shape}')
         img_out_path = os.path.join(debug_output_path, 'test_blur.png')
         plt.imsave(img_out_path, blur)
 

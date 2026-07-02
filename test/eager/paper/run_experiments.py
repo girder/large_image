@@ -1,9 +1,10 @@
 import math
 import os
 import sys
+from collections.abc import Callable
 from test.eager.eager_helpers import (run_performance_testing_on_directory,
                                       run_reproducible_performance_evaluation)
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import albumentations as A
 import numpy as np
@@ -1188,12 +1189,12 @@ def test_sparse_regions(test_path):
 
 def run_region_experiment(
     test_path,
-    region: Optional[Dict[str, Any]] = None,
-    tiles: Optional[np.ndarray] = None,
-    tile_size: Optional[Dict[str, int]] = None,
-    scale: Optional[Dict[str, Any]] = None,
-    transform: Optional[Callable] = None,
-    mask: Optional[np.ndarray] = None,
+    region: dict[str, Any] | None = None,
+    tiles: np.ndarray | None = None,
+    tile_size: dict[str, int] | None = None,
+    scale: dict[str, Any] | None = None,
+    transform: Callable | None = None,
+    mask: np.ndarray | None = None,
 ):
     if region is None:
         region = dict(left=100, top=100, width=10000, height=10000, units='base_pixels')
