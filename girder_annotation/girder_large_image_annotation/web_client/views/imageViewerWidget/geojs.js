@@ -1,11 +1,11 @@
-import $ from 'jquery';
-import _ from 'underscore';
-import Backbone from 'backbone';
-import events from '@girder/core/events';
-import {wrap} from '@girder/core/utilities/PluginUtils';
-import {restRequest, getApiRoot} from '@girder/core/rest';
-
 import convertAnnotation from '../../annotations/geojs/convert';
+
+const $ = girder.$;
+const _ = girder._;
+const Backbone = girder.Backbone;
+const events = girder.events;
+const {wrap} = girder.utilities.PluginUtils;
+const {restRequest, getApiRoot} = girder.rest;
 
 /**
  * Generate a new "random" element id (24 random 16 digits).
@@ -35,7 +35,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         return initialize.apply(this, _.rest(arguments));
     });
 
-    return viewer.extend({
+    return {
         _postRender: function () {
             // the feature layer is for annotations that are loaded
             this.featureLayer = this.viewer.createLayer('feature', {
@@ -992,7 +992,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         _guid: guid
-    });
+    };
 };
 
 export default GeojsImageViewerWidgetExtension;
