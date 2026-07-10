@@ -2,7 +2,6 @@ import contextlib
 import importlib.metadata
 import json
 import math
-import multiprocessing
 import os
 import shutil
 import tempfile
@@ -11,6 +10,7 @@ import uuid
 import warnings
 from pathlib import Path
 
+import filelock
 import numpy as np
 import packaging.version
 
@@ -146,7 +146,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._editable = True
         self._bandRanges = None
         self._threadLock = threading.RLock()
-        self._processLock = multiprocessing.Lock()
+        self._processLock = filelock.FileLock(os.path.join(str(self._tempdir), '.zarr_flock'))
         self._framecount = 0
         self._minWidth = None
         self._minHeight = None

@@ -41,6 +41,7 @@ setup(
         'numcodecs<0.16',
         # Without imagecodecs-numcodecs, some jpeg encoded data cannot be read
         'imagecodecs-numcodecs!=2024.9.22',
+        'filelock',
     ],
     extras_require={
         'girder': f'girder-large-image{limit_version}',
