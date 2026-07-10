@@ -534,7 +534,6 @@ def _add_tile_from_seed_data(sink, seed_data, position):
     )
 
 
-@pytest.mark.skipif(sys.version_info > (3, 14), reason='This fails in 3.14. See issues')
 @pytest.mark.singular
 def testConcurrency(tmp_path):
     output_file = tmp_path / 'test.db'
