@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.35.1
+
+### Improvements
+
+- Add a few missing type annotations ([#2074](../../pull/2074))
+
+### Bug Fixes
+
+- Fix zarr sink multi-process concurrency for python 3.14 ([#2098](../../pull/2098))
+
 ## 1.35.0
 
 ### Features
