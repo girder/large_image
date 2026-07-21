@@ -8,7 +8,7 @@
 
 ### Bug Fixes
 
-- Fix zarr sink multi-process concurrency for python 3.14 ([#2098](../../pull/2098))
+- Fix zarr sink multi-process concurrency for python 3.14 ([#2098](../../pull/2098), [#2100](../../pull/2100))
 
 ## 1.35.0
 
