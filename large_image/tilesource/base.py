@@ -2684,7 +2684,7 @@ class TileSource(IPyLeafletMixin):
         pixel['value'] = [v.item() for v in tile['tile'][0][0]]
         img = _imageToPIL(tile['tile'])
         if img.size[0] >= 1 and img.size[1] >= 1:
-            if len(img.mode) > 1:
+            if len(img.getbands()) > 1:
                 pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0], strict=True)))
             else:
                 pixel.update(dict(zip([img.mode.lower()], [img.load()[0, 0]], strict=True)))
