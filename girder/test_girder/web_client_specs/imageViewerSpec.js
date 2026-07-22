@@ -1,4 +1,4 @@
-/* globals describe, it, expect, _, girderTest, $, runs, waitsFor, xit */
+/* globals describe, it, expect, _, girderTest, $, runs, waitsFor, xdescribe, xit */
 
 girderTest.importPlugin('large_image');
 

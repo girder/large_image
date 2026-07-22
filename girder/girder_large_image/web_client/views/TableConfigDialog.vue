@@ -25,8 +25,8 @@
             <div class="flex items-center mb-2 space-x-2">
               <label class="flex items-center space-x-2 ml-1 mr-8 font-normal">
                 <input
-                  type="checkbox"
                   v-model="isGrid"
+                  type="checkbox"
                 >
                 <span>Display in grid</span>
               </label>
@@ -152,7 +152,7 @@ module.exports = {
             searchInput: '',
             editableName: '',
             gridWidth: 250,
-            isGrid: false,
+            isGrid: false
         };
     },
     computed: {
@@ -184,7 +184,7 @@ module.exports = {
                 this.editableConfig.layout = {};
             }
             this.editableConfig.layout['max-width'] = newWidth;
-        },
+        }
     },
     created() {
         this.updateConfig(this.config);
