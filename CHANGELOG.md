@@ -6,9 +6,15 @@
 
 - Add a few missing type annotations ([#2074](../../pull/2074))
 
+### Changes
+
+- Added more options to the TestTileSource ([#2102](../../pull/2102))
+- Change a band-count check for a PIL image to getbands() instead of mode ([#2104](../../pull/2104))
+
 ### Bug Fixes
 
-- Fix zarr sink multi-process concurrency for python 3.14 ([#2098](../../pull/2098))
+- Fix zarr sink multi-process concurrency for python 3.14 ([#2098](../../pull/2098), [#2100](../../pull/2100))
+- Fix subtile slicing for certain empty layer interpolations ([#2101](../../pull/2101))
 
 ## 1.35.0
 
