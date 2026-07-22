@@ -34,6 +34,9 @@ lint.ignore = [
     "D401",
     "D404",
     "D415",
+    "C408",
+    "G002", # logging uses format/f strings
+    "G004",
     "E741",  # ambiguous variable name
     "NPY002",  # numpy-legacy-random
     "PT011",  # pytest-raises-too-broad
@@ -91,6 +94,7 @@ docstring-code-format = true
 # allow "useless expressions" as it shows output
 # allow non-top level imports
 # allow long lines
+".circleci/build_plugins.py" = ["T201"]
 ".circleci/dcm4chee/*.py" = ["T201", "T203"]
 "docs/*.ipynb" = ["B018", "E402", "E501", "T201", "T203"]
 "docs/*.py" = ["E501", "T201", "T203"]
