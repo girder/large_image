@@ -1236,7 +1236,7 @@ class TileSource(IPyLeafletMixin):
                 self._bandCount = tile.shape[-1] if len(tile.shape) == 3 else 1
             elif isinstance(tile, PIL.Image.Image):
                 self._dtype = np.uint8 if ';16' not in tile.mode else np.uint16
-                self._bandCount = len(tile.mode)
+                self._bandCount = len(tile.getbands())
             else:
                 _img = _imageToNumpy(tile)[0]
                 self._dtype = np.dtype(_img.dtype)
@@ -1633,7 +1633,7 @@ class TileSource(IPyLeafletMixin):
                         x * scale + newX, y * scale + newY, z,
                         pilImageAllowed=False, numpyAllowed='always',
                         sparseFallback=True, edge=False, frame=kwargs.get('frame'))
-                    subtile = subtile[dx::scale, dy::scale]
+                    subtile = subtile[dy::scale, dx::scale]
                     nptile[ty:ty + subtile.shape[0], tx:tx + subtile.shape[1]] = subtile
             return nptile, TILE_FORMAT_NUMPY
         while z - basez > self._maxSkippedLevels:
@@ -2684,7 +2684,7 @@ class TileSource(IPyLeafletMixin):
         pixel['value'] = [v.item() for v in tile['tile'][0][0]]
         img = _imageToPIL(tile['tile'])
         if img.size[0] >= 1 and img.size[1] >= 1:
-            if len(img.mode) > 1:
+            if len(img.getbands()) > 1:
                 pixel.update(dict(zip(img.mode.lower(), img.load()[0, 0], strict=True)))
             else:
                 pixel.update(dict(zip([img.mode.lower()], [img.load()[0, 0]], strict=True)))
@@ -2804,7 +2804,7 @@ class FileTileSource(TileSource):
             return False
 
     @classmethod
-    def addKnownMimetypes(cls):
+    def addKnownMimetypes(cls) -> None:
         """
         Based on already listed extensions and a set of common extension-
         mimetype list, add mimetypes if they do not already exist.

@@ -885,3 +885,17 @@ def testKnownExtensionList():
     assert len(large_image.tilesource.listSources()['extensions']) > 100
     assert len(large_image.listExtensions()) > 100
     assert len(large_image.listMimeTypes()) > 10
+
+
+def testSubtileSlicing():
+    """
+    This specifically exercises the code in _getTileFromEmptyLevel when we get
+    one tile per pixel.  See PR #2101 for the fix that this checks
+    """
+    import large_image_source_test
+
+    ts = large_image_source_test.TestTileSource(
+        minLevel=9, tileWidth=20, tileHeight=30, sizeX=20 * 2 ** 9,
+        sizeY=30 * 2 ** 7, monochrome=True, failBelowMinLevel=False)
+    data = ts.getTile(1, 0, 2, pilImageAllowed=False, numpyAllowed='always')
+    assert np.amin(data) > 0

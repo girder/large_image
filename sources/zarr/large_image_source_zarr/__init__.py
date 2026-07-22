@@ -2,7 +2,6 @@ import contextlib
 import importlib.metadata
 import json
 import math
-import multiprocessing
 import os
 import shutil
 import tempfile
@@ -11,6 +10,7 @@ import uuid
 import warnings
 from pathlib import Path
 
+import filelock
 import numpy as np
 import packaging.version
 
@@ -146,7 +146,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._editable = True
         self._bandRanges = None
         self._threadLock = threading.RLock()
-        self._processLock = multiprocessing.Lock()
         self._framecount = 0
         self._minWidth = None
         self._minHeight = None
@@ -165,6 +164,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not self._created:
             with contextlib.suppress(Exception):
                 self._validateZarr()
+
+    def _processLock(self):
+        """
+        This is a function to avoid pickling issues.
+        """
+        return filelock.FileLock(os.path.join(str(self._tempdir), '.zarr_flock'))
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):
@@ -739,7 +744,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         }
         tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
 
-        with self._threadLock and self._processLock:
+        with self._threadLock and self._processLock():
             old_axes = self._axes if hasattr(self, '_axes') else {}
             self._axes = {k: i for i, k in enumerate(axes)}
             new_axes = {k: i for k, i in self._axes.items() if k not in old_axes}
@@ -841,7 +846,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with an image.  The numpy array can have 2 or 3 dimensions.
         """
         data, _ = _imageToNumpy(image)
-        with self._threadLock and self._processLock:
+        with self._threadLock and self._processLock():
             if imageKey is None:
                 # Each associated image should be in its own group
                 num_existing = len(self.getAssociatedImagesList())
@@ -897,7 +902,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         Metadata structure adheres to OME schema from https://ngff.openmicroscopy.org/latest/
         """
         self._checkEditable()
-        with self._threadLock and self._processLock:
+        with self._threadLock and self._processLock():
             name = str(self._tempdir.name).split('/')[-1]
             arrays = dict(self._zarr.arrays())
             datasets = []
