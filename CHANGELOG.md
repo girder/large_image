@@ -13,6 +13,7 @@
 ### Bug Fixes
 
 - Fix zarr sink multi-process concurrency for python 3.14 ([#2098](../../pull/2098), [#2100](../../pull/2100))
+- Fix subtile slicing for certain empty layer interpolations ([#2101](../../pull/2101))
 
 ## 1.35.0
 
