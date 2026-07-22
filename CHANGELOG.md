@@ -9,6 +9,7 @@
 ### Changes
 
 - Added more options to the TestTileSource ([#2102](../../pull/2102))
+- Change a band-count check for a PIL image to getbands() instead of mode ([#2104](../../pull/2104))
 
 ### Bug Fixes
 
