@@ -6,6 +6,10 @@
 
 - Add a few missing type annotations ([#2074](../../pull/2074))
 
+### Changes
+
+- Added more options to the TestTileSource ([#2102](../../pull/2102))
+
 ### Bug Fixes
 
 - Fix zarr sink multi-process concurrency for python 3.14 ([#2098](../../pull/2098), [#2100](../../pull/2100))

@@ -49,7 +49,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
     def __init__(self, ignored_path=None, minLevel=0, maxLevel=9,
                  tileWidth=256, tileHeight=256, sizeX=None, sizeY=None,
                  fractal=False, frames=None, monochrome=False, bands=None,
-                 **kwargs):
+                 failBelowMinLevel=True, **kwargs):
         """
         Initialize the tile class.  See the base class for other available
         parameters.
@@ -77,6 +77,11 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             the specified ranges.  The internal dtype with be uint8, uint16, or
             float depending on the union of the specified ranges.  If no ranges
             are specified at all, it is the same as 0-255.
+        :param failBelowMinLevel: if True and a tile is requested outside of
+            the minLevel and maxLevel, throw an error.  If false, interpolate
+            lower level tiles.  Throwing is useful when testing how viewers
+            handle missing levels; interpolating is useful for testing
+            interpolation functions.
         """
         if not kwargs.get('encoding'):
             kwargs = kwargs.copy()
@@ -100,8 +105,10 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)))))
         self.minLevel = min(self.minLevel, self.maxLevel)
         self.monochrome = bool(monochrome)
+        self._failBelowMinLevel = bool(failBelowMinLevel)
         self._bands = None
         self._dtype = np.uint8
+        self._bandCount = 1 if self.monochrome else 3
         if bands:
             bands = [re.match(
                 r'^(?P<key>[^=]+)(|=(?P<low>[+-]?((\d+(|\.\d*)))|(\.\d+))-(?P<high>[+-]?((\d+(|\.\d*))|(\.\d+))))$',  # noqa
@@ -126,6 +133,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
                 self._dtype = np.dtype(float)
             elif low >= 256 or high >= 256:
                 self._dtype = np.uint16
+            self._bandCount = len(self._bands) if not self.monochrome else 1
         # Used for reporting tile information
         self.levels = self.maxLevel + 1
         if frames:
@@ -266,52 +274,65 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
         )
         return image
 
+    def _nonemptyLevelsList(self, frame=0):
+        """
+        Return a list of one value per level where the value is None if the
+        level does not exist in the file and any other value if it does.
+
+        :param frame: the frame number.
+        :returns: a list of levels length.
+        """
+        return [True if self.minLevel <= idx <= self.maxLevel else None
+                for idx in range(self.levels)]
+
     @methodcache()
     def getTile(self, x, y, z, *args, **kwargs):
         frame = self._getFrame(**kwargs)
         self._xyzInRange(x, y, z, frame, len(self._frames) if hasattr(self, '_frames') else None)
-
-        if not (self.minLevel <= z <= self.maxLevel):
-            msg = 'z layer does not exist'
-            raise TileSourceError(msg)
-        _counters['tiles'] += 1
-
-        xFraction = (x + 0.5) * self.tileWidth * 2 ** (self.levels - 1 - z) / self.sizeX
-        yFraction = (y + 0.5) * self.tileHeight * 2 ** (self.levels - 1 - z) / self.sizeY
-        fFraction = yFraction
-        if hasattr(self, '_frames'):
-            fFraction = float(frame) / (len(self._frames) - 1)
-
-        backgroundColor = colorsys.hsv_to_rgb(
-            h=xFraction,
-            s=(0.3 + (0.7 * fFraction)),
-            v=(0.3 + (0.7 * yFraction)),
-        )
-        rgbColor = tuple(int(val * 255) for val in backgroundColor)
-
-        if not self._bands or len(self._bands) == (1 if self.monochrome else 3):
-            image = self._tileImage(rgbColor, x, y, z, frame)
-            if self.monochrome:
-                image = image.convert('L')
-            format = TILE_FORMAT_PIL
+        if z < self.minLevel and not self._failBelowMinLevel:
+            image, format = self._getTileFromEmptyLevel(x, y, z, **kwargs)
         else:
-            image = np.zeros(
-                (self.tileHeight, self.tileWidth, len(self._bands)), dtype=self._dtype)
-            for bandnum, band in enumerate(self._bands):
-                bandimg = self._tileImage(rgbColor, x, y, z, frame, band, bandnum)
-                if self.monochrome or band.upper() in {'grey', 'gray', 'alpha'}:
-                    bandimg = bandimg.convert('L')
-                bandimg = _imageToNumpy(bandimg)[0]
-                if (self._dtype != np.uint8 or
-                        self._bands[band]['low'] != 0 or
-                        self._bands[band]['high'] != 255):
-                    bandimg = bandimg.astype(float)
-                    bandimg = (bandimg / 255) * (
-                        self._bands[band]['high'] - self._bands[band]['low']
-                    ) + self._bands[band]['low']
-                    bandimg = bandimg.astype(self._dtype)
-                image[:, :, bandnum] = bandimg[:, :, bandnum % bandimg.shape[2]]
-            format = TILE_FORMAT_NUMPY
+            if not (self.minLevel <= z <= self.maxLevel):
+                msg = 'z layer does not exist'
+                raise TileSourceError(msg)
+            _counters['tiles'] += 1
+
+            xFraction = (x + 0.5) * self.tileWidth * 2 ** (self.levels - 1 - z) / self.sizeX
+            yFraction = (y + 0.5) * self.tileHeight * 2 ** (self.levels - 1 - z) / self.sizeY
+            fFraction = yFraction
+            if hasattr(self, '_frames'):
+                fFraction = float(frame) / (len(self._frames) - 1)
+
+            backgroundColor = colorsys.hsv_to_rgb(
+                h=xFraction,
+                s=(0.3 + (0.7 * fFraction)),
+                v=(0.3 + (0.7 * yFraction)),
+            )
+            rgbColor = tuple(int(val * 255) for val in backgroundColor)
+
+            if not self._bands or len(self._bands) == (1 if self.monochrome else 3):
+                image = self._tileImage(rgbColor, x, y, z, frame)
+                if self.monochrome:
+                    image = image.convert('L')
+                format = TILE_FORMAT_PIL
+            else:
+                image = np.zeros(
+                    (self.tileHeight, self.tileWidth, len(self._bands)), dtype=self._dtype)
+                for bandnum, band in enumerate(self._bands):
+                    bandimg = self._tileImage(rgbColor, x, y, z, frame, band, bandnum)
+                    if self.monochrome or band.upper() in {'grey', 'gray', 'alpha'}:
+                        bandimg = bandimg.convert('L')
+                    bandimg = _imageToNumpy(bandimg)[0]
+                    if (self._dtype != np.uint8 or
+                            self._bands[band]['low'] != 0 or
+                            self._bands[band]['high'] != 255):
+                        bandimg = bandimg.astype(float)
+                        bandimg = (bandimg / 255) * (
+                            self._bands[band]['high'] - self._bands[band]['low']
+                        ) + self._bands[band]['low']
+                        bandimg = bandimg.astype(self._dtype)
+                    image[:, :, bandnum] = bandimg[:, :, bandnum % bandimg.shape[2]]
+                format = TILE_FORMAT_NUMPY
         return self._outputTile(image, format, x, y, z, **kwargs)
 
     @staticmethod
@@ -323,7 +344,7 @@ class TestTileSource(TileSource, metaclass=LruCacheMetaclass):
             kwargs.get('tileWidth'), kwargs.get('tileHeight'),
             kwargs.get('fractal'), kwargs.get('sizeX'), kwargs.get('sizeY'),
             kwargs.get('frames'), kwargs.get('monochrome'),
-            kwargs.get('bands'),
+            kwargs.get('bands'), kwargs.get('failBelowMinLevel'),
         )
 
     def getState(self):
