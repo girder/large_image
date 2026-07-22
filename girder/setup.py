@@ -35,6 +35,7 @@ setup(
     install_requires=[
         'girder>=5',
         'girder-jobs>=5',
+        'girder-plugin-worker>=5',
         f'large_image{limit_version}',
     ],
     extras_require={

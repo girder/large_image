@@ -2,6 +2,7 @@
 
 import argparse
 import concurrent.futures
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -71,4 +72,5 @@ if __name__ == '__main__':
         help='Additional directories to build; for example, use "." and '
         '"girder/web".')
     args = parser.parse_args()
-    build_plugins(args.plugins_dir, args.workers, args.rebuild, args.extra, args.dry_run)
+    if str(os.environ.get('SKIP_BUILD_PLUGINS')).lower() not in {'1', 'true'}:
+        build_plugins(args.plugins_dir, args.workers, args.rebuild, args.extra, args.dry_run)
