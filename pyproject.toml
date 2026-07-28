@@ -35,6 +35,7 @@ lint.ignore = [
     "D404",
     "D415",
     "E741",  # ambiguous variable name
+    "ISC004",  # Unparenthesized implicit string concatenation in collection
     "NPY002",  # numpy-legacy-random
     "PT011",  # pytest-raises-too-broad
     "PT012",  # pytest-raises-with-multiple-statements
