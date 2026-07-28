@@ -220,11 +220,12 @@ class LazyTileDict(dict):
                     pilImageAllowed=True,
                     numpyAllowed='always' if TILE_FORMAT_NUMPY in self.format else True,
                     sparseFallback=True, frame=self.frame)
-                if self.crop:
-                    tileData, _ = _imageToNumpy(tileData)
-                    tileData = tileData[self.crop[1]:self.crop[3], self.crop[0]:self.crop[2]]
             else:
                 tileData = self._retileTile()
+
+            if self.crop:
+                tileData, _ = _imageToNumpy(tileData)
+                tileData = tileData[self.crop[1]:self.crop[3], self.crop[0]:self.crop[2]]
 
             pilData = None
             # resample if needed
