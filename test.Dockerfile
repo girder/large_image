@@ -97,6 +97,8 @@ RUN pyenv update && \
     rm -rf /tmp/* /var/tmp/* /root/.cache/* && \
     find /.pyenv '(' -name '*.so' -o -name '*.a' -o -name '*.so.*' ')' -exec strip --strip-unneeded -p -D {} \; && \
     find /.pyenv -name 'libpython*.a' -delete && \
+    find /.pyenv -name 'vendor.txt' -delete && \
+    find /.pyenv -name 'bom.cdx.json' -delete && \
     # This makes duplicate python library files hardlinks of each other \
     rdfind -minsize 8192 -makehardlinks true -makeresultsfile false /.pyenv
 
