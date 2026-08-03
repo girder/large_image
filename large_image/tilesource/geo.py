@@ -9,6 +9,7 @@ import numpy as np
 import PIL.Image
 
 from ..cache_util import CacheProperties, methodcache
+from ..config import getConfig, getLogger
 from ..constants import SourcePriority, TileInputUnits
 from ..exceptions import TileSourceError
 from .base import FileTileSource
@@ -30,12 +31,32 @@ if 'GDAL_PAM_ENABLED' not in os.environ:
 
 
 def make_vsi(url: str | pathlib.Path | dict[Any, Any], **options) -> str:
-    if str(url).startswith('s3://'):
-        s3_path = str(url).replace('s3://', '')
+    """
+    Build a GDAL Virtual File System path for a remote URL.
+
+    ``s3://`` URLs always use ``/vsis3/``.  Other URLs use ``/vsicurl/``
+    unless the ``force_gdal_vsis3`` config option is set, in which case
+    ``http``/``https`` URL paths are mapped to ``/vsis3/`` (intended for MinIO
+    and similar S3-compatible stores used with ``AWS_S3_ENDPOINT``).  ``ftp``
+    URLs always use ``/vsicurl/``; if ``force_gdal_vsis3`` is set, a warning is
+    logged because ``/vsis3/`` cannot serve FTP.
+    """
+    url_str = str(url)
+    parsed = urlparse(url_str)
+    force_vsis3 = getConfig('force_gdal_vsis3')
+    if url_str.startswith('s3://') or (force_vsis3 and parsed.scheme in {'http', 'https'}):
+        if url_str.startswith('s3://'):
+            s3_path = url_str.replace('s3://', '', 1)
+        else:
+            s3_path = parsed.path.lstrip('/')
         vsi = f'/vsis3/{s3_path}'
     else:
+        if force_vsis3 and parsed.scheme == 'ftp':
+            getLogger().warning(
+                'force_gdal_vsis3 is set but ftp:// URLs cannot use /vsis3/; '
+                'using /vsicurl/ for %s', url_str)
         gdal_options = {
-            'url': str(url),
+            'url': url_str,
             'use_head': 'no',
             'list_dir': 'no',  # don't search for adjacent files
             'empty_dir': 'yes',  # don't probe for sidecar files
