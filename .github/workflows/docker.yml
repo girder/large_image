@@ -13,12 +13,16 @@ jobs:
   build-and-publish-base:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository )
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Log into the Container registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
         with:
           registry: ${{ env.REGISTRY }}
           username: token
@@ -27,11 +31,11 @@ jobs:
       # Build and publish image with all sources
       - name: Extract metadata for the Docker image
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       - name: Build and push the Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
         with:
           context: .
           file: slim.Dockerfile
@@ -40,10 +44,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
       - name: Test the Docker image
-        run: docker run --rm ${{ steps.meta.outputs.tags }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
+        # zizmor-ignore template-injection [LOW] Template expansion is safe: value from docker/metadata-action, not user input. This is an artifact tag used as a docker run argument.
+        run: docker run --rm ${{ steps.meta.outputs.tags || '' }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
           >= 6"'
       - name: Push the Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
         with:
           context: .
           file: slim.Dockerfile
@@ -54,6 +59,9 @@ jobs:
   build-and-publish-targets:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository )
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -63,11 +71,12 @@ jobs:
           - "jupyter"
           - "jupyter-geo"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Log into the Container registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
         with:
           registry: ${{ env.REGISTRY }}
           username: token
@@ -76,14 +85,14 @@ jobs:
       # Build and publish image with only geospatial sources
       - name: Extract metadata for the geospatial Docker image
         id: meta_target
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
             latest=auto
             suffix=-${{ matrix.target }},onlatest=true
       - name: Build the Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
         with:
           context: .
           file: slim.Dockerfile
@@ -92,10 +101,11 @@ jobs:
           tags: ${{ steps.meta_target.outputs.tags }}
           labels: ${{ steps.meta_target.outputs.labels }}
       - name: Test the Docker image
-        run: docker run --rm ${{ steps.meta_target.outputs.tags }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
+        # zizmor-ignore template-injection [LOW] Template expansion is safe: value from docker/metadata-action, not user input. This is an artifact tag used as a docker run argument.
+        run: docker run --rm ${{ steps.meta_target.outputs.tags || '' }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
           >= 6"'
       - name: Push the Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
         with:
           context: .
           file: slim.Dockerfile
