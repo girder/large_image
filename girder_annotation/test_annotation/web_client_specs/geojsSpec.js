@@ -949,6 +949,20 @@ $(function () {
                 checkFeatureOpacity(annotation2.id, 0.5, 1);
             });
 
+            it('handles custom unselected opacity multiplier', function () {
+                viewer.setUnselectedOpacityMultiplier(0.5);
+                viewer.highlightAnnotation(annotation1.id);
+
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5 * 0.5, 0.5);
+
+                viewer.highlightAnnotation();
+                viewer.setUnselectedOpacityMultiplier();
+
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5, 1);
+            });
+
             it('hide an element', function () {
                 viewer.hideAnnotation(annotation2.id, element21);
 
