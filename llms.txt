@@ -1,0 +1,265 @@
+# large_image
+
+> Large Image
+> ===========
+> 
+> .. image:: https://img.shields.io/circleci/build/github/girder/large_image.svg
+>   :target: https://circleci.com/gh/girder/large_image
+>   :alt: Build Status
+> 
+> .. image:: https://img.shields.io/badge/license-Apache%202-blue.svg
+>   :target: https://raw.githubusercontent.com/girder/large_image/master/LICENSE
+>   :alt: License
+> 
+> .. image:: https://img.shields.io/codecov/c/github/girder/large_image.svg
+>   :target: https://codecov.io/github/girder/large_image?branch=master
+>   :alt: codecov.io
+> 
+> .. image:: https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4562625-blue.svg
+>   :target: https://doi.org/10.5281/zenodo.4562625
+> 
+> .. image:: https://img.shields.io/pypi/v/large-image.svg?logo=python&logoColor=white
+>   :target: https://pypi.org/project/large-image/
+> 
+> *Python modules to work with large, multiresolution images.*
+> 
+> Large Image is developed and maintained by the Data & Analytics group at `Kitware, Inc. <https://kitware.com>`_ for processing large geospatial and medical images. This provides the backbone for several of our image analysis platforms including `Resonant GeoData <https://github.com/ResonantGeoData/ResonantGeoData>`_, `HistomicsUI <https://github.com/DigitalSlideArchive/HistomicsUI>`_, and `the Digital Slide Archive <https://digitalslidearchive.github.io/digital_slide_archive/>`_.
+> 
+> 
+> Highlights
+> ----------
+> 
+> - Tile serving made easy
+> - Supports a wide variety of geospatial and medical image formats
+> - Convert to tiled Cloud Optimized (Geo)Tiffs (also known as pyramidal tiffs)
+> - Python methods for retiling or accessing regions of images efficiently
+> - Options for restyling tiles, such as dynamically applying color and band transform
+> 
+> 
+> Installation
+> ------------
+> 
+> In addition to installing the base ``large-image`` package, you'll need at least one tile source which corresponds to your target file format(s) (a ``large-image-source-xxx`` package).   You can install everything from the main project with one of these commands:
+> 
+> Pip
+> ~~~
+> 
+> Install common tile sources on linux, OSX, or Windows::
+> 
+>     pip install large-image[common]
+> 
+> Install all tile sources on linux::
+> 
+>     pip install large-image[all] --find-links https://girder.github.io/large_image_wheels
+> 
+> When using large-image with an instance of `Girder`_, install all tile sources and all Girder plugins on linux::
+> 
+>     pip install large-image[all] girder-large-image-annotation[tasks] --find-links https://girder.github.io/large_image_wheels
+> 
+> 
+> Conda
+> ~~~~~
+> 
+> Conda makes dependency management a bit easier if not on Linux. The base module, converter module, and two of the source modules are available on conda-forge. You can install the following::
+> 
+>     conda install -c conda-forge large-image
+>     conda install -c conda-forge large-image-source-gdal
+>     conda install -c conda-forge large-image-source-tiff
+>     conda install -c conda-forge large-image-converter
+> 
+> 
+> Docker Images
+> ~~~~~~~~~~~~~
+> 
+> Included in this repository’s packages are pre-built Docker images that have all
+> of the dependencies to read any supported image format.
+> 
+> This is particularly useful if you do not want to install some of the heavier
+> dependencies like GDAL on your system or want a dedicated and isolated
+> environment for working with large images.
+> 
+> To use, pull the image and run it by mounting a local volume where the
+> imagery is stored::
+> 
+>     docker pull ghcr.io/girder/large_image:latest
+>     docker run -v /path/to/images:/opt/images ghcr.io/girder/large_image:latest
+> 
+> There are some additional Docker images:
+> 
+> - ghcr.io/girder/large_image:latest-geo: this just includes the geospatial image format readers
+> - ghcr.io/girder/large_image:latest-girder: this has all image sources and girder installed
+> - ghcr.io/girder/large_image:latest-jupyter: this is the base jupyter notebook docker image with all image sources installed.
+> - ghcr.io/girder/large_image:latest-jupyter-geo: this is the base jupyter notebook docker image with geospatial image sources installed.
+> 
+> 
+> Modules
+> -------
+> 
+> Large Image consists of several Python modules designed to work together.  These include:
+> 
+> - ``large-image``: The core module.
+> 
+>   You can specify extras_require of the name of any tile source included with this repository.  For instance, you can do ``pip install large-image[tiff]``.  There are additional extras_require options:
+> 
+>   - ``sources``: all of the tile sources in the repository, a specific source name (e.g., ``tiff``)
+> 
+>   - ``memcached``: use memcached for tile caching
+> 
+>   - ``converter``: include the converter module
+> 
+>   - ``colormaps``: use matplotlib for named color palettes used in styles
+> 
+>   - ``tiledoutput``: support for emitting large regions as tiled tiffs
+> 
+>   - ``performance``: include optional modules that can improve performance
+> 
+>   - ``common``: all of the tile sources and above packages that will install directly from pypi without other external libraries on linux, OSX, and Windows.
+> 
+>   - ``all``: for all of the above
+> 
+> - ``large-image-converter``: A utility for using pyvips and other libraries to convert images into pyramidal tiff files that can be read efficiently by large_image.
+>   You can specify extras_require of ``jp2k`` to include modules to allow output to JPEG2000 compression, ``sources`` to include all sources, ``stats`` to include modules to allow computing compression noise statistics, ``geospatial`` to include support for converting geospatial sources, or ``all`` for all of the optional extras_require.
+> 
+> - Tile sources:
+> 
+>   - ``large-image-source-bioformats``: A tile source for reading any file handled by the Java Bioformats library.
+> 
+>   - ``large-image-source-deepzoom``: A tile source for reading Deepzoom tiles.
+> 
+>   - ``large-image-source-dicom``: A tile source for reading DICOM Whole Slide Images (WSI).
+> 
+>   - ``large-image-source-gdal``: A tile source for reading geotiff files via GDAL.  This handles source data with more complex transforms than the mapnik tile source.
+> 
+>   - ``large-image-source-mapnik``: A tile source for reading geotiff and netcdf files via Mapnik and GDAL.  This handles more vector issues than the gdal tile source.
+> 
+>   - ``large-image-source-multi``: A tile source for compositing other tile sources into a single multi-frame source.
+> 
+>   - ``large-image-source-nd2``: A tile source for reading nd2 (NIS Element) images.
+> 
+>   - ``large-image-source-ometiff``: A tile source using the tiff library that can handle most multi-frame OMETiff files that are compliant with the specification.
+> 
+>   - ``large-image-source-openjpeg``: A tile source using the Glymur library to read jp2 (JPEG 2000) files.
+> 
+>   - ``large-image-source-openslide``: A tile source using the OpenSlide library.  This works with svs, ndpi, Mirax, tiff, vms, and other file formats.
+> 
+>   - ``large-image-source-pil``: A tile source for small images via the Python Imaging Library (Pillow). By default, the maximum size is 4096, but the maximum size can be configured.
+> 
+>   - ``large-image-source-tiff``: A tile source for reading pyramidal tiff files in common compression formats.
+> 
+>   - ``large-image-source-tifffile``: A tile source using the tifffile library that can handle a wide variety of tiff-like files.
+> 
+>   - ``large-image-source-vips``: A tile source for reading any files handled by libvips.  This also can be used for writing tiled images from numpy arrays (up to 4 dimensions).
+> 
+>   - ``large-image-source-zarr``: A tile source using the zarr library that can handle OME-Zarr (OME-NGFF) files as well as some other zarr files. This can also be used for writing N-dimensional tiled images from numpy arrays. Written images can be saved as any supported format.
+> 
+>   - ``large-image-source-test``: A tile source that generates test tiles, including a simple fractal pattern.  Useful for testing extreme zoom levels.
+> 
+>   - ``large-image-source-dummy``: A tile source that does nothing. This is an absolutely minimal implementation of a tile source used for testing. If you want to create a custom tile source, start with this implementation.
+> 
+> 
+> As a `Girder`_ plugin, ``large-image`` adds end points to access all of the image formats it can read both to get metadata and to act as a tile server.
+> In the Girder UI, ``large-image`` shows images on item pages, and can show thumbnails in item lists when browsing folders.
+> There is also cache management to balance memory use and speed of response in Girder when ``large-image`` is used as a tile server.
+> 
+> Most tile sources can be used with Girder Large Image.  You can specify an extras_require of ``girder`` to install the following packages:
+> 
+> - ``girder-large-image``: Large Image as a Girder 3.x plugin.
+> 
+>   You can install ``large-image[tasks]`` to install a Girder Worker task that can convert otherwise unreadable images to pyramidal tiff files.
+> 
+> - ``girder-large-image-annotation``: Adds models to the Girder database for supporting annotating large images.  These annotations can be rendered on images. Annotations can include polygons, points, image overlays, and other types. Each annotation can have a label and metadata.
+> 
+> - ``large-image-tasks``: A utility for running the converter via Girder Worker.
+> 
+>   You can specify an extras_require of ``girder`` to include modules needed to work with the Girder remote worker or ``worker`` to include modules needed on the remote side of the Girder remote worker.  If neither is specified, some conversion tasks can be run using Girder local jobs.
+> 
+> 
+> 
+> .. _Girder: https://girder.readthedocs.io/en/latest/
+
+
+Kitware, Inc.
+
+## Pages
+
+- [Large Image](index.html.md): sphinx-quickstart on Tue Dec 31 14:43:10 2019.
+- [Annotation Schema](annotations.html.md): An annotation consists of a basic structure which includes a free-form
+- [API Documentation](api_index.html.md): The following pages are generated from module source code.
+- [Caching in Large Image](caching.html.md): There are two main caches in large_image in addition to caching done on the operating system level. ...
+- [Configuration Options](config_options.html.md): Some functionality of large_image is controlled through configuration parameters.  These can be read...
+- [Developer Guide](development.html.md): To install all packages from source, clone the repository:
+- [DICOMweb Assetstore](dicomweb_assetstore.html.md): The DICOM source also provides a Girder Assetstore plugin for accessing data on DICOMweb servers.  T...
+- [Image Formats](formats.html.md): Images can generally be read regardless of their name.  By default, when opening an image with `larg...
+- [Large Image Frame Selector in Jupyter](notebooks/frame_viewer_example.html.md): The large_image library has some convenience features for use in Jupyter Notebooks and Jupyter Lab. ...
+- [Getting Started](getting_started.html.md): The `large_image` library can be used to read and access different file formats.  There are several ...
+- [Girder Annotation Configuration Options](girder_annotation_config_options.html.md): The `large_image` annotation plugin adds models to the Girder database for supporting annotating lar...
+- [Caching Large Image in Girder](girder_caching.html.md): Tile sources are opened: when large image files uploaded or imported; when large image files are vie...
+- [Girder Configuration Options](girder_config_options.html.md): There are some general plugin settings that affect large_image as a Girder plugin.  These settings c...
+- [Girder Integration](girder_index.html.md): [Girder](https://girder.readthedocs.io/en/latest/) is a free and open source web-based data manageme...
+- [girder_large_image package](_build/girder_large_image/girder_large_image.html.md): * [girder_large_image.models package](girder_large_image.models.md)
+- [girder_large_image.models package](_build/girder_large_image/girder_large_image.models.html.md): Bases: `Item`
+- [girder_large_image.rest package](_build/girder_large_image/girder_large_image.rest.html.md): Bases: `Item`
+- [girder_large_image_annotation package](_build/girder_large_image_annotation/girder_large_image_annotation.html.md): * [girder_large_image_annotation.models package](girder_large_image_annotation.models.md)
+- [girder_large_image_annotation.models package](_build/girder_large_image_annotation/girder_large_image_annotation.models.html.md): Bases: `AccessControlledModel`
+- [girder_large_image_annotation.rest package](_build/girder_large_image_annotation/girder_large_image_annotation.rest.html.md): Bases: `Resource`
+- [girder_large_image_annotation.utils package](_build/girder_large_image_annotation/girder_large_image_annotation.utils.html.md): Bases: `object`
+- [Image Conversion](image_conversion.html.md): The `large_image` library can read a variety of images with the various tile source modules.  Some i...
+- [large_image.cache_util package](_build/large_image/large_image.cache_util.html.md): Bases: `Cache`
+- [large_image package](_build/large_image/large_image.html.md): * [large_image.cache_util package](large_image.cache_util.md)
+- [large_image.tilesource.eager_utils package](_build/large_image/large_image.tilesource.eager_utils.html.md): Share eager iterator callables with worker processes.
+- [large_image.tilesource package](_build/large_image/large_image.tilesource.html.md): * [large_image.tilesource.eager_utils package](large_image.tilesource.eager_utils.md)
+- [large_image_converter package](_build/large_image_converter/large_image_converter.html.md): Adjust options for aperio format.
+- [Using Large Image in Jupyter](notebooks/large_image_examples.html.md): The large_image library has some convenience features for use in Jupyter Notebooks and Jupyter Lab. ...
+- [large_image_source_bioformats package](_build/large_image_source_bioformats/large_image_source_bioformats.html.md): Bases: [`BioformatsFileTileSource`](#large_image_source_bioformats.BioformatsFileTileSource), [`Gird...
+- [large_image_source_deepzoom package](_build/large_image_source_deepzoom/large_image_source_deepzoom.html.md): Bases: [`DeepzoomFileTileSource`](#large_image_source_deepzoom.DeepzoomFileTileSource), [`GirderTile...
+- [large_image_source_dicom.assetstore package](_build/large_image_source_dicom/large_image_source_dicom.assetstore.html.md): Bases: `AbstractAssetstoreAdapter`
+- [large_image_source_dicom package](_build/large_image_source_dicom/large_image_source_dicom.html.md): * [large_image_source_dicom.assetstore package](large_image_source_dicom.assetstore.md)
+- [large_image_source_dummy package](_build/large_image_source_dummy/large_image_source_dummy.html.md): Bases: [`TileSource`](../large_image/large_image.tilesource.md#large_image.tilesource.base.TileSourc...
+- [large_image_source_gdal package](_build/large_image_source_gdal/large_image_source_gdal.html.md): Bases: [`GDALFileTileSource`](#large_image_source_gdal.GDALFileTileSource), [`GirderTileSource`](../...
+- [large_image_source_mapnik package](_build/large_image_source_mapnik/large_image_source_mapnik.html.md): Bases: [`MapnikFileTileSource`](#large_image_source_mapnik.MapnikFileTileSource), [`GDALGirderTileSo...
+- [large_image_source_multi package](_build/large_image_source_multi/large_image_source_multi.html.md): Bases: [`MultiFileTileSource`](#large_image_source_multi.MultiFileTileSource), [`GirderTileSource`](...
+- [large_image_source_nd2 package](_build/large_image_source_nd2/large_image_source_nd2.html.md): Bases: [`ND2FileTileSource`](#large_image_source_nd2.ND2FileTileSource), [`GirderTileSource`](../gir...
+- [large_image_source_ometiff package](_build/large_image_source_ometiff/large_image_source_ometiff.html.md): Bases: [`OMETiffFileTileSource`](#large_image_source_ometiff.OMETiffFileTileSource), [`GirderTileSou...
+- [large_image_source_openjpeg package](_build/large_image_source_openjpeg/large_image_source_openjpeg.html.md): Bases: [`OpenjpegFileTileSource`](#large_image_source_openjpeg.OpenjpegFileTileSource), [`GirderTile...
+- [large_image_source_openslide package](_build/large_image_source_openslide/large_image_source_openslide.html.md): Bases: [`OpenslideFileTileSource`](#large_image_source_openslide.OpenslideFileTileSource), [`GirderT...
+- [large_image_source_pil package](_build/large_image_source_pil/large_image_source_pil.html.md): Bases: [`PILFileTileSource`](#large_image_source_pil.PILFileTileSource), [`GirderTileSource`](../gir...
+- [large_image_source_rasterio package](_build/large_image_source_rasterio/large_image_source_rasterio.html.md): Bases: [`RasterioFileTileSource`](#large_image_source_rasterio.RasterioFileTileSource), [`GirderTile...
+- [large_image_source_test package](_build/large_image_source_test/large_image_source_test.html.md): Bases: [`TileSource`](../large_image/large_image.tilesource.md#large_image.tilesource.base.TileSourc...
+- [large_image_source_tiff package](_build/large_image_source_tiff/large_image_source_tiff.html.md): Bases: [`IOTiffError`](#large_image_source_tiff.exceptions.IOTiffError)
+- [large_image_source_tifffile package](_build/large_image_source_tifffile/large_image_source_tifffile.html.md): Bases: [`TifffileFileTileSource`](#large_image_source_tifffile.TifffileFileTileSource), [`GirderTile...
+- [large_image_source_vips package](_build/large_image_source_vips/large_image_source_vips.html.md): Bases: [`VipsFileTileSource`](#large_image_source_vips.VipsFileTileSource), [`GirderTileSource`](../...
+- [large_image_source_zarr package](_build/large_image_source_zarr/large_image_source_zarr.html.md): Bases: [`ZarrFileTileSource`](#large_image_source_zarr.ZarrFileTileSource), [`GirderTileSource`](../...
+- [large_image_tasks package](_build/large_image_tasks/large_image_tasks.html.md): Bases: `Handler`
+- [girder_large_image](_build/girder_large_image/modules.html.md): * [girder_large_image package](girder_large_image.md)
+- [girder_large_image_annotation](_build/girder_large_image_annotation/modules.html.md): * [girder_large_image_annotation package](girder_large_image_annotation.md)
+- [large_image](_build/large_image/modules.html.md): * [large_image package](large_image.md)
+- [large_image_converter](_build/large_image_converter/modules.html.md): * [large_image_converter package](large_image_converter.md)
+- [large_image_source_bioformats](_build/large_image_source_bioformats/modules.html.md): * [large_image_source_bioformats package](large_image_source_bioformats.md)
+- [large_image_source_deepzoom](_build/large_image_source_deepzoom/modules.html.md): * [large_image_source_deepzoom package](large_image_source_deepzoom.md)
+- [large_image_source_dicom](_build/large_image_source_dicom/modules.html.md): * [large_image_source_dicom package](large_image_source_dicom.md)
+- [large_image_source_dummy](_build/large_image_source_dummy/modules.html.md): * [large_image_source_dummy package](large_image_source_dummy.md)
+- [large_image_source_gdal](_build/large_image_source_gdal/modules.html.md): * [large_image_source_gdal package](large_image_source_gdal.md)
+- [large_image_source_mapnik](_build/large_image_source_mapnik/modules.html.md): * [large_image_source_mapnik package](large_image_source_mapnik.md)
+- [large_image_source_multi](_build/large_image_source_multi/modules.html.md): * [large_image_source_multi package](large_image_source_multi.md)
+- [large_image_source_nd2](_build/large_image_source_nd2/modules.html.md): * [large_image_source_nd2 package](large_image_source_nd2.md)
+- [large_image_source_ometiff](_build/large_image_source_ometiff/modules.html.md): * [large_image_source_ometiff package](large_image_source_ometiff.md)
+- [large_image_source_openjpeg](_build/large_image_source_openjpeg/modules.html.md): * [large_image_source_openjpeg package](large_image_source_openjpeg.md)
+- [large_image_source_openslide](_build/large_image_source_openslide/modules.html.md): * [large_image_source_openslide package](large_image_source_openslide.md)
+- [large_image_source_pil](_build/large_image_source_pil/modules.html.md): * [large_image_source_pil package](large_image_source_pil.md)
+- [large_image_source_rasterio](_build/large_image_source_rasterio/modules.html.md): * [large_image_source_rasterio package](large_image_source_rasterio.md)
+- [large_image_source_test](_build/large_image_source_test/modules.html.md): * [large_image_source_test package](large_image_source_test.md)
+- [large_image_source_tiff](_build/large_image_source_tiff/modules.html.md): * [large_image_source_tiff package](large_image_source_tiff.md)
+- [large_image_source_tifffile](_build/large_image_source_tifffile/modules.html.md): * [large_image_source_tifffile package](large_image_source_tifffile.md)
+- [large_image_source_vips](_build/large_image_source_vips/modules.html.md): * [large_image_source_vips package](large_image_source_vips.md)
+- [large_image_source_zarr](_build/large_image_source_zarr/modules.html.md): * [large_image_source_zarr package](large_image_source_zarr.md)
+- [large_image_tasks](_build/large_image_tasks/modules.html.md): * [large_image_tasks package](large_image_tasks.md)
+- [Multi Source Schema](multi_source_specification.html.md): A multi-source tile source is used to composite multiple other sources into a
+- [Jupyter Notebook Examples](notebooks.html.md): These example notebooks demonstrate some basic `large-image` functionality used in [Jupyter](https:/...
+- [Plottable Data](plottable.html.md): There is a python utility class and some REST endpoints to obtain plottable data related to a large ...
+- [Tile Source Options](tilesource_options.html.md): Each tile source can have custom options that affect how tiles are generated from that tile source. ...
+- [Upgrading from Previous Versions](upgrade.html.md): If you are migrating a Girder 2 instance with Large Image to Girder 3, you need to do a one time dat...
+- [Using the Zarr Tile Sink](notebooks/zarr_sink_example.html.md): The `ZarrFileTileSource` class has file-writing capabilities; an empty image can be created, image d...
+
+---
+
+For more comprehensive documentation, see [llms-full.txt](llms-full.txt)

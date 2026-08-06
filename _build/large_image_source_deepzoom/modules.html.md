@@ -1,0 +1,18 @@
+# large_image_source_deepzoom
+
+* [large_image_source_deepzoom package](large_image_source_deepzoom.md)
+  * [Submodules](large_image_source_deepzoom.md#submodules)
+  * [large_image_source_deepzoom.girder_source module](large_image_source_deepzoom.md#module-large_image_source_deepzoom.girder_source)
+    * [`DeepzoomGirderTileSource`](large_image_source_deepzoom.md#large_image_source_deepzoom.girder_source.DeepzoomGirderTileSource)
+      * [`DeepzoomGirderTileSource.cacheName`](large_image_source_deepzoom.md#large_image_source_deepzoom.girder_source.DeepzoomGirderTileSource.cacheName)
+      * [`DeepzoomGirderTileSource.name`](large_image_source_deepzoom.md#large_image_source_deepzoom.girder_source.DeepzoomGirderTileSource.name)
+  * [Module contents](large_image_source_deepzoom.md#module-large_image_source_deepzoom)
+    * [`DeepzoomFileTileSource`](large_image_source_deepzoom.md#large_image_source_deepzoom.DeepzoomFileTileSource)
+      * [`DeepzoomFileTileSource.cacheName`](large_image_source_deepzoom.md#large_image_source_deepzoom.DeepzoomFileTileSource.cacheName)
+      * [`DeepzoomFileTileSource.extensions`](large_image_source_deepzoom.md#large_image_source_deepzoom.DeepzoomFileTileSource.extensions)
+      * [`DeepzoomFileTileSource.getInternalMetadata()`](large_image_source_deepzoom.md#large_image_source_deepzoom.DeepzoomFileTileSource.getInternalMetadata)
+      * [`DeepzoomFileTileSource.getTile()`](large_image_source_deepzoom.md#large_image_source_deepzoom.DeepzoomFileTileSource.getTile)
+      * [`DeepzoomFileTileSource.mimeTypes`](large_image_source_deepzoom.md#large_image_source_deepzoom.DeepzoomFileTileSource.mimeTypes)
+      * [`DeepzoomFileTileSource.name`](large_image_source_deepzoom.md#large_image_source_deepzoom.DeepzoomFileTileSource.name)
+    * [`canRead()`](large_image_source_deepzoom.md#large_image_source_deepzoom.canRead)
+    * [`open()`](large_image_source_deepzoom.md#large_image_source_deepzoom.open)

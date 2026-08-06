@@ -1,0 +1,21 @@
+girder\_large\_image.models package
+===================================
+
+Submodules
+----------
+
+girder\_large\_image.models.image\_item module
+----------------------------------------------
+
+.. automodule:: girder_large_image.models.image_item
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: girder_large_image.models
+   :members:
+   :show-inheritance:
+   :undoc-members:
