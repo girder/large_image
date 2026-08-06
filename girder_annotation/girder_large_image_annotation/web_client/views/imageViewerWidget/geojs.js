@@ -29,7 +29,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
         this._unselectedOpacityMultiplier = typeof settings.unselectedOpacityMultiplier !== 'number'
-            ? 0.25
+            ? 0.33
             : settings.unselectedOpacityMultiplier;
         this.listenTo(events, 's:widgetDrawRegionEvent', this.drawRegion);
         this.listenTo(events, 's:widgetClearRegion', this.clearRegion);
@@ -957,7 +957,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
         setUnselectedOpacityMultiplier: function (opacityMultiplier) {
             this._unselectedOpacityMultiplier = typeof opacityMultiplier !== 'number'
-                ? 0.25
+                ? 0.33
                 : opacityMultiplier;
             if (this.featureLayer) {
                 _.each(this._annotations, (layer, annotationId) => {

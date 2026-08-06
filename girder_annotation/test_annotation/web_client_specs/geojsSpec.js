@@ -927,14 +927,14 @@ $(function () {
                 viewer.highlightAnnotation(annotation1.id);
 
                 checkFeatureOpacity(annotation1.id, 0.5, 1);
-                checkFeatureOpacity(annotation2.id, 0.5 * 0.25, 0.25);
+                checkFeatureOpacity(annotation2.id, 0.5 * 0.33, 0.33);
             });
 
             it('highlight a single element', function () {
                 viewer.highlightAnnotation(annotation2.id, element21);
 
-                checkFeatureOpacity(annotation1.id, 0.5 * 0.25, 0.25);
-                checkFeatureOpacity(annotation2.id, 0.5 * 0.25, 0.25, function (data) {
+                checkFeatureOpacity(annotation1.id, 0.5 * 0.33, 0.33);
+                checkFeatureOpacity(annotation2.id, 0.5 * 0.33, 0.33, function (data) {
                     return data.id !== element21;
                 });
                 checkFeatureOpacity(annotation2.id, 0.5, 1, function (data) {
