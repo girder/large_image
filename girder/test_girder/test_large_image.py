@@ -16,7 +16,7 @@ try:
     from girder_jobs.models.job import Job
     from girder_large_image import constants
     from girder_large_image.models.image_item import ImageItem
-    from girder_worker.girder_plugin.status import CustomJobStatus
+    from girder_plugin_worker.status import CustomJobStatus
 
     from girder import events
     from girder.exceptions import ValidationException
@@ -58,6 +58,7 @@ def _createThumbnails(server, admin, spec, cancel=False):
         resp = server.request('/job/%s' % str(job['_id']), user=admin)
         assert utilities.respStatus(resp) == 200
         if resp.json.get('status') == JobStatus.SUCCESS:
+            time.sleep(0.5)
             return True
         if resp.json.get('status') == JobStatus.ERROR:
             return False
