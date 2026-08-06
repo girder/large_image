@@ -20,20 +20,40 @@ import contextlib
 import importlib.util
 import json
 import os
+import re
 import threading
+import time
 import weakref
 from typing import Any, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 import numpy as np
+import yaml
 
 import large_image
 from large_image.exceptions import TileSourceError, TileSourceXYZRangeError
 from large_image.tilesource.utilities import JSONDict
+from large_image.widgets.components import FrameSelector
 
 ipyleafletPresent = importlib.util.find_spec('ipyleaflet') is not None
 ipyvuePresent = importlib.util.find_spec('ipyvue') is not None
 aiohttpPresent = importlib.util.find_spec('aiohttp') is not None
+
+skimage_transform = None
+
+
+def _lazyImportSkimageTransform():
+    """
+    Import the skimage.transform module. This is only needed when `editWarp=True` is used.
+    """
+    global skimage_transform
+
+    if skimage_transform is None:
+        try:
+            import skimage.transform as skimage_transform
+        except ImportError:
+            msg = 'scikit-image transform module not found.'
+            raise TileSourceError(msg)
 
 
 class IPyLeafletMixin:
@@ -92,7 +112,11 @@ class IPyLeafletMixin:
 
     def __init__(self, *args, **kwargs) -> None:
         self._jupyter_server_manager = None
-        self._map = Map(ts=self)
+        self._map = Map(
+            ts=self,
+            editWarp=kwargs.get('editWarp', False),
+            reference=kwargs.get('reference'),
+        )
         if ipyleafletPresent:
             self.to_map = self._map.to_map
             self.from_map = self._map.from_map
@@ -158,6 +182,10 @@ class IPyLeafletMixin:
             """
             return self._map.map
 
+    @property
+    def warp_points(self):
+        return self._map.warp_points
+
 
 class Map:
     """
@@ -168,7 +196,9 @@ class Map:
             self, *, ts: IPyLeafletMixin | None = None,
             metadata: dict | None = None, url: str | None = None,
             gc: Any | None = None, id: str | None = None,
-            resource: str | None = None) -> None:
+            resource: str | None = None,
+            editWarp: bool = False, reference: IPyLeafletMixin | None = None,
+    ) -> None:
         """
         Specify the large image to be used with the IPyLeaflet Map.  One of (a)
         a tile source, (b) metadata dictionary and tile url, (c) girder client
@@ -186,8 +216,17 @@ class Map:
             on the girder client.
         """
         self._layer = self._map = self._metadata = self._frame_slider = None
+        self.frame_selector: FrameSelector | None = None
         self._frame_histograms: dict[int, Any] | None = None
         self._ts = ts
+        self._edit_warp = editWarp
+        self._reference = reference
+        self._reference_layer = None
+        if self._edit_warp:
+            self.warp_points: dict[str, list[list[int] | None]] = dict(src=[], dst=[])
+            self._warp_widgets: dict = {}
+            self._warp_markers: dict = {'src': [], 'dst': []}
+            self._dragging_marker_id: str | None = None
         if (not url or not metadata) and gc and (id or resource):
             fileId = None
             if id is None:
@@ -281,8 +320,8 @@ class Map:
         Create an ipyleaflet map given large_image metadata, an optional
         ipyleaflet layer, and the center of the tile source.
         """
-        from ipyleaflet import Map, basemaps, projections
-        from ipywidgets import VBox
+        from ipyleaflet import FullScreenControl, Map, basemaps, projections
+        from ipywidgets import FloatSlider, VBox
 
         try:
             default_zoom = metadata['levels'] - metadata['sourceLevels']
@@ -324,8 +363,6 @@ class Map:
         children: list[Any] = []
         frames = metadata.get('frames')
         if frames is not None and ipyvuePresent and aiohttpPresent:
-            from large_image.widgets.components import FrameSelector
-
             self.frame_selector = FrameSelector()
             self.frame_selector.imageMetadata = metadata
             self.frame_selector.updateFrameCallback = self.update_frame
@@ -347,14 +384,273 @@ class Map:
             m.fit_bounds(bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]])
         if self._geospatial:
             m.add_layer(layer)
+
+        if self._reference is not None:
+            default_opacity = 0.5
+            self._reference_layer = self._reference.as_leaflet_layer()
+            if self._reference_layer is not None:
+                self._reference_layer.opacity = default_opacity
+                m.add_layer(self._reference_layer)
+
+            def update_reference_opacity(event):
+                if self._reference_layer is not None:
+                    self._reference_layer.opacity = event.get('new', default_opacity)
+
+            reference_slider = FloatSlider(
+                description='Reference Opacity',
+                value=default_opacity, step=0.1,
+                min=0, max=1,
+                readout_format='.1f',
+                style={'description_width': 'initial'},
+            )
+            reference_slider.observe(update_reference_opacity, names=['value'])
+            children.append(reference_slider)
+
         self._map = m
         children.append(m)
 
-        self.add_region_indicator()
+        if self._edit_warp:
+            children.append(self.add_warp_editor())
+        else:
+            # Only add region indicator if not using warp editor so that
+            # the map doesn't have conflicting on_interaction callbacks
+            self.add_region_indicator()
+        self._map.add(FullScreenControl())
         return VBox(children)
 
+    def warp_editor_validate_source(self):
+        if self._ts is None:
+            msg = 'Warp editor mode not allowed; source is not defined.'
+            raise TileSourceError(msg)
+
+        if not os.path.exists(str(self._ts.largeImagePath)):  # type: ignore[attr-defined]
+            msg = 'Warp editor mode not allowed; source file does not exist.'
+            raise TileSourceError(msg)
+
+    def convert_coordinate_map_to_warp(self, map_coord):
+        y, x = map_coord
+        if self._ts is not None:
+            y = self._ts.sizeY - y   # type: ignore[attr-defined]
+        return [int(x), int(y)]
+
+    def convert_coordinate_warp_to_map(self, warp_coord):
+        x, y = warp_coord
+        if self._ts is not None:
+            y = self._ts.sizeY - y   # type: ignore[attr-defined]
+        return [int(y), int(x)]
+
+    def toggle_warp_transform(self, event):
+        self.update_warp(event.get('new'))
+
+    def inverse_warp(self, coord):
+        _lazyImportSkimageTransform()
+
+        warp_src = np.array(self.warp_points['src'])
+        warp_dst = np.array(self.warp_points['dst'])
+        n_points = warp_src.shape[0]
+        inverse_coord = None
+        if n_points == 0:
+            return coord
+        if n_points == 1:
+            if warp_src[0] is not None and warp_dst[0] is not None:
+                inverse_coord = [
+                    v + warp_src[0][i] - warp_dst[0][i]
+                    for i, v in enumerate(coord)
+                ]
+        elif skimage_transform is not None:
+            srcsvd = np.linalg.svd(warp_src - warp_src.mean(axis=0), compute_uv=False)
+            dstsvd = np.linalg.svd(warp_dst - warp_dst.mean(axis=0), compute_uv=False)
+            useSimilarity = n_points < 3 or min(
+                srcsvd[1] / (srcsvd[0] or 1), dstsvd[1] / (dstsvd[0] or 1)) < 1e-3
+
+            if useSimilarity:
+                transformer = skimage_transform.SimilarityTransform()
+            elif n_points <= 3:
+                transformer = skimage_transform.AffineTransform()
+            else:
+                transformer = skimage_transform.ThinPlateSplineTransform()
+            transformer.estimate(warp_dst, warp_src)
+            inverse_coord = transformer([coord])[0]
+        if inverse_coord is not None:
+            return [int(v) for v in inverse_coord]
+
+    def get_warp_schema(self):
+        if self._ts is None:
+            return None
+        schema = dict(sources=[
+            dict(
+                path=str(self._ts.largeImagePath),  # type: ignore[attr-defined]
+                z=0, position=dict(x=0, y=0, warp=self.warp_points),
+            ),
+        ])
+        json_content = json.dumps(schema, indent=4)
+        # convert from json to avoid aliases
+        yaml_content = yaml.dump(json.loads(json_content))
+        return (json_content, yaml_content)
+
+    def copy_warp_schema(self, button):
+        from IPython.display import Javascript
+
+        schema_copy_output = self._warp_widgets.get('copy_output')
+        if schema_copy_output is not None:
+            content = ''
+            json_content, yaml_content = self.get_warp_schema()
+            desc = button.description
+            if 'YAML' in desc:
+                content = yaml_content
+            elif 'JSON' in desc:
+                content = json_content
+            content = content.replace('\n', '\\n')
+            command = f"navigator.clipboard.writeText(unescape('{content}'))"
+            schema_copy_output.clear_output()
+            schema_copy_output.append_display_data(Javascript(command))
+            button.description = 'Copied!'
+            button.icon = 'fa-check'
+            time.sleep(2)
+            button.description = desc
+            button.icon = 'fa-copy'
+
+    def update_warp_schemas(self):
+        yaml_schema = self._warp_widgets.get('yaml')
+        json_schema = self._warp_widgets.get('json')
+        schema_accordion = self._warp_widgets.get('accordion')
+        transform_checkbox = self._warp_widgets.get('transform')
+        help_text = self._warp_widgets.get('help_text')
+        if (
+            self._ts is None or
+            yaml_schema is None or
+            json_schema is None or
+            schema_accordion is None or
+            transform_checkbox is None or
+            help_text is None
+        ):
+            return
+        json_content, yaml_content = self.get_warp_schema()
+        yaml_schema.value = f'<pre>{yaml_content}</pre>'
+        json_schema.value = f'<pre>{json_content}</pre>'
+        schema_accordion.layout.display = 'block'
+        transform_checkbox.layout.display = 'block'
+        help_text.value = (
+            'Reference the schemas below to use this warp with '
+            'the MultiFileTileSource (either as YAML or JSON).'
+        )
+        self.update_warp(transform_checkbox.value)
+
+    def start_drag(self, marker):
+        self._dragging_marker_id = marker.title
+
+    def handle_drag(self, coords):
+        if self._dragging_marker_id is not None:
+            marker_title = self._dragging_marker_id
+            group_name = marker_title[:3]
+            index = int(marker_title[3:])
+            self.warp_points[group_name][index] = self.convert_coordinate_map_to_warp(coords)
+            self.update_warp_schemas()
+
+    def end_drag(self):
+        self._dragging_marker_id = None
+
+    def create_warp_reference_point_pair(self, coord):
+        from ipyleaflet import DivIcon, Marker
+
+        marker_style = (
+            'border-radius: 50%; position: relative;'
+            'height: 16px; width: 16px; top: -8px; left: -8px;'
+            'text-align: center; font-size: 11px;'
+        )
+        converted = self.convert_coordinate_map_to_warp(coord)
+        locations = dict(src=converted, dst=converted)
+        transform_checkbox = self._warp_widgets.get('transform')
+        transform_enabled = transform_checkbox.value if transform_checkbox is not None else True
+        if transform_enabled:
+            locations['src'] = self.inverse_warp(locations['src'])
+        index = len(self.warp_points['src'])
+        self.warp_points['src'].append(locations['src'])
+        self.warp_points['dst'].append(locations['dst'])
+
+        for group_name, color in [
+            ('src', '#ff6a5e'), ('dst', '#19a7ff'),
+        ]:
+            html = f'<div style="background-color: {color}; {marker_style}">{index}</div>'
+            icon = DivIcon(html=html, icon_size=[0, 0])
+            marker = Marker(
+                location=self.convert_coordinate_warp_to_map(locations[group_name]),
+                draggable=True,
+                icon=icon,
+                title=f'{group_name} {index}',
+                visible=(group_name == 'dst' or not transform_enabled),
+            )
+            marker.on_dblclick(lambda m=marker, **e: self.remove_warp_reference_point_pair(m))
+            marker.on_mousedown(lambda m=marker, **e: self.start_drag(m))
+            marker.on_mouseup(lambda **e: self.end_drag())
+            self._warp_markers[group_name].append(marker)
+            if self._map is not None:
+                self._map.add(marker)
+
+    def remove_warp_reference_point_pair(self, marker):
+        from ipyleaflet import DivIcon
+
+        index = int(marker.title[3:])
+        for group_name in ['src', 'dst']:
+            del self.warp_points[group_name][index]
+            if self._map is not None:
+                self._map.remove(self._warp_markers[group_name][index])
+            del self._warp_markers[group_name][index]
+            # reset indices of remaining markers
+            for i, m in enumerate(self._warp_markers[group_name]):
+                m.title = f'{group_name} {i}'
+                html = re.sub(r'>\d+<', f'>{i}<', m.icon.html)
+                m.icon = DivIcon(html=html, icon_size=[0, 0])
+        self.update_warp_schemas()
+
+    def add_warp_editor(self):
+        from ipywidgets import HTML, Accordion, Button, Checkbox, Label, Output, VBox
+
+        self.warp_editor_validate_source()
+        help_text = Label('To begin editing a warp, click on the image to place reference points.')
+        transform_checkbox = Checkbox(description='Show Transformed', value=True)
+        transform_checkbox.layout.display = 'none'
+        transform_checkbox.observe(self.toggle_warp_transform, names=['value'])
+        yaml_schema = HTML('yaml')
+        json_schema = HTML('json')
+        copy_yaml_button = Button(description='Copy YAML', icon='fa-copy')
+        copy_json_button = Button(description='Copy JSON', icon='fa-copy')
+        copy_yaml_button.on_click(self.copy_warp_schema)
+        copy_json_button.on_click(self.copy_warp_schema)
+        yaml_box = VBox(children=[copy_yaml_button, yaml_schema])
+        json_box = VBox(children=[copy_json_button, json_schema])
+        schema_accordion = Accordion(children=[yaml_box, json_box], titles=('YAML', 'JSON'))
+        schema_accordion.layout.display = 'none'
+        schema_copy_output = Output()
+        schema_copy_output.layout.display = 'none'
+        self._warp_widgets = dict(
+            help_text=help_text,
+            transform=transform_checkbox,
+            yaml=yaml_schema,
+            json=json_schema,
+            accordion=schema_accordion,
+            copy_output=schema_copy_output,
+        )
+
+        def handle_interaction(**kwargs):
+            event_type = kwargs.get('type')
+            coords = [round(v) for v in kwargs.get('coordinates', [])]
+            if event_type == 'click':
+                self.create_warp_reference_point_pair(coords)
+                self.update_warp_schemas()
+                help_text.value = (
+                    'After placing reference points, you can drag them to define the warp. '
+                    'You may also double-click any point to remove the point pair.'
+                )
+            elif event_type == 'mousemove':
+                self.handle_drag(coords)
+
+        if self._map is not None:
+            self._map.on_interaction(handle_interaction)
+        return VBox([transform_checkbox, help_text, schema_accordion, schema_copy_output])
+
     def add_region_indicator(self):
-        from ipyleaflet import FullScreenControl, GeomanDrawControl, Popup
+        from ipyleaflet import GeomanDrawControl, Popup
         from ipywidgets import HTML
 
         metadata = self._metadata
@@ -439,7 +735,6 @@ class Map:
         draw_control.on_draw(handle_draw)
         self._map.on_interaction(handle_interaction)
         self._map.add(draw_control)
-        self._map.add(FullScreenControl())
 
     @property
     def layer(self) -> Any:
@@ -494,7 +789,28 @@ class Map:
             return transf.transform(x, y)
         return x, self._metadata['sizeY'] - y
 
+    def update_warp(self, show_warp):
+        for marker in self._warp_markers['src']:
+            marker.visible = not show_warp
+        current_frame = self.frame_selector.currentFrame if self.frame_selector is not None else 0
+        if show_warp and len(self.warp_points['src']):
+            self.update_layer_query(frame=current_frame, style=dict(warp=self.warp_points))
+        else:
+            self.update_layer_query(frame=current_frame, style=dict())
+
     def update_frame(self, frame, style, **kwargs):
+        if self._edit_warp:
+            transform_checkbox = self._warp_widgets.get('transform')
+            if (
+                transform_checkbox is not None and
+                transform_checkbox.value and
+                self.warp_points is not None and
+                len(self.warp_points['src'])
+            ):
+                style['warp'] = self.warp_points
+        self.update_layer_query(frame=frame, style=style)
+
+    def update_layer_query(self, frame, style, **kwargs):
         if self._layer:
             parsed_url = urlparse(self._layer.url)
             query = parsed_url.query
@@ -537,9 +853,10 @@ class Map:
                 ) as session, session.get(url) as response:
                     self._frame_histograms[frame] = await response.json()  # type: ignore
                     # rewrite whole object for watcher
-                    self.frame_selector.frameHistograms = (
-                        self._frame_histograms.copy()  # type: ignore
-                    )
+                    if self.frame_selector is not None and self._frame_histograms is not None:
+                        self.frame_selector.frameHistograms = (
+                            self._frame_histograms.copy()  # type: ignore
+                        )
 
             asyncio.ensure_future(fetch(histogram_url))
 
@@ -556,6 +873,23 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
+
+multi_source = None
+
+
+def _lazyImportMultiSource():
+    """
+    Import the large_image_source_multi module. This is only needed when editWarp is used.
+    """
+    global multi_source
+
+    if multi_source is None:
+        try:
+            import large_image_source_multi as multi_source
+        except ImportError:
+            msg = 'large_image_source_multi module not found.'
+            raise TileSourceError(msg)
 
 
 class RequestManager:
@@ -578,6 +912,22 @@ class RequestManager:
     @property
     def port(self) -> int:
         return self.ports[0]
+
+    def get_warp_source(self, warp):
+        _lazyImportMultiSource()
+        if multi_source is not None and self.tile_source is not None:
+            return multi_source.open(dict(
+                sources=[
+                    dict(
+                        path=str(self.tile_source.largeImagePath),
+                        position=dict(
+                            x=0, y=0, warp=warp,
+                        ),
+                    ),
+                ],
+                width=self.tile_source.sizeX,
+                height=self.tile_source.sizeY,
+            ), noCache=False)
 
 
 def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
@@ -624,13 +974,20 @@ def launch_tile_server(tile_source: IPyLeafletMixin, port: int = 0) -> Any:
             z = int(self.get_argument('z'))
             frame = int(self.get_argument('frame', default='0'))
             style = self.get_argument('style', default=None)
-            if style:
-                manager.tile_source.style = json.loads(style)  # type: ignore[attr-defined]
+            warp = None
             encoding = self.get_argument('encoding', 'PNG')
             if getattr(manager.tile_source, '_noCache', False):
                 manager.tile_source.edge = '#00000000'  # type: ignore[attr-defined]
+            if style:
+                style = json.loads(style)
+                warp = style.get('warp')
+                if warp is None:
+                    manager.tile_source.style = style  # type: ignore[attr-defined]
             try:
-                tile_binary = manager.tile_source.getTile(  # type: ignore[attr-defined]
+                source = manager.tile_source
+                if warp is not None:
+                    source = manager.get_warp_source(warp)
+                tile_binary = source.getTile(  # type: ignore[attr-defined]
                     x, y, z, encoding=encoding, frame=frame)
             except TileSourceXYZRangeError as e:
                 self.clear()
