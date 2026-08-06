@@ -28,10 +28,14 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._unclampBoundsForOverlay = true;
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
+        this._unselectedOpacityMultiplier = typeof settings.unselectedOpacityMultiplier !== 'number'
+            ? 0.33
+            : settings.unselectedOpacityMultiplier;
         this.listenTo(events, 's:widgetDrawRegionEvent', this.drawRegion);
         this.listenTo(events, 's:widgetClearRegion', this.clearRegion);
         this.listenTo(events, 'g:startDrawMode', this.startDrawMode);
         this._hoverEvents = settings.hoverEvents;
+
         return initialize.apply(this, _.rest(arguments));
     });
 
@@ -603,7 +607,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     highlightannot: this._highlightAnnotation,
                     highlightelem: this._highlightElement,
                     hideannot: this._hideAnnotation,
-                    hideelem: this._hideElement
+                    hideelem: this._hideElement,
+                    unselectedOpacityMultiplier: this._unselectedOpacityMultiplier
                 };
 
                 if (_.isMatch(feature._lastFeatureProp, prop)) {
@@ -627,8 +632,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         fillOpacityArray[i] = fillOpacity;
                         strokeOpacityArray[i] = strokeOpacity;
                     } else {
-                        fillOpacityArray[i] = fillOpacity * 0.25;
-                        strokeOpacityArray[i] = strokeOpacity * 0.25;
+                        fillOpacityArray[i] = fillOpacity * this._unselectedOpacityMultiplier;
+                        strokeOpacityArray[i] = strokeOpacity * this._unselectedOpacityMultiplier;
                     }
                 }
 
@@ -644,7 +649,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (overlayLayer) {
                         let newOpacity = (overlay.opacity || 1) * this._globalAnnotationOpacity;
                         if (this._highlightAnnotation && annotationId !== this._highlightAnnotation) {
-                            newOpacity = newOpacity * 0.25;
+                            newOpacity = newOpacity * this._unselectedOpacityMultiplier;
                         }
                         overlayLayer.opacity(newOpacity);
                     }
@@ -940,6 +945,20 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
         setGlobalAnnotationFillOpacity: function (opacity) {
             this._globalAnnotationFillOpacity = opacity;
+            if (this.featureLayer) {
+                _.each(this._annotations, (layer, annotationId) => {
+                    const features = layer.features;
+                    this._mutateFeaturePropertiesForHighlight(annotationId, features);
+                });
+                this.viewer.scheduleAnimationFrame(this.viewer.draw);
+            }
+            return this;
+        },
+
+        setUnselectedOpacityMultiplier: function (opacityMultiplier) {
+            this._unselectedOpacityMultiplier = typeof opacityMultiplier !== 'number'
+                ? 0.33
+                : opacityMultiplier;
             if (this.featureLayer) {
                 _.each(this._annotations, (layer, annotationId) => {
                     const features = layer.features;
