@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.2
+
+### Improvements
+
+- Allow customizing unselected annotation dimming ([#2113](../../pull/2113))
+
 ## 1.35.1
 
 ### Improvements

@@ -6,6 +6,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
   # This checks dockerfiles, not docker-compose files, so doesn't do anything
   # - package-ecosystem: "docker"
   #   directory: "/.circleci/dcm4chee/"
@@ -15,3 +17,5 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
