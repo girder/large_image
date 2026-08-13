@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.3
+
+### Improvements
+
+- Better detect available memory in containers ([#2115](../../pull/2115))
+
 ## 1.35.2
 
 ### Improvements
