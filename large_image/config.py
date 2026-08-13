@@ -186,12 +186,14 @@ def total_memory() -> int:
     mem = 0
     if HAS_PSUTIL:
         mem = psutil.virtual_memory().total
-    try:
-        cgroup = int(open('/sys/fs/cgroup/memory/memory.limit_in_bytes').read().strip())
-        if 1024 ** 3 <= cgroup < 1024 ** 4 and (mem is None or cgroup < mem):
-            mem = cgroup
-    except Exception:
-        pass
+    caps = {'/sys/fs/cgroup/memory/memory.limit_in_bytes', '/sys/fs/cgroup/memory.max'}
+    for cap in caps:
+        try:
+            cgroup = int(open(cap).read().strip())
+            if 1024 ** 3 <= cgroup < 1024 ** 4 and (mem is None or cgroup < mem):
+                mem = cgroup
+        except Exception:
+            pass
     if mem:
         return mem
     return 8 * 1024 ** 3
