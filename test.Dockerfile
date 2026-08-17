@@ -62,6 +62,20 @@ RUN apt-get update && \
       # testing convenience \
       fonts-dejavu \
       libmagic-dev \
+      # These non-dev versions allow a downstream step to do
+      #  `apt-get remove --autoremove linux-libc-dev` and get rid of most dev
+      #  components. \
+      libfontconfig1 \
+      libfreetype6 \
+      libpng16-16t64 \
+      libx11-6 \
+      libx11-data \
+      libxau6 \
+      libxcb1 \
+      libxdmcp6 \
+      libxext6 \
+      libxrender1 \
+      x11-common \
       # shrink docker image \
       rdfind \
       # core girder \

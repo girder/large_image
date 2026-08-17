@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.35.3
+
+### Improvements
+
+- Better detect available memory in containers ([#2115](../../pull/2115))
+
+## 1.35.2
+
+### Improvements
+
+- Allow customizing unselected annotation dimming ([#2113](../../pull/2113))
+
 ## 1.35.1
 
 ### Improvements
