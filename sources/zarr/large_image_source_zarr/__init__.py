@@ -105,15 +105,15 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frameUnits = None
         if not os.path.isfile(self._largeImagePath) and '//:' not in self._largeImagePath:
             raise TileSourceFileNotFoundError(self._largeImagePath) from None
-        try:
-            self._zarr = zarr.open(zarr.SQLiteStore(self._largeImagePath), mode='r')
-        except Exception:
-            try:
+        if os.path.basename(self._largeImagePath) in {'.zgroup', '.zattrs', '.zarray'}:
+            with contextlib.suppress(Exception):
+                self._zarr = zarr.open(os.path.dirname(self._largeImagePath), mode='r')
+        if self._zarr is None:
+            with contextlib.suppress(Exception):
                 self._zarr = zarr.open(self._largeImagePath, mode='r')
-            except Exception:
-                if os.path.basename(self._largeImagePath) in {'.zgroup', '.zattrs', '.zarray'}:
-                    with contextlib.suppress(Exception):
-                        self._zarr = zarr.open(os.path.dirname(self._largeImagePath), mode='r')
+        if self._zarr is None:
+            with contextlib.suppress(Exception):
+                self._zarr = zarr.open(zarr.SQLiteStore(self._largeImagePath), mode='r')
         if self._zarr is None:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
