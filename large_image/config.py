@@ -82,6 +82,11 @@ ConfigValues = {
     # Any path that matches here will only be opened by a source that matches
     # extension or mime type.
     'all_sources_ignored_names': r'(\.mrxs|\.vsi)$',
+
+    # If True, make_vsi uses /vsis3/ for http(s) URLs instead of /vsicurl/.
+    # Useful with MinIO when AWS_S3_ENDPOINT (and related GDAL/AWS env vars)
+    # are configured.
+    'force_gdal_vsis3': False,
 }
 
 

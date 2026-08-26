@@ -1,10 +1,21 @@
 # Change Log
 
+## 1.35.4
+
+### Improvements
+
+- Add FORCE_GDAL_VSIS3 configuration option ([#2111](../../pull/2111))
+
 ## 1.35.3
 
 ### Improvements
 
 - Better detect available memory in containers ([#2115](../../pull/2115))
+- Avoid unclosed sqlite db when opening zarr source ([#2117](../../pull/2117))
+
+### Changes
+
+- Avoid a recent release of a package ([#2116](../../pull/2116))
 
 ## 1.35.2
 
@@ -1246,6 +1257,7 @@
 - Add geojson to known mime types ([#1022](../../pull/1022))
 - Handle upcoming matplotlib deprecations ([#1025](../../pull/1025))
 - Handle upcoming numpy deprecations ([#1026](../../pull/1026))
+- Add an option to flatten girder item lists ([#1029](../../pull/1029))
 
 ## 1.19.1
 

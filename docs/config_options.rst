@@ -128,6 +128,12 @@ Some functionality of large_image is controlled through configuration parameters
      - ``bool | str: one of PIL.ImageCms.Intents``
      - ``True``
 
+       .. _config_force_gdal_vsis3:
+   * - ``force_gdal_vsis3`` :ref:`🔗 <config_force_gdal_vsis3>`
+     - If True, remote URLs opened through GDAL-based tile sources use GDAL's ``/vsis3/`` virtual file system instead of ``/vsicurl/``.  ``s3://`` URLs already use ``/vsis3/``; this setting forces the same for ``http``/``https`` URLs by mapping the URL path to ``/vsis3/<path>``.  ``ftp`` URLs continue to use ``/vsicurl/`` and emit a warning, since ``/vsis3/`` cannot serve FTP.  Use this with MinIO or other S3-compatible stores when ``AWS_S3_ENDPOINT`` (and related AWS/GDAL credentials) are configured so GDAL authenticates via the S3 API rather than plain HTTP.
+     - ``bool``
+     - ``False``
+
        .. _config_max_annotation_input_file_length:
    * - ``max_annotation_input_file_length`` :ref:`🔗 <config_max_annotation_input_file_length>`
      - When an annotation file is uploaded through Girder, it is loaded into memory, validated, and then added to the database.  This is the maximum number of bytes that will be read directly.  Files larger than this are ignored.
@@ -154,6 +160,8 @@ Configuration from Environment
 All configuration parameters can be specified as environment parameters by prefixing their uppercase names with ``LARGE_IMAGE_``.  For instance, ``LARGE_IMAGE_CACHE_BACKEND=python`` specifies the cache backend.  If the values can be decoded as json, they will be parsed as such.  That is, numerical values will be parsed as numbers; to parse them as strings, surround them with double quotes.
 
 As another example, to use the least memory possible, set ``LARGE_IMAGE_CACHE_BACKEND=python LARGE_IMAGE_CACHE_PYTHON_MEMORY_PORTION=1000 LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=2``.  The first setting specifies caching tiles in the main process and not in memcached or an external cache.  The second setting asks to use 1/1000th of the memory for a tile cache.  The third settings caches no more than 2 tile sources (2 is the minimum).
+
+When using MinIO (or another S3-compatible endpoint) with GDAL, set ``LARGE_IMAGE_FORCE_GDAL_VSIS3=true`` so remote object URLs are opened via ``/vsis3/`` instead of ``/vsicurl/``.  Pair this with GDAL/AWS settings such as ``AWS_S3_ENDPOINT``, ``AWS_ACCESS_KEY_ID``, ``AWS_SECRET_ACCESS_KEY``, and typically ``AWS_VIRTUAL_HOSTING=FALSE`` / ``AWS_HTTPS=NO`` as appropriate for your MinIO local development (see https://gdal.org/en/stable/user/virtual_file_systems.html for more details).
 
 Configuration within the Girder Plugin
 --------------------------------------
