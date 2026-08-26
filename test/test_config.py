@@ -78,3 +78,22 @@ def testRasterioDefaultNoProjection():
     path = 'test/test_files/test_orient1.tif'
     src = large_image_source_rasterio.open(path)
     assert src.projection is None
+
+
+def testMakeVsiForceGdalVsis3():
+    from large_image.tilesource.geo import make_vsi
+
+    http_url = 'http://minio:9000/mybucket/path/to/image.tif'
+    ftp_url = 'ftp://example.com/path/to/image.tif'
+    assert make_vsi(http_url).startswith('/vsicurl?')
+
+    setConfig('force_gdal_vsis3', True)
+    try:
+        assert make_vsi(http_url) == '/vsis3/mybucket/path/to/image.tif'
+        assert make_vsi('https://minio:9000/mybucket/path/to/image.tif') == (
+            '/vsis3/mybucket/path/to/image.tif')
+        assert make_vsi('s3://mybucket/path/to/image.tif') == '/vsis3/mybucket/path/to/image.tif'
+        # ftp cannot use /vsis3/; keep /vsicurl/ and warn
+        assert make_vsi(ftp_url).startswith('/vsicurl?')
+    finally:
+        setConfig('force_gdal_vsis3', False)
