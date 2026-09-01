@@ -98,11 +98,11 @@ jobs:
           file: slim.Dockerfile
           load: true
           target: ${{ matrix.target }}
-          tags: ${{ steps.meta_target.outputs.tags }}
+          tags: large_image:${{ matrix.target }}-test
           labels: ${{ steps.meta_target.outputs.labels }}
       - name: Test the Docker image
         # zizmor-ignore template-injection [LOW] Template expansion is safe: value from docker/metadata-action, not user input. This is an artifact tag used as a docker run argument.
-        run: docker run --rm ${{ steps.meta_target.outputs.tags || '' }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
+        run: docker run --rm large_image:${{ matrix.target }}-test bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
           >= 6"'
       - name: Push the Docker image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
