@@ -57,5 +57,8 @@ setup(
         'girder.plugin': [
             'large_image_annotation = girder_large_image_annotation:LargeImageAnnotationPlugin',
         ],
+        'girder_worker_plugins': [
+            'large_image_annotation = girder_large_image_annotation.tasks:LargeImageAnnotationWorkerPlugin',  # noqa
+        ],
     },
 )
