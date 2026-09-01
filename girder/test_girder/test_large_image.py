@@ -667,6 +667,38 @@ def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     assert resp.json['keyE'] == 'value7'
 
 
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testYAMLConfigFileSkipPrivate(server, admin, user, fsAssetstore):
+    collection = Collection().createCollection(
+        'collection A', admin, public=False)
+    colFolderA = Folder().createFolder(
+        collection, 'folder A', parentType='collection',
+        creator=admin, public=True)
+    colFolderB = Folder().createFolder(
+        colFolderA, 'folder B', parentType='folder',
+        creator=admin, public=False)
+    colFolderC = Folder().createFolder(
+        colFolderB, 'folder C', parentType='folder',
+        creator=admin, public=True)
+    # Public config
+    utilities.uploadText(
+        json.dumps({
+            'keyA': 'publicValue',
+        }), admin, fsAssetstore, colFolderA, 'sample.json',
+    )
+    # Private config
+    utilities.uploadText(
+        json.dumps({
+            'keyA': 'privateValue',
+        }), admin, fsAssetstore, colFolderB, 'sample.json',
+    )
+    resp = server.request(
+        path='/folder/%s/yaml_config/sample.json' % str(colFolderC['_id']), user=None)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['keyA'] == 'publicValue'
+
+
 @pytest.mark.singular
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')

@@ -282,9 +282,13 @@ def yamlConfigFile(folder, name, user):
     """
     addConfig = None
     last = False
+    isGlobalConfig = False
     while folder:
         item = Item().findOne({'folderId': folder['_id'], 'name': name})
-        if item:
+        # If the user can't access the folder and it is not a global config mechanism,
+        # skip this folder. Keep walking up the chain to merge other publically available
+        # configuration in the hierarchy.
+        if item and (isGlobalConfig or Folder().hasAccess(folder, user, AccessType.READ)):
             for file in Item().childFiles(item):
                 if file['size'] > 10 * 1024 ** 2:
                     logger.info('Not loading %s -- too large', file['name'])
@@ -313,6 +317,7 @@ def yamlConfigFile(folder, name, user):
                     'parentId': folder['parentId'],
                     'parentCollection': folder['parentCollection'],
                     'name': '.config'})
+                isGlobalConfig = True
             else:
                 last = 'setting'
             if not folder or last == 'setting':
@@ -321,8 +326,10 @@ def yamlConfigFile(folder, name, user):
                     break
                 folder = Folder().load(folderId, force=True)
                 last = True
+                isGlobalConfig = True
         else:
-            folder = Folder().load(folder['parentId'], user=user, level=AccessType.READ)
+            folder = Folder().load(folder['parentId'], force=True)
+            isGlobalConfig = False
 
     addConfig = {} if addConfig is None else addConfig
     addSettingsToConfig(addConfig, user, name)
