@@ -1,0 +1,21 @@
+large\_image\_source\_openjpeg package
+======================================
+
+Submodules
+----------
+
+large\_image\_source\_openjpeg.girder\_source module
+----------------------------------------------------
+
+.. automodule:: large_image_source_openjpeg.girder_source
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: large_image_source_openjpeg
+   :members:
+   :show-inheritance:
+   :undoc-members:

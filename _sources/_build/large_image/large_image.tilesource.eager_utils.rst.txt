@@ -1,0 +1,61 @@
+large\_image.tilesource.eager\_utils package
+============================================
+
+Submodules
+----------
+
+large\_image.tilesource.eager\_utils.eager\_fn module
+-----------------------------------------------------
+
+.. automodule:: large_image.tilesource.eager_utils.eager_fn
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+large\_image.tilesource.eager\_utils.eager\_image\_modifications module
+-----------------------------------------------------------------------
+
+.. automodule:: large_image.tilesource.eager_utils.eager_image_modifications
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+large\_image.tilesource.eager\_utils.eager\_pytorch\_threading\_context module
+------------------------------------------------------------------------------
+
+.. automodule:: large_image.tilesource.eager_utils.eager_pytorch_threading_context
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+large\_image.tilesource.eager\_utils.eager\_read\_args module
+-------------------------------------------------------------
+
+.. automodule:: large_image.tilesource.eager_utils.eager_read_args
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+large\_image.tilesource.eager\_utils.eager\_shared\_array module
+----------------------------------------------------------------
+
+.. automodule:: large_image.tilesource.eager_utils.eager_shared_array
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+large\_image.tilesource.eager\_utils.eager\_wsi\_operations module
+------------------------------------------------------------------
+
+.. automodule:: large_image.tilesource.eager_utils.eager_wsi_operations
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: large_image.tilesource.eager_utils
+   :members:
+   :show-inheritance:
+   :undoc-members:
