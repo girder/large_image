@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.5
+
+### Improvements
+
+- Find public config files blocked by private ones ([#2120](../../pull/2120))
+
 ## 1.35.4
 
 ### Improvements
