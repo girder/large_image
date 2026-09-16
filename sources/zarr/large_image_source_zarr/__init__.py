@@ -27,14 +27,16 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 
 zarr = None
+SQLiteStore = None
 
 
 def _lazyImport():
     """
-    Import the zarr module.  This is done when needed rather than in the module
+    Import the zarr and zarr_sqlite modules.  This is done when needed rather than in the module
     initialization because it is slow.
     """
     global zarr
+    global SQLiteStore
 
     if zarr is None:
         try:
@@ -43,6 +45,12 @@ def _lazyImport():
             warnings.filterwarnings('ignore', category=FutureWarning, module='.*zarr.*')
         except ImportError:
             msg = 'zarr module not found.'
+            raise TileSourceError(msg)
+    if SQLiteStore is None:
+        try:
+            from zarr_sqlite import SQLiteStore
+        except ImportError:
+            msg = 'zarr_sqlite module not found.'
             raise TileSourceError(msg)
 
 
@@ -113,7 +121,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self._zarr = zarr.open(self._largeImagePath, mode='r')
         if self._zarr is None:
             with contextlib.suppress(Exception):
-                self._zarr = zarr.open(zarr.SQLiteStore(self._largeImagePath), mode='r')
+                self._zarr = zarr.open(SQLiteStore(self._largeImagePath), mode='r')
         if self._zarr is None:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
@@ -135,7 +143,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._created = False
         if not self._tempdir.exists():
             self._created = True
-        self._zarr_store = zarr.DirectoryStore(str(self._tempdir))
+        self._zarr_store = zarr.storage.LocalStore(str(self._tempdir))
         self._zarr = zarr.open(self._zarr_store, mode='a')
         self._largeImagePath = None
         self._dims = {}
@@ -305,13 +313,14 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         if results is None:
             results = {'best': None, 'series': [], 'associated': []}
-        if isinstance(group, zarr.core.Array):
+        if isinstance(group, zarr.Array):
             self._scanZarrArray(None, group, results)
             return results
-        for val in group.values():
-            if isinstance(val, zarr.core.Array):
+        for key in group.keys():
+            val = group[key]
+            if isinstance(val, zarr.Array):
                 self._scanZarrArray(group, val, results)
-            elif isinstance(val, zarr.hierarchy.Group):
+            elif isinstance(val, zarr.Group):
                 results = self._scanZarrGroup(val, results)
         return results
 
@@ -811,7 +820,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             else:
                 arr[placement_slices] = tile
             if chunking:
-                zarr.array(
+                zarr.from_array(
                     arr,
                     chunks=chunking,
                     overwrite=True,
@@ -852,7 +861,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 num_existing = len(self.getAssociatedImagesList())
                 imageKey = f'image_{num_existing + 1}'
             group = self._zarr.require_group(imageKey)
-            arr = zarr.array(
+            arr = zarr.from_array(
                 data,
                 store=self._zarr_store,
                 path=f'{imageKey}/image',
@@ -1420,11 +1429,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if suffix == '.zarr':
                 shutil.copytree(str(source._tempdir), path)
             elif suffix in ['.db', '.sqlite']:
-                sqlite_store = zarr.SQLiteStore(path)
+                sqlite_store = SQLiteStore(path)
                 zarr.copy_store(source._zarr_store, sqlite_store, if_exists='replace')
                 sqlite_store.close()
             elif suffix == '.zip':
-                zip_store = zarr.ZipStore(path)
+                zip_store = zarr.storage.ZipStore(path)
                 zarr.copy_store(source._zarr_store, zip_store, if_exists='replace')
                 zip_store.close()
 
