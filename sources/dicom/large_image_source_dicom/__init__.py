@@ -66,7 +66,10 @@ def dicom_to_dict(ds, base=None):
     :returns: a dictionary of values.
     """
     if base is None:
-        base = ds.to_json_dict(
+        dsbase = ds
+        if not hasattr(ds, 'to_json_dict'):
+            dsbase = ds.as_dataset()
+        base = dsbase.to_json_dict(
             bulk_data_threshold=0,
             bulk_data_element_handler=lambda x: '<%s bytes>' % len(x.value))
     info = {}
