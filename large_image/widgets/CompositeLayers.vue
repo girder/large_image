@@ -362,24 +362,38 @@ module.exports = {
       <div class="h5">
         Keyboard Shortcuts
       </div>
-      <div>
-        <span class="monospace">ctrl + number</span>
-        Toggle visibility of the layer at the number position
-      </div>
-      <div>
-        <span style="font-weight: bold;">Example: </span>
-        <span class="monospace">ctrl + 1</span>
-        Toggle visibility of the first layer in the table
-      </div>
-      <div>
-        <span class="monospace">ctrl + alt + number</span>
-        Toggle visibility of the layer at the position of the number plus 10
-      </div>
-      <div>
-        <span style="font-weight: bold;">Example: </span>
-        <span class="monospace">ctrl + alt + 1</span>
-        Toggle visibility of the eleventh layer in the table
-      </div>
+      <template v-if="customShortcuts">
+        <div
+          v-for="entry in customShortcuts"
+          :key="entry.layerName"
+        >
+          <span class="monospace">{{ entry.keys }}</span>
+          Toggle visibility of {{ entry.layerName }}
+        </div>
+        <div v-if="!customShortcuts.length">
+          No layers have keyboard shortcuts.
+        </div>
+      </template>
+      <template v-else>
+        <div>
+          <span class="monospace">ctrl + number</span>
+          Toggle visibility of the layer at the number position
+        </div>
+        <div>
+          <span style="font-weight: bold;">Example: </span>
+          <span class="monospace">ctrl + 1</span>
+          Toggle visibility of the first layer in the table
+        </div>
+        <div>
+          <span class="monospace">ctrl + alt + number</span>
+          Toggle visibility of the layer at the position of the number plus 10
+        </div>
+        <div>
+          <span style="font-weight: bold;">Example: </span>
+          <span class="monospace">ctrl + alt + 1</span>
+          Toggle visibility of the eleventh layer in the table
+        </div>
+      </template>
     </div>
     <div class="table-container">
       <table
