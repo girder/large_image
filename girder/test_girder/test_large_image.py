@@ -653,6 +653,29 @@ def testUserYAMLConfigFile(server, admin, user, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testUserYAMLConfigFileWithoutPrivateFolder(server, user, fsAssetstore):
+    path = '/user/%s/yaml_config/sample.yaml' % str(user['_id'])
+    private = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+    Folder().remove(private)
+    resp = server.request(path=path, user=user)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {}
+    # Writing creates a Private folder that is not public
+    resp = server.request(
+        method='PUT', user=user, path=path,
+        body=json.dumps({'keyA': 'value1'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    private = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+    assert private is not None
+    assert not private['public']
+    resp = server.request(path=path, user=user)
+    assert resp.json == {'keyA': 'value1'}
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     # Create some resources to use in the tests
     collection = Collection().createCollection(
