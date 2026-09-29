@@ -1,6 +1,8 @@
 def extract_dicom_metadata(dataset):
     # Extract any metadata we want to display from the dataset
 
+    if not hasattr(dataset, 'to_json_dict'):
+        dataset = dataset.as_dataset()
     metadata = {}
     for field in TOP_LEVEL_METADATA_FIELDS:
         if field not in dataset:
