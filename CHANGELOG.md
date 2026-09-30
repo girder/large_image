@@ -6,6 +6,10 @@
 
 - Find public config files blocked by private ones ([#2120](../../pull/2120))
 
+### Changes
+
+- Updates to work with wsidicom 0.30.x ([#2124](../../pull/2124))
+
 ## 1.35.4
 
 ### Improvements
