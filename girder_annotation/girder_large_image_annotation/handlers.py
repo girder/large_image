@@ -1,24 +1,38 @@
+import datetime
 import json
+import logging
 import time
 import uuid
 
-import cachetools
 import orjson
+from girder_large_image_annotation.models.annotation import Annotation
+from girder_large_image_annotation.utils import isGeoJSON
+from girder_worker.app import app
 
 import large_image.config
-from girder import logger
 from girder.constants import AccessType
 from girder.models.file import File
+from girder.models.folder import Folder
 from girder.models.item import Item
+from girder.models.model_base import Model
 from girder.models.user import User
 
-from .models.annotation import Annotation
-from .utils import isGeoJSON
-
-_recentIdentifiers = cachetools.TTLCache(maxsize=100, ttl=86400)
+logger = logging.getLogger(__name__)
 
 
-def _itemFromEvent(event, identifierEnding, itemAccessLevel=AccessType.READ):
+class RecentIdentifier(Model):
+    def initialize(self):
+        self.name = 'large_image_annotation_recent_identifier'
+        self.ensureIndices(['uuid', 'updated'])
+
+    def validate(self, doc):
+        if 'created' not in doc:
+            doc['created'] = datetime.datetime.now(datetime.timezone.utc)
+        doc['updated'] = datetime.datetime.now(datetime.timezone.utc)
+        return doc
+
+
+def itemFromEvent(event, identifierEnding, itemAccessLevel=AccessType.READ):  # noqa
     """
     If an event has a reference and an associated identifier that ends with a
     specific string, return the associated item, user, and image file.
@@ -27,50 +41,68 @@ def _itemFromEvent(event, identifierEnding, itemAccessLevel=AccessType.READ):
     :param identifierEnding: the required end of the identifier.
     :returns: a dictionary with item, user, and file if there was a match.
     """
-    info = event.info
+    info = getattr(event, 'info', event)
     identifier = None
     reference = info.get('reference', None)
     if reference is not None:
         try:
             reference = json.loads(reference)
-            if (isinstance(reference, dict) and
-                    isinstance(reference.get('identifier'), str)):
-                identifier = reference['identifier']
         except (ValueError, TypeError):
             logger.debug('Failed to parse data.process reference: %r', reference)
+    if isinstance(reference, dict) and isinstance(reference.get('identifier'), str):
+        identifier = reference['identifier']
     if identifier and 'uuid' in reference:
-        if reference['uuid'] not in _recentIdentifiers:
-            _recentIdentifiers[reference['uuid']] = {}
-        _recentIdentifiers[reference['uuid']][identifier] = info
-        reprocessFunc = _recentIdentifiers[reference['uuid']].pop('_reprocess', None)
-        if reprocessFunc:
-            reprocessFunc()
+        recent = RecentIdentifier().findOne({'uuid': reference['uuid']}) or {}
+        recent['uuid'] = reference['uuid']
+        recent[identifier] = info
+        reprocessOpts = recent.pop('reprocess', None)
+        RecentIdentifier().save(recent)
+        if reprocessOpts:
+            processAnnotationsTask(**reprocessOpts)
+        RecentIdentifier().removeWithQuery({'updated': {
+            '$lte': datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)}})
     if identifier is not None and identifier.endswith(identifierEnding):
         if identifier == 'LargeImageAnnotationUpload' and 'uuid' not in reference:
             reference['uuid'] = str(uuid.uuid4())
-        if 'userId' not in reference or 'itemId' not in reference or 'fileId' not in reference:
+        if 'itemId' not in reference and 'fileId' not in reference:
             logger.error('Reference does not contain required information.')
             return None
-
-        userId = reference['userId']
-        imageId = reference['fileId']
-
-        # load models from the database
+        userId = reference.get('userId')
+        if not userId:
+            if 'itemId' in reference:
+                item = Item().load(reference['itemId'], force=True)
+            else:
+                file = File().load(reference['fileId'], force=True)
+                item = Item().load(file['itemId'], force=True)
+            if 'folderId' not in item:
+                logger.error('Reference does not contain userId.')
+                return None
+            folder = Folder().load(item['folderId'], force=True)
+            userId = folder['creatorId']
         user = User().load(userId, force=True)
+        imageId = reference.get('fileId')
+        if not imageId:
+            item = Item().load(reference['itemId'], force=True)
+            if 'largeImage' in item and 'fileId' in item['largeImage']:
+                imageId = item['largeImage']['fileId']
         image = File().load(imageId, level=AccessType.READ, user=user)
         item = Item().load(image['itemId'], level=itemAccessLevel, user=user)
         return {'item': item, 'user': user, 'file': image, 'uuid': reference.get('uuid')}
 
 
-def resolveAnnotationGirderIds(event, results, data, possibleGirderIds):
+def resolveAnnotationGirderIds(
+        event, results, data, possibleGirderIds, referenceName, removeSingularFileItem):
     """
     If an annotation has references to girderIds, resolve them to actual ids.
 
     :param event: a data.process event.
-    :param results: the results from _itemFromEvent,
+    :param results: the results from itemFromEvent,
     :param data: annotation data.
     :param possibleGirderIds: a list of annotation elements with girderIds
         needing resolution.
+    :param referenceName: reference used for events.
+    :param removeSingularFileItem: boolean indicating if file cleanup should
+        occur.
     :returns: True if all ids were processed.
     """
     # Exclude actual girderIds from resolution
@@ -85,10 +117,17 @@ def resolveAnnotationGirderIds(event, results, data, possibleGirderIds):
             girderIds.append(element)
     if not len(girderIds):
         return True
-    idRecord = _recentIdentifiers.get(results.get('uuid'))
+    idRecord = RecentIdentifier().findOne({'uuid': results['uuid']}) if 'uuid' in results else None
+    if not idRecord:
+        return True
     if idRecord and not all(element['girderId'] in idRecord for element in girderIds):
-        idRecord['_reprocess'] = lambda: process_annotations(event)
+        idRecord['reprocess'] = {
+            'event': getattr(event, 'info', event),
+            'referenceName': referenceName,
+            'removeSingularFileItem': removeSingularFileItem}
+        RecentIdentifier().save(idRecord)
         return False
+    RecentIdentifier().remove(idRecord)
     for element in girderIds:
         element['girderId'] = str(idRecord[element['girderId']]['file']['itemId'])
         # Currently, all girderIds inside annotations are expected to be
@@ -105,16 +144,16 @@ def resolveAnnotationGirderIds(event, results, data, possibleGirderIds):
     return True
 
 
-def process_annotations(event):  # noqa: C901
-    """Add annotations to an image on a ``data.process`` event"""
-    results = _itemFromEvent(event, 'LargeImageAnnotationUpload')
+@app.task(queue='local')
+def processAnnotationsTask(event, referenceName, removeSingularFileItem=False):  # noqa C901
+    results = itemFromEvent(event, referenceName)
     if not results:
         return
     item = results['item']
     user = results['user']
 
     file = File().load(
-        event.info.get('file', {}).get('_id'),
+        getattr(event, 'info', event).get('file', {}).get('_id'),
         level=AccessType.READ, user=user,
     )
     startTime = time.time()
@@ -156,7 +195,8 @@ def process_annotations(event):  # noqa: C901
             for element in annotation.get('elements', [])[:100]
             if 'girderId' in element]
         if len(girderIds):
-            if not resolveAnnotationGirderIds(event, results, data, girderIds):
+            if not resolveAnnotationGirderIds(
+                    event, results, data, girderIds, referenceName, removeSingularFileItem):
                 return
     for annotation in data:
         try:
@@ -168,3 +208,17 @@ def process_annotations(event):  # noqa: C901
             raise
     if str(file['itemId']) == str(item['_id']):
         File().remove(file)
+    if removeSingularFileItem:
+        item = Item().load(file['itemId'], force=True)
+        if item and len(list(Item().childFiles(item, limit=2))) == 1:
+            Item().remove(item)
+
+
+def process_annotations(
+        event, referenceName='LargeImageAnnotationUpload', removeSingularFileItem=False):
+    """Add annotations to an image on a ``data.process`` event"""
+    if not itemFromEvent(event, referenceName):
+        return
+    processAnnotationsTask.delay(
+        getattr(event, 'info', event), referenceName, removeSingularFileItem,
+        girder_job_title='Process Annotations')
