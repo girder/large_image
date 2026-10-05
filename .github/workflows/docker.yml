@@ -35,7 +35,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
       - name: Build and push the Docker image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: slim.Dockerfile
@@ -48,7 +48,7 @@ jobs:
         run: docker run --rm ${{ steps.meta.outputs.tags || '' }} bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
           >= 6"'
       - name: Push the Docker image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: slim.Dockerfile
@@ -92,7 +92,7 @@ jobs:
             latest=auto
             suffix=-${{ matrix.target }},onlatest=true
       - name: Build the Docker image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: slim.Dockerfile
@@ -105,7 +105,7 @@ jobs:
         run: docker run --rm large_image:${{ matrix.target }}-test bash -c 'python -c "import large_image;print(large_image.listSources()[\"sources\"].keys());assert len(large_image.listSources()[\"sources\"])
           >= 6"'
       - name: Push the Docker image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: slim.Dockerfile
