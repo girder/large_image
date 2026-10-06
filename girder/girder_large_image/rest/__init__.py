@@ -9,6 +9,7 @@ from girder.api.rest import boundHandler
 from girder.constants import AccessType, TokenScope
 from girder.models.folder import Folder
 from girder.models.item import Item
+from girder.models.user import User
 
 
 def addSystemEndpoints(apiRoot):
@@ -19,6 +20,8 @@ def addSystemEndpoints(apiRoot):
     """
     apiRoot.folder.route('GET', (':id', 'yaml_config', ':name'), getYAMLConfigFile)
     apiRoot.folder.route('PUT', (':id', 'yaml_config', ':name'), putYAMLConfigFile)
+    apiRoot.user.route('GET', (':id', 'yaml_config', ':name'), getUserYAMLConfigFile)
+    apiRoot.user.route('PUT', (':id', 'yaml_config', ':name'), putUserYAMLConfigFile)
 
     origItemFind = apiRoot.item._find
     origFolderFind = apiRoot.folder._find
@@ -298,3 +301,41 @@ def putYAMLConfigFile(self, folder, name, config, user_context):
         Folder().requireAccess(folder, user, AccessType.WRITE)
     config = config.read().decode('utf8')
     return yamlConfigFileWrite(folder, name, user, config, user_context)
+
+
+@access.user(scope=TokenScope.DATA_READ)
+@autoDescribeRoute(
+    Description("Get a config file from a user's Private folder.")
+    .notes(
+        'Unlike the folder yaml_config endpoint, this does not search parent '
+        'folders or apply access, groups, or users sections.  It is intended '
+        'for per-user preferences that a client combines with a folder config.  '
+        'An empty object is returned if there is no such file.')
+    .modelParam('id', model=User, level=AccessType.ADMIN)
+    .param('name', 'The name of the file.', paramType='path')
+    .errorResponse(),
+)
+@boundHandler()
+def getUserYAMLConfigFile(self, user, name):
+    from .. import userYamlConfigFile
+
+    return userYamlConfigFile(user, name)
+
+
+@access.user(scope=TokenScope.DATA_WRITE)
+@autoDescribeRoute(
+    Description("Set a config file in a user's Private folder.")
+    .notes(
+        "This replaces or creates an item in the user's Private folder with "
+        'the specified name containing a single file also of the specified '
+        'name.  The Private folder is created if needed.')
+    .modelParam('id', model=User, level=AccessType.ADMIN)
+    .param('name', 'The name of the file.', paramType='path')
+    .param('config', 'The contents of yaml config file.', paramType='body'),
+)
+@boundHandler()
+def putUserYAMLConfigFile(self, user, name, config):
+    from .. import userYamlConfigFileWrite
+
+    config = config.read().decode('utf8')
+    return userYamlConfigFileWrite(user, name, config, self.getCurrentUser())
