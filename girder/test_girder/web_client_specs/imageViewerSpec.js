@@ -1,4 +1,4 @@
-/* globals describe, it, expect, _, girderTest, $, runs, waitsFor, xit */
+/* globals describe, it, expect, _, girderTest, $, runs, waitsFor, waits, xit */
 
 girderTest.importPlugin('large_image');
 
@@ -75,6 +75,118 @@ $(function () {
             waitsFor(function () {
                 return $('.image-frame-control-box input:visible').eq(1).val() === '1';
             }, 'control slider to update');
+        });
+    });
+    describe('test layer hotkeys in band compositing', function () {
+        // CompositeLayers listens on the document with addEventListener, which
+        // jQuery's trigger does not reach, so dispatch native events.
+        function pressKey(key, mods) {
+            var evt = document.createEvent('Event');
+            evt.initEvent('keydown', true, true);
+            var props = _.extend({key: key, ctrlKey: false, altKey: false, shiftKey: false, metaKey: false}, mods || {});
+            _.each(props, function (value, name) {
+                Object.defineProperty(evt, name, {value: value});
+            });
+            document.dispatchEvent(evt);
+        }
+        function bandEnabled(band) {
+            return $('.image-frame-control-box .enable-col input[value="' + band + '"]').prop('checked');
+        }
+        function frameSelector() {
+            return $('.image-frame-control-box')[0].__vue__;
+        }
+
+        it('upload a multi-band image', function () {
+            runs(function () {
+                $('.g-item-breadcrumb-link[data-type="folder"]:last').click();
+            });
+            girderTest.waitForLoad();
+            runs(function () {
+                girderTest.binaryUpload('${large_image}/../../test/test_files/multi_test_source_bands.yml'); // eslint-disable-line no-template-curly-in-string
+            });
+            girderTest.waitForLoad();
+        });
+        it('navigate to the item and use band compositing', function () {
+            waitsFor(function () {
+                return $('a.g-item-list-link:contains(multi_test_source_bands)').length > 0;
+            }, 'item link to appear');
+            runs(function () {
+                $('a.g-item-list-link:contains(multi_test_source_bands)').click();
+            });
+            girderTest.waitForLoad();
+            waitsFor(function () {
+                return $('.image-frame-control-box select[name="mode"] option[value="3"]').length > 0;
+            }, 'band compositing mode to be available', 15000);
+            runs(function () {
+                var select = $('.image-frame-control-box select[name="mode"]')[0];
+                select.value = '3';
+                var evt = document.createEvent('HTMLEvents');
+                evt.initEvent('change', true, true);
+                select.dispatchEvent(evt);
+            });
+            waitsFor(function () {
+                return $('.image-frame-control-box .enable-col input[value="green"]:visible').length > 0;
+            }, 'band table to appear');
+            runs(function () {
+                expect(bandEnabled('red')).toBe(true);
+                expect(bandEnabled('green')).toBe(true);
+            });
+        });
+        it('toggle a band with the default keys', function () {
+            runs(function () {
+                pressKey('1', {ctrlKey: true});
+            });
+            waitsFor(function () {
+                return bandEnabled('red') === false;
+            }, 'ctrl+1 to hide the first band');
+            runs(function () {
+                pressKey('1', {ctrlKey: true});
+            });
+            waitsFor(function () {
+                return bandEnabled('red') === true;
+            }, 'ctrl+1 to show the first band');
+        });
+        it('replace the layer hotkeys', function () {
+            runs(function () {
+                frameSelector()._props.layerHotkeys = {
+                    layerForEvent: function (evt) {
+                        return evt.key === 'q' && !evt.ctrlKey ? 1 : undefined;
+                    },
+                    labels: [undefined, 'Q']
+                };
+            });
+            waits(100);
+            runs(function () {
+                pressKey('1', {ctrlKey: true});
+                pressKey('q');
+            });
+            waitsFor(function () {
+                return bandEnabled('green') === false;
+            }, 'q to hide the second band');
+            runs(function () {
+                expect(bandEnabled('red')).toBe(true);
+            });
+        });
+        it('list the replaced keys in the help', function () {
+            runs(function () {
+                $('.image-frame-control-box .icon-keyboard:visible').click();
+            });
+            waitsFor(function () {
+                return $('.image-frame-control-box .shortcuts:visible').length > 0;
+            }, 'shortcut help to show');
+            runs(function () {
+                var text = $('.image-frame-control-box .shortcuts:visible').text().replace(/\s+/g, ' ');
+                expect(text).toContain('Q Toggle visibility of green');
+                expect(text).not.toContain('ctrl + number');
+                $('.image-frame-control-box .icon-keyboard:visible').click();
+                frameSelector()._props.layerHotkeys = undefined;
+            });
+            // Toggling bands requests histograms; let them finish before the
+            // next test navigates away from this viewer.
+            waitsFor(function () {
+                return $.active === 0;
+            }, 'histogram requests to finish');
+            girderTest.waitForLoad();
         });
     });
     describe('upload test file', function () {
