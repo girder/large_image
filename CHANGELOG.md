@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.6
+
+### Changes
+
+- Update a type to work with mypy 2.4.0 ([#2127](../../pull/2127))
+
 ## 1.35.5
 
 ### Improvements
