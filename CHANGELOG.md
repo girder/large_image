@@ -2,6 +2,11 @@
 
 ## 1.35.6
 
+### Improvements
+
+- Add an optional layerHotkeys prop to FrameSelector ([#2126](../../pull/2126))
+- Close cgroup reads deterministically ([#2128](../../pull/2128))
+
 ### Changes
 
 - Update a type to work with mypy 2.4.0 ([#2127](../../pull/2127))
