@@ -13,7 +13,7 @@
 
 ### Bug Fixes
 
-- Keep the bit depth of single-band uint16 images when encoding them as TIFF
+- Keep the bit depth of single-band uint16 images when encoding them as TIFF ([#2129](../../pull/2129))
 
 ## 1.35.5
 
