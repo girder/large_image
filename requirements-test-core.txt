@@ -26,7 +26,7 @@ utilities/converter[stats]
 matplotlib
 pylibmc>=1.5.1
 redis
-simplejpeg
+simplejpeg ; python_version < "3.15"
 ipyvue
 aiohttp
 
@@ -39,10 +39,10 @@ virtualenv
 # for eager
 --extra-index-url https://download.pytorch.org/whl/cpu
 pykdtree
-h5py
+h5py ; python_version < "3.15"
 torch
 torchvision
-albumentations
+albumentations ; python_version < "3.15"
 opencv-python
 
 # For Jupyter
