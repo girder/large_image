@@ -1,0 +1,21 @@
+large\_image\_source\_openslide package
+=======================================
+
+Submodules
+----------
+
+large\_image\_source\_openslide.girder\_source module
+-----------------------------------------------------
+
+.. automodule:: large_image_source_openslide.girder_source
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: large_image_source_openslide
+   :members:
+   :show-inheritance:
+   :undoc-members:
