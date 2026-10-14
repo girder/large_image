@@ -25,7 +25,7 @@ extraReqs = {
     'tiledoutput': ['pyvips'],
     'performance': [
         'psutil>=4.2.0',
-        'simplejpeg',
+        'simplejpeg ; python_version < "3.15"',
     ],
     'pykdtree': ['pykdtree'],
 }
@@ -87,6 +87,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
         'Programming Language :: Python :: 3.14',
+        'Programming Language :: Python :: 3.15',
     ],
     python_requires='>=3.10',
     install_requires=[
