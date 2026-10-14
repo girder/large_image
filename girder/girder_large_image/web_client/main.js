@@ -1,12 +1,5 @@
-import _ from 'underscore';
-
-import * as rest from '@girder/core/rest';
-import {registerPluginNamespace} from '@girder/core/pluginUtils';
-import SearchFieldWidget from '@girder/core/views/widgets/SearchFieldWidget';
-
 // import modules for side effects
 import './routes';
-import './eventStream';
 import './views/fileList';
 import './views/itemList';
 import './views/itemView';
@@ -15,23 +8,11 @@ import './views/imageViewerSelectWidget';
 
 // expose symbols under girder.plugins
 import * as largeImage from './index';
-registerPluginNamespace('large_image', largeImage);
 
-/* eslint-disable no-import-assign */
-rest.restRequest = _.wrap(rest.restRequest, (restRequest, opts) => {
-    /* Automatically convert long GET and PUT queries to POST queries */
-    try {
-        if ((!opts.method || opts.method === 'GET' || opts.method === 'PUT') && opts.data && !opts.contentType) {
-            if (JSON.stringify(opts.data).length > 1536) {
-                opts.headers = opts.header || {};
-                opts.headers['X-HTTP-Method-Override'] = opts.method || 'GET';
-                opts.method = 'POST';
-            }
-        }
-    } catch (err) { }
-    return restRequest(opts);
-});
-/* eslint-enable no-import-assign */
+const {registerPluginNamespace} = girder.pluginUtils;
+const SearchFieldWidget = girder.views.widgets.SearchFieldWidget;
+
+registerPluginNamespace('large_image', largeImage);
 
 SearchFieldWidget.addMode(
     'li_metadata',
