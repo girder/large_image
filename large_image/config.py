@@ -194,7 +194,7 @@ def total_memory() -> int:
     caps = {'/sys/fs/cgroup/memory/memory.limit_in_bytes', '/sys/fs/cgroup/memory.max'}
     for cap in caps:
         try:
-            cgroup = int(open(cap).read().strip())
+            cgroup = int(pathlib.Path(cap).read_text().strip())
             if 1024 ** 3 <= cgroup < 1024 ** 4 and (mem is None or cgroup < mem):
                 mem = cgroup
         except Exception:
