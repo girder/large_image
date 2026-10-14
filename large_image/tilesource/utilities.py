@@ -189,7 +189,7 @@ def _encodeImage(
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
         imageFormatOrMimeType = TileOutputMimeTypes[encoding]
-        if encoding == 'TIFF' and _isSingleBandUint16(image):
+        if encoding in {'TIFF', 'TILED'} and _isSingleBandUint16(image):
             # TIFF can hold 16-bit data, so don't reduce it to 8-bits
             npimage = cast(np.ndarray, image)
             image = PIL.Image.fromarray(
