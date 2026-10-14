@@ -599,9 +599,9 @@ def yamlConfigFile(folder, name, user):
     isGlobalConfig = False
     while folder:
         item = Item().findOne({'folderId': folder['_id'], 'name': name})
-        # If the user can't access the folder and it is not a global config mechanism,
-        # skip this folder. Keep walking up the chain to merge other publically available
-        # configuration in the hierarchy.
+        # If the user can't access the folder and it is not a global config
+        # mechanism, skip this folder. Keep walking up the chain to merge other
+        # publicly available configuration in the hierarchy.
         if item and (isGlobalConfig or Folder().hasAccess(folder, user, AccessType.READ)):
             for file in Item().childFiles(item):
                 if file['size'] > 10 * 1024 ** 2:
