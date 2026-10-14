@@ -13,7 +13,9 @@ module.exports = {
         'layerMap',
         'active',
         'colors',
-        'styleUpdate'
+        'styleUpdate',
+
+        'layerHotkeys'
     ],
     data() {
         return {
@@ -37,6 +39,15 @@ module.exports = {
                 style: this.histogramParamStyle,
                 roundRange: true
             };
+        },
+        customShortcuts() {
+            if (!this.layerHotkeys) {
+                return undefined;
+            }
+            const labels = this.layerHotkeys.labels || [];
+            return this.layers
+                .map((layerName, index) => ({layerName, keys: labels[index]}))
+                .filter((entry) => entry.keys);
         },
         showExpandAllButton() {
             if (this.histogramRows.length) {
@@ -122,25 +133,34 @@ module.exports = {
             }
         },
         keyHandler(e) {
-            let numericKey = parseFloat(e.key);
-            if (e.ctrlKey && !isNaN(numericKey)) {
-                e.preventDefault();
+            let layerIndex;
+            if (this.layerHotkeys) {
+                layerIndex = this.layerHotkeys.layerForEvent(e);
+                if (layerIndex === undefined || layerIndex === null || layerIndex < 0) {
+                    return;
+                }
+            } else {
+                let numericKey = parseFloat(e.key);
+                if (!e.ctrlKey || isNaN(numericKey)) {
+                    return;
+                }
                 if (numericKey === 0) {
                     numericKey += 10;
                 }
                 if (e.altKey) {
                     numericKey += 10;
                 }
-                const layerIndex = numericKey - 1;
-                if (layerIndex < this.layers.length) {
-                    const targetLayer = this.layers[layerIndex];
-                    if (this.compositeLayerInfo[targetLayer].enabled) {
-                        this.enabledLayers = this.enabledLayers.filter((v) => v !== targetLayer);
-                    } else {
-                        this.enabledLayers.push(targetLayer);
-                    }
-                    this.updateActiveLayers();
+                layerIndex = numericKey - 1;
+            }
+            e.preventDefault();
+            if (layerIndex < this.layers.length) {
+                const targetLayer = this.layers[layerIndex];
+                if (this.compositeLayerInfo[targetLayer].enabled) {
+                    this.enabledLayers = this.enabledLayers.filter((v) => v !== targetLayer);
+                } else {
+                    this.enabledLayers.push(targetLayer);
                 }
+                this.updateActiveLayers();
             }
         },
         initializeLayerInfo() {
@@ -342,24 +362,38 @@ module.exports = {
       <div class="h5">
         Keyboard Shortcuts
       </div>
-      <div>
-        <span class="monospace">ctrl + number</span>
-        Toggle visibility of the layer at the number position
-      </div>
-      <div>
-        <span style="font-weight: bold;">Example: </span>
-        <span class="monospace">ctrl + 1</span>
-        Toggle visibility of the first layer in the table
-      </div>
-      <div>
-        <span class="monospace">ctrl + alt + number</span>
-        Toggle visibility of the layer at the position of the number plus 10
-      </div>
-      <div>
-        <span style="font-weight: bold;">Example: </span>
-        <span class="monospace">ctrl + alt + 1</span>
-        Toggle visibility of the eleventh layer in the table
-      </div>
+      <template v-if="customShortcuts">
+        <div
+          v-for="entry in customShortcuts"
+          :key="entry.layerName"
+        >
+          <span class="monospace">{{ entry.keys }}</span>
+          Toggle visibility of {{ entry.layerName }}
+        </div>
+        <div v-if="!customShortcuts.length">
+          No layers have keyboard shortcuts.
+        </div>
+      </template>
+      <template v-else>
+        <div>
+          <span class="monospace">ctrl + number</span>
+          Toggle visibility of the layer at the number position
+        </div>
+        <div>
+          <span style="font-weight: bold;">Example: </span>
+          <span class="monospace">ctrl + 1</span>
+          Toggle visibility of the first layer in the table
+        </div>
+        <div>
+          <span class="monospace">ctrl + alt + number</span>
+          Toggle visibility of the layer at the position of the number plus 10
+        </div>
+        <div>
+          <span style="font-weight: bold;">Example: </span>
+          <span class="monospace">ctrl + alt + 1</span>
+          Toggle visibility of the eleventh layer in the table
+        </div>
+      </template>
     </div>
     <div class="table-container">
       <table

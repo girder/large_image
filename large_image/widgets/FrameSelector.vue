@@ -9,7 +9,8 @@ module.exports = {
         'liConfig',
         'colors',
         'getFrameHistogram',
-        'frameHistograms'
+        'frameHistograms',
+        'layerHotkeys'
     ],
     data() {
         return {
@@ -401,6 +402,7 @@ module.exports = {
         :active="currentModeId === 2"
         :class="currentModeId === 2 ? '' : 'invisible'"
         :colors="colors"
+        :layer-hotkeys="layerHotkeys"
         :style-update="(style) => updateStyle(2, style)"
       />
       <composite-layers
@@ -418,6 +420,7 @@ module.exports = {
         :active="currentModeId === 3"
         :class="currentModeId === 3 ? '' : 'invisible'"
         :colors="colors"
+        :layer-hotkeys="layerHotkeys"
         :style-update="(style) => updateStyle(3, style)"
       />
     </div>
