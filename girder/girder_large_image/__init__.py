@@ -650,6 +650,63 @@ def yamlConfigFile(folder, name, user):
     return addConfig
 
 
+def userPrivateFolder(user, create=False):
+    """
+    Get a user's Private folder. Callers are responsible for access checks.
+
+    :param user: a Girder user model.
+    :param create: if True, create the folder if it does not exist.
+    :returns: the folder model or None.
+    """
+    if create:
+        return Folder().createFolder(
+            user, 'Private', parentType='user', public=False, creator=user,
+            reuseExisting=True)
+    return Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+
+
+def userYamlConfigFile(user, name):
+    """
+    Get a named config file from a user's Private folder. Unlike
+    yamlConfigFile, this does not walk up a folder tree; it is intended for
+    per-user preferences that are combined with a folder's config by the
+    client. Callers are responsible for access checks.
+
+    :param user: the Girder user model whose file is loaded.
+    :param name: the name of the config file.
+    :returns: the parsed config or an empty dictionary if there is none.
+    """
+    folder = userPrivateFolder(user)
+    item = Item().findOne({'folderId': folder['_id'], 'name': name}) if folder else None
+    if item:
+        for file in Item().childFiles(item):
+            if file['size'] > 10 * 1024 ** 2:
+                logger.info('Not loading %s -- too large', file['name'])
+                continue
+            with File().open(file) as fptr:
+                config = yaml.safe_load(fptr)
+            if isinstance(config, list) and len(config) == 1:
+                config = config[0]
+            if config is not None:
+                return config
+    return {}
+
+
+def userYamlConfigFileWrite(user, name, yaml_config, writer):
+    """
+    Create or replace a named config file in a user's Private folder.
+    Callers are responsible for access checks.
+
+    :param user: the Girder user model whose file is written.
+    :param name: the name of the config file.
+    :param yaml_config: a yaml config string.
+    :param writer: the user performing the write.
+    """
+    folder = userPrivateFolder(user, create=True)
+    return yamlConfigFileWrite(folder, name, writer, yaml_config, False)
+
+
 def yamlConfigFileWrite(folder, name, user, yaml_config, user_context):
     """
     If the user has appropriate permissions, create or modify an item in the

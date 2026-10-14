@@ -46,6 +46,11 @@ The yaml file has the following structure:
     # file in the parent folder hierarchy.
     __inherit__: true
 
+Per-User Configuration Files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A user can also have their own configuration files, which are stored in their ``Private`` folder.  These are read and written with the ``GET`` and ``PUT`` ``user/{id}/yaml_config/{name}`` endpoints, which only the user and admins can use.  Writing a file creates the ``Private`` folder if needed.  Unlike folder configuration files, these do not search parent folders and do not apply the ``access``, ``groups``, or ``users`` keys; reading a file that does not exist returns an empty object.  They are intended for per-user preferences, such as keyboard shortcuts, that a client combines with the folder configuration.  Because they are ordinary files, users can also edit them directly.
+
 .large_image_config.yaml
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -26,6 +26,7 @@ try:
     from girder.models.group import Group
     from girder.models.item import Item
     from girder.models.setting import Setting
+    from girder.models.user import User
 except ImportError:
     # Make it easier to test without girder
     pass
@@ -601,6 +602,76 @@ def testPutYAMLConfigFile(server, admin, user, fsAssetstore):
         path='/folder/%s/yaml_config/sample.yaml' % str(colFolderB['_id']))
     assert utilities.respStatus(resp) == 200
     assert resp.json['keyA'] == 'value3'
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testUserYAMLConfigFile(server, admin, user, fsAssetstore):
+    path = '/user/%s/yaml_config/sample.yaml' % str(user['_id'])
+    # No file yet
+    resp = server.request(path=path, user=user)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {}
+    # Anonymous and other users are refused
+    resp = server.request(path=path)
+    assert utilities.respStatus(resp) == 401
+    otherUser = User().createUser(
+        'other', 'password', 'Other', 'User', 'other@nowhere.com')
+    resp = server.request(path=path, user=otherUser)
+    assert utilities.respStatus(resp) == 403
+    resp = server.request(
+        method='PUT', user=otherUser, path=path,
+        body=json.dumps({'keyA': 'value0'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 403
+    # Create and replace
+    resp = server.request(
+        method='PUT', user=user, path=path,
+        body=json.dumps({'keyA': 'value1'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(path=path, user=user)
+    assert resp.json == {'keyA': 'value1'}
+    resp = server.request(
+        method='PUT', user=user, path=path,
+        body=json.dumps({'keyA': 'value2'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(path=path, user=user)
+    assert resp.json == {'keyA': 'value2'}
+    # The file is in the user's Private folder
+    private = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+    assert Item().findOne({'folderId': private['_id'], 'name': 'sample.yaml'})
+    # Admins can access other users' files
+    resp = server.request(path=path, user=admin)
+    assert resp.json == {'keyA': 'value2'}
+    resp = server.request(
+        method='PUT', user=admin, path=path,
+        body=json.dumps({'keyA': 'value3'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    resp = server.request(path=path, user=user)
+    assert resp.json == {'keyA': 'value3'}
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
+def testUserYAMLConfigFileWithoutPrivateFolder(server, user, fsAssetstore):
+    path = '/user/%s/yaml_config/sample.yaml' % str(user['_id'])
+    private = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+    Folder().remove(private)
+    resp = server.request(path=path, user=user)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {}
+    # Writing creates a Private folder that is not public
+    resp = server.request(
+        method='PUT', user=user, path=path,
+        body=json.dumps({'keyA': 'value1'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    private = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+    assert private is not None
+    assert not private['public']
+    resp = server.request(path=path, user=user)
+    assert resp.json == {'keyA': 'value1'}
 
 
 @pytest.mark.usefixtures('unbindLargeImage')
