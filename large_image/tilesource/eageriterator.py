@@ -295,7 +295,7 @@ class EagerIterator:
         self.tile_overlap = tile_overlap
         self.region = region
         self.is_torch = False
-        self.callable_arg_num = None
+        self.callable_arg_num: int | None = None
         self.transform = transform
         self.transform_save_mode = transform_save_mode
         self._worker_transform = None

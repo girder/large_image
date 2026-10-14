@@ -10,7 +10,8 @@ export default {
         'liConfig',
         'colors',
         'getFrameHistogram',
-        'frameHistograms'
+        'frameHistograms',
+        'layerHotkeys'
     ],
     data() {
         return {
@@ -406,6 +407,7 @@ export default {
         :active="currentModeId === 2"
         :class="currentModeId === 2 ? '' : 'invisible'"
         :colors="colors"
+        :layer-hotkeys="layerHotkeys"
         :style-update="(style) => updateStyle(2, style)"
       />
       <composite-layers
@@ -423,6 +425,7 @@ export default {
         :active="currentModeId === 3"
         :class="currentModeId === 3 ? '' : 'invisible'"
         :colors="colors"
+        :layer-hotkeys="layerHotkeys"
         :style-update="(style) => updateStyle(3, style)"
       />
     </div>
