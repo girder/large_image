@@ -133,6 +133,10 @@ registry = {
     # This is a dicom with monochrome1 format data that bioformats incorrectly
     # inverts and offsets
     'monochrome1.dcm': 'sha512:a67c38a5e26aba31b68e40eec0f260acf0ba638f0bf7fd99d41c3e16ddd8fd43b2737aeb3759ce92f2c4a10a81995bdae3b93b101ebcaa59543ea6eff7a4c8f2',  # noqa
+    # Zip of a mirax (.mrxs) file and its companion directory.  Unlike the
+    # other entries, this is an archive and is only used by specific tests.
+    # Source: openslide test data Mirax2-Fluorescence-1
+    'Mirax2-Fluorescence-1.mrxs.zip': 'sha512:c5195f2740e92e4375c5011c4dd34d9b3e8524166ba1478ead95ad1a9207b10f3a27488ee3c7f55c6ff3b9412618d48f5dfd0a45e4f776b30c872b9ed1ab30d3',  # noqa
 }
 
 

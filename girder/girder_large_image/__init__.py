@@ -207,6 +207,45 @@ def checkForMergeDicom(item):
     Item().remove(item)
 
 
+def checkForFlatLargeImage(item, imagePattern):
+    """
+    Check if an item that contains a companion file of a folder/image style
+    image is adjacent to the image file itself ("flat" layout).  The image
+    file can be another file in the same item or the sole file of another item
+    in the same folder.  If found, try to make it a large image.
+
+    :param item: the item containing the companion file.
+    :param imagePattern: a regex that matches the name of the image file.
+    :returns: True if a large image was created.
+    """
+    # A failed createImageItem can leave a partial largeImage record on the
+    # in-memory item, so always use a fresh copy
+    item = Item().load(item['_id'], force=True)
+    if not item.get('largeImage'):
+        for imageFile in File().find({'itemId': item['_id']}):
+            if not re.search(imagePattern, imageFile['name']):
+                continue
+            try:
+                ImageItem().createImageItem(item, imageFile, createJob=False)
+                return True
+            except Exception:
+                item = Item().load(item['_id'], force=True)
+    for imageItem in Item().find({
+            'folderId': item['folderId'], '_id': {'$ne': item['_id']},
+            'name': {'$regex': imagePattern}}):
+        if imageItem.get('largeImage'):
+            continue
+        files = list(Item().childFiles(item=imageItem, limit=2))
+        if len(files) != 1:
+            continue
+        try:
+            ImageItem().createImageItem(imageItem, files[0], createJob=False)
+            return True
+        except Exception:
+            pass
+    return False
+
+
 def checkForLargeImageFiles(event):  # noqa
     file = event.info
     if 'file.save' in event.name and 's3FinalizeRequest' in file:
@@ -245,6 +284,11 @@ def checkForLargeImageFiles(event):  # noqa
             'up': 1,
             'folder': r'^(.*)$',
             'image': '\\1.mrxs',
+            # Some openslide builds can read "flat" mirax files where the
+            # companion files are adjacent to the .mrxs file rather than in a
+            # subfolder.  The companion files can be sibling items in the same
+            # folder or sibling files in the same item.
+            'flat': r'\.mrxs$',
         },
         'vsi': {
             'match': r'^.*\.ets$',
@@ -255,6 +299,12 @@ def checkForLargeImageFiles(event):  # noqa
     }
     for check in imageFolderRecords.values():
         if re.match(check['match'], file['name']):
+            if check.get('flat'):
+                try:
+                    if checkForFlatLargeImage(item, check['flat']):
+                        return
+                except Exception:
+                    pass
             try:
                 folderId = item['folderId']
                 folder = None
