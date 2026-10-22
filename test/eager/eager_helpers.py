@@ -7,11 +7,9 @@ import subprocess
 import time
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import albumentations as A
 import cv2
-import h5py
 import numpy as np
 import pytest
 import torch
@@ -22,6 +20,22 @@ import large_image
 from large_image.tilesource.eager_utils.eager_image_modifications import rgba2rgb
 from large_image.tilesource.eager_utils.eager_shared_array import SharedArray
 from large_image.tilesource.eager_utils.eager_wsi_operations import calculate_slide_dimensions
+
+if TYPE_CHECKING:
+    import albumentations as A
+    import h5py
+else:
+    # albumentations (and its transitive simsimd dependency) and h5py have no
+    # python 3.15 wheels yet and may be absent; the tests that need them skip
+    # in that case
+    try:
+        import albumentations as A
+    except ImportError:
+        A = None
+    try:
+        import h5py
+    except ImportError:
+        h5py = None
 
 INFERENCE_PERFORMANCE_TYPES = {
     'inference_sobel',
@@ -73,7 +87,7 @@ def make_pytorch_dataset(input_image_dir: str, transform: Callable | None = None
             image_path = self.image_paths[idx]
             image = read_image(image_path, mode=ImageReadMode.RGB)
             if self.transform is not None:
-                if isinstance(self.transform, A.Compose):
+                if A is not None and isinstance(self.transform, A.Compose):
                     image = image.numpy()
                     image = self.transform(image=image)
                 elif isinstance(self.transform, Callable):
@@ -1137,6 +1151,8 @@ def _write_aggregate_datasets(h5_file: h5py.File, output_data: dict):
 
 def aggregate_runs(runs: list[dict], output_file_path: str):
     if len(runs) == 0:
+        return None
+    if h5py is None:
         return None
 
     file_dir = os.path.dirname(output_file_path)
