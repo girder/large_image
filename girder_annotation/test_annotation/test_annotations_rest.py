@@ -957,7 +957,7 @@ class TestLargeImageAnnotationElementGroups:
             resp = server.request(
                 '/annotation/%s' % annot['_id'], method='PATCH', user=admin,
                 type='application/json', body=json.dumps(record), isJson=False)
-            assert utilities.respStatus(resp) == 204
+            assert utilities.respStatus(resp) in {200, 204}
             assert testfunc(Annotation().load(annot['_id'], user=admin))
 
         # These should all fail

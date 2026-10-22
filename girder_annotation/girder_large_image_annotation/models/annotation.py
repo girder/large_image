@@ -17,6 +17,7 @@
 import copy
 import datetime
 import enum
+import logging
 import re
 import threading
 import time
@@ -28,21 +29,22 @@ from bson import ObjectId
 from girder_large_image import constants
 from girder_large_image.models.image_item import ImageItem
 
-from girder import events, logger
+from girder import events
 from girder.constants import AccessType, SortDir
 from girder.exceptions import AccessException, ValidationException
 from girder.models.folder import Folder
 from girder.models.item import Item
 from girder.models.model_base import AccessControlledModel
-from girder.models.notification import Notification
 from girder.models.setting import Setting
 from girder.models.user import User
+from girder.notification import Notification
 
 from ..utils import AnnotationGeoJSON, GeoJSONAnnotation, isGeoJSON
 from .annotationelement import Annotationelement
 
 # Some arrays longer than this are validated using numpy rather than jsonschema
 VALIDATE_ARRAY_LENGTH = 1000
+logger = logging.getLogger(__name__)
 
 
 def extendSchema(base, add):
@@ -884,11 +886,11 @@ class Annotation(AccessControlledModel):
         self.setUserAccess(doc, user=creator, level=AccessType.ADMIN, save=False)
 
         doc = self.save(doc)
-        Notification().createNotification(
+        Notification(
             type='large_image_annotation.create',
             data={'_id': doc['_id'], 'itemId': doc['itemId']},
             user=creator,
-            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
+        ).flush()
         return doc
 
     def load(self, id, region=None, getElements=True, *args, **kwargs):
@@ -957,11 +959,11 @@ class Annotation(AccessControlledModel):
                     result = super().remove(annotation, *args, **kwargs)
                 finally:
                     self.collection.delete_one = delete_one
-        Notification().createNotification(
+        Notification(
             type='large_image_annotation.remove',
             data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
             user=User().load(annotation['creatorId'], force=True),
-            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
+        ).flush()
         return result
 
     def save(self, annotation, *args, **kwargs):  # noqa
@@ -1064,7 +1066,7 @@ class Annotation(AccessControlledModel):
                 len(annotation['annotation']['elements']))
         events.trigger('large_image.annotations.save_history', {
             'annotation': annotation,
-        }, asynchronous=True)
+        })
         return result
 
     def updateAnnotation(self, annotation, updateUser=None):
@@ -1078,11 +1080,11 @@ class Annotation(AccessControlledModel):
         annotation['updated'] = datetime.datetime.now(datetime.timezone.utc)
         annotation['updatedId'] = updateUser['_id'] if updateUser else None
         annotation = self.save(annotation)
-        Notification().createNotification(
+        Notification(
             type='large_image_annotation.update',
             data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
             user=User().load(annotation['creatorId'], force=True),
-            expires=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1))
+        ).flush()
         return annotation
 
     def _similarElementStructure(self, a, b, parentKey=None):  # noqa
@@ -1284,7 +1286,7 @@ class Annotation(AccessControlledModel):
         result['_id'] = result.pop('annotationId', result['_id'])
         return result
 
-    def revertVersion(self, id, version=None, user=None, force=False):
+    def revertVersion(self, id, version=None, user=None, force=False, justCheck=False):
         """
         Revert to a previous version of an annotation.
 
@@ -1295,6 +1297,7 @@ class Annotation(AccessControlledModel):
         :param user: the user doing the reversion.
         :param force: if True don't authenticate the user with the associated
             item access.
+        :param justCheck: if True, only check if this can be done, don't do it.
         """
         if version is None:
             oldVersions = list(Annotation().versionList(id, limit=2, force=True))
@@ -1310,13 +1313,14 @@ class Annotation(AccessControlledModel):
         if not annotation.get('_active', True):
             if not force:
                 self.requireAccess(annotation, user=user, level=AccessType.WRITE)
+            if justCheck:
+                return annotation
             annotation = Annotation().updateAnnotation(annotation, updateUser=user)
-            Notification().createNotification(
+            Notification(
                 type='large_image_annotation.revert',
                 data={'_id': annotation['_id'], 'itemId': annotation['itemId']},
-                user=user,
-                expires=datetime.datetime.now(datetime.timezone.utc) +
-                datetime.timedelta(seconds=1))
+                user=user or User().load(annotation['creatorId'], force=True),
+            ).flush()
         return annotation
 
     def findAnnotatedImages(self, imageNameFilter=None, creator=None,
@@ -1404,7 +1408,7 @@ class Annotation(AccessControlledModel):
             self.update({'_id': doc['_id']}, {'$set': {'access': doc['access']}})
         return doc
 
-    def removeOldAnnotations(self, remove=False, minAgeInDays=30, keepInactiveVersions=5):  # noqa
+    def removeOldAnnotations(self, remove=False, minAgeInDays=30, keepInactiveVersions=5, justCheck=False):  # noqa
         """
         Remove annotations that (a) have no item or (b) are inactive and at
         least (1) a minimum age in days and (2) not the most recent inactive
@@ -1423,8 +1427,10 @@ class Annotation(AccessControlledModel):
             raise ValidationException(msg)
         age = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(-minAgeInDays)
         if keepInactiveVersions < 0:
-            msg = 'keepInactiveVersions mist be non-negative'
+            msg = 'keepInactiveVersions must be non-negative'
             raise ValidationException(msg)
+        if justCheck:
+            return None
         logger.info('Checking old annotations')
         logtime = time.time()
         report = {'fromDeletedItems': 0, 'oldVersions': 0, 'abandonedVersions': 0}
