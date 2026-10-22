@@ -18,7 +18,7 @@ girder-jobs>=5.0.0a10
 matplotlib
 pylibmc>=1.5.1
 redis
-simplejpeg
+simplejpeg ; python_version < "3.15"
 ipyvue
 aiohttp
 
