@@ -305,7 +305,7 @@ def putYAMLConfigFile(self, folder, name, config, user_context):
 
 @access.user(scope=TokenScope.DATA_READ)
 @autoDescribeRoute(
-    Description("Get a config file from a user's Private folder.")
+    Description("Get a config file from a user's private folder.")
     .notes(
         'Unlike the folder yaml_config endpoint, this does not search parent '
         'folders or apply access, groups, or users sections.  It is intended '
@@ -324,11 +324,11 @@ def getUserYAMLConfigFile(self, user, name):
 
 @access.user(scope=TokenScope.DATA_WRITE)
 @autoDescribeRoute(
-    Description("Set a config file in a user's Private folder.")
+    Description("Set a config file in a user's private folder.")
     .notes(
-        "This replaces or creates an item in the user's Private folder with "
+        "This replaces or creates an item in the user's private folder with "
         'the specified name containing a single file also of the specified '
-        'name.  The Private folder is created if needed.')
+        'name.  The private folder is created if needed.')
     .modelParam('id', model=User, level=AccessType.ADMIN)
     .param('name', 'The name of the file.', paramType='path')
     .param('config', 'The contents of yaml config file.', paramType='body'),

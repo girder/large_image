@@ -702,23 +702,34 @@ def yamlConfigFile(folder, name, user):
 
 def userPrivateFolder(user, create=False):
     """
-    Get a user's Private folder. Callers are responsible for access checks.
+    Get a user's private folder.  This is the top-level user folder with the
+    lowest id that is not public; it is usually named Private, but this
+    doesn't depend on the name.  Callers are responsible for access checks.
 
     :param user: a Girder user model.
-    :param create: if True, create the folder if it does not exist.
+    :param create: if True, create the folder if it does not exist.  It is
+        named Private unless that name is already used, in which case a
+        numeric suffix is added.
     :returns: the folder model or None.
     """
-    if create:
-        return Folder().createFolder(
-            user, 'Private', parentType='user', public=False, creator=user,
-            reuseExisting=True)
-    return Folder().findOne({
-        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+    folder = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user',
+        'public': {'$ne': True}}, sort=[('_id', SortDir.ASCENDING)])
+    if folder or not create:
+        return folder
+    name = 'Private'
+    suffix = 1
+    while Folder().findOne({
+            'parentId': user['_id'], 'parentCollection': 'user', 'name': name}):
+        suffix += 1
+        name = 'Private %d' % suffix
+    return Folder().createFolder(
+        user, name, parentType='user', public=False, creator=user)
 
 
 def userYamlConfigFile(user, name):
     """
-    Get a named config file from a user's Private folder. Unlike
+    Get a named config file from a user's private folder. Unlike
     yamlConfigFile, this does not walk up a folder tree; it is intended for
     per-user preferences that are combined with a folder's config by the
     client. Callers are responsible for access checks.
@@ -745,7 +756,7 @@ def userYamlConfigFile(user, name):
 
 def userYamlConfigFileWrite(user, name, yaml_config, writer):
     """
-    Create or replace a named config file in a user's Private folder.
+    Create or replace a named config file in a user's private folder.
     Callers are responsible for access checks.
 
     :param user: the Girder user model whose file is written.

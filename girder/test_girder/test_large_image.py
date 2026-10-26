@@ -676,6 +676,41 @@ def testUserYAMLConfigFileWithoutPrivateFolder(server, user, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testUserYAMLConfigFileOtherPrivateFolder(server, user, fsAssetstore):
+    path = '/user/%s/yaml_config/sample.yaml' % str(user['_id'])
+    # A non-public folder is used regardless of its name
+    private = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private'})
+    private['name'] = 'Mine'
+    private = Folder().save(private)
+    resp = server.request(
+        method='PUT', user=user, path=path,
+        body=json.dumps({'keyA': 'value1'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    assert Item().findOne({'folderId': private['_id'], 'name': 'sample.yaml'})
+    resp = server.request(path=path, user=user)
+    assert resp.json == {'keyA': 'value1'}
+    # If the folder becomes public, it is no longer used
+    Folder().setPublic(private, True, save=True)
+    resp = server.request(path=path, user=user)
+    assert resp.json == {}
+    # If Private is taken by a public folder, a new name is used
+    private['name'] = 'Private'
+    private = Folder().save(private)
+    resp = server.request(
+        method='PUT', user=user, path=path,
+        body=json.dumps({'keyA': 'value2'}), type='text/yaml')
+    assert utilities.respStatus(resp) == 200
+    newPrivate = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user', 'name': 'Private 2'})
+    assert newPrivate is not None
+    assert not newPrivate['public']
+    resp = server.request(path=path, user=user)
+    assert resp.json == {'keyA': 'value2'}
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testYAMLConfigFileInherit(server, admin, user, fsAssetstore):
     # Create some resources to use in the tests
     collection = Collection().createCollection(
