@@ -109,6 +109,9 @@ def sourceAndRegistry(tiles=False):
     for source in SourceAndFiles:
         sourceInfo = SourceAndFiles[source]
         for filename in registry:
+            if re.search(r'\.mrxs\.zip$', filename):
+                # archives of multi-file images are only used by specific tests
+                continue
             if re.search(sourceInfo.get('skip', r'^$'), filename):
                 # this file needs more complex tests
                 continue
