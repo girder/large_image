@@ -1144,6 +1144,62 @@ def testTilesAutoSetOption(server, admin, fsAssetstore):
 
 @pytest.mark.usefixtures('unbindLargeImage')
 @pytest.mark.plugin('large_image')
+def testTilesAutoSetMiraxCompanionFiles(server, admin, fsAssetstore, tmp_path):
+    # Mirax images are a small .mrxs file plus companion files, normally in a
+    # subfolder named after the image.  Some openslide builds can also read a
+    # "flat" layout where the companion files are adjacent to the .mrxs file.
+    # Adding the .mrxs file by itself can't make a large image, but adding the
+    # companion files afterwards should.  Files are imported rather than
+    # uploaded so that openslide can find the companion files on disk.
+    import zipfile
+
+    from girder.models.folder import Folder
+    from girder.utility import assetstore_utilities
+
+    name = 'Mirax2-Fluorescence-1'
+    with zipfile.ZipFile(utilities.datastore.fetch(name + '.mrxs.zip')) as archive:
+        archive.extractall(tmp_path / 'src')
+    srcMrxs = tmp_path / 'src' / (name + '.mrxs')
+    srcCompanions = tmp_path / 'src' / name
+    adapter = assetstore_utilities.getAssetstoreAdapter(fsAssetstore)
+    public = utilities.namedFolder(admin)
+
+    for layout in ('nested', 'flat', 'item'):
+        dest = tmp_path / layout
+        dest.mkdir()
+        shutil.copy(srcMrxs, dest)
+        folder = Folder().createFolder(public, layout, creator=admin)
+        item = Item().createItem(name + '.mrxs', admin, folder)
+        mrxsFile = adapter.importFile(item, str(dest / (name + '.mrxs')), admin)
+        # Without the companion files, this isn't a large image
+        assert 'largeImage' not in Item().load(item['_id'], force=True)
+        if layout == 'nested':
+            companionDir = dest / name
+            companionFolder = Folder().createFolder(folder, name, creator=admin)
+        else:
+            companionDir = dest
+            companionFolder = folder
+        shutil.copytree(srcCompanions, companionDir, dirs_exist_ok=True)
+        # Slidedat.ini is what triggers rechecking the .mrxs file, so add it
+        # last
+        paths = sorted(path for path in companionDir.iterdir() if path.suffix == '.dat')
+        paths.append(companionDir / 'Slidedat.ini')
+        for path in paths:
+            if layout == 'item':
+                companionItem = item
+            else:
+                companionItem = Item().createItem(path.name, admin, companionFolder)
+            adapter.importFile(companionItem, str(path), admin)
+        item = Item().load(item['_id'], force=True)
+        assert item.get('largeImage', {}).get('fileId') == mrxsFile['_id'], layout
+        resp = server.request(path='/item/%s/tiles' % item['_id'], user=admin)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['sizeX'] == 10487
+        assert resp.json['sizeY'] == 13350
+
+
+@pytest.mark.usefixtures('unbindLargeImage')
+@pytest.mark.plugin('large_image')
 def testTilesAssociatedImages(server, admin, fsAssetstore):
     file = utilities.uploadExternalFile(
         'sample_image.ptif', admin, fsAssetstore)
