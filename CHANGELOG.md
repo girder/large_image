@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.7
+
+### Bug Fixes
+
+- Automatically make flat mirax files large images when uploaded ([#2133](../../pull/2133))
+
 ## 1.35.6
 
 ### Improvements
