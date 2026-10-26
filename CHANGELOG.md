@@ -1,5 +1,27 @@
 # Change Log
 
+## 1.35.7
+
+### Bug Fixes
+
+- Automatically make flat mirax files large images when uploaded ([#2133](../../pull/2133))
+
+## 1.35.6
+
+### Improvements
+
+- Add an optional layerHotkeys prop to FrameSelector ([#2126](../../pull/2126))
+- Close cgroup reads deterministically ([#2128](../../pull/2128))
+
+### Changes
+
+- Update a type to work with mypy 2.4.0 ([#2127](../../pull/2127))
+- Start testing with Python 3.15 ([#2129](../../pull/2129))
+
+### Bug Fixes
+
+- Keep the bit depth of single-band uint16 images when encoding them as TIFF ([#2129](../../pull/2129))
+
 ## 1.35.5
 
 ### Improvements

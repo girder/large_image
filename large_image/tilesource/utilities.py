@@ -189,10 +189,28 @@ def _encodeImage(
         if encoding not in TileOutputMimeTypes:
             raise ValueError('Invalid encoding "%s"' % encoding)
         imageFormatOrMimeType = TileOutputMimeTypes[encoding]
+        if encoding in {'TIFF', 'TILED'} and _isSingleBandUint16(image):
+            # TIFF can hold 16-bit data, so don't reduce it to 8-bits
+            npimage = cast(np.ndarray, image)
+            image = PIL.Image.fromarray(
+                np.ascontiguousarray(npimage.reshape(npimage.shape[:2])))
         image = _imageToPIL(image)
         imageData = _encodeImageBinary(
             image, encoding, jpegQuality, jpegSubsampling, tiffCompression)
     return imageData, imageFormatOrMimeType
+
+
+def _isSingleBandUint16(image: Any) -> bool:
+    """
+    Check if an image is a numpy array of single-band uint16 data.
+
+    :param image: input image.
+    :returns: True if the image is a 2-D uint16 array or a 3-D uint16 array
+        with one band.
+    """
+    return (
+        isinstance(image, np.ndarray) and image.dtype == np.uint16 and
+        (len(image.shape) == 2 or (len(image.shape) == 3 and image.shape[2] == 1)))
 
 
 def _imageToPIL(

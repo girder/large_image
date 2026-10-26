@@ -109,6 +109,9 @@ def sourceAndRegistry(tiles=False):
     for source in SourceAndFiles:
         sourceInfo = SourceAndFiles[source]
         for filename in registry:
+            if re.search(r'\.mrxs\.zip$', filename):
+                # archives of multi-file images are only used by specific tests
+                continue
             if re.search(sourceInfo.get('skip', r'^$'), filename):
                 # this file needs more complex tests
                 continue
@@ -899,3 +902,55 @@ def testSubtileSlicing():
         sizeY=30 * 2 ** 7, monochrome=True, failBelowMinLevel=False)
     data = ts.getTile(1, 0, 2, pilImageAllowed=False, numpyAllowed='always')
     assert np.amin(data) > 0
+
+
+@pytest.mark.parametrize('shape', [(40, 30), (40, 30, 1)])
+def testEncodeTiffUint16KeepsBitDepth(shape):
+    from large_image.tilesource import utilities as tsutilities
+
+    image = (np.arange(40 * 30, dtype=np.uint32) * 53 % 65536).astype(
+        np.uint16).reshape(shape)
+    data, mimeType = tsutilities._encodeImage(image, encoding='TIFF')
+    assert mimeType == 'image/tiff'
+    result = np.array(PIL.Image.open(io.BytesIO(data)))
+    assert result.dtype == np.uint16
+    assert np.array_equal(result, image.reshape((40, 30)))
+
+
+@pytest.mark.parametrize(('dtype', 'shape', 'encoding'), [
+    (np.uint16, (40, 30), 'PNG'),
+    (np.uint16, (40, 30), 'JPEG'),
+    (np.uint16, (40, 30, 3), 'TIFF'),
+    (np.uint8, (40, 30), 'TIFF'),
+])
+def testEncodeImageOtherCasesAre8Bit(dtype, shape, encoding):
+    from large_image.tilesource import utilities as tsutilities
+
+    image = (np.arange(np.prod(shape), dtype=np.uint32) % 256).astype(dtype).reshape(shape)
+    data, _ = tsutilities._encodeImage(image, encoding=encoding)
+    assert np.array(PIL.Image.open(io.BytesIO(data))).dtype == np.uint8
+
+
+@pytest.mark.parametrize('tiffCompression', ['raw', 'lzw', 'deflate'])
+def testGetRegionTiffUint16KeepsBitDepth(tmp_path, tiffCompression):
+    tifffile = pytest.importorskip('tifffile')
+    large_image_source_tifffile = pytest.importorskip('large_image_source_tifffile')
+
+    image = (np.arange(400 * 500, dtype=np.uint32) * 53 % 65536).astype(
+        np.uint16).reshape((400, 500))
+    imagePath = tmp_path / 'uint16.tiff'
+    tifffile.imwrite(imagePath, image)
+    ts = large_image_source_tifffile.open(imagePath)
+    assert ts.dtype == np.uint16
+    data, mimeType = ts.getRegion(encoding='TIFF', tiffCompression=tiffCompression)
+    assert mimeType == 'image/tiff'
+    result = np.array(PIL.Image.open(io.BytesIO(data)))
+    assert result.dtype == np.uint16
+    assert np.array_equal(result, image)
+    # A sub-region also keeps its values
+    data, _ = ts.getRegion(
+        encoding='TIFF', tiffCompression=tiffCompression,
+        region={'left': 100, 'top': 50, 'width': 200, 'height': 150})
+    result = np.array(PIL.Image.open(io.BytesIO(data)))
+    assert result.dtype == np.uint16
+    assert np.array_equal(result, image[50:200, 100:300])
