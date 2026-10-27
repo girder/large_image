@@ -197,6 +197,15 @@ def _startJavabridge(logger):
                     max_heap_size=config.getConfig('source_bioformats_max_heap'),
                     run_headless=True)
                 _reduceLogging()
+                # start_vm attaches the calling thread and never detaches it,
+                # and kill_vm only detaches the thread it runs on.  Detach
+                # here so this thread has no stale environment after the JVM
+                # is destroyed; freeing a Java object on such a thread at
+                # interpreter exit hangs the process.  Everything in this
+                # module attaches and detaches around its own use of the JVM.
+                with _javabridgeAttachLock:
+                    if javabridge.get_env():
+                        javabridge.detach()
                 atexit.register(_stopJavabridge)
                 logger.info('Started JVM for Bioformats tile source.')
                 _javabridgeStarted = True

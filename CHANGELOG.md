@@ -4,10 +4,11 @@
 
 ### Improvements
 
-- Let the bioformats JVM return memory to the system and read tiles more directly
+- Let the bioformats JVM return memory to the system and read tiles more directly ([#2135](../../pull/2135))
 
 ### Bug Fixes
 
+- Fix a hang at exit when a Java object was freed after the bioformats JVM was destroyed
 - Automatically make flat mirax files large images when uploaded ([#2133](../../pull/2133))
 - Copied annotations get the destination folder's access and the copying user gets admin access ([#2134](../../pull/2134))
 
