@@ -735,7 +735,9 @@ class Annotation(AccessControlledModel):
         destItemId = destItem['_id']
         folder = Folder().load(destItem['folderId'], force=True)
         count = 0
-        user = None
+        # The creator of the copied item is the user who copied it
+        user = User().load(destItem['creatorId'], force=True) if destItem.get(
+            'creatorId') else None
         for annotation in annotations:
             logger.info('Copying annotation %d of %d from %s to %s',
                         count + 1, total, srcItemId, destItemId)
@@ -747,13 +749,13 @@ class Annotation(AccessControlledModel):
                 continue
             annotation['itemId'] = destItemId
             del annotation['_id']
-            # Remove existing permissions, then give it the same permissions
-            # as the item's folder.
-            annotation.pop('access', None)
-            self.copyAccessPolicies(destItem, annotation, save=False)
+            # Replace existing permissions with the same permissions as the
+            # destination folder, as if the annotation was created there.
+            # Always have an ACL, even if the folder somehow lacks one.
+            annotation['access'] = {'users': [], 'groups': []}
+            self.copyAccessPolicies(folder, annotation, save=False)
             self.setPublic(annotation, folder.get('public') or False, save=False)
-            if user is None:
-                user = User().load(folder['creatorId'], force=True)
+            # Give the user who copied the item admin access
             if user is not None:
                 self.setUserAccess(annotation, user, AccessType.ADMIN, force=True, save=False)
             self.save(annotation)

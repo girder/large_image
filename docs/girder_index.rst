@@ -11,6 +11,7 @@ To see an example Girder application with the ``large-image`` plugin, visit `dem
 
    girder_config_options
    girder_annotation_config_options
+   girder_annotation_access
    girder_caching
    dicomweb_assetstore
    plottable

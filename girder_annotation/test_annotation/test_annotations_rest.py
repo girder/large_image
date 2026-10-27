@@ -22,6 +22,7 @@ try:
     from girder.models.folder import Folder
     from girder.models.item import Item
     from girder.models.setting import Setting
+    from girder.models.user import User
 except ImportError:
     # Make it easier to test without girder
     pass
@@ -630,6 +631,33 @@ class TestLargeImageAnnotationRest:
             '/annotation', user=admin, params={'itemId': resp.json['_id']})
         assert utilities.respStatus(resp) == 200
         assert len(resp.json) == 1
+
+    def testAnnotationAccessAfterCopyItem(self, server, user, admin):
+        other = User().createUser(
+            'other', 'password', 'Other', 'User', 'other@girder.test')
+        # A private folder created by the admin that the user can write to
+        # and another user can read
+        destFolder = Folder().createFolder(
+            utilities.namedFolder(admin, 'Private'), 'Shared', creator=admin)
+        Folder().setUserAccess(destFolder, user, AccessType.WRITE, save=True)
+        Folder().setUserAccess(destFolder, other, AccessType.READ, save=True)
+        item = Item().createItem('sample', user, utilities.namedFolder(user, 'Private'))
+        Annotation().createAnnotation(item, user, sampleAnnotation)
+        resp = server.request(
+            '/item/%s/copy' % item['_id'], method='POST', user=user,
+            params={'folderId': str(destFolder['_id'])})
+        assert utilities.respStatus(resp) == 200
+        newItemId = resp.json['_id']
+        # The user who copied the item has admin access to the copied
+        # annotation and the other user has the destination folder's access
+        for checkUser, level in ((user, AccessType.ADMIN), (other, AccessType.READ)):
+            resp = server.request(
+                '/annotation', user=checkUser, params={'itemId': newItemId})
+            assert utilities.respStatus(resp) == 200
+            assert len(resp.json) == 1
+            resp = server.request('/annotation/%s' % resp.json[0]['_id'], user=checkUser)
+            assert utilities.respStatus(resp) == 200
+            assert resp.json['_accessLevel'] == level
 
 
 @pytest.mark.plugin('large_image_annotation')
