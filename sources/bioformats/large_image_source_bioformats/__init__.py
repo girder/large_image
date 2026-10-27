@@ -54,15 +54,68 @@ javabridge = None
 
 _javabridgeStarted = None
 _javabridgeStartLock = threading.Lock()
-_javabridgeAttachLock = threading.Lock()
+# This is reentrant because a tile source's __del__ can run on a thread that is
+# in the middle of attaching to the JVM: the cyclic garbage collector can run
+# during javabridge.attach, which makes Java calls while this lock is held.
+_javabridgeAttachLock = threading.RLock()
 _bioformatsVersion = None
 _openImages = []
+
+# Map bioformats FormatTools pixel types to (little endian, big endian) numpy
+# dtypes.
+_pixelDtypes = {
+    0: (np.int8, np.int8),
+    1: (np.uint8, np.uint8),
+    2: ('<i2', '>i2'),
+    3: ('<u2', '>u2'),
+    4: ('<i4', '>i4'),
+    5: ('<u4', '>u4'),
+    6: ('<f4', '>f4'),
+    7: ('<f8', '>f8'),
+}
 
 
 # Default to ignoring files with no extension and some specific extensions.
 config.ConfigValues.setdefault(
     'source_bioformats_ignored_names',
     r'(^[^.]*|\.(jpg|jpeg|jpe|png|tif|tiff|ndpi|ome|nc|json|geojson|fits|isyntax|mrxs|zip|zarr(\.db|\.zip)))$')  # noqa
+# Options passed to the JVM when it is started.  If None, the options from
+# _defaultJvmArgs are used.
+config.ConfigValues.setdefault('source_bioformats_jvm_args', None)
+# Maximum JVM heap size (e.g., '4g'); None uses the JVM default.
+config.ConfigValues.setdefault('source_bioformats_max_heap', None)
+
+# The JVM honors two environment variables in addition to the options it is
+# started with: JAVA_TOOL_OPTIONS is prepended to the options (so our options
+# take precedence) and _JAVA_OPTIONS is appended (so it takes precedence over
+# our options).
+_jvmEnvironmentKeys = ('JAVA_TOOL_OPTIONS', '_JAVA_OPTIONS')
+# A garbage collector that returns memory to the operating system when the
+# heap shrinks.  JDK 8 defaults to ParallelGC, which never does.
+_jvmCollectorArgs = ['-XX:+UseG1GC']
+# Shrink the heap once it is mostly free; these are honored by any collector.
+_jvmHeapArgs = ['-XX:MinHeapFreeRatio=5', '-XX:MaxHeapFreeRatio=10']
+
+
+def _defaultJvmArgs(logger):
+    """
+    Get the default options used to start the JVM.
+
+    These select a garbage collector that gives memory back to the operating
+    system and ask it to shrink the heap when most of it is free.  The JVM
+    refuses to start if more than one garbage collector is selected, so if the
+    environment (see _jvmEnvironmentKeys) already selects one, only the heap
+    options are used.
+
+    :param logger: a logger for reporting what was chosen.
+    :returns: a list of JVM options.
+    """
+    envopts = ' '.join(os.environ.get(key, '') for key in _jvmEnvironmentKeys)
+    if re.search(r'-XX:\+Use\w*GC\b', envopts):
+        logger.info('Using the garbage collector from the environment for the '
+                    'Bioformats JVM.')
+        return list(_jvmHeapArgs)
+    return _jvmCollectorArgs + _jvmHeapArgs
 
 
 def _monitor_thread():
@@ -138,8 +191,24 @@ def _startJavabridge(logger):
             monitor.daemon = True
             monitor.start()
             try:
-                javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+                args = config.getConfig('source_bioformats_jvm_args')
+                # start_vm appends to the args list, so always pass a copy
+                args = list(args) if args is not None else _defaultJvmArgs(logger)
+                javabridge.start_vm(
+                    args=args,
+                    class_path=bioformats.JARS,
+                    max_heap_size=config.getConfig('source_bioformats_max_heap'),
+                    run_headless=True)
                 _reduceLogging()
+                # start_vm attaches the calling thread and never detaches it,
+                # and kill_vm only detaches the thread it runs on.  Detach
+                # here so this thread has no stale environment after the JVM
+                # is destroyed; freeing a Java object on such a thread at
+                # interpreter exit hangs the process.  Everything in this
+                # module attaches and detaches around its own use of the JVM.
+                with _javabridgeAttachLock:
+                    if javabridge.get_env():
+                        javabridge.detach()
                 atexit.register(_stopJavabridge)
                 logger.info('Started JVM for Bioformats tile source.')
                 _javabridgeStarted = True
@@ -155,6 +224,22 @@ def _stopJavabridge(*args, **kwargs):
     if javabridge is not None:
         javabridge.kill_vm()
     _javabridgeStarted = None
+
+
+def _releaseJavaMemory():
+    """
+    Ask the JVM to collect garbage and shrink its heap.  This only reduces
+    resident memory if the JVM was started with a collector that uncommits
+    memory (see the source_bioformats_jvm_args config value).  The caller must
+    be attached to the JVM.
+
+    This uses the Runtime instance method rather than the static System.gc,
+    since javabridge holds the Python GIL during static void calls.
+    """
+    with contextlib.suppress(Exception):
+        runtime = javabridge.static_call(
+            'java/lang/Runtime', 'getRuntime', '()Ljava/lang/Runtime;')
+        javabridge.call(runtime, 'gc', '()V')
 
 
 def _getBioformatsVersion():
@@ -228,6 +313,7 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self.addKnownExtensions()
 
         self._tileLock = threading.RLock()
+        self._seriesPixelInfo = {}
 
         try:
             with _javabridgeAttachLock:
@@ -336,17 +422,27 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:
+            # The garbage collector can run this on any thread, including one
+            # that is partway through javabridge.attach or that owns the JVM
+            # environment without an attach count (javabridge's own monitor
+            # thread).  Only attach if the thread has no environment and only
+            # detach if we attached, so the thread is left as we found it.
+            attached = False
             try:
                 with _javabridgeAttachLock:
-                    javabridge.attach()
+                    if javabridge.get_env() is None:
+                        javabridge.attach()
+                        attached = True
                 self._bioimage.close()
                 del self._bioimage
                 _openImages.remove(weakref.ref(self))
+                if not _openImages:
+                    _releaseJavaMemory()
             except Exception:
                 pass
             finally:
-                with _javabridgeAttachLock:
-                    if javabridge.get_env():
+                if attached:
+                    with _javabridgeAttachLock:
                         javabridge.detach()
 
     def _checkForOffset(self):
@@ -657,6 +753,42 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         return self._metadata
 
+    def _readRegion(self, series, c, z, t, x, y, w, h):
+        """
+        Read a region of a plane directly from the bioformats reader.  This
+        bypasses bioformats.ImageReader.read, which rebuilds wrapper classes
+        and a ChannelSeparator and reads each channel separately on every
+        call.  The caller must be attached to the JVM and hold the tile lock.
+
+        :param series: the bioformats series to read.
+        :param c: the effective channel index.
+        :param z: the z index.
+        :param t: the t index.
+        :param x: the left edge of the region.
+        :param y: the top edge of the region.
+        :param w: the width of the region.
+        :param h: the height of the region.
+        :returns: a numpy array of shape (h, w) or (h, w, 3) in the file's
+            native dtype.
+        """
+        rdr = self._bioimage.rdr
+        rdr.setSeries(series)
+        info = self._seriesPixelInfo.get(series)
+        if info is None:
+            info = self._seriesPixelInfo[series] = (
+                _pixelDtypes[rdr.getPixelType()][0 if rdr.isLittleEndian() else 1],
+                rdr.getRGBChannelCount(),
+                rdr.isInterleaved())
+        dtype, rgbcc, interleaved = info
+        buf = np.frombuffer(rdr.openBytesXYWH(rdr.getIndex(z, c, t), x, y, w, h), dtype)
+        if rgbcc == 1:
+            return buf.reshape(h, w)
+        if interleaved:
+            tile = buf.reshape(h, w, rgbcc)
+        else:
+            tile = buf.reshape(rgbcc, h, w).transpose(1, 2, 0)
+        return tile[:, :, :3] if rgbcc > 3 else tile
+
     @methodcache()
     def getTile(self, x, y, z, pilImageAllowed=False, numpyAllowed=False, **kwargs):  # noqa
         self._xyzInRange(x, y, z)
@@ -700,18 +832,14 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             try:
                 if width > 0 and height > 0:
                     with self._tileLock:
-                        tile = self._bioimage.read(
-                            c=fc, z=fz, t=ft,
-                            series=fseries['series'][seriesLevel],
-                            rescale=False,  # return internal data types
-                            XYWH=(offsetx, offsety, width, height))
+                        tile = self._readRegion(
+                            fseries['series'][seriesLevel], fc, fz, ft,
+                            offsetx, offsety, width, height)
                 else:
                     # We need the same dtype, so read 1x1 at 0x0
                     with self._tileLock:
-                        tile = self._bioimage.read(
-                            c=fc, z=fz, t=ft, series=fseries['series'][seriesLevel],
-                            rescale=False,  # return internal data types
-                            XYWH=(0, 0, 1, 1))
+                        tile = self._readRegion(
+                            fseries['series'][seriesLevel], fc, fz, ft, 0, 0, 1, 1)
                     tile = np.zeros(tuple([0, 0] + list(tile.shape[2:])), dtype=tile.dtype)
                 format = TILE_FORMAT_NUMPY
             except javabridge.JavaException as exc:
