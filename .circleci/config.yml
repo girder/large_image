@@ -278,7 +278,6 @@ jobs:
       - checkout
       - allservices:
           version: "3.15"
-          node: v14
       - tox:
           toxenv: test-py315
           # environ: TOX_VERBOSE=4 TOX_PREFER_BINARY=1
