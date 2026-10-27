@@ -116,6 +116,18 @@ Some functionality of large_image is controlled through configuration parameters
      - ``str`` (regular expression)
      - Sources have different default values; see each source for its default. For example, the vips source default is ``r'(^[^.]*|\.(yml|yaml|json|png|svs|mrxs))$'``
 
+       .. _config_source_bioformats_jvm_args:
+   * - ``source_bioformats_jvm_args`` :ref:`🔗 <config_source_bioformats_jvm_args>`
+     - A list of options passed to the Java virtual machine when the bioformats source starts it.  If ``None``, the source chooses options that let the JVM return memory to the operating system after files are closed; see :ref:`bioformats_jvm`.  Class path options cannot be specified here.
+     - ``list[str] | None``
+     - ``None``
+
+       .. _config_source_bioformats_max_heap:
+   * - ``source_bioformats_max_heap`` :ref:`🔗 <config_source_bioformats_max_heap>`
+     - The maximum heap size of the Java virtual machine used by the bioformats source, in the form accepted by Java's ``-Xmx`` option, such as ``'4g'``.  If ``None``, the JVM's default is used.
+     - ``str | None``
+     - ``None``
+
        .. _config_all_sources_ignored_names:
    * - ``all_sources_ignored_names`` :ref:`🔗 <config_all_sources_ignored_names>`
      - If a file matches the regular expression in this setting, it will only be opened by sources that explicitly match the extension or mimetype.  Some formats are composed of multiple files that can be read as either a small image or as a large image depending on the source; this prohibits all sources that don't explicitly support the format.
@@ -210,3 +222,19 @@ Alternately, a different logger can be specified via ``setConfig`` in the ``logg
   logger = logging.getLogger(__name__)
   large_image.config.setConfig('logger', logger)
   large_image.config.setConfig('logprint', logger)
+
+.. _bioformats_jvm:
+
+Bioformats Java Virtual Machine
+-------------------------------
+
+The bioformats tile source reads images through a Java virtual machine (JVM) that is started inside the Python process the first time a bioformats source is opened.  The JVM cannot be stopped and restarted within a process, so it stays running until the process exits.  Instead, the source starts it with options chosen so that memory is returned to the operating system: a garbage collector that can shrink the heap, and settings that ask it to do so when the heap is mostly free.  When the last bioformats source is closed, the source asks the JVM to collect garbage, which is when the heap shrinks.  Any of this can be changed with the ``source_bioformats_jvm_args`` and ``source_bioformats_max_heap`` settings; the default options are listed in the bioformats source module.
+
+The JVM also reads options from two environment variables, and these interact with the settings above:
+
+- ``JAVA_TOOL_OPTIONS`` is a documented, portable variable.  Its options are placed *before* those from large_image, so where both specify the same option, the large_image setting wins.
+- ``_JAVA_OPTIONS`` is an undocumented HotSpot-specific variable.  Its options are placed *after* those from large_image, so it overrides the large_image setting.  For instance, setting it to ``-Xmx2g`` caps the heap regardless of ``source_bioformats_max_heap``.
+
+The JVM refuses to start if more than one garbage collector is selected.  To avoid that, if either variable selects a garbage collector, the default options omit the garbage collector and only include the heap settings.  If ``source_bioformats_jvm_args`` is set explicitly, it is used as given, so it must not select a collector that conflicts with the environment.
+
+The JVM prints a line starting with ``Picked up`` to standard error whenever it reads either variable.

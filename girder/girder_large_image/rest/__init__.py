@@ -94,11 +94,11 @@ def _groupingPipeline(initialPipeline, cbase, grouping, sort=None):
                 groupStep[f'count_{cbase}_{cidx}'] = {'$addToSet': f'${ckey}'}
                 cparts = cval.split('.')
                 centry = {cparts[-1]: {'$size': f'$count_{cbase}_{cidx}'}}
-                for cidx in range(len(cparts) - 2, -1, -1):
+                for pidx in range(len(cparts) - 2, -1, -1):
                     centry = {
-                        cparts[cidx]: {
+                        cparts[pidx]: {
                             '$mergeObjects': [
-                                '$firstOrder.' + '.'.join(cparts[:cidx + 1]),
+                                '$firstOrder.' + '.'.join(cparts[:pidx + 1]),
                                 centry,
                             ],
                         },
