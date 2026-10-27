@@ -54,7 +54,10 @@ javabridge = None
 
 _javabridgeStarted = None
 _javabridgeStartLock = threading.Lock()
-_javabridgeAttachLock = threading.Lock()
+# This is reentrant because a tile source's __del__ can run on a thread that is
+# in the middle of attaching to the JVM: the cyclic garbage collector can run
+# during javabridge.attach, which makes Java calls while this lock is held.
+_javabridgeAttachLock = threading.RLock()
 _bioformatsVersion = None
 _openImages = []
 
@@ -419,9 +422,17 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
     def __del__(self):
         if getattr(self, '_bioimage', None) is not None:
+            # The garbage collector can run this on any thread, including one
+            # that is partway through javabridge.attach or that owns the JVM
+            # environment without an attach count (javabridge's own monitor
+            # thread).  Only attach if the thread has no environment and only
+            # detach if we attached, so the thread is left as we found it.
+            attached = False
             try:
                 with _javabridgeAttachLock:
-                    javabridge.attach()
+                    if javabridge.get_env() is None:
+                        javabridge.attach()
+                        attached = True
                 self._bioimage.close()
                 del self._bioimage
                 _openImages.remove(weakref.ref(self))
@@ -430,8 +441,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             except Exception:
                 pass
             finally:
-                with _javabridgeAttachLock:
-                    if javabridge.get_env():
+                if attached:
+                    with _javabridgeAttachLock:
                         javabridge.detach()
 
     def _checkForOffset(self):
