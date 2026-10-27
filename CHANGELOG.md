@@ -5,6 +5,7 @@
 ### Bug Fixes
 
 - Automatically make flat mirax files large images when uploaded ([#2133](../../pull/2133))
+- Copied annotations get the destination folder's access and the copying user gets admin access ([#2134](../../pull/2134))
 
 ## 1.35.6
 
