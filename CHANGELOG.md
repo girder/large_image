@@ -2,6 +2,10 @@
 
 ## 1.35.7
 
+### Improvements
+
+- Let the bioformats JVM return memory to the system and read tiles more directly
+
 ### Bug Fixes
 
 - Automatically make flat mirax files large images when uploaded ([#2133](../../pull/2133))
