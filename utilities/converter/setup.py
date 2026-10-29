@@ -41,7 +41,6 @@ setup(
     install_requires=[
         f'large-image-source-tiff{limit_version}',
         'numpy',
-        'psutil',
         'pyvips',
         'tifftools',
     ],
@@ -51,6 +50,10 @@ setup(
         ],
         'geospatial': [
             'gdal',
+        ],
+        # not strictly required
+        'psutil': [
+            'psutil',
         ],
         'sources': [
             f'large-image[sources]{limit_version}',
@@ -64,6 +67,7 @@ setup(
             'gdal',
             f'large-image[sources]{limit_version}',
             'packaging',
+            'psutil',
             'scikit-image',
         ],
     },

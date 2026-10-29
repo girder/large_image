@@ -6,6 +6,10 @@
 
 - Let the bioformats JVM return memory to the system and read tiles more directly ([#2135](../../pull/2135))
 
+### Changes
+
+- Mark psutil as optional in the converter requirements ([#2136](../../pull/2136))
+
 ### Bug Fixes
 
 - Fix a hang at exit when a Java object was freed after the bioformats JVM was destroyed
