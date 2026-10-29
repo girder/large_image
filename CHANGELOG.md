@@ -4,11 +4,11 @@
 
 ### Improvements
 
-- Let the bioformats JVM return memory to the system and read tiles more directly ([#2135](../../pull/2135))
+- Let the bioformats JVM return memory to the system and read tiles more directly ([#2135](../../pull/2135), [#2137](../../pull/2137))
 
 ### Changes
 
-- Mark psutil as optional in the converter requirements ([#2136](../../pull/2136))
+- Mark psutil as optional in the converter requirements ([#2138](../../pull/2138))
 
 ### Bug Fixes
 
