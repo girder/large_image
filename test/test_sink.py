@@ -1,4 +1,8 @@
+import multiprocessing
+import os
+import sqlite3
 import subprocess
+import zipfile
 from datetime import datetime, timezone
 from multiprocessing.pool import Pool, ThreadPool
 from os import sys
@@ -825,6 +829,63 @@ sink.addTile(np.ones((1, 1, 1)), x=2047, y=2047, t=5, z=2, t_value='thursday', z
     assert metadata['frames'][24]['ValueT'] == 'sunday'
     assert metadata['frames'][24]['ValueZ'] == 0.4
     assert sink.sizeX == 5001
+
+
+@pytest.mark.singular
+def testSubprocessFrameValues(tmp_path):
+    # Each process has its own frame values; neither should replace the
+    # other's
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.ones((1, 1, 1)), x=0, y=0, t=0, t_value='sunday')
+    subprocess.run([sys.executable, '-c', """import large_image_source_zarr
+import numpy as np
+sink = large_image_source_zarr.open('%s')
+sink.addTile(np.ones((1, 1, 1)), x=0, y=0, t=1, t_value='monday')
+""" % sink.largeImagePath], capture_output=True, text=True, check=True)
+    sink.addTile(np.ones((1, 1, 1)), x=0, y=0, t=2, t_value='tuesday')
+
+    metadata = sink.getMetadata()
+    assert [frame['ValueT'] for frame in metadata['frames']] == ['sunday', 'monday', 'tuesday']
+
+
+def _add_frame(sink, t):
+    sink.addTile(np.full((10, 10, 1), t, dtype=np.uint8), x=0, y=0, t=t, t_value=f'time {t}')
+
+
+@pytest.mark.singular
+@pytest.mark.parametrize('pool_class', [
+    Pool, ThreadPool, multiprocessing.get_context('forkserver').Pool,
+], ids=['process', 'thread', 'forkserver'])
+def testConcurrentFrameValues(tmp_path, pool_class):
+    output_file = tmp_path / 'test.db'
+    sink = large_image_source_zarr.new()
+    _add_frame(sink, 0)
+    with pool_class(5) as pool:
+        pool.starmap(_add_frame, [(sink, t) for t in range(1, 20)])
+    sink.write(output_file, lossy=False)
+    written = large_image_source_zarr.open(output_file)
+    metadata = written.getMetadata()
+    assert [frame['ValueT'] for frame in metadata['frames']] == [f'time {t}' for t in range(20)]
+    for t in range(20):
+        assert written.getRegion(format='numpy', frame=t)[0][0, 0, 0] == t
+
+
+@pytest.mark.parametrize('suffix', ['.db', '.zip', '.zarr'])
+def testWriteExcludesInternalFiles(tmp_path, suffix):
+    sink = large_image_source_zarr.new()
+    sink.addTile(np.ones((10, 10, 3), dtype=np.uint8), x=0, y=0)
+    output_file = tmp_path / f'test{suffix}'
+    sink.write(output_file, lossy=False)
+    if suffix == '.db':
+        keys = {row[0] for row in sqlite3.connect(output_file).execute('SELECT k FROM zarr')}
+    elif suffix == '.zip':
+        keys = set(zipfile.ZipFile(output_file).namelist())
+    else:
+        keys = set(os.listdir(output_file))
+        output_file /= '.zattrs'
+    assert '.zattrs' in keys
+    assert not keys & {'.zarr_flock', '.zarr_stamp'}
+    assert large_image_source_zarr.open(output_file).getRegion(format='numpy')[0].sum() == 300
 
 
 @pytest.mark.parametrize('axes_order', ['tzd', 'tdz', 'dzt', 'dtz', 'ztd', 'zdt'])

@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.8
+
+### Bug Fixes
+
+- Resolve a possible race condition in the zarr sink ([#2142](../../pull/2142))
+
 ## 1.35.7
 
 ### Improvements

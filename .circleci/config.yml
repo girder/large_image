@@ -290,7 +290,7 @@ jobs:
           command: apt-get update -yq && apt-get install -yq pandoc && pandoc --version
       - run:
           name: Permissions for link checker
-          command: find /root -type d -exec chmod 755 {} \+
+          command: mkdir -p build && find /root -type d -exec chmod 755 {} \+
       - tox:
           toxenv: lint,lintclient,notebook
       - run:
