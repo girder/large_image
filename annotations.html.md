@@ -1,0 +1,1674 @@
+# Annotation Schema
+
+An annotation consists of a basic structure which includes a free-form
+`attributes` object and a list of `elements`. The elements are
+strictly specified by the schema and are mostly limited to a set of defined
+shapes.
+
+In addition to elements defined as shapes, image overlays are supported.
+
+Partial annotations are shown below with some example values. Note that
+the comments are not part of a valid annotation:
+
+```default
+{
+  "name": "MyAnnotationName",              # Non-empty string.  Optional
+  "description": "This is a description",  # String.  Optional
+  "display": {                             # Object.  Optional
+      "visible": "new",                    # String or boolean.  Optional.
+                  # If "new", display this annotation when it first is added
+                  # to the system.  If false, don't display the annotation by
+                  # default.  If true, display the annotation when the item
+                  # is loaded.
+  },
+  "attributes": {                          # Object.  Optional
+    "key1": "value1",
+    "key2": ["any", {"value": "can"}, "go", "here"]
+  },
+  "elements": []                           # A list.  Optional.
+                                           # See below for valid elements.
+}
+```
+
+## Elements
+
+Currently, most defined elements are shapes. Image overlays are not defined as
+shapes. All of the shape elements have some properties that they are allowed.
+Each element type is listed below:
+
+### All shapes
+
+All shapes have the following properties. If a property is not listed,
+it is not allowed. If element IDs are specified, they must be unique.
+
+```default
+{
+  "type": "point",                  # Exact string for the specific shape.  Required
+  "id": "0123456789abcdef01234567", # String, 24 lowercase hexadecimal digits.  Optional.
+  "label": {                        # Object.  Optional
+    "value": "This is a label",     # String.  Required
+    "visibility": "hidden",         # String.  One of "always", "hidden", "onhover".  Optional
+    "fontSize": 3.4,                # Number.  Optional
+    "color": "#0000FF"              # String.  See note about colors.  Optional
+  },
+  "group": "group name",            # String. Optional
+  "user": {},                       # User properties -- this can contain anything,
+                                    # but should be kept small.  Optional.
+  <shape specific properties>
+}
+```
+
+### All Vector Shapes
+
+These properties exist for all vector shapes (all but heatmaps, grid data, and image and pixelmap overlays).
+
+```default
+{
+  "lineColor": "#000000",           # String.  See note about colors.  Optional
+  "lineWidth": 1,                   # Number >= 0.  Optional
+}
+```
+
+### Circle
+
+```default
+{
+  "type": "circle",                  # Exact string.  Required
+  <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+  "center": [10.3, -40.0, 0],        # Coordinate.  Required
+  "radius": 5.3,                     # Number >= 0.  Required
+  "fillColor": "#0000fF",            # String.  See note about colors.  Optional
+}
+```
+
+### Ellipse
+
+The width and height of an ellipse are the major and minor axes.
+
+```default
+{
+  "type": "ellipse",                 # Exact string.  Required
+  <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+  "center": [10.3, -40.0, 0],        # Coordinate.  Required
+  "width": 5.3,                      # Number >= 0.  Required
+  "height": 17.3,                    # Number >= 0.  Required
+  "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
+  "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
+                                     # Optional
+  "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
+}
+```
+
+### Point
+
+```default
+{
+  "type": "point",                   # Exact string.  Required
+  <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+  "center": [123.3, 144.6, -123]     # Coordinate.  Required
+}
+```
+
+### Polyline (Polygons and Lines)
+
+When closed, this is a polygon. When open, this is a continuous line.
+
+```default
+{
+  "type": "polyline",                # Exact string.  Required
+  <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+  "points": [                        # At least two points must be specified
+    [5,6,0],                         # Coordinate.  At least two required
+    [-17,6,0],
+    [56,-45,6]
+  ],
+  "closed": true,                    # Boolean.  Default is false.  Optional
+  "holes": [                         # Only used if closed is true.  A list of a list of
+                                     # coordinates.  Each list of coordinates is a
+                                     # separate hole within the main polygon, and is expected
+                                     # to be contained within it and not cross the main
+                                     # polygon or other holes.
+    [
+      [10,10,0],
+      [20,30,0],
+      [10,30,0]
+    ]
+  ],
+  "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
+}
+```
+
+### Rectangle
+
+```default
+{
+  "type": "rectangle",               # Exact string.  Required
+  <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+  "center": [10.3, -40.0, 0],        # Coordinate.  Required
+  "width": 5.3,                      # Number >= 0.  Required
+  "height": 17.3,                    # Number >= 0.  Required
+  "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
+  "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
+                                     # Optional
+  "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
+}
+```
+
+### Heatmap
+
+A list of points with values that is interpreted as a heatmap so that
+nearby values aggregate together when viewed.
+
+```default
+{
+  "type": "heatmap",                 # Exact string.  Required
+  <id, label, group, user>           # Optional general shape properties
+  "points": [                        # A list of coordinate-value entries.  Each is x, y, z, value.
+    [32320, 48416, 0, 0.192],
+    [40864, 109568, 0, 0.87],
+    [53472, 63392, 0, 0.262],
+    [23232, 96096, 0, 0.364],
+    [10976, 93376, 0, 0.2],
+    [42368, 65248, 0, 0.054]
+  ],
+  "radius": 25,                      # Positive number.  Optional.  The size of the gaussian point
+                                     # spread
+  "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"],  # A list of colors corresponding to
+                                     # the rangeValues.  Optional
+  "rangeValues": [0, 1],             # A list of range values corresponding to the colorRange list
+                                     # and possibly normalized to a scale of [0, 1].  Optional
+  "normalizeRange": true,            # If true, the rangeValues are normalized to [0, 1].  If
+                                     # false, the rangeValues are in the
+                                     # value domain.  Defaults to true.  Optional
+  "scaleWithZoom": true              # If true, scale the size of points with the zoom level of
+                                     # the map. In this case, radius is in pixels of the
+                                     # associated image.  If false or unspecified, radius is in
+                                     # screen pixels. Defaults to false. Optional
+}
+```
+
+### Grid Data
+
+For evenly spaced data that is interpreted as a heatmap, contour, or
+choropleth, a grid with a list of values can be specified.
+
+```default
+{
+  "type": "griddata",                # Exact string.  Required
+  <id, label, group, user>           # Optional general shape properties
+  "interpretation": "contour",       # One of heatmap, contour, or choropleth
+  "gridWidth": 6,                    # Number of values across the grid.  Required
+  "origin": [0, 0, 0],               # Origin including fixed z value.  Optional
+  "dx": 32,                          # Grid spacing in x.  Optional
+  "dy": 32,                          # Grid spacing in y.  Optional
+  "colorRange": ["rgba(0, 0, 0, 0)", "rgba(255, 255, 0, 1)"], # A list of colors corresponding to
+                                     # the rangeValues.  Optional
+  "rangeValues": [0, 1],             # A list of range values corresponding to the colorRange list.
+                                     # This should have the same number of entries as colorRange
+                                     # unless a contour where stepped is true.  Possibly normalized
+                                     # to a scale of [0, 1].  Optional
+  "normalizeRange": false,           # If true, the rangeValues are normalized to [0, 1].  If
+                                     # false, the rangeValues are in the value domain.  Defaults to
+                                     # true.  Optional
+  "minColor": "rgba(0, 0, 255, 1)",  # The color of data below the minimum range.  Optional
+  "maxColor": "rgba(255, 255, 0, 1)", # The color of data above the maximum range.  Optional
+  "stepped": true,                   # For contours, whether discrete colors or continuous colors
+                                     # should be used.  Default false.  Optional
+  "radius": 25,                      # Positive number.  Optional.  The size of the gaussian
+                                     # point when using the heatman interprettation
+  "scaleWithZoom": true              # If true, when using the heatmap interprettation,  scale
+                                     # the size of points with the zoom level of the map. In
+                                     # this case, radius is in pixels of the associated image.
+                                     # If false or unspecified, radius is in screen pixels.
+                                     # Defaults to false. Optional
+  "values": [
+    0.508,
+    0.806,
+    0.311,
+    0.402,
+    0.535,
+    0.661,
+    0.866,
+    0.31,
+    0.241,
+    0.63,
+    0.555,
+    0.067,
+    0.668,
+    0.164,
+    0.512,
+    0.647,
+    0.501,
+    0.637,
+    0.498,
+    0.658,
+    0.332,
+    0.431,
+    0.053,
+    0.531
+  ]
+}
+```
+
+### Image overlays
+
+Image overlay annotations allow specifying a girder large image item
+to display on top of the base image as an annotation. It supports
+translation via the `xoffset` and `yoffset` properties, as well as other
+types of transformations via its ‘matrix’ property which should be specified as
+a `2x2` affine matrix.
+
+```default
+{
+  "type": "image",                   # Exact string. Required
+  <id, label, group, user>           # Optional general shape properties
+  "girderId": <girder image id>,     # 24-character girder id pointing
+                                     # to a large image object. Required
+  "opacity": 1,                      # Default opacity for the overlay. Defaults to 1. Optional
+  "hasAlpha": false,                 # Boolean specifying if the image has an alpha channel
+                                     # that should be used in rendering.
+  "transform": {                     # Object specifying additional overlay information. Optional
+    "xoffset": 0,                    # How much to shift the overlaid image right.
+    "yoffset": 0,                    # How much to shift the overlaid image down.
+    "matrix": [                      # Affine matrix to specify transformations like scaling,
+                                     # rotation, or shearing.
+      [1, 0],
+      [0, 1]
+    ]
+  }
+}
+```
+
+### Tiled pixelmap overlays
+
+Tiled pixelmap overlay annotations allow specifying a girder large image item
+to display on top of the base image to help represent categorical data.  This
+is often used with superpixels.  The specified large image overlay should be a
+lossless tiled image where pixel values represent category indices instead of
+colors. Data provided along with the ID of the image item is used to color the
+pixelmap based on the categorical data.
+
+The element must contain a `values` array. The indices of this
+array correspond to pixel values on the pixelmap, and the values are
+integers which correspond to indices in a `categories` array.
+
+```default
+{
+  "type": "pixelmap",                # Exact string. Required
+  <id, label, group, user>           # Optional general shape properties
+  "girderId": <girder image id>,     # 24-character girder id pointing
+                                     # to a large image object. Required
+  "opacity": 1,                      # Default opacity for the overlay. Defaults to 1. Optional
+  "transform": {                     # Object specifying additional overlay information. Optional
+    "xoffset": 0,                    # How much to shift the overlaid image right.
+    "yoffset": 0,                    # How much to shift the overlaid image down.
+    "matrix": [                      # Affine matrix to specify transformations like scaling,
+                                     # rotation, or shearing.
+      [1, 0],
+      [0, 1]
+    ]
+  },
+  "boundaries": false,               # Whether boundaries within the pixelmap have unique values.
+                                     # If so, the values array should only be half as long as the
+                                     # actual number of distinct pixel values in the pixelmap. In
+                                     # this case, for a given index i in the values array, the
+                                     # pixels with value 2i will be given the corresponding
+                                     # fillColor from the category information, and the pixels
+                                     # with value 2i + 1 will be given the corresponding
+                                     # strokeColor from the category information. Required
+  "values": [                        # An array where the value at index 'i' is an integer
+                                     # pointing to an index in the categories array. Required
+      1,
+      2,
+      1,
+      1,
+      2,
+    ],
+    "categories": [                  # An array whose values contain category information.
+      {
+        "fillColor": "#0000FF",      # The color pixels with this category should be. Required
+        "label": "class_a",          # A human-readable label for this category. Optional
+      },
+      {
+        "fillColor": "#00FF00",
+        "label": "class_b",
+
+      },
+      {
+        "fillColor": "#FF0000",
+        "label": "class_c",
+      },
+  ]
+}
+```
+
+### Arrow
+
+Not currently rendered.
+
+```default
+{
+  "type": "arrow",                   # Exact string.  Required
+  <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+  "points": [                        # Arrows ALWAYS have two points
+    [5,6,0],                         # Coordinate.  Arrow head.  Required
+    [-17,6,0]                        # Coordinate.  Aroow tail.  Required
+  ]
+}
+```
+
+### Rectangle Grid
+
+Not currently rendered.
+
+A Rectangle Grid is a rectangle which contains regular subdivisions,
+such as that used to show a regular scale grid overlay on an image.
+
+```default
+{
+  "type": "rectanglegrid",           # Exact string.  Required
+  <id, label, group, user, lineColor, lineWidth>  # Optional general shape properties
+  "center": [10.3, -40.0, 0],        # Coordinate.  Required
+  "width": 5.3,                      # Number >= 0.  Required
+  "height": 17.3,                    # Number >= 0.  Required
+  "rotation": 0,                     # Number.  Counterclockwise radians around normal.  Required
+  "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
+                                     # Optional
+  "widthSubdivisions": 3,            # Integer > 0.  Required
+  "heightSubdivisions": 4,           # Integer > 0.  Required
+  "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
+}
+```
+
+## Component Values
+
+### Colors
+
+Colors are specified using a css-like string. Specifically, values of the form `#RRGGBB`, `#RGB`, `#RRGGBBAA`, and `#RGBA` are allowed where `R`,
+`G`, `B`, and `A` are case-insensitive hexadecimal digits. Additionally,
+values of the form `rgb(123, 123, 123)` and `rgba(123, 123, 123, 0.123)`
+are allowed, where the colors are specified on a [0-255] integer scale, and
+the opacity is specified as a [0-1] floating-point number.
+
+### Coordinates
+
+Coordinates are specified as a triplet of floating point numbers. They
+are **always** three dimensional. As an example:
+
+`[1.3, -4.5, 0.3]`
+
+## A sample annotation
+
+A sample that shows off a valid annotation:
+
+```default
+{
+  "name": "AnnotationName",
+  "description": "This is a description",
+  "attributes": {
+    "key1": "value1",
+    "key2": ["any", {"value": "can"}, "go", "here"]
+  },
+  "elements": [{
+    "type": "point",
+    "label": {
+      "value": "This is a label",
+      "visibility": "hidden",
+      "fontSize": 3.4
+    },
+    "lineColor": "#000000",
+    "lineWidth": 1,
+    "center": [123.3, 144.6, -123]
+  },{
+    "type": "arrow",
+    "points": [
+      [5,6,0],
+      [-17,6,0]
+    ],
+    "lineColor": "rgba(128, 128, 128, 0.5)"
+  },{
+    "type": "circle",
+    "center": [10.3, -40.0, 0],
+    "radius": 5.3,
+    "fillColor": "#0000fF",
+    "lineColor": "rgb(3, 6, 8)"
+  },{
+    "type": "rectangle",
+    "center": [10.3, -40.0, 0],
+    "width": 5.3,
+    "height": 17.3,
+    "rotation": 0,
+    "fillColor": "rgba(0, 255, 0, 1)"
+  },{
+    "type": "ellipse",
+    "center": [3.53, 4.8, 0],
+    "width": 15.7,
+    "height": 7.1,
+    "rotation": 0.34,
+    "fillColor": "rgba(128, 255, 0, 0.5)"
+  },{
+    "type": "polyline",
+    "points": [
+      [5,6,0],
+      [-17,6,0],
+      [56,-45,6]
+    ],
+    "closed": true
+  },{
+    "type": "rectanglegrid",
+    "id": "0123456789abcdef01234567",
+    "center": [10.3, -40.0, 0],
+    "width": 5.3,
+    "height": 17.3,
+    "rotation": 0,
+    "widthSubdivisions": 3,
+    "heightSubdivisions": 4
+  }]
+}
+```
+
+## Full Schema
+
+The full schema can be obtained by calling the Girder endpoint of
+`GET` `/annotation/schema`.
+
+This returns the following:
+
+```default
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "display": {
+      "type": "object",
+      "properties": {
+        "visible": {
+          "type": [
+            "boolean",
+            "string"
+          ],
+          "enum": [
+            "new",
+            true,
+            false
+          ],
+          "description": "This advises viewers on when the annotation should be shown.  If \"new\" (the default), show the annotation when it is first added to the system.  If false, don't show the annotation by default.  If true, show the annotation when the item is displayed."
+        }
+      }
+    },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "Image Attributes",
+      "description": "Subjective things that apply to the entire image."
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "arrow"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "lineColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "lineWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "name": "Coordinate",
+                  "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "fillColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              }
+            },
+            "required": [
+              "points",
+              "type"
+            ],
+            "additionalProperties": false,
+            "description": "The first point is the head of the arrow"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "circle"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "lineColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "lineWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "radius": {
+                "type": "number",
+                "minimum": 0
+              },
+              "fillColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "pattern": {
+                "type": "string",
+                "description": "If one of \"circle\", \"triangle\", \"diamond\", \"flower(number)\", \"star(number)\", \"jack(number)\" where number is from 1 to 16, fill closed polylines with a pattern in their strokeColor."
+              }
+            },
+            "required": [
+              "center",
+              "radius",
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "ellipse"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "lineColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "lineWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "width": {
+                "type": "number",
+                "minimum": 0
+              },
+              "height": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rotation": {
+                "type": "number",
+                "description": "radians counterclockwise around normal"
+              },
+              "normal": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "fillColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "pattern": {
+                "type": "string",
+                "description": "If one of \"circle\", \"triangle\", \"diamond\", \"flower(number)\", \"star(number)\", \"jack(number)\" where number is from 1 to 16, fill closed polylines with a pattern in their strokeColor."
+              }
+            },
+            "required": [
+              "center",
+              "height",
+              "type",
+              "width"
+            ],
+            "additionalProperties": false,
+            "description": "normal is the positive z-axis unless otherwise specified"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "griddata"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "origin": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "dx": {
+                "type": "number",
+                "description": "grid spacing in the x direction"
+              },
+              "dy": {
+                "type": "number",
+                "description": "grid spacing in the y direction"
+              },
+              "gridWidth": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "The number of values across the width of the grid"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "The values of the grid.  This must have a multiple of gridWidth entries"
+              },
+              "interpretation": {
+                "type": "string",
+                "enum": [
+                  "heatmap",
+                  "contour",
+                  "choropleth"
+                ]
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "radius used for heatmap interpretation"
+              },
+              "scaleWithZoom": {
+                "type": "boolean",
+                "description": "If true, and interpreted as a heatmap, scale the size of points with the zoom level of the map."
+              },
+              "colorRange": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                },
+                "description": "A list of colors"
+              },
+              "rangeValues": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "A weakly monotonic list of range values"
+              },
+              "normalizeRange": {
+                "type": "boolean",
+                "description": "If true, rangeValues are on a scale of 0 to 1 and map to the minimum and maximum values on the data.  If false (the default), the rangeValues are the actual data values."
+              },
+              "stepped": {
+                "type": "boolean"
+              },
+              "minColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "maxColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              }
+            },
+            "required": [
+              "gridWidth",
+              "type",
+              "values"
+            ],
+            "additionalProperties": false,
+            "description": "ColorRange and rangeValues should have a one-to-one correspondence except for stepped contours where rangeValues needs one more entry than colorRange.  minColor and maxColor are the colors applies to values beyond the ranges in rangeValues."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "heatmap"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "name": "CoordinateWithValue",
+                  "description": "An X, Y, Z, value coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+                }
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "colorRange": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                },
+                "description": "A list of colors"
+              },
+              "rangeValues": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "A weakly monotonic list of range values"
+              },
+              "normalizeRange": {
+                "type": "boolean",
+                "description": "If true, rangeValues are on a scale of 0 to 1 and map to the minimum and maximum values on the data.  If false (the default), the rangeValues are the actual data values."
+              },
+              "scaleWithZoom": {
+                "type": "boolean",
+                "description": "If true, scale the size of points with the zoom level of the map."
+              }
+            },
+            "required": [
+              "points",
+              "type"
+            ],
+            "additionalProperties": false,
+            "description": "ColorRange and rangeValues should have a one-to-one correspondence."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "point"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "lineColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "lineWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "fillColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              }
+            },
+            "required": [
+              "center",
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "polyline"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "lineColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "lineWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "name": "Coordinate",
+                  "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+                },
+                "minItems": 2
+              },
+              "fillColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "closed": {
+                "type": "boolean",
+                "description": "polyline is open if closed flag is not specified"
+              },
+              "holes": {
+                "type": "array",
+                "description": "If closed is true, this is a list of polylines that are treated as holes in the base polygon. These should not cross each other and should be contained within the base polygon.",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "name": "Coordinate",
+                    "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+                  },
+                  "minItems": 3
+                }
+              },
+              "pattern": {
+                "type": "string",
+                "description": "If one of \"circle\", \"triangle\", \"diamond\", \"flower(number)\", \"star(number)\", \"jack(number)\" where number is from 1 to 16, fill closed polylines with a pattern in their strokeColor."
+              }
+            },
+            "required": [
+              "points",
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rectangle"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "lineColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "lineWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "width": {
+                "type": "number",
+                "minimum": 0
+              },
+              "height": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rotation": {
+                "type": "number",
+                "description": "radians counterclockwise around normal"
+              },
+              "normal": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "fillColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "pattern": {
+                "type": "string",
+                "description": "If one of \"circle\", \"triangle\", \"diamond\", \"flower(number)\", \"star(number)\", \"jack(number)\" where number is from 1 to 16, fill closed polylines with a pattern in their strokeColor."
+              }
+            },
+            "required": [
+              "center",
+              "height",
+              "type",
+              "width"
+            ],
+            "additionalProperties": false,
+            "description": "normal is the positive z-axis unless otherwise specified"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rectanglegrid"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "lineColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "lineWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "center": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "width": {
+                "type": "number",
+                "minimum": 0
+              },
+              "height": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rotation": {
+                "type": "number",
+                "description": "radians counterclockwise around normal"
+              },
+              "normal": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "name": "Coordinate",
+                "description": "An X, Y, Z coordinate tuple, in base layer pixel coordinates, where the origin is the upper-left."
+              },
+              "fillColor": {
+                "type": "string",
+                "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+              },
+              "pattern": {
+                "type": "string",
+                "description": "If one of \"circle\", \"triangle\", \"diamond\", \"flower(number)\", \"star(number)\", \"jack(number)\" where number is from 1 to 16, fill closed polylines with a pattern in their strokeColor."
+              },
+              "widthSubdivisions": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "heightSubdivisions": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "center",
+              "height",
+              "heightSubdivisions",
+              "type",
+              "width",
+              "widthSubdivisions"
+            ],
+            "additionalProperties": false,
+            "description": "normal is the positive z-axis unless otherwise specified"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "image"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "girderId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$",
+                "description": "Girder item ID containing the image to overlay."
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Default opacity for this image overlay. Must be between 0 and 1. Defaults to 1."
+              },
+              "hasAlpha": {
+                "type": "boolean",
+                "description": "If true, the image is treated assuming it has an alpha channel."
+              },
+              "transform": {
+                "type": "object",
+                "description": "Specification for an affine transform of the image overlay. Includes a 2D transform matrix, an X offset and a Y offset.",
+                "properties": {
+                  "xoffset": {
+                    "type": "number"
+                  },
+                  "yoffset": {
+                    "type": "number"
+                  },
+                  "matrix": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "A 2D matrix representing the transform of an image overlay."
+                  }
+                }
+              }
+            },
+            "required": [
+              "girderId",
+              "type"
+            ],
+            "additionalProperties": false,
+            "description": "An image overlay on top of the base resource."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "pixelmap"
+                ]
+              },
+              "user": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "label": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "hidden",
+                      "always",
+                      "onhover"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "group": {
+                "type": "string"
+              },
+              "girderId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{24}$",
+                "description": "Girder item ID containing the image to overlay."
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Default opacity for this image overlay. Must be between 0 and 1. Defaults to 1."
+              },
+              "hasAlpha": {
+                "type": "boolean",
+                "description": "If true, the image is treated assuming it has an alpha channel."
+              },
+              "transform": {
+                "type": "object",
+                "description": "Specification for an affine transform of the image overlay. Includes a 2D transform matrix, an X offset and a Y offset.",
+                "properties": {
+                  "xoffset": {
+                    "type": "number"
+                  },
+                  "yoffset": {
+                    "type": "number"
+                  },
+                  "matrix": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "A 2D matrix representing the transform of an image overlay."
+                  }
+                }
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "description": "An array where the indices correspond to pixel values in the pixel map image and the values are used to look up the appropriate color in the categories property."
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fillColor": {
+                      "type": "string",
+                      "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                    },
+                    "strokeColor": {
+                      "type": "string",
+                      "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(\\d+,\\s*\\d+,\\s*\\d+\\)|rgba\\(\\d+,\\s*\\d+,\\s*\\d+,\\s*(\\d?\\.|)\\d+\\))$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "description": "A string representing the semantic meaning of regions of the map with the corresponding color."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "A more detailed explanation of the meaning of this category."
+                    }
+                  },
+                  "required": [
+                    "fillColor"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "An array used to map between the values array and color values. Can also contain semantic information for color values."
+              },
+              "boundaries": {
+                "type": "boolean",
+                "description": "True if the pixelmap doubles pixel values such that even values are the fill and odd values the are stroke of each superpixel. If true, the length of the values array should be half of the maximum value in the pixelmap."
+              }
+            },
+            "required": [
+              "boundaries",
+              "categories",
+              "girderId",
+              "type",
+              "values"
+            ],
+            "additionalProperties": false,
+            "description": "A tiled pixelmap to overlay onto a base resource."
+          }
+        ]
+      },
+      "title": "Image Markup",
+      "description": "Subjective things that apply to a spatial region."
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+## Uploading Via REST Endpoints
+
+Annotations can be uploaded through the Girder UI on the item page.  Internally, this uploads files as usual in Girder via the `POST` `file` endpoint and passes a `reference` json parameter of `{"identifier": "LargeImageAnnotationUpload", "itemId": <item id>}`.
+
+## Alternate Formats
+
+In addition to the native format for annotations, annotations in **geojson** can be passed to the `Annotation.createAnnotation` method, uploaded via the standard UI on the Girder item page or via the `POST` `file` endpoint.  All annotations can be read in geojson format via the `Annotation.geojson` method or downloaded via specifying the appropriate format from the `GET` `annotation/{id}/{format}` endpoint.
