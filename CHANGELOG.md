@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.35.8
+
+### Improvements
+
+- Free tile sources without waiting for the cyclic garbage collector ([#2140](../../pull/2140))
+
 ## 1.35.7
 
 ### Improvements
