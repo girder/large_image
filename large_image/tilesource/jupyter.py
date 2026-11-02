@@ -101,9 +101,14 @@ class IPyLeafletMixin:
         # the cyclic garbage collector could free, holding open file handles
         # and native memory after the source was released (e.g., evicted from
         # the tile source cache).
+        # getattr: a subclass may not call this mixin's __init__.
         if getattr(self, '_ipyleafletMap', None) is None:
             self._ipyleafletMap = Map(ts=self)
         return cast(Map, self._ipyleafletMap)
+
+    @_map.setter
+    def _map(self, value: 'Map | None') -> None:
+        self._ipyleafletMap = value
 
     if ipyleafletPresent:
 
