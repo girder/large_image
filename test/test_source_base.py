@@ -954,3 +954,36 @@ def testGetRegionTiffUint16KeepsBitDepth(tmp_path, tiffCompression):
     result = np.array(PIL.Image.open(io.BytesIO(data)))
     assert result.dtype == np.uint16
     assert np.array_equal(result, image[50:200, 100:300])
+
+
+@pytest.mark.parametrize('filename', [
+    None,
+    'test_L_8.png',
+    'test_orient1.tif',
+    'rgb_geotiff.tiff',
+])
+def testSourceFreedByReferenceCounting(filename):
+    # A tile source that isn't part of a reference cycle is freed, and its
+    # file handles closed, as soon as it is released (for instance, evicted
+    # from the tile source cache), not whenever the cyclic garbage collector
+    # next runs.
+    import gc
+    import weakref
+
+    import large_image_source_test
+
+    gc.collect()
+    gc.disable()
+    try:
+        if filename is None:
+            source = large_image_source_test.TestTileSource(noCache=True)
+        else:
+            testDir = os.path.dirname(os.path.realpath(__file__))
+            source = large_image.open(
+                os.path.join(testDir, 'test_files', filename), noCache=True)
+        source.getTile(0, 0, 0)
+        ref = weakref.ref(source)
+        del source
+        assert ref() is None
+    finally:
+        gc.enable()

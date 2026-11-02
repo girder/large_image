@@ -160,3 +160,13 @@ def testJupyterIpyleafletMapGeospatialRegion():
     for callback in m._interaction_callbacks.callbacks:
         callback(type='click', coordinates=[lat, lon])
     assert source._map.info_label.value == ''.join([f'<div>{e}</div>' for e in expected])
+
+
+def testJupyterMapCreatedOnFirstUse():
+    imagePath = os.path.join(TEST_DIR, 'test_files', 'test_orient0.tif')
+    source = large_image.open(imagePath, noCache=True)
+    assert source._ipyleafletMap is None
+    # Without a map layer there is no metadata, so these only swap axes
+    assert source.to_map((10, 20)) == (20, 10)
+    assert source._map is source._map
+    assert source.from_map(source.to_map((10, 20))) == (10, 20)

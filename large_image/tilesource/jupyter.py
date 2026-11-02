@@ -92,10 +92,34 @@ class IPyLeafletMixin:
 
     def __init__(self, *args, **kwargs) -> None:
         self._jupyter_server_manager = None
-        self._map = Map(ts=self)
-        if ipyleafletPresent:
-            self.to_map = self._map.to_map
-            self.from_map = self._map.from_map
+        self._ipyleafletMap: Map | None = None
+
+    @property
+    def _map(self) -> 'Map':
+        # Created on first use.  The Map refers back to this source, so making
+        # it eagerly turned every tile source into a reference cycle that only
+        # the cyclic garbage collector could free, holding open file handles
+        # and native memory after the source was released (e.g., evicted from
+        # the tile source cache).
+        if getattr(self, '_ipyleafletMap', None) is None:
+            self._ipyleafletMap = Map(ts=self)
+        return cast(Map, self._ipyleafletMap)
+
+    if ipyleafletPresent:
+
+        def to_map(self, coordinate: list[float] | tuple[float, float]) -> tuple[float, float]:
+            """
+            Convert a coordinate from the image or projected image space to the
+            map space.  See :meth:`Map.to_map`.
+            """
+            return self._map.to_map(coordinate)
+
+        def from_map(self, coordinate: list[float] | tuple[float, float]) -> tuple[float, float]:
+            """
+            Convert a coordinate from the map space to the image or projected
+            image space.  See :meth:`Map.from_map`.
+            """
+            return self._map.from_map(coordinate)
 
     def as_leaflet_layer(self, **kwargs) -> Any:
         # NOTE: `as_leaflet_layer` is supported by ipyleaflet.Map.add
