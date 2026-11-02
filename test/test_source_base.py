@@ -972,6 +972,7 @@ def testSourceFreedByReferenceCounting(sourceName, filename):
     import weakref
 
     module = pytest.importorskip(f'large_image_source_{sourceName}')
+    gcWasEnabled = gc.isenabled()
     gc.collect()
     gc.disable()
     try:
@@ -986,4 +987,5 @@ def testSourceFreedByReferenceCounting(sourceName, filename):
         del source
         assert ref() is None
     finally:
-        gc.enable()
+        if gcWasEnabled:
+            gc.enable()
