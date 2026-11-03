@@ -25,8 +25,7 @@ class MultiGirderTileSource(MultiFileTileSource, GirderTileSource):
         except TileSourceFileNotFoundError:
             prefix = 'girder://'
             potentialId = source['path']
-            if potentialId.startswith(prefix):
-                potentialId = potentialId[len(prefix):]
+            potentialId = potentialId.removeprefix(prefix)
             if '://' not in potentialId:
                 try:
                     item = ImageItem().load(potentialId, force=True)
