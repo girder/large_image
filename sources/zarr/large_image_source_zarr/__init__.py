@@ -3,6 +3,7 @@ import importlib.metadata
 import json
 import math
 import os
+import re
 import shutil
 import tempfile
 import threading
@@ -27,6 +28,8 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 
 zarr = None
+# Not part of the zarr data; used for cross-process safety
+_internalFiles = ('.zarr_flock', '.zarr_stamp')
 
 
 def _lazyImport():
@@ -44,6 +47,19 @@ def _lazyImport():
         except ImportError:
             msg = 'zarr module not found.'
             raise TileSourceError(msg)
+
+
+def _copyStore(src, dst):
+    """
+    Copy the zarr data from one store to another, excluding our internal
+    files.
+
+    :param src: the source store.
+    :param dst: the destination store.
+    """
+    zarr.copy_store(
+        src, dst, if_exists='replace',
+        excludes=[f'^{re.escape(name)}$' for name in _internalFiles])
 
 
 class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -162,14 +178,18 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._projection = None
         self._gcps = None
         if not self._created:
-            with contextlib.suppress(Exception):
-                self._validateZarr()
+            with self._threadLock, self._processLock(), contextlib.suppress(Exception):
+                # Always read the existing data; this reopens the group while
+                # holding the lock
+                self._lastStamp = False
+                self._syncFromOtherProcesses()
 
     def _processLock(self):
         """
         This is a function to avoid pickling issues.
         """
-        return filelock.FileLock(os.path.join(str(self._tempdir), '.zarr_flock'))
+        return filelock.FileLock(
+            os.path.join(str(self._tempdir), '.zarr_flock'), is_singleton=True)
 
     def __del__(self):
         if not hasattr(self, '_derivedSource'):
@@ -401,12 +421,15 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             if frame_values.size > 0:
                 self._frameValues = frame_values
 
-    def _validateZarr(self):
+    def _validateZarr(self, writeMetadata=True):
         """
         Validate that we can read tiles from the zarr parent group in
         self._zarr.  Set up the appropriate class variables.
+
+        :param writeMetadata: if True and this is an editable image, write
+            this process's metadata before reading it back.
         """
-        if self._editable and hasattr(self, '_axes'):
+        if writeMetadata and self._editable and hasattr(self, '_axes'):
             self._writeInternalMetadata()
         found = self._scanZarrGroup(self._zarr)
         if found['best'] is None:
@@ -728,9 +751,6 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             ``level`` is a reserved word and not permitted for an axis name.
         """
         self._checkEditable()
-        with contextlib.suppress(TileSourceError):
-            # read any info written by other processes
-            self._validateZarr()
         updateMetadata = False
         store_path = str(kwargs.pop('level', 0))
         placement = {
@@ -742,9 +762,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             k.replace('_value', ''): v for k, v in kwargs.items()
             if k not in placement
         }
-        tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
 
-        with self._threadLock and self._processLock():
+        with self._threadLock, self._processLock():
+            self._syncFromOtherProcesses()
+            tile, mask, placement, axes = self._validateNewTile(tile, mask, placement, axes)
             old_axes = self._axes if hasattr(self, '_axes') else {}
             self._axes = {k: i for i, k in enumerate(axes)}
             new_axes = {k: i for k, i in self._axes.items() if k not in old_axes}
@@ -767,12 +788,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 updateMetadata = True
                 self._updateFrameValues(frame_values, placement, axes, new_axes, new_dims)
 
-            current_arrays = dict(self._zarr.arrays())
+            current_arrays = self._currentArrays()
             if store_path == '0':
                 # if writing to base data, invalidate generated levels
-                for path in current_arrays:
+                for path in list(current_arrays):
                     if path != store_path:
                         self._zarr_store.rmdir(path)
+                        self._arrays = None
             chunking = None
             if store_path not in current_arrays:
                 chunking = tuple([
@@ -790,6 +812,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     path=store_path,
                     write_empty_chunks=False,
                 )
+                self._arrays = None
                 chunking = None
             else:
                 arr = current_arrays[store_path]
@@ -818,6 +841,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     store=self._zarr_store,
                     path=store_path,
                 )
+                self._arrays = None
 
             # If base data changed, update large_image attributes
             if store_path == '0':
@@ -835,8 +859,9 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 self.levels = int(max(1, math.ceil(math.log(max(
                     self.sizeX / self.tileWidth, self.sizeY / self.tileHeight)) / math.log(2)) + 1))
                 updateMetadata = True
-        if updateMetadata:
-            self._writeInternalMetadata()
+            self._markChanged()
+            if updateMetadata:
+                self._writeInternalMetadata()
 
     def addAssociatedImage(self, image, imageKey=None):
         """
@@ -846,7 +871,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             with an image.  The numpy array can have 2 or 3 dimensions.
         """
         data, _ = _imageToNumpy(image)
-        with self._threadLock and self._processLock():
+        with self._threadLock, self._processLock():
+            self._syncFromOtherProcesses()
             if imageKey is None:
                 # Each associated image should be in its own group
                 num_existing = len(self.getAssociatedImagesList())
@@ -858,6 +884,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 path=f'{imageKey}/image',
             )
             self._associatedImages[imageKey] = (group, arr)
+            self._markChanged()
 
     def _getAxisInternalMetadata(self, axis_name):
         """
@@ -896,15 +923,64 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 axis_metadata['unit'] = unit
         return axis_metadata
 
+    def _readStamp(self):
+        """
+        Read the stamp that is changed every time the image is modified.
+
+        :returns: the stamp or None if the image has not been modified.
+        """
+        with contextlib.suppress(OSError):
+            return (self._tempdir / '.zarr_stamp').read_text()
+        return None
+
+    def _syncFromOtherProcesses(self):
+        """
+        If another process has modified the image since this process last
+        did, read what it wrote.  Every modification updates the stamp, so
+        this is cheap when nothing has changed.  This must be called while
+        holding the process lock.
+        """
+        stamp = self._readStamp()
+        if stamp == getattr(self, '_lastStamp', None):
+            return
+        self._lastStamp = stamp
+        self._arrays = None
+        # zarr caches group attributes in memory, so reopen the group
+        self._zarr = zarr.open_group(self._zarr_store, mode='a')
+        with contextlib.suppress(TileSourceError):
+            # Don't write our metadata first; that would replace what the
+            # other process wrote
+            self._validateZarr(writeMetadata=False)
+
+    def _markChanged(self):
+        """
+        Record that this process modified the image.  This must be called
+        while holding the process lock.
+        """
+        self._lastStamp = str(uuid.uuid4())
+        (self._tempdir / '.zarr_stamp').write_text(self._lastStamp)
+
+    def _currentArrays(self):
+        """
+        Get the arrays in the root group.  Listing them is slow, so this is cached
+        until this or another process changes them.
+
+        :returns: a dictionary of array names and zarr arrays.
+        """
+        if getattr(self, '_arrays', None) is None:
+            self._arrays = dict(self._zarr.arrays())
+        return self._arrays
+
     def _writeInternalMetadata(self):
         """
         Write metadata to Zarr attributes.
         Metadata structure adheres to OME schema from https://ngff.openmicroscopy.org/latest/
         """
         self._checkEditable()
-        with self._threadLock and self._processLock():
+        with self._threadLock, self._processLock():
+            self._syncFromOtherProcesses()
             name = str(self._tempdir.name).split('/')[-1]
-            arrays = dict(self._zarr.arrays())
+            arrays = self._currentArrays()
             datasets = []
             axes = []
             channels = []
@@ -965,7 +1041,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         channel_metadata['color'] = self._channelColors[c]
                     channels.append(channel_metadata)
             # Guidelines from https://ngff.openmicroscopy.org/latest/
-            self._zarr.attrs.update({
+            attrs = {
                 'multiscales': [{
                     'version': '0.5',
                     'name': name,
@@ -986,7 +1062,13 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     'rdefs': rdefs,
                 },
                 'bioformats2raw.layout': 3,
-            })
+            }
+            # Writing attributes is slow and makes other processes reread
+            # them, so only do so if they changed
+            current = self._zarr.attrs.asdict()
+            if any(current.get(k) != v for k, v in attrs.items()):
+                self._zarr.attrs.update(attrs)
+                self._markChanged()
 
     @property
     def crop(self):
@@ -1417,16 +1499,20 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             source._generateDownsampledLevels(resample)
             source._writeInternalMetadata()  # rewrite with new level datasets
 
-            if suffix == '.zarr':
-                shutil.copytree(str(source._tempdir), path)
-            elif suffix in ['.db', '.sqlite']:
-                sqlite_store = zarr.SQLiteStore(path)
-                zarr.copy_store(source._zarr_store, sqlite_store, if_exists='replace')
-                sqlite_store.close()
-            elif suffix == '.zip':
-                zip_store = zarr.ZipStore(path)
-                zarr.copy_store(source._zarr_store, zip_store, if_exists='replace')
-                zip_store.close()
+            # Don't let other processes change the data while we copy it
+            with source._threadLock, source._processLock():
+                if suffix == '.zarr':
+                    shutil.copytree(
+                        str(source._tempdir), path,
+                        ignore=shutil.ignore_patterns(*_internalFiles))
+                elif suffix in ['.db', '.sqlite']:
+                    sqlite_store = zarr.SQLiteStore(path)
+                    _copyStore(source._zarr_store, sqlite_store)
+                    sqlite_store.close()
+                elif suffix == '.zip':
+                    zip_store = zarr.ZipStore(path)
+                    _copyStore(source._zarr_store, zip_store)
+                    zip_store.close()
 
         else:
             from large_image_converter import convert

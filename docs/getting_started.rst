@@ -489,9 +489,11 @@ Multiple processes
 
 In some cases, it may be beneficial to write to a single image from multiple processes or threads.
 
-There is one important thing to note about writing an image with multiple processes.
-In order to properly record the set of values along each frame axis, prior to any multiprocess concurrency,
-the first tile added should be at the maximum position so that the size of each dimension is preallocated.
+We recommend adding a tile at the maximum position first, before any
+concurrency, so that the size of each dimension is preallocated. While not
+required, whenever the image grows its data has to be resized, so it is more
+efficient.
+
 The following example demonstrates this step.
 
 .. code-block:: python
@@ -507,15 +509,28 @@ The following example demonstrates this step.
         )
 
     source = large_image.new()
-    # Important: Maximum size must be allocated before any multiprocess concurrency
+    # Recommended: allocate the maximum size before any concurrency
     add_tile_to_source(source, np.zeros(1, 1, 3), dict(x=max_x, y=max_y, z=max_z))
-    # Also works with multiprocessing.ThreadPool, which does not need maximum size allocated first
+    # Also works with multiprocessing.pool.ThreadPool
     with multiprocessing.Pool(max_workers=5) as pool:
         pool.starmap(
             add_tile_to_source,
             [(source, t, t_pos) for t, t_pos in tileset]
         )
     source.write('/tmp/sample.zarr.zip', lossy=False)
+
+Adding tiles and associated images, including frame values passed to
+``addTile``, is thread and multi-process safe.  Other properties of the image,
+such as ``channelNames``, ``channelColors``, ``imageDescription``,
+``additionalMetadata``, ``mm_x``, ``mm_y``, and ``frameUnits``, are not merged
+between processes; if more than one process sets them, the last one to write
+its metadata wins, and a value set in one process can be replaced when another
+process adds a tile.  Set these in the process that will call ``write`` after
+the other processes have finished adding tiles.
+
+Reading from an image (for instance, with ``getRegion``, ``tileIterator``, or
+``getMetadata``) while other processes are still adding tiles may return data
+that does not yet include their changes.
 
 
 More examples
