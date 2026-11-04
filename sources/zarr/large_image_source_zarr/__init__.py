@@ -28,8 +28,16 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 
 zarr = None
+zarr3 = None
+SQLiteStore = None
 # Not part of the zarr data; used for cross-process safety
 _internalFiles = ('.zarr_flock', '.zarr_stamp')
+# Metadata file names for each zarr format
+_metadataFiles = {2: '.zattrs', 3: 'zarr.json'}
+# The OME-Zarr specification version written for each zarr format.  OME-Zarr
+# 0.4 is the last version that uses zarr format 2; 0.5 and later use zarr
+# format 3 and store their metadata under an "ome" key.
+_omeVersions = {2: '0.4', 3: '0.5'}
 
 
 def _lazyImport():
@@ -37,7 +45,7 @@ def _lazyImport():
     Import the zarr module.  This is done when needed rather than in the module
     initialization because it is slow.
     """
-    global zarr
+    global zarr, zarr3, SQLiteStore
 
     if zarr is None:
         try:
@@ -47,6 +55,86 @@ def _lazyImport():
         except ImportError:
             msg = 'zarr module not found.'
             raise TileSourceError(msg)
+        zarr3 = packaging.version.parse(zarr.__version__).major >= 3
+        if zarr3:
+            from .zarr3 import LegacySQLiteStore
+            SQLiteStore = LegacySQLiteStore
+            # zarr 3 warns about any file that isn't zarr data, such as our
+            # lock files or the METADATA.ome.xml file in OME zarr images
+            warnings.filterwarnings(
+                'ignore', category=UserWarning,
+                message=r'Object at .* is not recognized as a component of a Zarr hierarchy')
+        else:
+            SQLiteStore = zarr.SQLiteStore
+
+
+def _omeAttrs(attrs):
+    """
+    Get the OME-Zarr metadata from a group's attributes.  OME-Zarr 0.5 and
+    later store it under an "ome" key; earlier versions store it at the top
+    level.
+
+    :param attrs: a dictionary of group attributes.
+    :returns: the dictionary containing the OME-Zarr keys such as
+        "multiscales".
+    """
+    if isinstance(attrs.get('ome'), dict):
+        return attrs['ome']
+    return attrs
+
+
+def _omeAxes(multiscale):
+    """
+    Get the axes list from a multiscales entry.  OME-Zarr 0.6 moved the axes
+    into coordinate systems.
+
+    :param multiscale: a multiscales dictionary.
+    :returns: a list of axis dictionaries.
+    """
+    if 'axes' not in multiscale and multiscale.get('coordinateSystems'):
+        return multiscale['coordinateSystems'][0]['axes']
+    return multiscale['axes']
+
+
+def _omeScale(dataset):
+    """
+    Get the scale transformation of a multiscales dataset entry.  OME-Zarr
+    0.6 can wrap it in a sequence transformation.
+
+    :param dataset: a dictionary from the multiscales datasets list.
+    :returns: a list of scale values or None.
+    """
+    for trans in dataset.get('coordinateTransformations', []):
+        if trans.get('type') == 'sequence':
+            trans = next(
+                (t for t in trans.get('transformations', []) if t.get('type') == 'scale'),
+                {})
+        if trans.get('type') == 'scale':
+            return trans['scale']
+    return None
+
+
+def _jsonSafe(value):
+    """
+    Convert a value to what it will be when written as zarr attributes.  zarr 2
+    converted numpy numbers to python numbers when writing attributes; zarr 3
+    does not.
+
+    :param value: a json-serializable value that may contain numpy numbers.
+    :returns: the value with only python types.
+    """
+
+    def default(obj):
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        msg = f'Object of type {type(obj).__name__} is not JSON serializable'
+        raise TypeError(msg)
+
+    return json.loads(json.dumps(value, default=default))
 
 
 def _copyStore(src, dst):
@@ -57,9 +145,13 @@ def _copyStore(src, dst):
     :param src: the source store.
     :param dst: the destination store.
     """
-    zarr.copy_store(
-        src, dst, if_exists='replace',
-        excludes=[f'^{re.escape(name)}$' for name in _internalFiles])
+    if zarr3:
+        from .zarr3 import copy_store
+        copy_store(src, dst, excludes=_internalFiles)
+    else:
+        zarr.copy_store(
+            src, dst, if_exists='replace',
+            excludes=[f'^{re.escape(name)}$' for name in _internalFiles])
 
 
 class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
@@ -75,6 +167,8 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         'zgroup': SourcePriority.PREFERRED,
         'zattrs': SourcePriority.PREFERRED,
         'zarray': SourcePriority.PREFERRED,
+        # zarr.json files in zarr format 3
+        'json': SourcePriority.LOW,
         'db': SourcePriority.MEDIUM,
         'zip': SourcePriority.LOWER,
     }
@@ -98,6 +192,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         parameters.
 
         :param path: a filesystem path for the tile source.
+        :param zarr_format: when creating a new image, the zarr format to
+            write: 2 or 3.  This defaults to 3 if the zarr library supports
+            it, which produces OME-Zarr 0.5 files.  Zarr format 2 produces
+            OME-Zarr 0.4 files that can be read by zarr 2.
         """
         super().__init__(path, **kwargs)
 
@@ -106,7 +204,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._initNew(path, **kwargs)
         else:
             self._initOpen(**kwargs)
-            internal = self.getInternalMetadata().get('zarr', {}).get('base', {})
+            internal = _omeAttrs(self.getInternalMetadata().get('zarr', {}).get('base', {}))
             multiscale = internal.get('multiscales', [None])[0]
             if multiscale is not None:
                 self._imageDescription = multiscale.get('metadata', {}).get('description')
@@ -121,15 +219,21 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._frameUnits = None
         if not os.path.isfile(self._largeImagePath) and '//:' not in self._largeImagePath:
             raise TileSourceFileNotFoundError(self._largeImagePath) from None
-        if os.path.basename(self._largeImagePath) in {'.zgroup', '.zattrs', '.zarray'}:
+        if os.path.basename(self._largeImagePath) in {
+                '.zgroup', '.zattrs', '.zarray', 'zarr.json'}:
             with contextlib.suppress(Exception):
                 self._zarr = zarr.open(os.path.dirname(self._largeImagePath), mode='r')
         if self._zarr is None:
             with contextlib.suppress(Exception):
                 self._zarr = zarr.open(self._largeImagePath, mode='r')
+        if self._zarr is None and zarr3 and self._largeImagePath.endswith('.zip'):
+            with contextlib.suppress(Exception):
+                self._zarr = zarr.open(zarr.storage.ZipStore(
+                    self._largeImagePath, mode='r'), mode='r')
         if self._zarr is None:
             with contextlib.suppress(Exception):
-                self._zarr = zarr.open(zarr.SQLiteStore(self._largeImagePath), mode='r')
+                self._zarr = zarr.open(SQLiteStore(
+                    self._largeImagePath, **({'read_only': True} if zarr3 else {})), mode='r')
         if self._zarr is None:
             if not os.path.isfile(self._largeImagePath):
                 raise TileSourceFileNotFoundError(self._largeImagePath) from None
@@ -151,8 +255,22 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._created = False
         if not self._tempdir.exists():
             self._created = True
-        self._zarr_store = zarr.DirectoryStore(str(self._tempdir))
-        self._zarr = zarr.open(self._zarr_store, mode='a')
+        zarr_format = kwargs.get('zarr_format')
+        if not self._created:
+            # Another process created this image; use its format
+            zarr_format = 3 if (self._tempdir / 'zarr.json').exists() else 2
+        if zarr_format is None:
+            zarr_format = 3 if zarr3 else 2
+        if zarr_format not in _metadataFiles or (zarr_format == 3 and not zarr3):
+            msg = f'zarr_format {zarr_format} is not supported.'
+            raise TileSourceError(msg)
+        self._zarrFormat = zarr_format
+        if zarr3:
+            self._zarr_store = zarr.storage.LocalStore(str(self._tempdir))
+            self._zarr = zarr.open_group(self._zarr_store, mode='a', zarr_format=self._zarrFormat)
+        else:
+            self._zarr_store = zarr.DirectoryStore(str(self._tempdir))
+            self._zarr = zarr.open(self._zarr_store, mode='a')
         self._largeImagePath = None
         self._dims = {}
         self.sizeX = self.sizeY = self.levels = 0
@@ -209,6 +327,23 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             msg = 'Not an editable image'
             raise TileSourceError(msg)
 
+    def _createKwargs(self, axes=None):
+        """
+        Get the keyword arguments used when creating zarr arrays for an
+        editable image.
+
+        :param axes: an optional list of axis names in array order.  With
+            zarr format 3, these are stored as the array's dimension names,
+            which OME-Zarr 0.5 requires.
+        :returns: a dictionary of keyword arguments.
+        """
+        if not zarr3:
+            return {'write_empty_chunks': False}
+        kwargs = {'zarr_format': self._zarrFormat}
+        if axes is not None and self._zarrFormat == 3:
+            kwargs['dimension_names'] = list(axes)
+        return kwargs
+
     def _getGeneralAxes(self, arr):
         """
         Examine a zarr array an guess what the axes are.  We assume the two
@@ -259,12 +394,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             arrays that might be associated images.  These have to be culled
             for the actual groups used in the series.
         """
-        attrs = group.attrs.asdict() if group is not None else {}
+        attrs = _omeAttrs(group.attrs.asdict()) if group is not None else {}
         min_version = packaging.version.Version('0.4')
         is_ome = (
             isinstance(attrs.get('multiscales', None), list) and
-            'omero' in attrs and
-            isinstance(attrs['omero'], dict) and
+            len(attrs['multiscales']) > 0 and
             all(isinstance(m, dict) for m in attrs['multiscales']) and
             all(packaging.version.Version(m['version']) >= min_version
                 for m in attrs['multiscales'] if 'version' in m))
@@ -272,17 +406,18 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         axes_values = None
         axes_units = None
         if is_ome:
-            axes = {axis['name']: idx for idx, axis in enumerate(
-                attrs['multiscales'][0]['axes'])}
+            ome_axes = _omeAxes(attrs['multiscales'][0])
+            axes = {axis['name']: idx for idx, axis in enumerate(ome_axes)}
             axes_values = {
                 axis['name']: axis.get('values')
-                for axis in attrs['multiscales'][0]['axes']
+                for axis in ome_axes
             }
             axes_units = {
                 axis['name']: axis.get('unit')
-                for axis in attrs['multiscales'][0]['axes']
+                for axis in ome_axes
             }
-            if isinstance(attrs['omero'].get('channels'), list):
+            if (isinstance(attrs.get('omero'), dict) and
+                    isinstance(attrs['omero'].get('channels'), list)):
                 channels = [channel['label'] for channel in attrs['omero']['channels']]
                 if all(channel.startswith('Channel ') for channel in channels):
                     channels = None
@@ -325,13 +460,14 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         """
         if results is None:
             results = {'best': None, 'series': [], 'associated': []}
-        if isinstance(group, zarr.core.Array):
+        if isinstance(group, zarr.Array):
             self._scanZarrArray(None, group, results)
             return results
-        for val in group.values():
-            if isinstance(val, zarr.core.Array):
+        for key in sorted(group):
+            val = group[key]
+            if isinstance(val, zarr.Array):
                 self._scanZarrArray(group, val, results)
-            elif isinstance(val, zarr.hierarchy.Group):
+            elif isinstance(val, zarr.Group):
                 results = self._scanZarrGroup(val, results)
         return results
 
@@ -373,11 +509,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._mm_x = self._mm_y = None
         baseGroup, baseArray = self._series[0]
         try:
-            ms = baseGroup.attrs.asdict()['multiscales'][0]
-            self._mm_x = ms['datasets'][0]['coordinateTransformations'][0][
-                'scale'][self._axes['x']] * unit[ms['axes'][self._axes['x']]['unit']]
-            self._mm_y = ms['datasets'][0]['coordinateTransformations'][0][
-                'scale'][self._axes['y']] * unit[ms['axes'][self._axes['y']]['unit']]
+            ms = _omeAttrs(baseGroup.attrs.asdict())['multiscales'][0]
+            axes = _omeAxes(ms)
+            scale = _omeScale(ms['datasets'][0])
+            self._mm_x = scale[self._axes['x']] * unit[axes[self._axes['x']]['unit']]
+            self._mm_y = scale[self._axes['y']] * unit[axes[self._axes['y']]['unit']]
         except Exception:
             pass
 
@@ -609,7 +745,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         with self._tileLock:
             img = np.transpose(arr, trans).squeeze()
         if len(img.shape) == 2:
-            img.expand_dims(axis=2)
+            img = np.expand_dims(img, axis=2)
         return large_image.tilesource.base._imageToPIL(img)
 
     @methodcache()
@@ -670,7 +806,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if axes[-1] != 's':
             axes.append('s')
             tile = tile[..., np.newaxis]
-        if mask is not None and len(axes) - 1 == len(mask.shape):
+        if mask is not None and len(mask.shape) == 2:
             mask = mask[:, :, np.newaxis]
         if 'x' not in axes or 'y' not in axes:
             err = 'Invalid value for axes. Must contain "y" and "x".'
@@ -723,12 +859,11 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     [(0, s - arr.shape[i]) for i, s in enumerate(new_shape)],
                 )
                 new_arr = zarr.zeros(
-                    new_shape, chunks=chunking, dtype=arr.dtype,
-                    write_empty_chunks=False)
+                    new_shape, chunks=chunking, dtype=arr.dtype, **self._createKwargs())
                 new_arr[:] = arr[:]
                 arr = new_arr
             else:
-                arr.resize(*new_shape)
+                arr.resize(new_shape)
         return arr
 
     def addTile(self, tile, x=0, y=0, mask=None, axes=None, **kwargs):
@@ -793,7 +928,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 # if writing to base data, invalidate generated levels
                 for path in list(current_arrays):
                     if path != store_path:
-                        self._zarr_store.rmdir(path)
+                        del self._zarr[path]
                         self._arrays = None
             chunking = None
             if store_path not in current_arrays:
@@ -810,7 +945,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                     chunks=chunking,
                     store=self._zarr_store,
                     path=store_path,
-                    write_empty_chunks=False,
+                    **self._createKwargs(axes),
                 )
                 self._arrays = None
                 chunking = None
@@ -835,11 +970,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 arr[placement_slices] = tile
             if chunking:
                 zarr.array(
-                    arr,
+                    arr[...] if zarr3 else arr,
                     chunks=chunking,
                     overwrite=True,
                     store=self._zarr_store,
                     path=store_path,
+                    **self._createKwargs(axes),
                 )
                 self._arrays = None
 
@@ -882,6 +1018,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 data,
                 store=self._zarr_store,
                 path=f'{imageKey}/image',
+                **self._createKwargs(),
             )
             self._associatedImages[imageKey] = (group, arr)
             self._markChanged()
@@ -946,7 +1083,10 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         self._lastStamp = stamp
         self._arrays = None
         # zarr caches group attributes in memory, so reopen the group
-        self._zarr = zarr.open_group(self._zarr_store, mode='a')
+        if zarr3:
+            self._zarr = zarr.open_group(self._zarr_store, mode='a', zarr_format=self._zarrFormat)
+        else:
+            self._zarr = zarr.open_group(self._zarr_store, mode='a')
         with contextlib.suppress(TileSourceError):
             # Don't write our metadata first; that would replace what the
             # other process wrote
@@ -971,6 +1111,47 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             self._arrays = dict(self._zarr.arrays())
         return self._arrays
 
+    def _getChannelsInternalMetadata(self, base_array, channel_axis):
+        """
+        Get the omero channels metadata for the image.
+
+        :param base_array: the zarr array of the base level of the image.
+        :param channel_axis: the index of the channel axis in the array.
+        :returns: a list of channel dictionaries.
+        """
+        # The omero specification requires a window for each channel.
+        # Scanning the data for the actual range is expensive, so use the
+        # range of the data type.
+        dtype = np.dtype(base_array.dtype)
+        if dtype.kind in 'iu':
+            window_min, window_max = int(np.iinfo(dtype).min), int(np.iinfo(dtype).max)
+        elif dtype.kind == 'b':
+            window_min, window_max = 0, 1
+        else:
+            window_min, window_max = 0.0, 1.0
+        channels = []
+        for c in range(base_array.shape[channel_axis]):
+            channel_metadata = {
+                'active': True,
+                'coefficient': 1,
+                'color': 'FFFFFF',
+                'family': 'linear',
+                'inverted': False,
+                'label': f'Band {c + 1}',
+                'window': {
+                    'end': window_max,
+                    'max': window_max,
+                    'min': window_min,
+                    'start': window_min,
+                },
+            }
+            if len(self._channelNames) > c:
+                channel_metadata['label'] = self._channelNames[c]
+            if len(self._channelColors) > c:
+                channel_metadata['color'] = self._channelColors[c]
+            channels.append(channel_metadata)
+        return channels
+
     def _writeInternalMetadata(self):
         """
         Write metadata to Zarr attributes.
@@ -980,7 +1161,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         with self._threadLock, self._processLock():
             self._syncFromOtherProcesses()
             name = str(self._tempdir.name).split('/')[-1]
-            arrays = self._currentArrays()
+            arrays = dict(sorted(self._currentArrays().items()))
             datasets = []
             axes = []
             channels = []
@@ -1009,41 +1190,12 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         rdefs['defaultZ'] = 0
                     axes.append(self._getAxisInternalMetadata(a))
             if channel_axis is not None and len(arrays) > 0:
-                base_array = list(arrays.values())[0]
-                base_shape = base_array.shape
-                for c in range(base_shape[channel_axis]):
-                    channel_metadata = {
-                        'active': True,
-                        'coefficient': 1,
-                        'color': 'FFFFFF',
-                        'family': 'linear',
-                        'inverted': False,
-                        'label': f'Band {c + 1}',
-                    }
-                    # slicing = tuple(
-                    #     slice(None)
-                    #     if k != ('c' if 'c' in self._axes else 's')
-                    #     else c
-                    #     for k, v in self._axes.items()
-                    # )
-                    # channel_data = base_array[slicing]
-                    # channel_min = np.min(channel_data)
-                    # channel_max = np.max(channel_data)
-                    # channel_metadata['window'] = {
-                    #     'end': channel_max,
-                    #     'max': channel_max,
-                    #     'min': channel_min,
-                    #     'start': channel_min,
-                    # }
-                    if len(self._channelNames) > c:
-                        channel_metadata['label'] = self._channelNames[c]
-                    if len(self._channelColors) > c:
-                        channel_metadata['color'] = self._channelColors[c]
-                    channels.append(channel_metadata)
+                channels = self._getChannelsInternalMetadata(
+                    list(arrays.values())[0], channel_axis)
             # Guidelines from https://ngff.openmicroscopy.org/latest/
+            version = _omeVersions[self._zarrFormat]
             attrs = {
                 'multiscales': [{
-                    'version': '0.5',
                     'name': name,
                     'axes': axes,
                     'datasets': datasets,
@@ -1056,18 +1208,29 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 }],
                 'omero': {
                     'id': 1,
-                    'version': '0.5',
                     'name': name,
                     'channels': channels,
                     'rdefs': rdefs,
                 },
-                'bioformats2raw.layout': 3,
             }
+            if self._zarrFormat == 3:
+                # OME-Zarr 0.5 and later store the metadata under an "ome"
+                # key with a single version
+                attrs = {'ome': {'version': version, **attrs}}
+            else:
+                # OME-Zarr 0.4 stores the keys at the top level, each with a
+                # version
+                attrs['multiscales'][0]['version'] = version
+                attrs['omero']['version'] = version
+            attrs = _jsonSafe(attrs)
             # Writing attributes is slow and makes other processes reread
             # them, so only do so if they changed
             current = self._zarr.attrs.asdict()
             if any(current.get(k) != v for k, v in attrs.items()):
-                self._zarr.attrs.update(attrs)
+                if zarr3:
+                    self._zarr.update_attributes(attrs)
+                else:
+                    self._zarr.attrs.update(attrs)
                 self._markChanged()
 
     @property
@@ -1451,7 +1614,7 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
 
         if self.crop:
             left, top, width, height = self.crop
-            source = new()
+            source = new(zarr_format=self._zarrFormat)
             source._zarr.attrs.update(self._zarr.attrs)
             for frame in self.getMetadata().get('frames', [{'Index': 0}]):
                 frame_position = {
@@ -1506,18 +1669,19 @@ class ZarrFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                         str(source._tempdir), path,
                         ignore=shutil.ignore_patterns(*_internalFiles))
                 elif suffix in ['.db', '.sqlite']:
-                    sqlite_store = zarr.SQLiteStore(path)
+                    sqlite_store = SQLiteStore(path)
                     _copyStore(source._zarr_store, sqlite_store)
                     sqlite_store.close()
                 elif suffix == '.zip':
-                    zip_store = zarr.ZipStore(path)
+                    zip_store = (zarr.storage.ZipStore(path, mode='w') if zarr3 else
+                                 zarr.ZipStore(path))
                     _copyStore(source._zarr_store, zip_store)
                     zip_store.close()
 
         else:
             from large_image_converter import convert
 
-            attrs_path = source._tempdir / '.zattrs'
+            attrs_path = source._tempdir / _metadataFiles[source._zarrFormat]
             params = {}
             if lossy and self.dtype == np.uint8:
                 params['compression'] = 'jpeg'
@@ -1546,5 +1710,9 @@ def new(*args, **kwargs):
     """
     Create a new image, collecting the results from patches of numpy arrays or
     smaller images.
+
+    :param zarr_format: the zarr format to write: 2 or 3.  This defaults to 3
+        if the zarr library supports it, which produces OME-Zarr 0.5 files.
+        Zarr format 2 produces OME-Zarr 0.4 files that can be read by zarr 2.
     """
     return ZarrFileTileSource(NEW_IMAGE_PATH_FLAG + str(uuid.uuid4()), *args, **kwargs)
