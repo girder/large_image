@@ -15,7 +15,8 @@ from ..eager_helpers import EAGER_TEST_REGION, run_eager_iterator_with_pytorch_t
         v2.Compose(
             [
                 v2.Resize(224),
-                v2.ToTensor(),
+                v2.ToImage(),
+                v2.ToDtype(torch.float32, scale=True),
                 v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
             ],
         ),
@@ -48,7 +49,8 @@ if __name__ == '__main__':
     transform = v2.Compose(
         [
             v2.Resize(224),
-            v2.ToTensor(),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ],
     )
