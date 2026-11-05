@@ -198,7 +198,7 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if not path.is_file():
             return
         try:
-            newxml = path.open('r').read()
+            newxml = path.read_text()
         except Exception:
             return
         try:
