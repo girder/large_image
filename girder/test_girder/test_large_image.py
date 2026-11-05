@@ -851,7 +851,8 @@ def testConfigFileEndpoints(server, admin, fsAssetstore):
                 type='application/x-girder-ini')
             assert utilities.respStatus(resp) == 200
             assert os.path.exists(os.environ['GIRDER_CONFIG'])
-            assert open(os.environ['GIRDER_CONFIG']).read() == config1
+            with open(os.environ['GIRDER_CONFIG']) as fh:
+                assert fh.read() == config1
 
             resp = server.request(
                 method='POST', path='/large_image/config/replace',
@@ -864,7 +865,8 @@ def testConfigFileEndpoints(server, admin, fsAssetstore):
                 params=dict(restart='false'), body=formatted, user=admin,
                 type='application/x-girder-ini')
             assert utilities.respStatus(resp) == 200
-            assert open(os.environ['GIRDER_CONFIG']).read() == formatted
+            with open(os.environ['GIRDER_CONFIG']) as fh:
+                assert fh.read() == formatted
     finally:
         os.environ.pop('GIRDER_CONFIG', None)
         if oldGirderConfig is not None:
