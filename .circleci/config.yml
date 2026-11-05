@@ -34,6 +34,8 @@ commands:
           # command: PYTEST_ADDOPTS="--reruns=3 --numprocesses=0" tox -e << parameters.toxenv >> | cat; test ${PIPESTATUS[0]} -eq 0
           command: |
             (while true; do date; sleep 60; done) &
+            # tox refuses to stage packages in group/world-writable directories
+            umask 0022
             _JAVA_OPTIONS="-Xmx2g" LARGE_IMAGE_CACHE_TILESOURCE_MAXIMUM=3 COVERAGE_CORE=sysmon PYTEST_NUMPROCESSES=2 PYTEST_ADDOPTS="--reruns=3" << parameters.environ >> tox -e << parameters.toxenv
             >> | cat; test ${PIPESTATUS[0]} -eq 0
   switchpython:
@@ -288,7 +290,7 @@ jobs:
           command: apt-get update -yq && apt-get install -yq pandoc && pandoc --version
       - run:
           name: Permissions for link checker
-          command: find /root -type d -exec chmod 755 {} \+
+          command: mkdir -p build && find /root -type d -exec chmod 755 {} \+
       - tox:
           toxenv: lint,lintclient,notebook
       - run:

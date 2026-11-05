@@ -2963,7 +2963,8 @@ def test_svs_with_pytorch_transform(test_path):
     transform = v2.Compose(
         [
             v2.Resize(224),
-            v2.ToTensor(),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ],
     )
@@ -2984,7 +2985,8 @@ def run_svs_with_efficientnet_experiment(test_path, file_dir=None):
     transform = v2.Compose(
         [
             v2.Resize(224),
-            v2.ToTensor(),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ],
     )
@@ -3048,7 +3050,8 @@ def run_svs_sobel_experiment(test_path, file_dir=None):
     transform = v2.Compose(
         [
             v2.Resize(224),
-            v2.ToTensor(),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
             v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ],
     )

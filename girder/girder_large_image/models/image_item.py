@@ -288,7 +288,8 @@ class ImageItem(Item):
             try:
                 file = File().load(item['largeImage']['fileId'], force=True)
                 localPath = File().getLocalFilePath(file)
-                open(localPath, 'rb').read(1)
+                with open(localPath, 'rb') as fh:
+                    fh.read(1)
             except OSError:
                 logger.warning(
                     'Is the original data reachable and readable (it fails via %r)?', localPath)

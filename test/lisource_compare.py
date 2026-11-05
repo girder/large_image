@@ -58,7 +58,8 @@ def write_thumb(img, source, prefix, name, opts=None, idx=None, idx2=None):
     idxStr = '' if not idx else '-%s' % str(idx)
     idx2Str = '' if not idx2 and not idx else '-%s' % str(idx2)
     path = '%s-%s-%s%s%s.%s' % (prefix, name, source, idxStr, idx2Str, ext)
-    open(path, 'wb').write(img)
+    with open(path, 'wb') as fh:
+        fh.write(img)
 
 
 def float_format(val, length):

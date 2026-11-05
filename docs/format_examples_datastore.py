@@ -77,7 +77,7 @@ format_examples = [
     ),
     dict(
         name='Zarr',
-        extensions=['zarr', 'zarray', 'zattrs', 'zgroup', 'zip', 'db', 'sqlite'],
+        extensions=['zarr', 'zarray', 'zattrs', 'zgroup', 'json', 'zip', 'db', 'sqlite'],
         reference='https://wiki.earthdata.nasa.gov/display/ESO/Zarr+Format',
         examples=[
             dict(

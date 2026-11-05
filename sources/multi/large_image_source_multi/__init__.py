@@ -60,6 +60,30 @@ def _lazyImportSkimageTransform():
             raise TileSourceError(msg)
 
 
+def _estimateTransform(cls, src, dst):
+    """
+    Estimate a scikit-image transform from corresponding points.  This uses
+    from_estimate when available (scikit-image >= 0.26) and estimate
+    otherwise.
+
+    :param cls: a scikit-image transform class, such as AffineTransform.
+    :param src: an array of source points.
+    :param dst: an array of destination points.
+    :returns: an instance of the transform class.
+    """
+    if hasattr(cls, 'from_estimate'):
+        transformer = cls.from_estimate(src, dst)
+        if not transformer:
+            msg = f'Cannot compute the warp transform: {transformer}'
+            raise TileSourceError(msg)
+        return transformer
+    transformer = cls()
+    if not transformer.estimate(src, dst):
+        msg = f'Cannot compute the warp transform: {cls.__name__} estimation failed'
+        raise TileSourceError(msg)
+    return transformer
+
+
 SourceEntrySchema = {
     'type': 'object',
     'additionalProperties': True,
@@ -697,12 +721,12 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             m[0][2] += warp_dst[0][0] - warp_src[0][0]
             m[1][2] += warp_dst[0][1] - warp_src[0][1]
         elif useSimilarity:
-            transformer = skimage_transform.SimilarityTransform()
-            transformer.estimate(warp_src, warp_dst)
+            transformer = _estimateTransform(
+                skimage_transform.SimilarityTransform, warp_src, warp_dst)
             m = transformer.params
         elif warp_src.shape[0] <= 3:
-            transformer = skimage_transform.AffineTransform()
-            transformer.estimate(warp_src, warp_dst)
+            transformer = _estimateTransform(
+                skimage_transform.AffineTransform, warp_src, warp_dst)
             m = np.dot(transformer.params, m)
         else:
             warp_dst = np.dot(m, np.hstack([warp_dst, np.ones((len(warp_dst), 1))]).T).T[:, :2]
@@ -757,8 +781,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if warp is None:
             transcorners = np.dot(m, corners.T)
         elif skimage_transform is not None:
-            transformer = skimage_transform.ThinPlateSplineTransform()
-            transformer.estimate(warp.get('src'), warp.get('dst'))
+            transformer = _estimateTransform(
+                skimage_transform.ThinPlateSplineTransform, warp.get('src'), warp.get('dst'))
             # We might want to adjust the number of points based on some
             # criteria such as source image size or number of warp points
             corners = self._perimeterPoints(x0, y0, x1, y1, 8)
@@ -1272,8 +1296,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
             dstcorners = corners
             srccorners = np.dot(np.linalg.inv(transform), np.array(corners).T).T.tolist()
         else:
-            transformer = skimage_transform.ThinPlateSplineTransform()
-            transformer.estimate(warp_dst, warp_src)
+            transformer = _estimateTransform(
+                skimage_transform.ThinPlateSplineTransform, warp_dst, warp_src)
             # Is there any way to be smarter about the sampling?
             dstcorners = self._perimeterPoints(0, 0, outw, outh, 8)
             srccorners = transformer(dstcorners)
@@ -1373,8 +1397,8 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         if warp is None:
             transformer = skimage_transform.AffineTransform(np.linalg.inv(transform))
         else:
-            transformer = skimage_transform.ThinPlateSplineTransform()
-            transformer.estimate(warp_dst, warp_src)
+            transformer = _estimateTransform(
+                skimage_transform.ThinPlateSplineTransform, warp_dst, warp_src)
         # skimage.transform.warp is faster and has less artifacts than
         # scipy.ndimage.affine_transform.  It is faster than using cupy's
         # version of scipy's affine_transform when the source and destination

@@ -370,8 +370,7 @@ class OMETiffFileTileSource(TiffFileTileSource, metaclass=LruCacheMetaclass):
         starts = ['StructuredAnnotations:OriginalMetadata:Series 0 ',
                   'StructuredAnnotations:OriginalMetadata:']
         for start in starts:
-            if prefix.startswith(start):
-                prefix = prefix[len(start):]
+            prefix = prefix.removeprefix(start)
         if isinstance(entry, dict):
             for key, val in entry.items():
                 pkey = f'{prefix}:{key}'.strip(':')
