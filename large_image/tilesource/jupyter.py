@@ -346,7 +346,7 @@ class Map:
         if not self._geospatial:
             m.fit_bounds(bounds=[[0, 0], [metadata['sizeY'], metadata['sizeX']]])
         if self._geospatial:
-            m.add_layer(layer)
+            m.add(layer)
         self._map = m
         children.append(m)
 
