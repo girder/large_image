@@ -658,6 +658,9 @@ class TifffileFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 if len(self._zarrcache) > 10:
                     self._zarrcache = {}
                 za = zarr.open(series.aszarr(), mode='r')
+                if isinstance(za, zarr.Group):
+                    # zarr 3 groups can only be indexed by string keys
+                    za = [za[str(idx)] for idx in range(len(series.levels))]
                 hasgbs = hasattr(za[0], 'get_basic_selection')
                 if not hasgbs and math.prod(series.shape) < 256 * 1024 ** 2:
                     za = series.asarray()

@@ -35,11 +35,14 @@ setup(
     python_requires='>=3.10',
     install_requires=[
         f'large-image{limit_version}',
-        # zarr 3 removes the SQLiteStore
-        'zarr<3',
+        # zarr 3 removes the SQLiteStore; zarr-sqlite restores it but
+        # requires Python >= 3.12
+        'zarr<3; python_version < "3.12"',
         # numcodecs had been required by zarr, but now needs to be asked for
         # 0.16 requires zarr 3 (but does specify such)
-        'numcodecs<0.16',
+        'numcodecs<0.16; python_version < "3.12"',
+        'zarr>=3.2.1; python_version >= "3.12"',
+        'zarr-sqlite; python_version >= "3.12"',
         # Without imagecodecs-numcodecs, some jpeg encoded data cannot be read
         'imagecodecs-numcodecs!=2024.9.22,!=2026.8.16',
         # Needs is_singleton
