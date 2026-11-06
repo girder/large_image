@@ -94,7 +94,7 @@ SourceAndFiles = {
         'skip': r'\.czi$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)',  # noqa
     },
-    'zarr': {'read': r'\.(zarr|zgroup|zattrs|db|zarr\.zip)$'},
+    'zarr': {'read': r'(\.(zarr|zgroup|zattrs|db|zarr\.zip)|zarr\.json)$'},
 }
 
 

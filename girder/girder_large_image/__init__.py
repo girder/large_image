@@ -105,9 +105,10 @@ def _postUpload(event):
             localPath = File().getLocalFilePath(fileObj)
             for _ in range(300):
                 size = os.path.getsize(localPath)
-                if size == fileObj['size'] and len(
-                        open(localPath, 'rb').read(500)) == min(size, 500):
-                    break
+                if size == fileObj['size']:
+                    with open(localPath, 'rb') as fh:
+                        if len(fh.read(500)) == min(size, 500):
+                            break
                 logger.info(
                     f'S3 upload not fully present ({size}/{fileObj["size"]} bytes reported)')
                 time.sleep(0.1)
@@ -698,6 +699,74 @@ def yamlConfigFile(folder, name, user):
     addConfig = {} if addConfig is None else addConfig
     addSettingsToConfig(addConfig, user, name)
     return addConfig
+
+
+def userPrivateFolder(user, create=False):
+    """
+    Get a user's private folder.  This is the top-level user folder with the
+    lowest id that is not public; it is usually named Private, but this
+    doesn't depend on the name.  Callers are responsible for access checks.
+
+    :param user: a Girder user model.
+    :param create: if True, create the folder if it does not exist.  It is
+        named Private unless that name is already used, in which case a
+        numeric suffix is added.
+    :returns: the folder model or None.
+    """
+    folder = Folder().findOne({
+        'parentId': user['_id'], 'parentCollection': 'user',
+        'public': {'$ne': True}}, sort=[('_id', SortDir.ASCENDING)])
+    if folder or not create:
+        return folder
+    name = 'Private'
+    suffix = 1
+    while Folder().findOne({
+            'parentId': user['_id'], 'parentCollection': 'user', 'name': name}):
+        suffix += 1
+        name = 'Private %d' % suffix
+    return Folder().createFolder(
+        user, name, parentType='user', public=False, creator=user)
+
+
+def userYamlConfigFile(user, name):
+    """
+    Get a named config file from a user's private folder. Unlike
+    yamlConfigFile, this does not walk up a folder tree; it is intended for
+    per-user preferences that are combined with a folder's config by the
+    client. Callers are responsible for access checks.
+
+    :param user: the Girder user model whose file is loaded.
+    :param name: the name of the config file.
+    :returns: the parsed config or an empty dictionary if there is none.
+    """
+    folder = userPrivateFolder(user)
+    item = Item().findOne({'folderId': folder['_id'], 'name': name}) if folder else None
+    if item:
+        for file in Item().childFiles(item):
+            if file['size'] > 10 * 1024 ** 2:
+                logger.info('Not loading %s -- too large', file['name'])
+                continue
+            with File().open(file) as fptr:
+                config = yaml.safe_load(fptr)
+            if isinstance(config, list) and len(config) == 1:
+                config = config[0]
+            if config is not None:
+                return config
+    return {}
+
+
+def userYamlConfigFileWrite(user, name, yaml_config, writer):
+    """
+    Create or replace a named config file in a user's private folder.
+    Callers are responsible for access checks.
+
+    :param user: the Girder user model whose file is written.
+    :param name: the name of the config file.
+    :param yaml_config: a yaml config string.
+    :param writer: the user performing the write.
+    """
+    folder = userPrivateFolder(user, create=True)
+    return yamlConfigFileWrite(folder, name, writer, yaml_config, False)
 
 
 def yamlConfigFileWrite(folder, name, user, yaml_config, user_context):

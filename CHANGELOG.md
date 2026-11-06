@@ -1,10 +1,19 @@
 # Change Log
 
-## 1.35.8
+## 1.36.0
+
+### Features
+
+- Use zarr 3 and zarr-sqlite on Python 3.12 and newer ([#2145](../../pull/2145))
 
 ### Improvements
 
 - Free tile sources without waiting for the cyclic garbage collector ([#2140](../../pull/2140))
+
+### Bug Fixes
+
+- Resolve a possible race condition in the zarr sink ([#2142](../../pull/2142))
+- Fix reading single-band associated images and adding masked tiles with extra axes in the zarr source ([#2145](../../pull/2145))
 
 ## 1.35.7
 

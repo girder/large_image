@@ -527,3 +527,10 @@ def testThinPlateSplineInvalid():
         'warp src and warp dst must have at least one point.'
     )):
         large_image_source_multi.open(json.dumps(spec))
+
+    spec['sources'][0]['position']['warp'] = dict(
+        src=[[1, 1], [1, 1]],
+        dst=[[3, 2], [5, 4]],
+    )
+    with pytest.raises(Exception, match='Cannot compute the warp transform'):
+        large_image_source_multi.open(json.dumps(spec))
