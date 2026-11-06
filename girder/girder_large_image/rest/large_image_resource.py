@@ -758,7 +758,8 @@ class LargeImageResource(Resource):
         if 'GIRDER_CONFIG' in os.environ:
             path = os.environ['GIRDER_CONFIG']
         if os.path.exists(path):
-            contents = open(path).read()
+            with open(path) as fh:
+                contents = fh.read()
             if contents == config:
                 return {'status': 'no change'}
             newpath = path + '.' + time.strftime(
@@ -766,7 +767,8 @@ class LargeImageResource(Resource):
             logger.info('Copying existing config file from %s to %s', path, newpath)
             shutil.copy2(path, newpath)
         logger.warning('Replacing config file %s', path)
-        open(path, 'w').write(config)
+        with open(path, 'w') as fh:
+            fh.write(config)
 
         class Restart(cherrypy.process.plugins.Monitor):
             def __init__(self, bus, frequency=1):

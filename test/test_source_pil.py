@@ -45,7 +45,8 @@ def testTilesFromPIL():
 def testTileRedirects():
     # Test redirects, use a JPEG
     imagePath = datastore.fetch('sample_Easy1.jpeg')
-    rawimage = open(imagePath, 'rb').read()
+    with open(imagePath, 'rb') as fh:
+        rawimage = fh.read()
     source = large_image_source_pil.open(imagePath, style={'icc': False})
     # No encoding or redirect should just get a JPEG
     image = source.getTile(0, 0, 0)

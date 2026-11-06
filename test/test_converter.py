@@ -109,7 +109,8 @@ def testConvertOverwrite(tmpdir):
     testDir = os.path.dirname(os.path.realpath(__file__))
     imagePath = os.path.join(testDir, 'test_files', 'yb10kx5k.png')
     outputPath = os.path.join(tmpdir, 'out.tiff')
-    open(outputPath, 'w').write('placeholder')
+    with open(outputPath, 'w') as fh:
+        fh.write('placeholder')
     with pytest.raises(Exception):
         large_image_converter.convert(imagePath, outputPath)
     large_image_converter.convert(imagePath, outputPath, overwrite=True)
