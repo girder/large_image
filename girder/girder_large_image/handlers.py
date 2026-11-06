@@ -60,9 +60,10 @@ def _postUpload(event):
             localPath = File().getLocalFilePath(fileObj)
             for _ in range(300):
                 size = os.path.getsize(localPath)
-                if size == fileObj['size'] and len(
-                        open(localPath, 'rb').read(500)) == min(size, 500):
-                    break
+                if size == fileObj['size']:
+                    with open(localPath, 'rb') as fh:
+                        if len(fh.read(500)) == min(size, 500):
+                            break
                 logger.info(
                     f'S3 upload not fully present ({size}/{fileObj["size"]} bytes reported)')
                 time.sleep(0.1)

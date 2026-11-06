@@ -3,7 +3,7 @@ FROM python:3.14-slim AS build
 
 # Need git for setuptools_scm
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git curl \
+    && apt-get install -y --no-install-recommends git curl libatomic1 \
     && apt-get purge -y --auto-remove \
     && rm -rf /var/lib/apt/lists/*
 

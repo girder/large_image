@@ -160,7 +160,8 @@ def testNewAndWriteJPEG(tmp_path):
     outputPath = os.path.join(tmp_path, 'temp.jpeg')
     out.write(outputPath, vips_kwargs=dict(Q=80))
     assert os.path.getsize(outputPath) > 50000
-    image = open(outputPath, 'rb').read()
+    with open(outputPath, 'rb') as fh:
+        image = fh.read()
     assert image[:len(utilities.JPEGHeader)] == utilities.JPEGHeader
 
 

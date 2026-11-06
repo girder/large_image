@@ -299,7 +299,8 @@ class BioformatsFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
         header = b''
         if os.path.isfile(largeImagePath):
             try:
-                header = builtins.open(largeImagePath, 'rb').read(5)
+                with builtins.open(largeImagePath, 'rb') as fh:
+                    header = fh.read(5)
             except Exception:
                 msg = 'File cannot be opened via Bioformats'
                 raise TileSourceError(msg)

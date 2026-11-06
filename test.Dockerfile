@@ -137,6 +137,7 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | b
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm && \
     npm install 'brace-expansion@^1.1.12' && \
     npm install 'cross-spawn@^6.0.6' && \
+    npm install 'decode-uri-component@^0.5.1' && \
     npm install 'form-data@^2.5.5' && \
     npm install 'http-cache-semantics@^4.1.1' && \
     npm install 'minimatch@^3.1.3' && \
@@ -162,6 +163,8 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | b
     npm install 'http-cache-semantics@^4.1.1' && \
     cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/glob && \
     npm install 'minimatch@^3.1.3' && \
+    cd /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/query-string && \
+    npm install 'decode-uri-component@^0.5.1' && \
     # We can't actually upgrade tar past 6.x \
     sed -i 's/4\.4\.19/8.0.0/g' /root/.nvm/versions/node/v14.21.3/lib/node_modules/npm/node_modules/tar/package.json && \
     npm --version && \

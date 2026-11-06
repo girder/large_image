@@ -94,7 +94,7 @@ SourceAndFiles = {
         'skip': r'\.czi$',
         'skipTiles': r'(sample_image\.ptif|one_layer_missing_tiles|JK-kidney_B-gal_H3_4C_1-500sec\.jp2|extraoverview|synthetic_untiled)',  # noqa
     },
-    'zarr': {'read': r'\.(zarr|zgroup|zattrs|db|zarr\.zip)$'},
+    'zarr': {'read': r'(\.(zarr|zgroup|zattrs|db|zarr\.zip)|zarr\.json)$'},
 }
 
 
@@ -954,3 +954,38 @@ def testGetRegionTiffUint16KeepsBitDepth(tmp_path, tiffCompression):
     result = np.array(PIL.Image.open(io.BytesIO(data)))
     assert result.dtype == np.uint16
     assert np.array_equal(result, image[50:200, 100:300])
+
+
+@pytest.mark.parametrize(('sourceName', 'filename'), [
+    ('test', None),
+    ('pil', 'test_L_8.png'),
+    ('tiff', 'test_orient1.tif'),
+    ('gdal', 'rgb_geotiff.tiff'),
+])
+def testSourceFreedByReferenceCounting(sourceName, filename):
+    # A tile source that isn't part of a reference cycle is freed, and its
+    # file handles closed, as soon as it is released (for instance, evicted
+    # from the tile source cache), not whenever the cyclic garbage collector
+    # next runs.  Each case names its source so the result doesn't depend on
+    # which source large_image.open would pick.
+    import gc
+    import weakref
+
+    module = pytest.importorskip(f'large_image_source_{sourceName}')
+    gcWasEnabled = gc.isenabled()
+    gc.collect()
+    gc.disable()
+    try:
+        if filename is None:
+            source = module.open(noCache=True)
+        else:
+            testDir = os.path.dirname(os.path.realpath(__file__))
+            source = module.open(
+                os.path.join(testDir, 'test_files', filename), noCache=True)
+        source.getTile(0, 0, 0)
+        ref = weakref.ref(source)
+        del source
+        assert ref() is None
+    finally:
+        if gcWasEnabled:
+            gc.enable()

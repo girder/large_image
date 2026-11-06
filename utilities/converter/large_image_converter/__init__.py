@@ -472,7 +472,8 @@ def _convert_to_jp2k(path, **kwargs):
             except concurrent.futures.TimeoutError:
                 continue
             ifd, idx, processed, tmppath, task = tasks.pop(0)
-            data = open(tmppath, 'rb').read()
+            with open(tmppath, 'rb') as fh:
+                data = fh.read()
             os.unlink(tmppath)
             # Remove first comment marker.  It adds needless bytes
             compos = data.find(b'\xff\x64')
