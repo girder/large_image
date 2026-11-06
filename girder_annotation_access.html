@@ -1,0 +1,195 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<link rel="alternate" type="text/markdown" href="girder_annotation_access.html.md">
+<link rel="describedby" href="llms.txt">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Girder Annotation Access Control &mdash; large_image  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e9af8ede" />
+
+  
+    <link rel="shortcut icon" href="_static/K.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Caching Large Image in Girder" href="girder_caching.html" />
+    <link rel="prev" title="Girder Annotation Configuration Options" href="girder_annotation_config_options.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            large_image
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tilesource_options.html">Tile Source Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config_options.html">Configuration Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_conversion.html">Image Conversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats.html">Image Formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_source_specification.html">Multi Source Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="annotations.html">Annotation Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caching.html">Caching in Large Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">Jupyter Notebook Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Developer Guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="girder_index.html">Girder Integration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="girder_config_options.html">Girder Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="girder_annotation_config_options.html">Girder Annotation Configuration Options</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Girder Annotation Access Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#required-access">Required Access</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-annotations">Creating Annotations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#changing-folder-access">Changing Folder Access</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#moving-items-and-annotations">Moving Items and Annotations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#copying-items-and-folders">Copying Items and Folders</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#changing-annotation-access">Changing Annotation Access</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#changing-access-for-all-annotations-in-a-folder">Changing Access for All Annotations in a Folder</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="girder_caching.html">Caching Large Image in Girder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dicomweb_assetstore.html">DICOMweb Assetstore</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plottable.html">Plottable Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html">Upgrading from Previous Versions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build/girder_large_image/modules.html">girder_large_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_build/girder_large_image_annotation/modules.html">girder_large_image_annotation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api_index.html">API Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">large_image</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="girder_index.html">Girder Integration</a></li>
+      <li class="breadcrumb-item active">Girder Annotation Access Control</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/girder_annotation_access.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="girder-annotation-access-control">
+<h1>Girder Annotation Access Control<a class="headerlink" href="#girder-annotation-access-control" title="Link to this heading"></a></h1>
+<p>Annotations have their own access control lists, separate from the item they are attached to.</p>
+<p>Girder items do not have access control lists of their own; access to an item is determined by the folder that contains it.  Annotations are different: each annotation stores its own list of users and groups with access, plus its own public flag.  A user’s access to an annotation does not automatically match their access to the item’s folder.</p>
+<section id="required-access">
+<h2>Required Access<a class="headerlink" href="#required-access" title="Link to this heading"></a></h2>
+<p>Site administrators have full access to all annotations.  For other users:</p>
+<ul class="simple">
+<li><p>Listing or reading the annotations on an item requires read access to the item (that is, to its folder) and read access to each annotation.</p></li>
+<li><p>Creating an annotation requires write access to the item’s folder, or the <code class="docutils literal notranslate"><span class="pre">Create</span> <span class="pre">annotations</span></code> access flag on that folder.</p></li>
+<li><p>Modifying an annotation requires write access to the annotation and either write access to the item or the <code class="docutils literal notranslate"><span class="pre">Create</span> <span class="pre">annotations</span></code> access flag.</p></li>
+<li><p>Viewing or changing the access control list of an annotation requires admin access to the annotation.</p></li>
+</ul>
+</section>
+<section id="creating-annotations">
+<h2>Creating Annotations<a class="headerlink" href="#creating-annotations" title="Link to this heading"></a></h2>
+<p>When an annotation is created, the access control list and public flag of the folder containing the item are copied to the annotation.  The user who created the annotation is then given admin access to it.</p>
+<p>This is a one-time copy.  As a consequence, users with write or admin access to a folder get write or admin access to every annotation created in that folder, including annotations created by other users.</p>
+<p>Copying an annotation to another item (<code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/annotation/{id}/copy</span></code>) creates a new annotation. It follows the same rules as creating one: the new annotation gets the access of the destination item’s folder, and the user who copied it gets admin access.</p>
+</section>
+<section id="changing-folder-access">
+<h2>Changing Folder Access<a class="headerlink" href="#changing-folder-access" title="Link to this heading"></a></h2>
+<p>Changing the access control list or public flag of a folder does not change the access control lists of annotations that already exist on items in that folder, including when the change is applied to subfolders.  For example:</p>
+<ul class="simple">
+<li><p>If a folder is shared with a user after annotations have been created, that user can see the items but not the existing annotations.  Annotations created after the folder was shared will be visible to that user.</p></li>
+<li><p>If a user’s access to a folder is removed, the existing annotations still list that user.  The user cannot list or read those annotations through the item while they lack read access to it.</p></li>
+</ul>
+</section>
+<section id="moving-items-and-annotations">
+<h2>Moving Items and Annotations<a class="headerlink" href="#moving-items-and-annotations" title="Link to this heading"></a></h2>
+<p>Moving an item to a different folder does not change the access control lists of its annotations.  Moving an annotation to a different item (<code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">/annotation/{id}</span></code> with an <code class="docutils literal notranslate"><span class="pre">itemId</span></code>) also leaves its access control list unchanged.  In both cases the annotations keep the access that was copied from their original folder.</p>
+</section>
+<section id="copying-items-and-folders">
+<h2>Copying Items and Folders<a class="headerlink" href="#copying-items-and-folders" title="Link to this heading"></a></h2>
+<p>When an item is copied (directly, or as part of copying a folder), its active annotations are copied as well, unless <code class="docutils literal notranslate"><span class="pre">copyAnnotations</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>.  The copied annotations get access as if they had been created in the destination folder: the access control list and public flag of the destination folder replace the original annotation’s access control list, and the user who copied the item is given admin access.</p>
+<p>The copied annotations keep the original annotation’s creator, but that user is not given access to them unless the destination folder’s access control list includes them.  The original annotation’s creator may not have access to the destination folder.</p>
+</section>
+<section id="changing-annotation-access">
+<h2>Changing Annotation Access<a class="headerlink" href="#changing-annotation-access" title="Link to this heading"></a></h2>
+<p>The access control list of a single annotation can be edited by a user with admin access to it, either through the API (<code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">/annotation/{id}/access</span></code>) or from the annotation’s access dialog in the user interface.  This replaces the annotation’s access control list and public flag.</p>
+</section>
+<section id="changing-access-for-all-annotations-in-a-folder">
+<h2>Changing Access for All Annotations in a Folder<a class="headerlink" href="#changing-access-for-all-annotations-in-a-folder" title="Link to this heading"></a></h2>
+<p>If a user has admin access to any annotations on items in a folder or its subfolders, the folder’s actions menu includes <code class="docutils literal notranslate"><span class="pre">Annotation</span> <span class="pre">access</span> <span class="pre">control</span></code>.  This dialog changes the access of many annotations at once:</p>
+<ul class="simple">
+<li><p>The dialog shows the access control list of a single annotation: the most recently created annotation in the folder or its subfolders to which the user has admin access.</p></li>
+<li><p>Saving the dialog replaces the access control list and public flag of every annotation on items in the folder to which the user has admin access.  For site administrators, this is every annotation in the folder.  The lists are replaced, not merged, so any user or group not in the dialog loses access.  Because folder access is copied to new annotations, a user with admin access to a folder usually has admin access to other users’ annotations in it, and saving this dialog can remove those users’ access to their own annotations.</p></li>
+<li><p>Annotations in subfolders are only changed if the option to apply the change to subfolders is checked.  The access control list shown in the dialog may come from a subfolder even when that option is not checked.</p></li>
+<li><p>The dialog closes as soon as the request is sent, without waiting for the changes to finish.  If the request fails, no error is shown.</p></li>
+</ul>
+<p>The same operation is available through the API as <code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">/annotation/folder/{id}/access</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="girder_annotation_config_options.html" class="btn btn-neutral float-left" title="Girder Annotation Configuration Options" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="girder_caching.html" class="btn btn-neutral float-right" title="Caching Large Image in Girder" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Kitware, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+large\_image\_source\_tifffile package
+======================================
+
+Submodules
+----------
+
+large\_image\_source\_tifffile.girder\_source module
+----------------------------------------------------
+
+.. automodule:: large_image_source_tifffile.girder_source
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: large_image_source_tifffile
+   :members:
+   :show-inheritance:
+   :undoc-members:
