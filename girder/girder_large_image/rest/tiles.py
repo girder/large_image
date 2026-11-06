@@ -36,13 +36,13 @@ from girder.exceptions import RestException
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.upload import Upload
-from girder.utility.progress import setResponseTimeLimit
 from large_image.cache_util import strhash
 from large_image.constants import TileInputUnits, TileOutputMimeTypes
 from large_image.exceptions import TileGeneralError
 
 from .. import loadmodelcache
 from ..models.image_item import ImageItem
+from . import longRestResponse, mimeTypeFromEncoding
 
 MimeTypeExtensions = {
     'image/jpeg': 'jpg',
@@ -904,36 +904,43 @@ class TilesItemResource(ItemResource):
         ])
         _handleETag('getTilesRegion', item, params)
         pickl = _pickleParams(params)
-        setResponseTimeLimit(86400)
         try:
-            regionData, regionMime = self.imageItemModel.getRegion(
-                item, **params)
-            if pickl:
-                regionData, regionMime = _pickleOutput(regionData, pickl)
-        except TileGeneralError as e:
-            raise RestException(e.args[0])
+            regionMime = mimeTypeFromEncoding(params.get('encoding', 'JPEG'))
         except ValueError as e:
             raise RestException('Value Error: %s' % e.args[0])
         self._setContentDisposition(
             item, params.get('contentDisposition'), regionMime, 'region',
             params.get('contentDispositionFilename'))
         setResponseHeader('Content-Type', regionMime)
-        if isinstance(regionData, pathlib.Path):
-            BUF_SIZE = 65536
-
-            def stream():
-                try:
-                    with regionData.open('rb') as f:
-                        while True:
-                            data = f.read(BUF_SIZE)
-                            if not data:
-                                break
-                            yield data
-                finally:
-                    regionData.unlink()
-            return stream
         setRawResponse()
-        return regionData
+
+        def process():
+            try:
+                regionData, _ = self.imageItemModel.getRegion(
+                    item, **params)
+                if pickl:
+                    regionData, _ = _pickleOutput(regionData, pickl)
+            except TileGeneralError as e:
+                raise RestException(e.args[0])
+            except ValueError as e:
+                raise RestException('Value Error: %s' % e.args[0])
+            if isinstance(regionData, pathlib.Path):
+                BUF_SIZE = 65536
+
+                def stream():
+                    try:
+                        with regionData.open('rb') as f:
+                            while True:
+                                data = f.read(BUF_SIZE)
+                                if not data:
+                                    break
+                                yield data
+                    finally:
+                        regionData.unlink()
+                return stream
+            return regionData
+
+        return longRestResponse(process)
 
     @describeRoute(
         Description('Get a single pixel of a large image item.')
@@ -1369,27 +1376,29 @@ class TilesItemResource(ItemResource):
             params['frameList'] = [
                 int(f.strip()) for f in str(params['frameList']).lstrip(
                     '[').rstrip(']').split(',')]
-        setResponseTimeLimit(86400)
-        try:
-            result = self.imageItemModel.tileFrames(
-                item, checkAndCreate=checkAndCreate, **params)
-        except TileGeneralError as e:
-            raise RestException(e.args[0])
-        except ValueError as e:
-            raise RestException('Value Error: %s' % e.args[0])
-        if not isinstance(result, tuple):
-            return result
-        regionData, regionMime = result
-        if pickl:
-            regionData, regionMime = _pickleOutput(regionData, pickl)
+        regionMime = mimeTypeFromEncoding(params.get('encoding', 'JPEG'))
         self._setContentDisposition(
             item, params.get('contentDisposition'), regionMime, 'tileframes',
             params.get('contentDispositionFilename'))
         setResponseHeader('Content-Type', regionMime)
-        if isinstance(regionData, pathlib.Path):
-            BUF_SIZE = 65536
+        setRawResponse()
 
-            def stream():
+        def process():
+            try:
+                result = self.imageItemModel.tileFrames(
+                    item, checkAndCreate=checkAndCreate, **params)
+            except TileGeneralError as e:
+                raise RestException(e.args[0])
+            except ValueError as e:
+                raise RestException('Value Error: %s' % e.args[0])
+            if not isinstance(result, tuple):
+                yield result
+                return
+            regionData, _ = result
+            if pickl:
+                regionData, _ = _pickleOutput(regionData, pickl)
+            if isinstance(regionData, pathlib.Path):
+                BUF_SIZE = 65536
                 try:
                     with regionData.open('rb') as f:
                         while True:
@@ -1399,9 +1408,10 @@ class TilesItemResource(ItemResource):
                             yield data
                 finally:
                     regionData.unlink()
-            return stream
-        setRawResponse()
-        return regionData
+            else:
+                yield regionData
+
+        return longRestResponse(process)
 
     @describeRoute(
         Description('Get parameters for using tile_frames as background sprite images.')
