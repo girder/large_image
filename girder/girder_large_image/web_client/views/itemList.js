@@ -1,3 +1,5 @@
+import Vue from 'vue';
+
 import largeImageConfig from './configView';
 import {addToRoute} from '../routes';
 
@@ -5,8 +7,12 @@ import '../stylesheets/itemList.styl';
 import ItemListTemplate from '../templates/itemList.pug';
 import {MetadatumWidget, validateMetadataValue} from './metadataWidget';
 
+import TableConfigDialog from './TableConfigDialog.vue';
+import TableViewSelect from './TableViewSelect.vue';
+
 const {$, _, Backbone} = girder;
 const {wrap} = girder.utilities.PluginUtils;
+const {getCurrentUser} = girder.auth;
 const {getApiRoot} = girder.rest;
 const {AccessType} = girder.constants;
 const {formatSize, parseQueryString, splitRoute} = girder.misc;
@@ -45,21 +51,17 @@ wrap(HierarchyWidget, 'render', function (render) {
     if (this.parentModel.resourceName !== 'folder') {
         this.$('.g-folder-list-container').toggleClass('hidden', false);
     }
-    if (
-        !this.$('#flattenitemlist').length &&
-        this.$('.g-item-list-container').length &&
-        this.itemListView &&
-        this.itemListView.setFlatten
-    ) {
-        $('button.g-checked-actions-button')
-            .parent()
-            .after(
-                '<div class="li-flatten-item-list" title="Check to show items in all subfolders in this list"><input type="checkbox" id="flattenitemlist"></input><label for="flattenitemlist">Flatten</label></div>'
-            );
-        if (
-            (this.itemListView || {})._recurse &&
-            this.parentModel.resourceName === 'folder'
-        ) {
+    if (!this.$('#flattenitemlist').length && this.$('.g-item-list-container').length && this.itemListView && this.itemListView.setFlatten) {
+        $('.g-checked-actions').after(`
+            <div class="group relative inline-block flex items-center">
+                <div class="absolute bg-zinc-800 bg-opacity-80 px-2 py-1 text-white left-1/2 -translate-x-1/2 bottom-full rounded-md mb-[2px] text-sm whitespace-nowrap htk-hidden group-hover:block">
+                    Show items in this folder and all subfolders
+                </div>
+                <input type="checkbox" id="flattenitemlist" style="margin:0 !important">
+                <span class="mx-1 text-sm">Subfolders</span>
+            </div>`
+        );
+        if ((this.itemListView || {})._recurse && this.parentModel.resourceName === 'folder') {
             this.$('#flattenitemlist').prop('checked', true);
             this.$('.g-folder-list-container').toggleClass(
                 'hidden',
@@ -73,13 +75,10 @@ wrap(HierarchyWidget, 'render', function (render) {
         };
         this.delegateEvents();
     }
-    if (
-        this.$('#flattenitemlist').length &&
-        this.parentModel.get('_modelType') !== 'folder'
-    ) {
-        this.$('.li-flatten-item-list').addClass('hidden');
+    if (this.$('#flattenitemlist').length && this.parentModel.get('_modelType') !== 'folder') {
+        this.$('.li-flatten-item-list').addClass('htk-hidden');
     } else {
-        this.$('.li-flatten-item-list').removeClass('hidden');
+        this.$('.li-flatten-item-list').removeClass('htk-hidden');
     }
 
     const updateChecked = () => {
@@ -108,15 +107,14 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
         if (!this._liconfig) {
             return undefined;
         }
-        const namedList = this._namedList || this._liconfig.defaultItemList;
+        // If the named list is not valid, revert to the default list
+        if (!this._namedList || !this._liconfig.namedItemLists || !this._liconfig.namedItemLists[this._namedList]) {
+            this._namedList = this._liconfig.defaultItemList;
+        }
         if (this.$el.closest('.modal-dialog').length) {
             list = this._liconfig.itemListDialog;
-        } else if (
-            namedList &&
-            this._liconfig.namedItemLists &&
-            this._liconfig.namedItemLists[namedList]
-        ) {
-            list = this._liconfig.namedItemLists[namedList];
+        } else if (this._namedList && this._liconfig.namedItemLists && this._liconfig.namedItemLists[this._namedList]) {
+            list = this._liconfig.namedItemLists[this._namedList];
         } else {
             list = this._liconfig.itemList;
         }
@@ -202,16 +200,11 @@ wrap(ItemListWidget, 'initialize', function (initialize, settings) {
             this.render();
         }
     });
-    this.events['click .li-item-list-header.sortable'] = (evt) =>
-        sortColumn.call(this, evt);
-    this.events['click .li-item-list-cell-filter'] = (evt) =>
-        itemListCellFilter.call(this, evt);
-    this.events['click .large_image_metadata.lientry_edit'] = (evt) =>
-        itemListMetadataEdit.call(this, evt);
-    this.events['change .large_image_metadata.lientry_edit'] = (evt) =>
-        itemListMetadataEdit.call(this, evt);
-    this.events['input .large_image_metadata.lientry_edit'] = (evt) =>
-        itemListMetadataEdit.call(this, evt);
+    this.events['click .sortable'] = (evt) => sortColumn.call(this, evt);
+    this.events['click .li-item-list-cell-filter'] = (evt) => itemListCellFilter.call(this, evt);
+    this.events['click .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
+    this.events['change .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
+    this.events['input .large_image_metadata.lientry_edit'] = (evt) => itemListMetadataEdit.call(this, evt);
     this.delegateEvents();
     this.setFlatten = (flatten) => {
         if (!!flatten !== !!this._recurse) {
@@ -270,6 +263,101 @@ wrap(ItemListWidget, 'render', function (render) {
                 });
         }
     }
+
+    this._saveTableConfig = ({config, name, newView, originalName}) => {
+        // Update or add the named view
+        if (!this._liconfig) {
+            this._liconfig = {};
+        }
+        if (!this._liconfig.namedItemLists) {
+            this._liconfig.namedItemLists = {};
+        }
+        if (newView) {
+            // Need to make the view name unique
+            let foundView = this._liconfig.namedItemLists[name];
+            while (foundView) {
+                name += ' Copy';
+                foundView = this._liconfig.namedItemLists[name];
+            }
+            const configCopy = JSON.parse(JSON.stringify(config));
+            configCopy.edit = true;
+            this._liconfig.namedItemLists[name] = configCopy;
+        } else {
+            const foundView = this._liconfig.namedItemLists[originalName];
+            if (foundView) {
+                if (originalName !== name) {
+                    // Need to make the view name unique
+                    let duplicate = this._liconfig.namedItemLists[name];
+                    while (duplicate) {
+                        name += ' Copy';
+                        duplicate = this._liconfig.namedItemLists[name];
+                    }
+                    delete this._liconfig.namedItemLists[originalName];
+                    this._liconfig.namedItemLists[name] = foundView;
+                }
+                foundView.columns = config.columns;
+                foundView.layout = config.layout;
+                foundView.edit = true;
+            } else {
+                // This may occur if we are moving an old existing default view to a named view
+                const configCopy = JSON.parse(JSON.stringify(config));
+                configCopy.edit = true;
+                this._liconfig.namedItemLists[name] = configCopy;
+            }
+        }
+        this._updateNamedList(name, true);
+        // Save the new configuration to the yaml file
+        largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
+        itemListRender.apply(this);
+    };
+
+    this._deleteTableConfig = (name) => {
+        if (!this._liconfig) {
+            return;
+        }
+        delete this._liconfig.namedItemLists[name];
+        // If we are deleting the current view, clear the namedList from the URL
+        if ((this._namedList || '') === name) {
+            addToRoute({namedList: undefined});
+            this._namedList = undefined;
+        }
+        itemListRender.apply(this);
+        largeImageConfig.saveConfigFile(this.parentView.parentModel.id, this._liconfig, null);
+    };
+
+    this._allColumns = () => {
+        if (this._liconfig && this._liconfig.allColumns) {
+            return this._liconfig.allColumns;
+        }
+        const allColumns = [
+            {type: 'image', value: 'thumbnail', title: 'Thumbnail'},
+            {type: 'image', value: 'label', title: 'Label'},
+            {type: 'record', value: 'controls', title: 'Controls'},
+            {type: 'record', value: 'name', title: 'Name'},
+            {type: 'record', value: 'size', title: 'Size'}
+        ];
+        const allColumnsMap = {};
+        this.collection.toArray().forEach((item) => {
+            const value = item.get('meta') || {};
+            for (const key in value) {
+                if (!allColumnsMap[key]) {
+                    allColumnsMap[key] = true;
+                    allColumns.push({
+                        type: 'metadata',
+                        value: key,
+                        title: key.replace(/[^a-zA-Z0-9]+/g, ' ')
+                            .split(' ')
+                            .filter((word) => word.length > 0)
+                            .map((word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                            )
+                            .join(' ')
+                    });
+                }
+            }
+        });
+        return allColumns;
+    };
 
     /**
      * Set sort on the collection and perform a debounced re-fetch.
@@ -749,20 +837,23 @@ wrap(ItemListWidget, 'render', function (render) {
             }
             if (base.length) {
                 base.parent().addClass('li-item-list-filter-parent');
-                base[func](
-                    '<span class="li-item-list-filter">Filter:&nbsp;<input class="li-item-list-filter-input" title="' +
-                        'All specified terms must be included.  ' +
-                        'Surround with single quotes to include spaces, double quotes for exact value match.  ' +
-                        'Prefix with - to exclude that value.  ' +
-                        'By default, all columns are searched.  ' +
-                        'Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.  ' +
-                        'Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).  ' +
-                        'If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.  ' +
-                        'Non-exact matches without a column specifier will also match columns that start with the specified value.  ' +
-                        '"></input>' +
-                        '<span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>' +
-                        '</span>'
-                );
+                base[func](`
+                    <div class="g-table-view-select"></div>
+
+                    <span class="li-item-list-filter">Filter:&nbsp;<input class="li-item-list-filter-input" title="
+                        All specified terms must be included.
+                        Surround with single quotes to include spaces, double quotes for exact value match.
+                        Prefix with - to exclude that value.
+                        By default, all columns are searched.
+                        Use <column>:<value1>[,<value2>...] to require that a column matches a specified value or any of a list of specified values.
+                        Column and value names can be quoted to include spaces (single quotes for substring match, double quotes for exact value match).
+                        If <column>:-<value1>[,<value2>...] is specified, matches will exclude the list of values.
+                        Non-exact matches without a column specifier will also match columns that start with the specified value.
+                        "></input>
+                        <span class="li-item-list-filter-clear"><i class="icon-cancel"></i></span>
+                        </span>
+                `);
+                this._tableViewSelectVue = null;
                 if (this._generalFilter) {
                     root.find('.li-item-list-filter-input').val(
                         this._generalFilter
@@ -794,6 +885,14 @@ wrap(ItemListWidget, 'render', function (render) {
             this._setSort();
             return;
         }
+        const itemList = this._confList();
+        if (!itemList.columns || itemList.columns.length === 0) {
+            itemList.columns = [
+                {type: 'record', value: 'name', title: 'Name'},
+                {type: 'record', value: 'size', title: 'Size'},
+                {type: 'record', value: 'controls', title: 'Controls'}
+            ];
+        }
         const availableApps = this.checkApps();
         adjustItemHref.call(this, availableApps);
         this.$el.html(
@@ -821,6 +920,101 @@ wrap(ItemListWidget, 'render', function (render) {
                 AccessType: AccessType
             })
         );
+
+        const TableConfigDialogConstructor = Vue.extend(TableConfigDialog);
+        this._tableConfigVue = new TableConfigDialogConstructor({
+            propsData: {
+                config: (this._confList() || {}) || {},
+                allColumns: this._allColumns(),
+                name: this._namedList,
+                newView: false
+            }
+        });
+        this._tableConfigVue.$on('save', (config, name) => {
+            this._saveTableConfig({config, name, newView: false, originalName: this._tableConfigVue.name});
+        });
+        this._tableConfigVue.$mount(this.parentView.$el.find('.g-edit-table-view-dialog-container')[0]);
+
+        const currentName = this._namedList;
+        const views = (this._liconfig || {}).namedItemLists || {};
+        if (this._tableViewSelectVue) {
+            this._tableViewSelectVue.value = currentName;
+            this._tableViewSelectVue.views = views;
+            this._tableViewSelectVue.loggedIn = !!getCurrentUser();
+        } else {
+            const TableViewSelectConstructor = Vue.extend(TableViewSelect);
+            this._tableViewSelectVue = new TableViewSelectConstructor({
+                propsData: {
+                    value: currentName,
+                    views,
+                    loggedIn: !!getCurrentUser()
+                }
+            });
+
+            this._tableViewSelectVue.$on('change', (name) => {
+                if (!this._liconfig) {
+                    this._liconfig = {};
+                }
+                if (!this._liconfig.itemList) {
+                    this._liconfig.itemList = {};
+                }
+                this._updateNamedList(name, true);
+                this._setFilter(false);
+                this._setSort();
+            });
+
+            this._tableViewSelectVue.$on('edit', (name) => {
+                this._tableConfigVue.config = (this._liconfig.namedItemLists || {})[name];
+                this._tableConfigVue.name = name;
+                this._tableConfigVue.newView = false;
+                this._tableConfigVue.$refs.dialog.show();
+            });
+
+            this._tableViewSelectVue.$on('delete', (name) => {
+                this._deleteTableConfig(name);
+            });
+
+            this._tableViewSelectVue.$on('new', () => {
+                if (this._liconfig === undefined) {
+                    this._liconfig = {};
+                }
+                if (this._liconfig.namedItemLists === undefined) {
+                    this._liconfig.namedItemLists = {};
+                }
+                let name = 'View';
+                let num = 1;
+                let foundView = this._liconfig.namedItemLists[name];
+                while (foundView) {
+                    num += 1;
+                    name = `View ${num}`;
+                    foundView = this._liconfig.namedItemLists[name];
+                }
+                const columns = [
+                    {type: 'record', value: 'name'},
+                    {type: 'record', value: 'size'},
+                    {type: 'record', value: 'controls'}
+                ];
+                this._liconfig.namedItemLists[name] = {columns, edit: true};
+
+                this._tableConfigVue.config = this._liconfig.namedItemLists[name];
+                this._tableConfigVue.name = name;
+                this._tableConfigVue.newView = true;
+                this._tableConfigVue.$refs.dialog.show();
+            });
+
+            this._tableViewSelectVue.$on('copy', (name) => {
+                if (this._liconfig === undefined) {
+                    this._liconfig = {};
+                }
+                if (this._liconfig.namedItemLists === undefined) {
+                    this._liconfig.namedItemLists = {};
+                }
+                const foundView = this._liconfig.namedItemLists[name];
+                this._saveTableConfig({config: foundView, name, newView: true});
+            });
+
+            this._tableViewSelectVue.$mount(this.parentView.$el.find('.g-table-view-select')[0]);
+        }
 
         const parent = this.$el;
         this.$el.find('.large_image_thumbnail').each(function () {
@@ -873,7 +1067,12 @@ wrap(ItemListWidget, 'remove', function (remove) {
 });
 
 function sortColumn(evt) {
-    const header = $(evt.target);
+    const icon = {
+        up: 'ri-arrow-up-line',
+        down: 'ri-arrow-down-line',
+        none: 'ri-arrow-up-down-line'
+    };
+    const header = $(evt.currentTarget);
     const entry = {
         type: header.attr('column_type'),
         value: header.attr('column_value')
