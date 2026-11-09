@@ -566,6 +566,56 @@ class AnnotationSchema:
         ],
     }
 
+    legendEntrySchema = {
+        'type': 'object',
+        'properties': {
+            'label': {
+                'type': 'string',
+                'description': 'The text shown next to the color sample or '
+                               'above a color range.',
+            },
+            'fillColor': {
+                'anyOf': [
+                    colorSchema,
+                    {
+                        'type': 'array',
+                        'items': colorSchema,
+                        'minItems': 2,
+                        'description':
+                            'A continuous color range.  Colors are evenly '
+                            'spaced with linear interpolation between them.',
+                    },
+                ],
+            },
+            'labels': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'Only allowed when fillColor is a list.  One label per '
+                    'color, shown at that position along the color range.  '
+                    'Use an empty string to skip a position.',
+            },
+            'lineColor': colorSchema,
+            'lineWidth': {
+                'type': 'number',
+                'minimum': 0,
+            },
+        },
+        'required': ['label'],
+        'dependencies': {
+            'labels': {
+                'properties': {'fillColor': {'type': 'array'}},
+                'required': ['fillColor'],
+            },
+        },
+        # An entry must have at least one color to be meaningful.
+        'anyOf': [
+            {'required': ['fillColor']},
+            {'required': ['lineColor']},
+        ],
+        'additionalProperties': False,
+    }
+
     annotationSchema = {
         '$schema': 'http://json-schema.org/schema#',
         'type': 'object',
@@ -590,6 +640,17 @@ class AnnotationSchema:
                         'is displayed.',
                     },
                 },
+            },
+            'legend': {
+                'type': 'array',
+                'items': legendEntrySchema,
+                'title': 'Legend',
+                'description': 'A list of entries that a viewer can show as '
+                               'a legend when the annotation is displayed.  '
+                               'Each entry has a label and the fill color, '
+                               'line color, and line width that the label '
+                               'refers to.  The fill color can be a list of '
+                               'colors to show a continuous color range.',
             },
             'attributes': {
                 'type': 'object',

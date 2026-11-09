@@ -289,6 +289,59 @@ class TestLargeImageAnnotation:
         annot['elements'][1]['id'] = ObjectId('012345678901234567890124')
         assert Annotation().validate(doc) is not None
 
+    def testValidateLegend(self, db):
+        annot = copy.deepcopy(sampleAnnotation)
+        doc = {'annotation': annot}
+        annot['legend'] = [
+            {'label': 'Low', 'fillColor': '#0000ff', 'lineColor': '#000000', 'lineWidth': 1},
+            {'label': 'High', 'fillColor': 'rgba(255, 0, 0, 0.5)'},
+            {'label': 'Outline only', 'lineColor': 'rgb(0, 255, 0)', 'lineWidth': 2.5},
+        ]
+        assert Annotation().validate(doc) is not None
+        annot['legend'] = []
+        assert Annotation().validate(doc) is not None
+        # Entries must have a label
+        annot['legend'] = [{'fillColor': '#0000ff'}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        # Entries must have at least one color
+        annot['legend'] = [{'label': 'No color'}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        annot['legend'] = [{'label': 'No color', 'lineWidth': 2}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        # Colors must be valid
+        annot['legend'] = [{'label': 'Bad', 'fillColor': 'blue'}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        # Unknown keys are not allowed
+        annot['legend'] = [{'label': 'Bad', 'strokeColor': '#000000'}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        # The legend must be a list
+        annot['legend'] = {'label': 'Bad'}
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        # A color range
+        annot['legend'] = [
+            {'label': 'Range', 'fillColor': ['#0000ff', '#ff0000']},
+            {'label': 'Range', 'fillColor': ['#0000ff', '#00ff00', '#ff0000'],
+             'labels': ['Low', '', 'High'], 'lineColor': '#000000'},
+        ]
+        assert Annotation().validate(doc) is not None
+        # A range needs at least two colors
+        annot['legend'] = [{'label': 'Range', 'fillColor': ['#0000ff']}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        # Labels are only allowed with a color range
+        annot['legend'] = [{'label': 'Bad', 'fillColor': '#0000ff', 'labels': ['Low']}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+        annot['legend'] = [{'label': 'Bad', 'lineColor': '#0000ff', 'labels': ['Low']}]
+        with pytest.raises(ValidationException):
+            Annotation().validate(doc)
+
     def testVersionList(self, db, user, admin):
         privateFolder = utilities.namedFolder(admin, 'Private')
         # Test without history
