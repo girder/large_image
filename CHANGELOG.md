@@ -5,6 +5,7 @@
 ### Features
 
 - Use zarr 3 and zarr-sqlite on Python 3.12 and newer ([#2145](../../pull/2145))
+- Add an optional legend to the annotation schema ([#2152](../../pull/2152))
 
 ### Improvements
 
