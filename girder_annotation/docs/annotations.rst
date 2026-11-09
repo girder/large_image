@@ -23,6 +23,21 @@ the comments are not part of a valid annotation:
                     # default.  If true, display the annotation when the item
                     # is loaded.
     },
+    "legend": [                              # List.  Optional
+      {                                      # Each entry is an object
+        "label": "Low density",              # String.  Required
+        "fillColor": "#0000FF",              # String.  See note about colors.  At least one
+                                             # of fillColor or lineColor is required
+        "lineColor": "#000000",              # String.  See note about colors.
+        "lineWidth": 1                       # Number >= 0.  Optional
+      },
+      {
+        "label": "Density",                  # String.  Required
+        "fillColor": ["#0000FF", "#FF0000"], # List of two or more colors.  Shown as
+                                             # a continuous color range
+        "labels": ["Low", "High"]            # List of strings, one per color.  Optional
+      }
+    ],
     "attributes": {                          # Object.  Optional
       "key1": "value1",
       "key2": ["any", {"value": "can"}, "go", "here"]
@@ -30,6 +45,24 @@ the comments are not part of a valid annotation:
     "elements": []                           # A list.  Optional.
                                              # See below for valid elements.
   }
+
+Legend
+------
+
+An annotation can include an optional ``legend``: a list of entries that a
+viewer can display when the annotation is shown.  Each entry has a ``label``
+and at least one of a ``fillColor`` or ``lineColor``, plus an optional
+``lineWidth``, that describe how the entry is drawn.  This is useful when the
+elements of an annotation are colored to represent values, such as a
+choropleth made from polygons with a fixed color range.  The legend does not
+affect how elements are rendered; it only documents what the colors mean.
+
+If ``fillColor`` is a list of two or more colors, the entry is a continuous
+color range: the colors are evenly spaced and linearly interpolated between,
+in the same manner as the ``colorRange`` of heatmap elements.  The ``label``
+is the title of the range, and an optional ``labels`` list, with one string per
+color, marks positions along the range; use an empty string to leave a position
+unmarked.  ``labels`` is only allowed when ``fillColor`` is a list.
 
 Elements
 --------
