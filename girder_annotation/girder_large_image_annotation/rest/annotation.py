@@ -116,7 +116,8 @@ class AnnotationResource(Resource):
         fields = list(
             (
                 'annotation.name', 'annotation.description',
-                'annotation.attributes', 'annotation.display', 'access',
+                'annotation.attributes', 'annotation.display',
+                'annotation.legend', 'access',
                 'groups', '_version', '_elementCount', '_detailsCount',
             ) + Annotation().baseFields)
         return Annotation().findWithPermissions(
