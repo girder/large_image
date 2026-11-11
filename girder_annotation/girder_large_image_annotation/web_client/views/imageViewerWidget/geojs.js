@@ -600,6 +600,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _mutateFeaturePropertiesForHighlight: function (annotationId, features) {
             const opacityFactor = this._annotationOpacityFactor(annotationId);
             _.each(features, (feature) => {
+                if (feature._ownLayer) {
+                    feature.layer().opacity(this._getAnnotationOpacity(annotationId));
+                    return;
+                }
                 const data = this._featureOpacity[annotationId][feature.featureType];
                 if (!data) {
                     // skip highlighting on features with a lot of entities
@@ -931,11 +935,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         setGlobalAnnotationOpacity: function (opacity) {
             this._globalAnnotationOpacity = opacity;
             this._updateAnnotationOpacity();
-            Object.values(this._annotations).forEach((annot) => annot.features.forEach((feature) => {
-                if (feature._ownLayer) {
-                    feature.layer().opacity(opacity);
-                }
-            }));
             _.each(this._annotations, (annotation) => {
                 _.each(annotation.overlays, (overlay) => {
                     const overlayLayer = this.viewer.layers().find((layer) => layer.id() === overlay.id);

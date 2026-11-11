@@ -1000,6 +1000,50 @@ $(function () {
                 checkFeatureOpacity(annotation2.id, 0.5, 1);
             });
         });
+
+        describe('heatmap opacity', function () {
+            var heatmapAnnotation;
+
+            it('generate a heatmap annotation', function () {
+                girder.rest.restRequest({
+                    url: 'annotation?itemId=' + itemId,
+                    contentType: 'application/json',
+                    processData: false,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        name: 'heatmap',
+                        elements: [{
+                            type: 'heatmap',
+                            points: [[100, 100, 0, 1], [200, 200, 0, 2]]
+                        }]
+                    })
+                }).done(function (resp) {
+                    heatmapAnnotation = new largeImageAnnotation.models.AnnotationModel({
+                        _id: resp._id
+                    });
+                });
+                waitsFor(function () {
+                    return heatmapAnnotation;
+                }, 'annotation to be created');
+                runs(function () {
+                    viewer.drawAnnotation(heatmapAnnotation);
+                });
+                waitsFor(function () {
+                    return (viewer._annotations[heatmapAnnotation.id] || {features: []}).features.length;
+                }, 'heatmap to be drawn');
+            });
+
+            it('set heatmap opacity', function () {
+                var layer = viewer._annotations[heatmapAnnotation.id].features[0].layer();
+                viewer.setGlobalAnnotationOpacity(0.5);
+                expect(layer.opacity()).toBe(0.5);
+                viewer.setAnnotationOpacity(heatmapAnnotation.id, 0.25);
+                expect(layer.opacity()).toBe(0.25);
+                viewer.setAnnotationOpacity(heatmapAnnotation.id);
+                expect(layer.opacity()).toBe(0.5);
+                viewer.removeAnnotation(heatmapAnnotation);
+            });
+        });
         describe('large annotations', function () {
             var annotations = [], count = 0;
             it('generate several sizes of annotations', function () {
