@@ -18,7 +18,6 @@ import time
 
 import cherrypy
 
-from girder.api.rest import getCurrentToken
 from girder.utility.model_importer import ModelImporter
 
 LoadModelCache = {}
@@ -62,10 +61,7 @@ def loadModel(resource, model, plugin='_core', id=None, allowCookie=False,
         entry = cacheEntry['result']
         cacheEntry['hits'] += 1
     else:
-        # we have to get the token separately from the user if we are using
-        # cookies.
         if allowCookie:
-            getCurrentToken(allowCookie)
             cherrypy.request.girderAllowCookie = True
         entry = ModelImporter.model(model, plugin).load(
             id=id, level=level, user=resource.getCurrentUser())
