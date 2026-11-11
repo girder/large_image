@@ -212,6 +212,24 @@ $(function () {
             });
         });
 
+        it('set overlay opacity', function () {
+            var overlayId = viewer._annotations[overlayAnnotationId].overlays[0].id;
+            var layer;
+            waitsFor(function () {
+                layer = _.find(viewer.viewer.layers(), function (layer) {
+                    return layer.id() === overlayId;
+                });
+                return layer;
+            }, 'overlay layer to be created');
+            runs(function () {
+                expect(layer.opacity()).toBe(0.5);
+                viewer.setAnnotationOpacity(overlayAnnotationId, 0.5);
+                expect(layer.opacity()).toBe(0.25);
+                viewer.setAnnotationOpacity(overlayAnnotationId);
+                expect(layer.opacity()).toBe(0.5);
+            });
+        });
+
         it('generates pixelmap layer parameters', function () {
             const overlayMetadata = {
                 sizeX: 500,

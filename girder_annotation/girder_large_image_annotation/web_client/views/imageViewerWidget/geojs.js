@@ -209,9 +209,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @param {object} overlayImageMetadata metadata such as size, tile size, and levels for the overlay image
          * @param {string} overlayImageId ID of a girder image item
          * @param {object} overlay information about the overlay such as opacity
+         * @param {string} [annotationId] ID of the overlay's annotation
          * @returns layer params for the image overlay layer
          */
-        _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay) {
+        _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay, annotationId) {
             const geo = window.geo;
             const params = geo.util.pixelCoordinateParams(
                 this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileWidth, overlayImageMetadata.tileHeight
@@ -227,7 +228,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 params.layer.url += '?' + extraarg.substr(1);
             }
             params.layer.opacity = overlay.opacity || 1;
-            params.layer.opacity *= this._globalAnnotationOpacity;
+            params.layer.opacity *= this._getAnnotationOpacity(annotationId);
 
             let levelDifference = this.levels - overlayImageMetadata.levels;
 
@@ -445,7 +446,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                             this.viewer.deleteLayer(layer);
                         });
                     }
-                    const params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
+                    const params = this._generateOverlayLayerParams(response, overlayItemId, overlay, annotation.id);
                     const layerType = (overlay.type === 'pixelmap') ? 'pixelmap' : 'osm';
                     const proj = this._getOverlayTransformProjString(overlay);
                     const overlayLayer = this.viewer.createLayer(layerType, Object.assign({}, params, {id: overlay.id, gcs: proj}));
@@ -658,7 +659,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 _.each(overlays, (overlay) => {
                     const overlayLayer = this.viewer.layers().find((layer) => layer.id() === overlay.id);
                     if (overlayLayer) {
-                        let newOpacity = (overlay.opacity || 1) * this._globalAnnotationOpacity;
+                        let newOpacity = (overlay.opacity || 1) * this._getAnnotationOpacity(annotationId);
                         if (this._highlightAnnotation && annotationId !== this._highlightAnnotation) {
                             newOpacity = newOpacity * this._unselectedOpacityMultiplier;
                         }
@@ -935,15 +936,6 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         setGlobalAnnotationOpacity: function (opacity) {
             this._globalAnnotationOpacity = opacity;
             this._updateAnnotationOpacity();
-            _.each(this._annotations, (annotation) => {
-                _.each(annotation.overlays, (overlay) => {
-                    const overlayLayer = this.viewer.layers().find((layer) => layer.id() === overlay.id);
-                    if (overlayLayer) {
-                        const overlayOpacity = overlay.opacity || 1;
-                        overlayLayer.opacity(opacity * overlayOpacity);
-                    }
-                });
-            });
             return this;
         },
 
