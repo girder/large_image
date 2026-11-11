@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.36.1
+
+### Improvements
+
+- Removed a needless token lookup in the tiles endpoint ([#2154](../../pull/2154))
+
 ## 1.36.0
 
 ### Features
