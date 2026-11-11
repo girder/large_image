@@ -28,6 +28,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._unclampBoundsForOverlay = true;
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
+        this._annotationOpacity = {};
         this._unselectedOpacityMultiplier = typeof settings.unselectedOpacityMultiplier !== 'number'
             ? 0.33
             : settings.unselectedOpacityMultiplier;
@@ -509,7 +510,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                                 };
                             });
                     });
-                    this._mutateFeaturePropertiesForHighlight(annotation.id, features);
+                    if (this.featureLayer.opacity() !== this._featureLayerOpacity()) {
+                        this._updateAnnotationOpacity();
+                    } else {
+                        this._mutateFeaturePropertiesForHighlight(annotation.id, features);
+                    }
                     const centroidFeature = featureList.find((f) => f._centroidFeature);
                     if (annotation._centroids && centroidFeature) {
                         if (centroidFeature.verticesPerFeature) {
@@ -593,6 +598,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * element to modify.
          */
         _mutateFeaturePropertiesForHighlight: function (annotationId, features) {
+            const opacityFactor = this._annotationOpacityFactor(annotationId);
             _.each(features, (feature) => {
                 const data = this._featureOpacity[annotationId][feature.featureType];
                 if (!data) {
@@ -604,6 +610,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     datalen: data.length,
                     annotationId: annotationId,
                     fillOpacity: this._globalAnnotationFillOpacity,
+                    opacityFactor: opacityFactor,
                     highlightannot: this._highlightAnnotation,
                     highlightelem: this._highlightElement,
                     hideannot: this._hideAnnotation,
@@ -621,8 +628,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
                 for (let i = 0; i < data.length; i += 1) {
                     const id = data[i].id;
-                    const fillOpacity = data[i].fillOpacity * this._globalAnnotationFillOpacity;
-                    const strokeOpacity = data[i].strokeOpacity;
+                    const fillOpacity = data[i].fillOpacity * this._globalAnnotationFillOpacity * opacityFactor;
+                    const strokeOpacity = data[i].strokeOpacity * opacityFactor;
                     if (this._hideAnnotation && annotationId === this._hideAnnotation && id === this._hideElement) {
                         fillOpacityArray[i] = 0;
                         strokeOpacityArray[i] = 0;
@@ -923,9 +930,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
         setGlobalAnnotationOpacity: function (opacity) {
             this._globalAnnotationOpacity = opacity;
-            if (this.featureLayer) {
-                this.featureLayer.opacity(opacity);
-            }
+            this._updateAnnotationOpacity();
             Object.values(this._annotations).forEach((annot) => annot.features.forEach((feature) => {
                 if (feature._ownLayer) {
                     feature.layer().opacity(opacity);
@@ -941,6 +946,56 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 });
             });
             return this;
+        },
+
+        /**
+         * Set the opacity of one annotation.
+         *
+         * @param {string} annotationId The id of the annotation.
+         * @param {number} [opacity] The opacity.  If undefined, the global
+         *      annotation opacity is used.
+         */
+        setAnnotationOpacity: function (annotationId, opacity) {
+            if (opacity === undefined) {
+                delete this._annotationOpacity[annotationId];
+            } else {
+                this._annotationOpacity[annotationId] = opacity;
+            }
+            this._updateAnnotationOpacity();
+            return this;
+        },
+
+        _getAnnotationOpacity: function (annotationId) {
+            const opacity = this._annotationOpacity[annotationId];
+            return opacity === undefined ? this._globalAnnotationOpacity : opacity;
+        },
+
+        /**
+         * The feature layer is as opaque as the most opaque drawn annotation.
+         */
+        _featureLayerOpacity: function () {
+            return Math.max(
+                this._globalAnnotationOpacity,
+                ...Object.keys(this._annotations).map((id) => this._getAnnotationOpacity(id)));
+        },
+
+        /**
+         * The factor to scale an annotation's feature opacities by so that it
+         * has its own opacity on the shared feature layer.
+         */
+        _annotationOpacityFactor: function (annotationId) {
+            const layerOpacity = this._featureLayerOpacity();
+            return layerOpacity ? this._getAnnotationOpacity(annotationId) / layerOpacity : 1;
+        },
+
+        _updateAnnotationOpacity: function () {
+            if (this.featureLayer) {
+                this.featureLayer.opacity(this._featureLayerOpacity());
+                _.each(this._annotations, (layer, annotationId) => {
+                    this._mutateFeaturePropertiesForHighlight(annotationId, layer.features);
+                });
+                this.viewer.scheduleAnimationFrame(this.viewer.draw);
+            }
         },
 
         setGlobalAnnotationFillOpacity: function (opacity) {

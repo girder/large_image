@@ -981,6 +981,24 @@ $(function () {
                 checkFeatureOpacity(annotation1.id, 0.5, 1);
                 checkFeatureOpacity(annotation2.id, 0.5, 1);
             });
+
+            it('set annotation opacity', function () {
+                viewer.setGlobalAnnotationOpacity(0.5);
+                viewer.setAnnotationOpacity(annotation1.id, 0.25);
+                expect(viewer.featureLayer.opacity()).toBe(0.5);
+                checkFeatureOpacity(annotation1.id, 0.25, 0.5);
+                checkFeatureOpacity(annotation2.id, 0.5, 1);
+
+                viewer.setAnnotationOpacity(annotation1.id, 1);
+                expect(viewer.featureLayer.opacity()).toBe(1);
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.25, 0.5);
+
+                viewer.setAnnotationOpacity(annotation1.id);
+                expect(viewer.featureLayer.opacity()).toBe(0.5);
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5, 1);
+            });
         });
         describe('large annotations', function () {
             var annotations = [], count = 0;
