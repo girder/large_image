@@ -1,0 +1,39 @@
+girder\_large\_image\_annotation package
+========================================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   girder_large_image_annotation.models
+   girder_large_image_annotation.rest
+   girder_large_image_annotation.utils
+
+Submodules
+----------
+
+girder\_large\_image\_annotation.constants module
+-------------------------------------------------
+
+.. automodule:: girder_large_image_annotation.constants
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+girder\_large\_image\_annotation.handlers module
+------------------------------------------------
+
+.. automodule:: girder_large_image_annotation.handlers
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: girder_large_image_annotation
+   :members:
+   :show-inheritance:
+   :undoc-members:
