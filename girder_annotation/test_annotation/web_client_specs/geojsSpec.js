@@ -1116,6 +1116,18 @@ $(function () {
                     expect(annotations[1]._lastZoom).toBeDefined();
                 });
             });
+            it('set opacity of an annotation using centroids', function () {
+                var feature = _.find(viewer._annotations[annotations[1].id].features, function (feature) {
+                    return feature._centroidFeature;
+                });
+                var fillOpacity = feature.style.get('fillOpacity');
+                viewer.setGlobalAnnotationOpacity(0.5);
+                var opacity = fillOpacity(feature.data()[0], 0);
+                viewer.setAnnotationOpacity(annotations[1].id, 0.25);
+                expect(fillOpacity(feature.data()[0], 0)).toBe(opacity * 0.5);
+                viewer.setAnnotationOpacity(annotations[1].id);
+                expect(fillOpacity(feature.data()[0], 0)).toBe(opacity);
+            });
         });
         it('destroy the viewer', function () {
             viewer.destroy();

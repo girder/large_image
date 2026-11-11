@@ -346,6 +346,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             if (annotation._centroids && !centroidFeature) {
                 const feature = this.featureLayer.createFeature('point');
                 feature._centroidFeature = true;
+                feature._opacityFactor = this._annotationOpacityFactor(annotation.id);
                 featureList.push(feature);
                 feature.data(annotation._centroids.data).position((d, i) => ({
                     x: annotation._centroids.centroids.x[i],
@@ -371,7 +372,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     },
                     strokeOpacity: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
-                        return annotation._centroids.props[s].strokeOpacity;
+                        return annotation._centroids.props[s].strokeOpacity * feature._opacityFactor;
                     },
                     strokeWidth: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
@@ -386,7 +387,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     },
                     fillOpacity: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
-                        return annotation._centroids.props[s].fillOpacity;
+                        return annotation._centroids.props[s].fillOpacity * feature._opacityFactor;
                     }
                 });
                 // bind an event so zoom updates radius
@@ -603,6 +604,13 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             _.each(features, (feature) => {
                 if (feature._ownLayer) {
                     feature.layer().opacity(this._getAnnotationOpacity(annotationId));
+                    return;
+                }
+                if (feature._centroidFeature) {
+                    if (feature._opacityFactor !== opacityFactor) {
+                        feature._opacityFactor = opacityFactor;
+                        feature.modified();
+                    }
                     return;
                 }
                 const data = this._featureOpacity[annotationId][feature.featureType];
