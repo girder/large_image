@@ -212,6 +212,24 @@ $(function () {
             });
         });
 
+        it('set overlay opacity', function () {
+            var overlayId = viewer._annotations[overlayAnnotationId].overlays[0].id;
+            var layer;
+            waitsFor(function () {
+                layer = _.find(viewer.viewer.layers(), function (layer) {
+                    return layer.id() === overlayId;
+                });
+                return layer;
+            }, 'overlay layer to be created');
+            runs(function () {
+                expect(layer.opacity()).toBe(0.5);
+                viewer.setAnnotationOpacity(overlayAnnotationId, 0.5);
+                expect(layer.opacity()).toBe(0.25);
+                viewer.setAnnotationOpacity(overlayAnnotationId);
+                expect(layer.opacity()).toBe(0.5);
+            });
+        });
+
         it('generates pixelmap layer parameters', function () {
             const overlayMetadata = {
                 sizeX: 500,
@@ -981,6 +999,68 @@ $(function () {
                 checkFeatureOpacity(annotation1.id, 0.5, 1);
                 checkFeatureOpacity(annotation2.id, 0.5, 1);
             });
+
+            it('set annotation opacity', function () {
+                viewer.setGlobalAnnotationOpacity(0.5);
+                viewer.setAnnotationOpacity(annotation1.id, 0.25);
+                expect(viewer.featureLayer.opacity()).toBe(0.5);
+                checkFeatureOpacity(annotation1.id, 0.25, 0.5);
+                checkFeatureOpacity(annotation2.id, 0.5, 1);
+
+                viewer.setAnnotationOpacity(annotation1.id, 1);
+                expect(viewer.featureLayer.opacity()).toBe(1);
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.25, 0.5);
+
+                viewer.setAnnotationOpacity(annotation1.id);
+                expect(viewer.featureLayer.opacity()).toBe(0.5);
+                checkFeatureOpacity(annotation1.id, 0.5, 1);
+                checkFeatureOpacity(annotation2.id, 0.5, 1);
+            });
+        });
+
+        describe('heatmap opacity', function () {
+            var heatmapAnnotation;
+
+            it('generate a heatmap annotation', function () {
+                girder.rest.restRequest({
+                    url: 'annotation?itemId=' + itemId,
+                    contentType: 'application/json',
+                    processData: false,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        name: 'heatmap',
+                        elements: [{
+                            type: 'heatmap',
+                            points: [[100, 100, 0, 1], [200, 200, 0, 2]]
+                        }]
+                    })
+                }).done(function (resp) {
+                    heatmapAnnotation = new largeImageAnnotation.models.AnnotationModel({
+                        _id: resp._id
+                    });
+                });
+                waitsFor(function () {
+                    return heatmapAnnotation;
+                }, 'annotation to be created');
+                runs(function () {
+                    viewer.drawAnnotation(heatmapAnnotation);
+                });
+                waitsFor(function () {
+                    return (viewer._annotations[heatmapAnnotation.id] || {features: []}).features.length;
+                }, 'heatmap to be drawn');
+            });
+
+            it('set heatmap opacity', function () {
+                var layer = viewer._annotations[heatmapAnnotation.id].features[0].layer();
+                viewer.setGlobalAnnotationOpacity(0.5);
+                expect(layer.opacity()).toBe(0.5);
+                viewer.setAnnotationOpacity(heatmapAnnotation.id, 0.25);
+                expect(layer.opacity()).toBe(0.25);
+                viewer.setAnnotationOpacity(heatmapAnnotation.id);
+                expect(layer.opacity()).toBe(0.5);
+                viewer.removeAnnotation(heatmapAnnotation);
+            });
         });
         describe('large annotations', function () {
             var annotations = [], count = 0;
@@ -1035,6 +1115,18 @@ $(function () {
                     viewer.viewer.zoom(viewer.viewer.zoom() + 1);
                     expect(annotations[1]._lastZoom).toBeDefined();
                 });
+            });
+            it('set opacity of an annotation using centroids', function () {
+                var feature = _.find(viewer._annotations[annotations[1].id].features, function (feature) {
+                    return feature._centroidFeature;
+                });
+                var fillOpacity = feature.style.get('fillOpacity');
+                viewer.setGlobalAnnotationOpacity(0.5);
+                var opacity = fillOpacity(feature.data()[0], 0);
+                viewer.setAnnotationOpacity(annotations[1].id, 0.25);
+                expect(fillOpacity(feature.data()[0], 0)).toBe(opacity * 0.5);
+                viewer.setAnnotationOpacity(annotations[1].id);
+                expect(fillOpacity(feature.data()[0], 0)).toBe(opacity);
             });
         });
         it('destroy the viewer', function () {
