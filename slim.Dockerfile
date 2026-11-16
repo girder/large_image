@@ -16,6 +16,7 @@ RUN mv ~/wheels /opt/build-context/
 
 RUN echo "pylibmc>=1.5.1\nmatplotlib\npyvips\nsimplejpeg\n" \
     > /opt/build-context/wheels/requirements.txt
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6
 
 
 # Geospatial Sources
@@ -37,6 +38,7 @@ RUN pip install \
     /opt/wheels/large_image_source_tiff*.whl \
     /opt/wheels/large_image_source_pil*.whl \
     /opt/wheels/large_image_converter*.whl
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6
 
 
 # All Sources
@@ -55,6 +57,7 @@ RUN pip install \
     /opt/wheels/large_image-*.whl \
     /opt/wheels/large_image_converter*.whl \
     $(ls -1  /opt/wheels/large_image_source*.whl)
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6
 
 
 # All Sources and Girder Packages
@@ -69,6 +72,7 @@ RUN pip install \
     --find-links=/opt/wheels \
     -r /opt/wheels/requirements.txt \
     $(ls -1  /opt/wheels/*.whl)
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6
 
 
 # Jupyter all sources
@@ -89,6 +93,7 @@ RUN pip install \
     ipyleaflet \
     jupyter-server-proxy
 ENV LARGE_IMAGE_JUPYTER_PROXY='/proxy/'
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6
 
 
 # Jupyter Geospatial sources
@@ -114,3 +119,4 @@ RUN pip install \
     ipyleaflet \
     jupyter-server-proxy
 ENV LARGE_IMAGE_JUPYTER_PROXY='/proxy/'
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libstdc++.so.6

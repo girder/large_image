@@ -28,6 +28,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         this._unclampBoundsForOverlay = true;
         this._globalAnnotationOpacity = settings.globalAnnotationOpacity || 1.0;
         this._globalAnnotationFillOpacity = settings.globalAnnotationFillOpacity || 1.0;
+        this._annotationOpacity = {};
         this._unselectedOpacityMultiplier = typeof settings.unselectedOpacityMultiplier !== 'number'
             ? 0.33
             : settings.unselectedOpacityMultiplier;
@@ -208,9 +209,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * @param {object} overlayImageMetadata metadata such as size, tile size, and levels for the overlay image
          * @param {string} overlayImageId ID of a girder image item
          * @param {object} overlay information about the overlay such as opacity
+         * @param {string} [annotationId] ID of the overlay's annotation
          * @returns layer params for the image overlay layer
          */
-        _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay) {
+        _generateOverlayLayerParams(overlayImageMetadata, overlayImageId, overlay, annotationId) {
             const geo = window.geo;
             const params = geo.util.pixelCoordinateParams(
                 this.viewer.node(), overlayImageMetadata.sizeX, overlayImageMetadata.sizeY, overlayImageMetadata.tileWidth, overlayImageMetadata.tileHeight
@@ -226,7 +228,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 params.layer.url += '?' + extraarg.substr(1);
             }
             params.layer.opacity = overlay.opacity || 1;
-            params.layer.opacity *= this._globalAnnotationOpacity;
+            params.layer.opacity *= this._getAnnotationOpacity(annotationId);
 
             let levelDifference = this.levels - overlayImageMetadata.levels;
 
@@ -344,6 +346,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             if (annotation._centroids && !centroidFeature) {
                 const feature = this.featureLayer.createFeature('point');
                 feature._centroidFeature = true;
+                feature._opacityFactor = this._annotationOpacityFactor(annotation.id);
                 featureList.push(feature);
                 feature.data(annotation._centroids.data).position((d, i) => ({
                     x: annotation._centroids.centroids.x[i],
@@ -369,7 +372,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     },
                     strokeOpacity: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
-                        return annotation._centroids.props[s].strokeOpacity;
+                        return annotation._centroids.props[s].strokeOpacity * feature._opacityFactor;
                     },
                     strokeWidth: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
@@ -384,7 +387,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     },
                     fillOpacity: (d, i) => {
                         const s = annotation._centroids.centroids.s[i];
-                        return annotation._centroids.props[s].fillOpacity;
+                        return annotation._centroids.props[s].fillOpacity * feature._opacityFactor;
                     }
                 });
                 // bind an event so zoom updates radius
@@ -444,7 +447,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                             this.viewer.deleteLayer(layer);
                         });
                     }
-                    const params = this._generateOverlayLayerParams(response, overlayItemId, overlay);
+                    const params = this._generateOverlayLayerParams(response, overlayItemId, overlay, annotation.id);
                     const layerType = (overlay.type === 'pixelmap') ? 'pixelmap' : 'osm';
                     const proj = this._getOverlayTransformProjString(overlay);
                     const overlayLayer = this.viewer.createLayer(layerType, Object.assign({}, params, {id: overlay.id, gcs: proj}));
@@ -509,7 +512,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                                 };
                             });
                     });
-                    this._mutateFeaturePropertiesForHighlight(annotation.id, features);
+                    if (this.featureLayer.opacity() !== this._featureLayerOpacity()) {
+                        this._updateAnnotationOpacity();
+                    } else {
+                        this._mutateFeaturePropertiesForHighlight(annotation.id, features);
+                    }
                     const centroidFeature = featureList.find((f) => f._centroidFeature);
                     if (annotation._centroids && centroidFeature) {
                         if (centroidFeature.verticesPerFeature) {
@@ -593,7 +600,19 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * element to modify.
          */
         _mutateFeaturePropertiesForHighlight: function (annotationId, features) {
+            const opacityFactor = this._annotationOpacityFactor(annotationId);
             _.each(features, (feature) => {
+                if (feature._ownLayer) {
+                    feature.layer().opacity(this._getAnnotationOpacity(annotationId));
+                    return;
+                }
+                if (feature._centroidFeature) {
+                    if (feature._opacityFactor !== opacityFactor) {
+                        feature._opacityFactor = opacityFactor;
+                        feature.modified();
+                    }
+                    return;
+                }
                 const data = this._featureOpacity[annotationId][feature.featureType];
                 if (!data) {
                     // skip highlighting on features with a lot of entities
@@ -604,6 +623,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     datalen: data.length,
                     annotationId: annotationId,
                     fillOpacity: this._globalAnnotationFillOpacity,
+                    opacityFactor: opacityFactor,
                     highlightannot: this._highlightAnnotation,
                     highlightelem: this._highlightElement,
                     hideannot: this._hideAnnotation,
@@ -621,8 +641,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
                 for (let i = 0; i < data.length; i += 1) {
                     const id = data[i].id;
-                    const fillOpacity = data[i].fillOpacity * this._globalAnnotationFillOpacity;
-                    const strokeOpacity = data[i].strokeOpacity;
+                    const fillOpacity = data[i].fillOpacity * this._globalAnnotationFillOpacity * opacityFactor;
+                    const strokeOpacity = data[i].strokeOpacity * opacityFactor;
                     if (this._hideAnnotation && annotationId === this._hideAnnotation && id === this._hideElement) {
                         fillOpacityArray[i] = 0;
                         strokeOpacityArray[i] = 0;
@@ -647,7 +667,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 _.each(overlays, (overlay) => {
                     const overlayLayer = this.viewer.layers().find((layer) => layer.id() === overlay.id);
                     if (overlayLayer) {
-                        let newOpacity = (overlay.opacity || 1) * this._globalAnnotationOpacity;
+                        let newOpacity = (overlay.opacity || 1) * this._getAnnotationOpacity(annotationId);
                         if (this._highlightAnnotation && annotationId !== this._highlightAnnotation) {
                             newOpacity = newOpacity * this._unselectedOpacityMultiplier;
                         }
@@ -923,24 +943,58 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
 
         setGlobalAnnotationOpacity: function (opacity) {
             this._globalAnnotationOpacity = opacity;
-            if (this.featureLayer) {
-                this.featureLayer.opacity(opacity);
-            }
-            Object.values(this._annotations).forEach((annot) => annot.features.forEach((feature) => {
-                if (feature._ownLayer) {
-                    feature.layer().opacity(opacity);
-                }
-            }));
-            _.each(this._annotations, (annotation) => {
-                _.each(annotation.overlays, (overlay) => {
-                    const overlayLayer = this.viewer.layers().find((layer) => layer.id() === overlay.id);
-                    if (overlayLayer) {
-                        const overlayOpacity = overlay.opacity || 1;
-                        overlayLayer.opacity(opacity * overlayOpacity);
-                    }
-                });
-            });
+            this._updateAnnotationOpacity();
             return this;
+        },
+
+        /**
+         * Set the opacity of one annotation.
+         *
+         * @param {string} annotationId The id of the annotation.
+         * @param {number} [opacity] The opacity.  If undefined, the global
+         *      annotation opacity is used.
+         */
+        setAnnotationOpacity: function (annotationId, opacity) {
+            if (opacity === undefined) {
+                delete this._annotationOpacity[annotationId];
+            } else {
+                this._annotationOpacity[annotationId] = opacity;
+            }
+            this._updateAnnotationOpacity();
+            return this;
+        },
+
+        _getAnnotationOpacity: function (annotationId) {
+            const opacity = this._annotationOpacity[annotationId];
+            return opacity === undefined ? this._globalAnnotationOpacity : opacity;
+        },
+
+        /**
+         * The feature layer is as opaque as the most opaque drawn annotation.
+         */
+        _featureLayerOpacity: function () {
+            return Math.max(
+                this._globalAnnotationOpacity,
+                ...Object.keys(this._annotations).map((id) => this._getAnnotationOpacity(id)));
+        },
+
+        /**
+         * The factor to scale an annotation's feature opacities by so that it
+         * has its own opacity on the shared feature layer.
+         */
+        _annotationOpacityFactor: function (annotationId) {
+            const layerOpacity = this._featureLayerOpacity();
+            return layerOpacity ? this._getAnnotationOpacity(annotationId) / layerOpacity : 1;
+        },
+
+        _updateAnnotationOpacity: function () {
+            if (this.featureLayer) {
+                this.featureLayer.opacity(this._featureLayerOpacity());
+                _.each(this._annotations, (layer, annotationId) => {
+                    this._mutateFeaturePropertiesForHighlight(annotationId, layer.features);
+                });
+                this.viewer.scheduleAnimationFrame(this.viewer.draw);
+            }
         },
 
         setGlobalAnnotationFillOpacity: function (opacity) {
