@@ -5,6 +5,7 @@
 ### Improvements
 
 - Removed a needless token lookup in the tiles endpoint ([#2154](../../pull/2154))
+- Support per-annotation opacity ([#2155](../../pull/2155))
 
 ## 1.36.0
 
