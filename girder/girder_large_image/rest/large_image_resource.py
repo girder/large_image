@@ -19,6 +19,7 @@ import contextlib
 import datetime
 import io
 import json
+import logging
 import os
 import pprint
 import re
@@ -32,7 +33,6 @@ from girder_jobs.constants import JobStatus
 from girder_jobs.models.job import Job
 
 import large_image
-from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute, describeRoute
 from girder.api.rest import Resource
@@ -48,6 +48,8 @@ from large_image.exceptions import TileGeneralError, TileSourceError
 
 from .. import constants, girder_tilesource
 from ..models.image_item import ImageItem
+
+logger = logging.getLogger(__name__)
 
 
 def createThumbnailsJobTask(item, spec):
@@ -394,7 +396,6 @@ class LargeImageResource(Resource):
             type='large_image_create_thumbnails',
             user=self.getCurrentUser(),
             public=True,
-            asynchronous=True,
         )
         Job().scheduleJob(job)
         return job
