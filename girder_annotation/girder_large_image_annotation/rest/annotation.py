@@ -1027,7 +1027,7 @@ class AnnotationResource(Resource):
         if not user:
             return []
         access = json.loads(params['access'])
-        public = self.boolParam('public', params, False)
+        public = bool(params.get('public'))
         count = 0
         for annotation in self.getFolderAnnotations(id, params['recurse'], user):
             annot = Annotation().load(annotation['_id'], user=user, getElements=False)
