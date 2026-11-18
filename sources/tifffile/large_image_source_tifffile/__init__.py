@@ -26,7 +26,7 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 class checkForMissingDataHandler(logging.Handler):
     def emit(self, record):
         msg = record.getMessage()
-        if 'Missing data are zeroed' in msg or 'OME series expected ' in msg:
+        if 'Missing data are ' in msg or 'OME series expected ' in msg:
             raise TileSourceError(record.getMessage())
 
 
