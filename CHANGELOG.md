@@ -4,7 +4,11 @@
 
 ### Improvements
 
-- Adjust a check to work with the latest version of tifffile ([#2156](../../pull/2156))
+- Adjust a check to work with the latest version of tifffile ([#2157](../../pull/2157))
+
+### Bug Fixes
+
+- Fix setting folder-level annotation access without the public parameter ([#2158](../../pull/2158))
 
 ## 1.36.1
 
