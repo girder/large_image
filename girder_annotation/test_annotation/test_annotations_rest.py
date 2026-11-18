@@ -15,6 +15,7 @@ pytestmark = pytest.mark.girder
 
 try:
     from girder_large_image import constants
+    from girder_large_image_annotation.constants import ANNOTATION_ACCESS_FLAG
     from girder_large_image_annotation.models.annotation import Annotation
 
     from girder.constants import AccessType
@@ -1115,3 +1116,267 @@ def testFolderEndpoints(server, admin, user):
         params={'recurse': True})
     assert utilities.respStatus(resp) == 200
     assert len(resp.json) == 2
+
+
+def _folderAccessSetup(admin, user):
+    """
+    Create a private folder with a subfolder, with annotations in each made by
+    a user and by an admin.  The user has admin access to the folders and to
+    the annotations they made.  The admin's annotations have empty access
+    control lists.  A second user is given read access to the folders after
+    the annotations are created, so has no access to any of the annotations.
+
+    :param admin: an admin user.
+    :param user: a non-admin user.
+    :returns: a dictionary with other (the second user), folderA, folderB (a
+        subfolder of folderA), userInA (a list of the user's annotations in
+        folderA), userInB (the same for folderB), and adminInA and adminInB (the
+        same for the admin).
+    """
+    other = User().createUser(
+        'other', 'password', 'Other', 'User', 'other@girder.test')
+    collection = Collection().createCollection('collection A', user, public=False)
+    folderA = Folder().createFolder(
+        collection, 'folder A', parentType='collection', creator=user, public=False)
+    folderB = Folder().createFolder(folderA, 'folder B', creator=user, public=False)
+    itemA1 = Item().createItem('sample A1', user, folderA)
+    itemA2 = Item().createItem('sample A2', user, folderA)
+    itemB1 = Item().createItem('sample B1', user, folderB)
+    result = {'other': other, 'userInA': [], 'userInB': [], 'adminInA': [], 'adminInB': []}
+    for item, key in ((itemA1, 'A'), (itemA2, 'A'), (itemB1, 'B')):
+        result['userIn' + key].append(
+            Annotation().createAnnotation(item, user, sampleAnnotation))
+    for item, key in ((itemA1, 'A'), (itemB1, 'B')):
+        annot = Annotation().createAnnotation(item, admin, sampleAnnotation, public=False)
+        Annotation().setAccessList(annot, access={'users': [], 'groups': []}, save=True)
+        result['adminIn' + key].append(annot)
+    Collection().setUserAccess(collection, other, AccessType.READ, save=True)
+    result['folderA'] = Folder().setUserAccess(folderA, other, AccessType.READ, save=True)
+    result['folderB'] = Folder().setUserAccess(folderB, other, AccessType.READ, save=True)
+    return result
+
+
+def _annotationAccessLevels(annot):
+    """
+    Get the current access of an annotation from the database.
+
+    :param annot: the annotation to check.
+    :returns: a dictionary of user id to access level for the users in the
+        annotation's access control list, and the annotation's public flag.
+    """
+    annot = Annotation().load(annot['_id'], force=True, getElements=False)
+    return {entry['id']: entry['level'] for entry in annot['access']['users']}, annot['public']
+
+
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
+@pytest.mark.plugin('large_image_annotation')
+def testFolderAnnotationAccess(server, admin, user):
+    setup = _folderAccessSetup(admin, user)
+    other = setup['other']
+    path = '/annotation/folder/%s/access' % setup['folderA']['_id']
+    userAnnots = setup['userInA'] + setup['userInB']
+    adminAnnots = setup['adminInA'] + setup['adminInB']
+
+    def accessList(*entries):
+        return json.dumps({'groups': [], 'users': [{
+            'id': str(entry['_id']), 'level': level, 'flags': [],
+        } for entry, level in entries]})
+
+    # The second user starts with no access to any annotation
+    for annot in userAnnots + adminAnnots:
+        resp = server.request('/annotation/%s' % annot['_id'], user=other)
+        assert utilities.respStatus(resp) == 403
+
+    # This requires a logged in user
+    resp = server.request(path, method='PUT', params={
+        'access': accessList((user, AccessType.ADMIN))})
+    assert utilities.respStatus(resp) == 401
+
+    # A user without admin access to any annotations changes nothing
+    resp = server.request(path, method='PUT', user=other, params={
+        'access': accessList((other, AccessType.ADMIN)), 'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'updated': 0}
+    for annot in userAnnots:
+        assert _annotationAccessLevels(annot) == ({user['_id']: AccessType.ADMIN}, False)
+
+    # Without recurse, only the user's annotations in the folder itself are
+    # changed
+    resp = server.request(path, method='PUT', user=user, params={
+        'access': accessList((user, AccessType.ADMIN), (other, AccessType.READ)),
+        'public': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'updated': 2}
+    for annot in setup['userInA']:
+        assert _annotationAccessLevels(annot) == (
+            {user['_id']: AccessType.ADMIN, other['_id']: AccessType.READ}, True)
+        resp = server.request('/annotation/%s' % annot['_id'], user=other)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['_accessLevel'] == AccessType.READ
+    for annot in setup['userInB']:
+        assert _annotationAccessLevels(annot) == ({user['_id']: AccessType.ADMIN}, False)
+        resp = server.request('/annotation/%s' % annot['_id'], user=other)
+        assert utilities.respStatus(resp) == 403
+    # Annotations the user does not have admin access to are not changed
+    for annot in adminAnnots:
+        assert _annotationAccessLevels(annot) == ({}, False)
+
+    # With recurse, annotations in subfolders are changed.  The access control
+    # list is replaced, not merged, and public defaults to false.
+    resp = server.request(path, method='PUT', user=user, params={
+        'access': accessList((user, AccessType.ADMIN)), 'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'updated': 3}
+    for annot in userAnnots:
+        assert _annotationAccessLevels(annot) == ({user['_id']: AccessType.ADMIN}, False)
+        resp = server.request('/annotation/%s' % annot['_id'], user=other)
+        assert utilities.respStatus(resp) == 403
+    for annot in adminAnnots:
+        assert _annotationAccessLevels(annot) == ({}, False)
+
+    # A user can remove their own access, after which they can no longer
+    # change the annotations
+    resp = server.request(path, method='PUT', user=user, params={
+        'access': accessList((other, AccessType.ADMIN)), 'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'updated': 3}
+    for annot in userAnnots:
+        assert _annotationAccessLevels(annot) == ({other['_id']: AccessType.ADMIN}, False)
+    resp = server.request(path, method='PUT', user=user, params={
+        'access': accessList((user, AccessType.ADMIN)), 'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'updated': 0}
+    for annot in userAnnots:
+        assert _annotationAccessLevels(annot) == ({other['_id']: AccessType.ADMIN}, False)
+
+    # A site admin changes all annotations, regardless of their access
+    resp = server.request(path, method='PUT', user=admin, params={
+        'access': accessList((user, AccessType.WRITE)), 'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'updated': 5}
+    for annot in userAnnots + adminAnnots:
+        assert _annotationAccessLevels(annot) == ({user['_id']: AccessType.WRITE}, False)
+
+    # The annotation elements are not affected by changing access
+    resp = server.request('/annotation/%s' % userAnnots[0]['_id'], user=user)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json['_accessLevel'] == AccessType.WRITE
+    assert len(resp.json['annotation']['elements']) == len(sampleAnnotation['elements'])
+
+
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
+@pytest.mark.plugin('large_image_annotation')
+def testFolderAnnotationPresent(server, admin, user):
+    setup = _folderAccessSetup(admin, user)
+    other = setup['other']
+    pathA = '/annotation/folder/%s/present' % setup['folderA']['_id']
+    pathB = '/annotation/folder/%s/present' % setup['folderB']['_id']
+
+    def present(path, checkUser, **params):
+        resp = server.request(path, user=checkUser, params=params)
+        assert utilities.respStatus(resp) == 200
+        return resp.json
+
+    assert present(pathA, user) is True
+    assert present(pathA, user, recurse=False) is True
+    assert present(pathB, user) is True
+    assert present(pathA, admin) is True
+    # Read access to the folder is not enough; the user must have admin access
+    # to an annotation
+    assert present(pathA, other) is False
+    assert present(pathB, other) is False
+    assert not present(pathA, None)
+
+    # Subfolders are checked by default, but not if recurse is false
+    Annotation().setUserAccess(setup['userInB'][0], other, AccessType.WRITE, save=True)
+    assert present(pathA, other) is False
+    Annotation().setUserAccess(setup['userInB'][0], other, AccessType.ADMIN, save=True)
+    assert present(pathA, other) is True
+    assert present(pathA, other, recurse=False) is False
+    assert present(pathB, other, recurse=False) is True
+
+    # Deleted annotations are not counted
+    emptyFolder = Folder().createFolder(setup['folderA'], 'empty', creator=user)
+    emptyPath = '/annotation/folder/%s/present' % emptyFolder['_id']
+    assert present(emptyPath, user) is False
+    item = Item().createItem('sample', user, emptyFolder)
+    annot = Annotation().createAnnotation(item, user, sampleAnnotation)
+    assert present(emptyPath, user) is True
+    resp = server.request('/annotation/%s' % annot['_id'], method='DELETE', user=user)
+    assert utilities.respStatus(resp) == 200
+    assert present(emptyPath, user) is False
+
+
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
+@pytest.mark.plugin('large_image_annotation')
+def testFolderAnnotationCreate(server, admin, user):
+    setup = _folderAccessSetup(admin, user)
+    other = setup['other']
+    folder = setup['folderA']
+    path = '/annotation/folder/%s/create' % folder['_id']
+
+    resp = server.request(path)
+    assert utilities.respStatus(resp) == 401
+    for checkUser in (user, admin):
+        resp = server.request(path, user=checkUser)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json is True
+    # Read access is not enough to create annotations
+    resp = server.request(path, user=other)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json is False
+    # Read access with the create annotations flag is enough
+    Folder().setUserAccess(
+        folder, other, AccessType.READ, save=True, flags=[ANNOTATION_ACCESS_FLAG])
+    resp = server.request(path, user=other)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json is True
+    # As is write access without the flag
+    Folder().setUserAccess(folder, other, AccessType.WRITE, save=True)
+    resp = server.request(path, user=other)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json is True
+    # Without read access, the folder cannot be checked
+    Folder().setUserAccess(folder, other, None, save=True)
+    resp = server.request(path, user=other)
+    assert utilities.respStatus(resp) == 403
+
+
+@pytest.mark.usefixtures('unbindLargeImage', 'unbindAnnotation')
+@pytest.mark.plugin('large_image_annotation')
+def testFolderAnnotationDelete(server, admin, user):
+    setup = _folderAccessSetup(admin, user)
+    other = setup['other']
+    path = '/annotation/folder/%s' % setup['folderA']['_id']
+
+    def remaining():
+        resp = server.request(path, user=admin, params={'recurse': True})
+        assert utilities.respStatus(resp) == 200
+        return {entry['_id'] for entry in resp.json}
+
+    def ids(*keys):
+        return {str(annot['_id']) for key in keys for annot in setup[key]}
+
+    assert remaining() == ids('userInA', 'userInB', 'adminInA', 'adminInB')
+    resp = server.request(path, method='DELETE', params={'recurse': True})
+    assert utilities.respStatus(resp) == 401
+    # A user without admin access to any annotations deletes nothing
+    resp = server.request(path, method='DELETE', user=other, params={'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'deleted': 0}
+    assert remaining() == ids('userInA', 'userInB', 'adminInA', 'adminInB')
+    # Without recurse, only the user's annotations in the folder itself are
+    # deleted
+    resp = server.request(path, method='DELETE', user=user)
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'deleted': 2}
+    assert remaining() == ids('userInB', 'adminInA', 'adminInB')
+    resp = server.request(path, method='DELETE', user=user, params={'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'deleted': 1}
+    assert remaining() == ids('adminInA', 'adminInB')
+    # A site admin deletes all annotations
+    resp = server.request(path, method='DELETE', user=admin, params={'recurse': True})
+    assert utilities.respStatus(resp) == 200
+    assert resp.json == {'deleted': 2}
+    assert remaining() == set()

@@ -1052,7 +1052,7 @@ class AnnotationResource(Resource):
         if not user:
             return []
         access = json.loads(params['access'])
-        public = self.boolParam('public', params, False)
+        public = bool(params.get('public'))
 
         def process():
             count = 0
