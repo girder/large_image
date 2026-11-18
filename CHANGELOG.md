@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.36.2
+
+### Improvements
+
+- Adjust a check to work with the latest version of tifffile ([#2156](../../pull/2156))
+
 ## 1.36.1
 
 ### Improvements
