@@ -1,0 +1,21 @@
+large\_image\_source\_gdal package
+==================================
+
+Submodules
+----------
+
+large\_image\_source\_gdal.girder\_source module
+------------------------------------------------
+
+.. automodule:: large_image_source_gdal.girder_source
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: large_image_source_gdal
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,16 @@
+# large_image_converter
+
+* [large_image_converter package](large_image_converter.md)
+  * [Submodules](large_image_converter.md#submodules)
+  * [large_image_converter.format_aperio module](large_image_converter.md#module-large_image_converter.format_aperio)
+    * [`adjust_params()`](large_image_converter.md#large_image_converter.format_aperio.adjust_params)
+    * [`create_thumbnail_and_label()`](large_image_converter.md#large_image_converter.format_aperio.create_thumbnail_and_label)
+    * [`modify_tiff_before_write()`](large_image_converter.md#large_image_converter.format_aperio.modify_tiff_before_write)
+    * [`modify_tiled_ifd()`](large_image_converter.md#large_image_converter.format_aperio.modify_tiled_ifd)
+    * [`modify_vips_image_before_output()`](large_image_converter.md#large_image_converter.format_aperio.modify_vips_image_before_output)
+  * [Module contents](large_image_converter.md#module-large_image_converter)
+    * [`convert()`](large_image_converter.md#large_image_converter.convert)
+    * [`format_hook()`](large_image_converter.md#large_image_converter.format_hook)
+    * [`is_geospatial()`](large_image_converter.md#large_image_converter.is_geospatial)
+    * [`is_vips()`](large_image_converter.md#large_image_converter.is_vips)
+    * [`json_serial()`](large_image_converter.md#large_image_converter.json_serial)
