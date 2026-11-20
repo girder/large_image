@@ -9,6 +9,7 @@
 ### Bug Fixes
 
 - Fix setting folder-level annotation access without the public parameter ([#2158](../../pull/2158))
+- Fix multi-source crop being ignored when a source has no transform ([#2161](../../pull/2161))
 
 ## 1.36.1
 
