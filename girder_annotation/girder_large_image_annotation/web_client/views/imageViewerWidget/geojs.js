@@ -6,6 +6,9 @@ import {wrap} from '@girder/core/utilities/PluginUtils';
 import {restRequest, getApiRoot} from '@girder/core/rest';
 
 import convertAnnotation from '../../annotations/geojs/convert';
+import * as defaults from '../../annotations/defaults';
+import style from '../../annotations/style';
+import {sanitizeText, textFont} from '../../annotations/text';
 
 /**
  * Generate a new "random" element id (24 random 16 digits).
@@ -17,6 +20,25 @@ function guid() {
             .substring(1);
     }
     return s4() + s4() + s4() + s4() + s4() + s4();
+}
+
+/**
+ * Listen to the feature mouse events that annotations respond to.
+ *
+ * @param {geo.object} target A feature or layer.
+ * @param {function} handler The event handler.
+ */
+function onFeatureMouseEvents(target, handler) {
+    const events = window.geo.event.feature;
+    target.geoOn([
+        events.mousedown,
+        events.mouseup,
+        events.mouseclick,
+        events.mouseoff,
+        events.mouseon,
+        events.mouseover,
+        events.mouseout
+    ], handler);
 }
 
 var GeojsImageViewerWidgetExtension = function (viewer) {
@@ -46,6 +68,8 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             this.featureLayer = this.viewer.createLayer('feature', {
                 features: ['point', 'line', 'polygon', 'marker']
             });
+            // the text layer is created when the first text element is drawn
+            this.textLayer = null;
             this.setGlobalAnnotationOpacity(this._globalAnnotationOpacity);
             this.setGlobalAnnotationFillOpacity(this._globalAnnotationFillOpacity);
             // the annotation layer is for annotations that are actively drawn
@@ -298,7 +322,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         if (feature._ownLayer) {
                             feature.layer().map().deleteLayer(feature.layer());
                         } else {
-                            this.featureLayer.deleteFeature(feature);
+                            feature.layer().deleteFeature(feature);
                             immediateUpdate = true;
                         }
                     } else {
@@ -453,25 +477,14 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     const overlayLayer = this.viewer.createLayer(layerType, Object.assign({}, params, {id: overlay.id, gcs: proj}));
                     this.annotationLayer.moveToTop();
                     this.trigger('g:drawOverlayAnnotation', overlay, overlayLayer);
-                    const featureEvents = geo.event.feature;
-                    overlayLayer.geoOn(
-                        [
-                            featureEvents.mousedown,
-                            featureEvents.mouseup,
-                            featureEvents.mouseclick,
-                            featureEvents.mouseoff,
-                            featureEvents.mouseon,
-                            featureEvents.mouseover,
-                            featureEvents.mouseout
-                        ],
-                        (evt) => this._onMouseFeature(evt, annotation.elements().get(overlay.id), overlayLayer)
-                    );
+                    onFeatureMouseEvents(overlayLayer, (evt) => this._onMouseFeature(evt, annotation.elements().get(overlay.id), overlayLayer));
                     this.viewer.scheduleAnimationFrame(this.viewer.draw, true);
                 }).fail((response) => {
                     console.error(`There was an error overlaying image with ID ${overlayItemId}`);
                 });
             });
             this._featureOpacity[annotation.id] = {};
+            this._drawTextElements(annotation, featureList);
             geo.createFileReader('geojsonReader', {layer: this.featureLayer})
                 .read(geojson, (features) => {
                     if (features.length === 0) {
@@ -481,23 +494,11 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                         }
                     }
                     _.each(features || [], (feature) => {
-                        var events = geo.event.feature;
                         featureList.push(feature);
 
                         feature.selectionAPI(this._hoverEvents);
 
-                        feature.geoOn(
-                            [
-                                events.mousedown,
-                                events.mouseup,
-                                events.mouseclick,
-                                events.mouseoff,
-                                events.mouseon,
-                                events.mouseover,
-                                events.mouseout
-                            ],
-                            (evt) => this._onMouseFeature(evt)
-                        );
+                        onFeatureMouseEvents(feature, (evt) => this._onMouseFeature(evt));
 
                         // store the original opacities for the elements in each feature
                         if (annotation._centroids) {
@@ -543,7 +544,296 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                 });
             if (immediateUpdate) {
                 this.featureLayer._update();
+                if (this.textLayer) {
+                    this.textLayer._update();
+                }
             }
+        },
+
+        /**
+         * Get the layer used for text elements, creating it if necessary.
+         * The geojs text feature is drawn on a canvas, so it cannot be in the
+         * same layer as the other features.
+         *
+         * @returns {geo.featureLayer}
+         */
+        _getTextLayer: function () {
+            if (!this.textLayer) {
+                this.textLayer = this.viewer.createLayer('feature', {features: ['text']});
+                this.textLayer.opacity(this._featureLayerOpacity());
+                // keep actively drawn annotations above loaded annotations
+                this.annotationLayer.moveToTop();
+            }
+            return this.textLayer;
+        },
+
+        /**
+         * Draw the text elements of an annotation.  All of the text elements
+         * of one annotation are drawn in a single feature.
+         *
+         * @param {AnnotationModel} annotation
+         * @param {geo.feature[]} featureList The list of features for the
+         *      annotation.  If a text feature is created, it is added to this
+         *      list.
+         */
+        _drawTextElements: function (annotation, featureList) {
+            const data = ((annotation.get('annotation') || {}).elements || [])
+                .filter((element) => element.type === 'text' && element.text)
+                .map((element) => {
+                    element = _.defaults({}, element, defaults.text);
+                    return {id: element.id, properties: _.extend({element, annotation: annotation.id}, style(element))};
+                });
+            if (!data.length) {
+                return;
+            }
+            const feature = this._getTextLayer().createFeature('text');
+            feature.data(data)
+                .position((d) => ({x: d.properties.element.center[0], y: d.properties.element.center[1]}))
+                .text((d) => d.properties.element.text)
+                .style({
+                    font: (d) => textFont(d.properties.element),
+                    color: (d) => d.properties.strokeColor,
+                    textOpacity: (d) => d.properties.strokeOpacity,
+                    textAlign: 'center',
+                    textBaseline: 'middle'
+                });
+            featureList.push(feature);
+            feature.selectionAPI(this._hoverEvents);
+            onFeatureMouseEvents(feature, (evt) => this._onMouseFeature(evt));
+            // highlighting sets textOpacity from these values
+            this._featureOpacity[annotation.id].text = data.map(({id, properties}) => ({id, strokeOpacity: properties.strokeOpacity}));
+            this._mutateFeaturePropertiesForHighlight(annotation.id, [feature]);
+        },
+
+        /**
+         * Edit the text of a text element in place.  This shows a text area
+         * with a transparent background centered on the element's location
+         * using the same font as the drawn text.  Editing finishes when the
+         * text area loses focus or the finish key is pressed, and is canceled
+         * by the escape key.  The caller is responsible for hiding any drawn
+         * version of the element while it is edited (see `hideAnnotation`)
+         * and for updating the element afterwards.
+         *
+         * If `options.movable` is set, the text is first shown so that it can
+         * be moved: dragging it changes its location, and clicking it (or
+         * pressing enter) switches to editing the text.  Clicking elsewhere
+         * finishes and escape cancels, the same as when editing.
+         *
+         * @param {object} element A text element or an object with some of its
+         *      properties.
+         * @param {number[]} element.center The location of the text in image
+         *      coordinates.
+         * @param {string} [element.text] The initial text.
+         * @param {string} [element.lineColor] The color of the text.
+         * @param {number} [element.fontSize] The font size in css pixels.
+         * @param {object} [options]
+         * @param {string} [options.enterKey='newline'] What the enter key does
+         *      when editing.  If `newline`, enter adds a line and control-enter
+         *      or meta-enter finishes editing.  If `finish`, enter finishes
+         *      editing and shift-enter, control-enter, or meta-enter adds a
+         *      line.
+         * @param {boolean} [options.movable=false] If true, the text can be
+         *      dragged to a new location before it is edited.
+         * @returns {$.Promise} A promise that resolves to the new text and the
+         *      location as `(text, center)` when editing finishes.  The text
+         *      has had control characters and leading and trailing whitespace
+         *      removed and can be an empty string; an element cannot be empty,
+         *      so in that case it should be discarded.  The location is only
+         *      different from the original if the text was moved.  The promise
+         *      is rejected if editing is canceled.
+         */
+        startTextEdit: function (element, options) {
+            var geo = window.geo;
+            this.finishTextEdit();
+            element = _.defaults({}, element, defaults.text);
+            options = _.defaults({}, options, {enterKey: 'newline', movable: false});
+            const defer = $.Deferred();
+            const map = this.viewer;
+            const font = textFont(element);
+            const enterFinishes = options.enterKey === 'finish';
+            const css = {
+                position: 'absolute',
+                transform: 'translate(-50%, -50%)',
+                'z-index': 1000,
+                margin: 0,
+                padding: '0 4px',
+                border: '1px dashed',
+                outline: 'none',
+                'box-sizing': 'content-box',
+                background: 'transparent',
+                color: element.lineColor,
+                font: font,
+                'text-align': 'center',
+                'white-space': 'pre'
+            };
+            // don't let the map or other handlers act on these
+            const isolated = 'keydown keyup keypress mousedown mouseup click dblclick contextmenu wheel touchstart touchend';
+            let center = element.center.slice();
+            let text = sanitizeText(element.text);
+            // the current control: either the text area or the move handle
+            let node = null;
+            let input = null;
+            let done = false;
+
+            const place = () => {
+                const pt = map.gcsToDisplay({x: center[0], y: center[1]});
+                node.css({left: pt.x + 'px', top: pt.y + 'px'});
+            };
+            // commit is true to resolve, false to reject, or null to do neither
+            const finish = (commit) => {
+                if (done) {
+                    return;
+                }
+                done = true;
+                this._textEdit = null;
+                map.geoOff(geo.event.pan, place);
+                map.geoOff(geo.event.resize, place);
+                $(document).off('.liAnnotationTextMove');
+                if (input) {
+                    text = sanitizeText(input.val());
+                }
+                node.remove();
+                if (commit) {
+                    defer.resolve(text, center);
+                } else if (commit === false) {
+                    defer.reject();
+                }
+            };
+            const resize = () => {
+                if (!this._textMeasureContext) {
+                    this._textMeasureContext = document.createElement('canvas').getContext('2d');
+                }
+                this._textMeasureContext.font = font;
+                const lines = input.val().split('\n');
+                // always leave room for the cursor and a few characters
+                input.attr('rows', lines.length).css('width', Math.ceil(Math.max(
+                    this._textMeasureContext.measureText('MM').width,
+                    ...lines.map((line) => this._textMeasureContext.measureText(line).width))) + 2);
+            };
+            // replace the current control with a new one and focus it
+            const show = (newNode, title, extraCss, onKeydown) => {
+                newNode.attr({'aria-label': 'Annotation text', title}).css(css).css(extraCss).on('keydown', (evt) => {
+                    if (evt.key === 'Escape') {
+                        evt.preventDefault();
+                        finish(false);
+                    } else {
+                        onKeydown(evt);
+                    }
+                }).on('blur', () => {
+                    finish(true);
+                }).on(isolated, (evt) => {
+                    evt.stopPropagation();
+                });
+                if (node) {
+                    // jQuery unbinds the old control's handlers before
+                    // removing it, so its blur doesn't finish editing
+                    node.remove();
+                }
+                node = newNode.appendTo(map.node());
+                place();
+                node[0].focus();
+            };
+            const showEditor = () => {
+                input = $('<textarea class="g-li-annotation-text-edit" autocomplete="off" spellcheck="false" wrap="off">').val(text);
+                input.on('input', () => {
+                    const value = sanitizeText(input.val(), false);
+                    if (value !== input.val()) {
+                        // keep the cursor where it was relative to the end
+                        const fromEnd = input.val().length - input[0].selectionEnd;
+                        input.val(value);
+                        const pos = Math.max(0, value.length - fromEnd);
+                        input[0].setSelectionRange(pos, pos);
+                    }
+                    resize();
+                });
+                resize();
+                show(input, (enterFinishes ? 'Enter' : 'Ctrl-Enter') + ' or click elsewhere to finish, ' +
+                    (enterFinishes ? 'Shift-Enter for a new line, ' : '') + 'Escape to cancel',
+                {overflow: 'hidden', resize: 'none'}, (evt) => {
+                    if (evt.key !== 'Enter') {
+                        return;
+                    }
+                    const modified = evt.ctrlKey || evt.metaKey;
+                    if (enterFinishes ? (!modified && !evt.shiftKey) : modified) {
+                        evt.preventDefault();
+                        finish(true);
+                    } else if (enterFinishes && modified) {
+                        // shift-enter adds a line without any help, but these
+                        // don't.
+                        evt.preventDefault();
+                        input[0].setRangeText('\n', input[0].selectionStart, input[0].selectionEnd, 'end');
+                        resize();
+                    }
+                });
+                input[0].setSelectionRange(input.val().length, input.val().length);
+            };
+            const showHandle = () => {
+                const handle = $('<div class="g-li-annotation-text-move" tabindex="0" role="button">').text(text);
+                handle.on('mousedown', (evt) => {
+                    if (evt.which > 1) {
+                        return;
+                    }
+                    const start = {x: evt.pageX, y: evt.pageY};
+                    const startPt = map.gcsToDisplay({x: center[0], y: center[1]});
+                    let dragging = false;
+                    const endDrag = () => {
+                        $(document).off('.liAnnotationTextMove');
+                        handle.off('.liAnnotationTextMove');
+                        if (!dragging && !done) {
+                            showEditor();
+                        }
+                    };
+                    $(document).off('.liAnnotationTextMove').on('mousemove.liAnnotationTextMove', (evt) => {
+                        const dx = evt.pageX - start.x, dy = evt.pageY - start.y;
+                        // a small movement is still a click
+                        if (!dragging && dx * dx + dy * dy < 9) {
+                            return;
+                        }
+                        dragging = true;
+                        const pt = map.displayToGcs({x: startPt.x + dx, y: startPt.y + dy});
+                        center = [pt.x, pt.y, center[2] || 0];
+                        place();
+                    }).on('mouseup.liAnnotationTextMove', endDrag);
+                    // releasing the button over the handle doesn't reach the
+                    // document
+                    handle.off('.liAnnotationTextMove').on('mouseup.liAnnotationTextMove', endDrag);
+                });
+                show(handle, 'Drag to move the text, click to edit it; click elsewhere to finish, Escape to cancel',
+                    {cursor: 'move', 'user-select': 'none'}, (evt) => {
+                        if (evt.key === 'Enter') {
+                            evt.preventDefault();
+                            showEditor();
+                        }
+                    });
+            };
+            map.geoOn(geo.event.pan, place);
+            map.geoOn(geo.event.resize, place);
+            this._textEdit = {finish};
+            if (options.movable) {
+                showHandle();
+            } else {
+                showEditor();
+            }
+            return defer.promise();
+        },
+
+        /**
+         * If text is being edited in place, stop editing.
+         *
+         * @param {boolean} [commit=true] If true, resolve the promise returned
+         *      from `startTextEdit` with the current text.  If false, reject
+         *      it.  If null, neither resolve nor reject it.
+         */
+        finishTextEdit: function (commit) {
+            if (this._textEdit) {
+                this._textEdit.finish(commit === undefined ? true : commit);
+            }
+        },
+
+        destroy: function () {
+            // don't leave an editor or report text after the viewer is gone
+            this.finishTextEdit(null);
+            return viewer.prototype.destroy.apply(this, arguments);
         },
 
         /**
@@ -657,8 +947,12 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     }
                 }
 
-                feature.updateStyleFromArray('fillOpacity', fillOpacityArray);
-                feature.updateStyleFromArray('strokeOpacity', strokeOpacityArray);
+                if (feature.featureType === 'text') {
+                    feature.updateStyleFromArray('textOpacity', strokeOpacityArray);
+                } else {
+                    feature.updateStyleFromArray('fillOpacity', fillOpacityArray);
+                    feature.updateStyleFromArray('strokeOpacity', strokeOpacityArray);
+                }
                 feature._lastFeatureProp = prop;
             });
             // Also modify opacity of image overlay layers
@@ -717,7 +1011,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (feature._ownLayer) {
                         feature.layer().map().deleteLayer(feature.layer());
                     } else {
-                        this.featureLayer.deleteFeature(feature);
+                        feature.layer().deleteFeature(feature);
                     }
                 });
                 _.each(this._annotations[annotation.id].overlays, (overlay) => {
@@ -877,7 +1171,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          * Set the image interaction mode to draw the given type of annotation.
          *
          * @param {string} type An annotation type, or null to turn off
-         *    drawing.
+         *    drawing.  For `text`, a point is placed and then the text is
+         *    typed in place (see `startTextEdit`).  If no text is entered,
+         *    the element is discarded and the promise is rejected.
          * @param {object} [options]
          * @param {boolean} [options.trigger=true] Trigger a global event after
          *    creating each annotation element.
@@ -885,6 +1181,10 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
          *    remove extant annotations.
          * @param {object} [options.modeOptions] Additional options to pass to
          *    the annotationLayer mode.
+         * @param {object} [options.textStyle] For the `text` type, the
+         *    `lineColor` and `fontSize` to use for the new element.
+         * @param {object} [options.textEdit] For the `text` type, options to
+         *    pass to `startTextEdit`, such as `enterKey`.
          * @returns {$.Promise}
          *    Resolves to an array of generated annotation elements.
          */
@@ -894,11 +1194,14 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
             var annotations = [];
             var defer = $.Deferred();
             var element;
+            const isText = type === 'text';
 
+            options = _.defaults(options || {}, {trigger: true});
+            // don't settle a promise for text that is still being typed
+            this.finishTextEdit(null);
             layer.geoOff(window.geo.event.annotation.mode);
             layer.mode(null);
             layer.geoOff(window.geo.event.annotation.state);
-            options = _.defaults(options || {}, {trigger: true});
             if (!options.keepExisting) {
                 layer.removeAllAnnotations();
             }
@@ -917,6 +1220,31 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     if (!element.id) {
                         element.id = guid();
                     }
+                    if (isText) {
+                        const annotation = evt.annotation;
+                        element = _.extend(
+                            {id: element.id, type: 'text', center: element.center},
+                            defaults.text,
+                            _.pick(options.textStyle || {}, 'lineColor', 'fontSize'));
+                        layer.removeAllAnnotations();
+                        layer.geoOff(window.geo.event.annotation.state);
+                        this.startTextEdit(element, _.omit(options.textEdit || {}, 'movable')).done((text) => {
+                            if (!text) {
+                                defer.reject();
+                                return;
+                            }
+                            element.text = text;
+                            elements.push(element);
+                            annotations.push(annotation);
+                            if (options.trigger) {
+                                events.trigger('g:annotationCreated', element, annotation, opts);
+                            }
+                            defer.resolve(elements, annotations, opts);
+                        }).fail(() => {
+                            defer.reject();
+                        });
+                        return;
+                    }
                     elements.push(element);
                     annotations.push(evt.annotation);
 
@@ -929,7 +1257,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
                     defer.resolve(elements, annotations, opts);
                 }
             );
-            layer.mode(type, undefined, options.modeOptions);
+            layer.mode(isText ? 'point' : type, undefined, options.modeOptions);
             layer.geoOn(window.geo.event.annotation.mode, (evt) => {
                 layer.geoOff(window.geo.event.annotation.state);
                 layer.geoOff(window.geo.event.annotation.mode);
@@ -990,6 +1318,9 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         _updateAnnotationOpacity: function () {
             if (this.featureLayer) {
                 this.featureLayer.opacity(this._featureLayerOpacity());
+                if (this.textLayer) {
+                    this.textLayer.opacity(this._featureLayerOpacity());
+                }
                 _.each(this._annotations, (layer, annotationId) => {
                     this._mutateFeaturePropertiesForHighlight(annotationId, layer.features);
                 });

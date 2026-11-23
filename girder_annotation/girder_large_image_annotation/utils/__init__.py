@@ -171,6 +171,8 @@ class AnnotationGeoJSON:
         geom['type'] = 'Point'
         geom['coordinates'] = element['center']
 
+    textType = pointType
+
     def polylineType(self, element, geom, prop):
         if element.get('closed'):
             geom['type'] = 'Polygon'
@@ -223,7 +225,7 @@ class AnnotationGeoJSON:
                 for k, v in element.items() if k in {
                     'id', 'label', 'group', 'user', 'lineColor', 'lineWidth',
                     'fillColor', 'radius', 'width', 'height', 'rotation',
-                    'normal',
+                    'normal', 'text', 'fontSize',
                 }
             },
         }
@@ -274,6 +276,12 @@ class GeoJSONAnnotation:
                 self._annotation.update(geoelem['properties']['annotation'])
             self._annotation['elements'] = self._elements
         elemtype = geoelem.get('properties', {}).get('type', '') or geoelem['geometry']['type']
+        if elemtype.lower() == 'text':
+            element = {k: v for k, v in element.items() if k in {
+                'id', 'label', 'group', 'user', 'lineColor'}}
+            element.update({
+                k: v for k, v in geoelem.get('properties', {}).items()
+                if k in {'text', 'fontSize'}})
         func = getattr(self, elemtype.lower() + 'Type', None)
         if func is not None:
             result = func(geoelem['geometry'], element)
@@ -322,6 +330,11 @@ class GeoJSONAnnotation:
     def pointType(self, elem, result):
         result['center'] = (elem['coordinates'] + [0, 0, 0])[:3]
         result['type'] = 'point'
+        return result
+
+    def textType(self, elem, result):
+        result = self.pointType(elem, result)
+        result['type'] = 'text'
         return result
 
     def multipointType(self, elem, result):
