@@ -33,7 +33,7 @@ matplotlib
 tol-colors>=2.0.0
 pylibmc>=1.5.1
 redis
-simplejpeg ; python_version < "3.15"
+simplejpeg
 ipyvue
 aiohttp
 pykdtree

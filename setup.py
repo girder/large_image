@@ -25,7 +25,7 @@ extraReqs = {
     'tiledoutput': ['pyvips'],
     'performance': [
         'psutil>=4.2.0',
-        'simplejpeg ; python_version < "3.15"',
+        'simplejpeg',
     ],
     'pykdtree': ['pykdtree'],
 }
