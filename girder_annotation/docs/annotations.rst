@@ -98,7 +98,7 @@ it is not allowed. If element IDs are specified, they must be unique.
 All Vector Shapes
 ~~~~~~~~~~~~~~~~~
 
-These properties exist for all vector shapes (all but heatmaps, grid data, and image and pixelmap overlays).
+These properties exist for all vector shapes (all but heatmaps, grid data, and image and pixelmap overlays).  Text elements have ``lineColor`` but not ``lineWidth``.
 
 ::
 
@@ -195,6 +195,32 @@ Rectangle
     "normal": [0, 0, 1.0],             # Three numbers specifying normal.  Default is positive Z.
                                        # Optional
     "fillColor": "rgba(0, 255, 0, 1)"  # String.  See note about colors.  Optional
+  }
+
+Text
+~~~~
+
+One or more lines of text that are centered horizontally and vertically on a
+point.  The text is drawn in a sans-serif font and is the same size on screen
+at all zoom levels.  Lines are separated by line feeds (``\n``); there is no
+automatic word wrapping.  The text may contain any unicode characters except
+control characters other than line feeds, so it cannot contain tabs.  When the
+annotation is saved, other line breaks are converted to line feeds and leading
+and trailing whitespace is removed.  The remaining text cannot be empty.
+
+Unlike the other vector shapes, text does not have a ``lineWidth``.
+
+::
+
+  {
+    "type": "text",                    # Exact string.  Required
+    <id, label, group, user>           # Optional general shape properties
+    "center": [123.3, 144.6, 0],       # Coordinate.  Required
+    "text": "A comment\non two lines", # String.  Required
+    "lineColor": "#000000",            # String.  See note about colors.  The color
+                                       # of the text.  Optional
+    "fontSize": 16                     # Number > 0.  The size of the font in display
+                                       # (CSS) pixels.  Default is 16.  Optional
   }
 
 Heatmap
@@ -516,6 +542,12 @@ A sample that shows off a valid annotation:
       "rotation": 0,
       "widthSubdivisions": 3,
       "heightSubdivisions": 4
+    },{
+      "type": "text",
+      "center": [20.5, 30.0, 0],
+      "text": "A comment",
+      "lineColor": "#000000",
+      "fontSize": 16
     }]
   }
 

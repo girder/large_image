@@ -5,6 +5,7 @@ import style from './style';
 import * as geometry from './geometry';
 import * as defaults from './defaults';
 import * as geojs from './geojs';
+import * as text from './text';
 
 export {
     convert,
@@ -13,5 +14,6 @@ export {
     style,
     geometry,
     defaults,
-    geojs
+    geojs,
+    text
 };

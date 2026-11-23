@@ -289,6 +289,58 @@ class TestLargeImageAnnotation:
         annot['elements'][1]['id'] = ObjectId('012345678901234567890124')
         assert Annotation().validate(doc) is not None
 
+    def testValidateText(self, db):
+        annot = copy.deepcopy(sampleAnnotation)
+        annot['elements'] = [{
+            'type': 'text',
+            'center': [10, 20, 0],
+            'text': 'A comment',
+        }, {
+            'type': 'text',
+            'center': [10, 20, 0],
+            'text': '  \u00c5ngstr\u00f6m \u65e5\u672c\u8a9e \U0001f600 two  spaces\t\n',
+            'lineColor': 'rgba(255, 0, 0, 0.5)',
+            'fontSize': 12.5,
+            'group': 'comments',
+            'label': {'value': 'a label'},
+        }]
+        doc = {'annotation': annot}
+        assert Annotation().validate(doc) is not None
+        # leading and trailing whitespace is removed
+        assert annot['elements'][1]['text'] == (
+            '\u00c5ngstr\u00f6m \u65e5\u672c\u8a9e \U0001f600 two  spaces')
+        # other line breaks are converted to line feeds
+        annot['elements'][0]['text'] = '\r\nthree\r\nlines\rof text\n'
+        assert Annotation().validate(doc) is not None
+        assert annot['elements'][0]['text'] == 'three\nlines\nof text'
+        # long text is allowed
+        longText = '\n'.join(
+            ' '.join('word%d' % (line * 15 + idx) for idx in range(15)) for line in range(200))
+        annot['elements'][0]['text'] = longText
+        assert Annotation().validate(doc) is not None
+        assert annot['elements'][0]['text'] == longText
+        # a failed validation doesn't leave the elements in place, so use a
+        # new document each time
+        base = {'type': 'text', 'center': [10, 20, 0], 'text': 'A comment'}
+
+        def validateElement(**kwargs):
+            element = dict(base, **kwargs)
+            return Annotation().validate({'annotation': {'name': 'sample', 'elements': [element]}})
+
+        assert validateElement() is not None
+        for badText in ['', '   ', '\t', '\n\n', 'bell\x07', 'a\ttab', 'c1\x85.', 5]:
+            with pytest.raises(ValidationException):
+                validateElement(text=badText)
+        with pytest.raises(ValidationException):
+            Annotation().validate({'annotation': {'name': 'sample', 'elements': [
+                {'type': 'text', 'center': [10, 20, 0]}]}})
+        for key, value in [
+            ('fontSize', 0), ('fontSize', -5), ('fontSize', '12'),
+            ('lineColor', 'blue'), ('lineWidth', 2), ('fillColor', '#000000'),
+        ]:
+            with pytest.raises(ValidationException):
+                validateElement(**{key: value})
+
     def testValidateLegend(self, db):
         annot = copy.deepcopy(sampleAnnotation)
         doc = {'annotation': annot}
