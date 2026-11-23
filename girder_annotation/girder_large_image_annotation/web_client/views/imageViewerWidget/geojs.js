@@ -42,6 +42,9 @@ function onFeatureMouseEvents(target, handler) {
 }
 
 var GeojsImageViewerWidgetExtension = function (viewer) {
+    // The methods returned here are copied onto the viewer's prototype, so
+    // keep a reference to the original destroy method to call from ours.
+    const destroy = viewer.prototype.destroy;
     wrap(viewer, 'initialize', function (initialize) {
         var settings = arguments[1];
 
@@ -833,7 +836,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         destroy: function () {
             // don't leave an editor or report text after the viewer is gone
             this.finishTextEdit(null);
-            return viewer.prototype.destroy.apply(this, arguments);
+            return destroy.apply(this, arguments);
         },
 
         /**

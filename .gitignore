@@ -60,6 +60,11 @@ ENV/
 
 node_modules/
 
+# Playwright test output
+girder/girder_large_image/web_client/test-results/
+girder/girder_large_image/web_client/playwright-report/
+girder/girder_large_image/web_client/coverage/
+
 .*.swp
 .*.swo
 *.aux.xml
