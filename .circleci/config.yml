@@ -150,7 +150,7 @@ commands:
           environment:
             DEBIAN_FRONTEND: noninteractive
           command: |
-            npx playwright install --with-deps
+            npx playwright install --with-deps chromium
           working_directory: girder/girder_large_image/web_client
       - run:
           name: Check node versions

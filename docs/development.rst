@@ -43,7 +43,7 @@ By default, instead of storing test environments in a ``.tox`` directory, they a
 nodejs and npm for Girder Tests or Development
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``nodejs`` version 14.x and a corresponding version of ``npm`` are required to build and test Girder client code.  See `nodejs <https://nodejs.org/en/download/>`_ for how to download and install it.  Remember to get version 12 or 14.
+``nodejs`` version 22.x or later and a corresponding version of ``npm`` are required to build and test Girder client code.  See `nodejs <https://nodejs.org/en/download/>`_ for how to download and install it.
 
 Mongo for Girder Tests or Development
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,6 +76,29 @@ You can run specific tests using pytest's options, e.g., to try one specific tes
 .. code-block:: bash
 
     tox -e core-py39 -- -k testFromTiffRGBJPEG
+
+Girder Web Client Tests
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The Girder web client is tested with `Playwright <https://playwright.dev/>`_, following the same structure as Girder's own web client tests.  The tests are in ``girder/girder_large_image/web_client/tests``; each spec in the ``spec`` directory starts its own Girder server (with all installed plugins, including ``large_image_annotation`` and ``dicomweb``) and uses its own MongoDB database, so a MongoDB instance must be running.  The ``test`` tox environments build the web clients, run the Playwright tests, and then run the Python tests.
+
+To run the web client tests directly, the Girder server from the tox environment (or another environment with the plugins installed) must be on the path, and the Playwright browser must be installed once:
+
+.. code-block:: bash
+
+    cd girder/girder_large_image/web_client
+    npx playwright install --with-deps chromium
+    PATH=../../../build/tox/test-py311/bin:$PATH npm run test
+
+A single spec can be run by naming it (e.g., ``npm run test -- tests/spec/geojs.spec.ts``), and ``npx playwright show-report`` shows the report from the last run.  Some environment variables adjust the tests:
+
+- ``GIRDER_CLIENT_TESTING_MONGO_URI``: the MongoDB server to use (default ``mongodb://localhost:27017``).
+- ``GIRDER_CLIENT_TESTING_GIRDER_EXECUTABLE``: the ``girder`` executable to run instead of the one on the path.
+- ``GIRDER_CLIENT_TESTING_KEEP_SERVER_ALIVE``: if set, the Girder server and database from each spec are left running after the tests for inspection.
+- ``GIRDER_WORKER_TASK_ALWAYS_EAGER``: by default this is ``true`` so that worker tasks (such as processing uploaded annotations) run in the server process; set it to ``false`` to use a message broker and a separate ``celery`` worker.
+- ``HEADLESS=false``: show the browser while the tests run.
+- ``PLAYWRIGHT_WORKERS`` and ``PLAYWRIGHT_RETRIES``: control parallelism and retries.
+- ``DICOMWEB_TEST_URL`` and ``DICOMWEB_TEST_TOKEN``: the DICOMweb tests are skipped unless a DICOMweb server with the CI example data is specified.
 
 
 Development Environment
