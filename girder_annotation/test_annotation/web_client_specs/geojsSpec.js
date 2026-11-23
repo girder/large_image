@@ -788,6 +788,594 @@ $(function () {
             });
         });
 
+        describe('text elements', function () {
+            var model, longText, center1, center2;
+
+            function clickAt(x, y) {
+                var pt = viewer.viewer.gcsToDisplay({x: x, y: y});
+                interactor.simulateEvent('mousedown', {button: 'left', map: pt});
+                interactor.simulateEvent('mouseup', {button: 'left', map: pt});
+            }
+
+            function typeText(text) {
+                var input = $el.find('.g-li-annotation-text-edit');
+                expect(input.length).toBe(1);
+                input.val(text).trigger('input');
+                return input;
+            }
+
+            function key(input, name, ctrl) {
+                input.trigger($.Event('keydown', {key: name, ctrlKey: !!ctrl}));
+            }
+
+            it('draw text', function () {
+                var created, triggered;
+
+                runs(function () {
+                    girder.events.once('g:annotationCreated', function (element) {
+                        triggered = element;
+                    });
+                    viewer.startDrawMode('text', {textStyle: {lineColor: '#ff0000', fontSize: 20, lineWidth: 5}}).then(function (elements) {
+                        created = elements;
+                        return null;
+                    });
+                    expect(viewer.annotationLayer.mode()).toBe('point');
+                    clickAt(100, 200);
+                });
+                waitsFor(function () {
+                    return $el.find('.g-li-annotation-text-edit').length === 1;
+                }, 'the text editor to be shown');
+                runs(function () {
+                    var input = $el.find('.g-li-annotation-text-edit');
+                    var pt = viewer.viewer.gcsToDisplay({x: 100, y: 200});
+                    expect(viewer.annotationLayer.mode()).toBe(null);
+                    expect(viewer.annotationLayer.annotations().length).toBe(0);
+                    expect(document.activeElement).toBe(input[0]);
+                    expect(input.val()).toBe('');
+                    expect(parseFloat(input.css('left'))).toBeCloseTo(pt.x, 0);
+                    expect(parseFloat(input.css('top'))).toBeCloseTo(pt.y, 0);
+                    expect(input.css('font-size')).toBe('20px');
+                    expect(input.css('line-height')).toBe('25px');
+                    expect(input.css('color')).toBe('rgb(255, 0, 0)');
+                    expect(input.css('background-color')).toBe('rgba(0, 0, 0, 0)');
+                    // tabs and control characters are fixed while typing
+                    typeText('  A\tcomment\u0007\r\non two lines ');
+                    expect(input.val()).toBe('  A comment\non two lines ');
+                    expect(input.attr('rows')).toBe('2');
+                    // the editor moves with the map
+                    var zoom = viewer.viewer.zoom();
+                    viewer.viewer.zoom(zoom + 1);
+                    var pt2 = viewer.viewer.gcsToDisplay({x: 100, y: 200});
+                    expect(Math.abs(pt2.x - pt.x) + Math.abs(pt2.y - pt.y)).toBeGreaterThan(5);
+                    expect(parseFloat(input.css('left'))).toBeCloseTo(pt2.x, 0);
+                    expect(parseFloat(input.css('top'))).toBeCloseTo(pt2.y, 0);
+                    viewer.viewer.zoom(zoom);
+                    // enter adds a line and doesn't finish
+                    key(input, 'Enter');
+                    expect($el.find('.g-li-annotation-text-edit').length).toBe(1);
+                    expect(created).toBe(undefined);
+                    key(input, 'Enter', true);
+                });
+                waitsFor(function () {
+                    return created;
+                }, 'the element to be created');
+                runs(function () {
+                    expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                    expect(created.length).toBe(1);
+                    expect(created[0].type).toBe('text');
+                    expect(created[0].text).toBe('A comment\non two lines');
+                    expect(created[0].lineColor).toBe('#ff0000');
+                    expect(created[0].fontSize).toBe(20);
+                    expect(created[0].lineWidth).toBe(undefined);
+                    expect(created[0].fillColor).toBe(undefined);
+                    expect(created[0].id).toMatch(/^[0-9a-f]{24}$/);
+                    closeTo(created[0].center, [100, 200, 0]);
+                    expect(triggered).toBe(created[0]);
+                });
+            });
+
+            it('draw text finishes when focus is lost', function () {
+                var created;
+
+                runs(function () {
+                    viewer.startDrawMode('text', {trigger: false}).then(function (elements) {
+                        created = elements;
+                        return null;
+                    });
+                    clickAt(150, 250);
+                });
+                waitsFor(function () {
+                    return $el.find('.g-li-annotation-text-edit').length === 1;
+                }, 'the text editor to be shown');
+                runs(function () {
+                    typeText('Blurred').trigger('blur');
+                });
+                waitsFor(function () {
+                    return created;
+                }, 'the element to be created');
+                runs(function () {
+                    expect(created[0].text).toBe('Blurred');
+                    expect(created[0].lineColor).toBe('rgb(0,0,0)');
+                    expect(created[0].fontSize).toBe(16);
+                    expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                });
+            });
+
+            it('empty text is discarded', function () {
+                var created, rejected = 0;
+
+                function draw() {
+                    viewer.startDrawMode('text').then(function (elements) {
+                        created = elements;
+                        return null;
+                    }, function () {
+                        rejected += 1;
+                    });
+                    clickAt(100, 200);
+                }
+                runs(draw);
+                waitsFor(function () {
+                    return $el.find('.g-li-annotation-text-edit').length === 1;
+                }, 'the text editor to be shown');
+                runs(function () {
+                    key(typeText(' \n\t  '), 'Enter', true);
+                });
+                waitsFor(function () {
+                    return rejected === 1;
+                }, 'the whitespace element to be discarded');
+                runs(function () {
+                    expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                    draw();
+                });
+                waitsFor(function () {
+                    return $el.find('.g-li-annotation-text-edit').length === 1;
+                }, 'the text editor to be shown again');
+                runs(function () {
+                    // escape cancels even if there is text
+                    key(typeText('Canceled'), 'Escape');
+                });
+                waitsFor(function () {
+                    return rejected === 2;
+                }, 'the canceled element to be discarded');
+                runs(function () {
+                    expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                    expect(created).toBe(undefined);
+                });
+            });
+
+            it('restarting text draw mode abandons text entry', function () {
+                var settled = false;
+
+                runs(function () {
+                    viewer.startDrawMode('text', {trigger: false}).always(function () {
+                        settled = true;
+                    });
+                    clickAt(100, 200);
+                });
+                waitsFor(function () {
+                    return $el.find('.g-li-annotation-text-edit').length === 1;
+                }, 'the text editor to be shown');
+                runs(function () {
+                    typeText('Abandoned');
+                    viewer.startDrawMode('text', {trigger: false});
+                    // a new point is placed before the text is typed
+                    expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                    expect(viewer.annotationLayer.mode()).toBe('point');
+                    expect(settled).toBe(false);
+                    viewer.startDrawMode(null);
+                });
+            });
+
+            it('starting another draw mode abandons text entry', function () {
+                var settled = false;
+
+                runs(function () {
+                    viewer.startDrawMode('text').always(function () {
+                        settled = true;
+                    });
+                    clickAt(100, 200);
+                });
+                waitsFor(function () {
+                    return $el.find('.g-li-annotation-text-edit').length === 1;
+                }, 'the text editor to be shown');
+                runs(function () {
+                    typeText('Abandoned');
+                    viewer.startDrawMode('point');
+                    expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                    expect(settled).toBe(false);
+                    viewer.startDrawMode(null);
+                });
+            });
+
+            it('startTextEdit and finishTextEdit', function () {
+                var results = [];
+
+                longText = [];
+                for (var i = 0; i < 200; i += 1) {
+                    var words = [];
+                    for (var j = 0; j < 15; j += 1) {
+                        words.push('word' + (i * 15 + j));
+                    }
+                    longText.push(words.join(' '));
+                }
+                longText = longText.join('\n');
+
+                function record(name) {
+                    // done and fail are called synchronously
+                    return viewer.startTextEdit({center: [100, 100, 0], text: name, fontSize: 12}).done(function (text) {
+                        results.push(['resolved', text]);
+                    }).fail(function () {
+                        results.push(['rejected', name]);
+                    });
+                }
+                record('first');
+                expect($el.find('.g-li-annotation-text-edit').val()).toBe('first');
+                // starting a second edit finishes the first
+                record('second');
+                expect(results).toEqual([['resolved', 'first']]);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(1);
+                typeText('changed');
+                viewer.finishTextEdit();
+                expect(results[1]).toEqual(['resolved', 'changed']);
+                record('third');
+                viewer.finishTextEdit(false);
+                expect(results[2]).toEqual(['rejected', 'third']);
+                record('fourth');
+                viewer.finishTextEdit(null);
+                expect(results.length).toBe(3);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                // nothing happens if there is no editor
+                viewer.finishTextEdit();
+                expect(results.length).toBe(3);
+                // a comment of a few thousand words can be edited
+                record(longText);
+                expect($el.find('.g-li-annotation-text-edit').val()).toBe(longText);
+                expect($el.find('.g-li-annotation-text-edit').attr('rows')).toBe('200');
+                typeText(longText + '\nand one more line');
+                expect($el.find('.g-li-annotation-text-edit').attr('rows')).toBe('201');
+                viewer.finishTextEdit();
+                expect(results[3]).toEqual(['resolved', longText + '\nand one more line']);
+            });
+
+            it('the enter key can finish editing', function () {
+                var results = [], input;
+
+                function record(text, options) {
+                    viewer.startTextEdit({center: [100, 100, 0], text: text}, options).done(function (text) {
+                        results.push(text);
+                    });
+                    return $el.find('.g-li-annotation-text-edit');
+                }
+                // by default, enter doesn't finish and control-enter does
+                input = record('default');
+                key(input, 'Enter');
+                expect(results).toEqual([]);
+                input.trigger($.Event('keydown', {key: 'Enter', shiftKey: true}));
+                expect(results).toEqual([]);
+                key(input, 'Enter', true);
+                expect(results).toEqual(['default']);
+                input = record('explicit', {enterKey: 'newline'});
+                key(input, 'Enter');
+                expect(results.length).toBe(1);
+                input.trigger($.Event('keydown', {key: 'Enter', metaKey: true}));
+                expect(results).toEqual(['default', 'explicit']);
+                // when enter finishes, the modified keys add lines
+                input = record('first', {enterKey: 'finish'});
+                expect(input.attr('title')).toMatch(/^Enter or click elsewhere/);
+                input.trigger($.Event('keydown', {key: 'Enter', shiftKey: true}));
+                expect(results.length).toBe(2);
+                input[0].setSelectionRange(5, 5);
+                key(input, 'Enter', true);
+                expect(results.length).toBe(2);
+                expect(input.val()).toBe('first\n');
+                expect(input.attr('rows')).toBe('2');
+                input.val('first\nsecond').trigger('input');
+                input[0].setSelectionRange(2, 4);
+                input.trigger($.Event('keydown', {key: 'Enter', metaKey: true}));
+                expect(input.val()).toBe('fi\nt\nsecond');
+                expect(input[0].selectionStart).toBe(3);
+                key(input, 'Enter');
+                expect(results).toEqual(['default', 'explicit', 'fi\nt\nsecond']);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+            });
+
+            it('move text by dragging and edit it by clicking', function () {
+                var results = [], handle, offset, pt, center;
+
+                function record(options) {
+                    viewer.startTextEdit({center: [100, 200, 0], text: 'Movable\ntext', fontSize: 20, lineColor: '#0000ff'}, options).done(function (text, center) {
+                        results.push(['resolved', text, center]);
+                    }).fail(function () {
+                        results.push(['rejected']);
+                    });
+                    return $el.find('.g-li-annotation-text-move');
+                }
+                function mouse(target, name, dx, dy) {
+                    target.trigger($.Event(name, {which: 1, pageX: offset.left + dx, pageY: offset.top + dy}));
+                }
+                // without the option, the text is edited immediately
+                viewer.startTextEdit({center: [100, 200, 0], text: 'Not movable'});
+                expect($el.find('.g-li-annotation-text-move').length).toBe(0);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(1);
+                viewer.finishTextEdit(null);
+
+                handle = record({movable: true});
+                expect(handle.length).toBe(1);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                expect(handle.text()).toBe('Movable\ntext');
+                expect(handle.css('font-size')).toBe('20px');
+                expect(handle.css('color')).toBe('rgb(0, 0, 255)');
+                expect(handle.css('white-space')).toBe('pre');
+                expect(document.activeElement).toBe(handle[0]);
+                pt = viewer.viewer.gcsToDisplay({x: 100, y: 200});
+                expect(parseFloat(handle.css('left'))).toBeCloseTo(pt.x, 0);
+                expect(parseFloat(handle.css('top'))).toBeCloseTo(pt.y, 0);
+                offset = handle.offset();
+                // drag it
+                mouse(handle, 'mousedown', 5, 5);
+                mouse($(document), 'mousemove', 6, 6);
+                // a tiny movement doesn't move it
+                expect(parseFloat(handle.css('left'))).toBeCloseTo(pt.x, 0);
+                mouse($(document), 'mousemove', 35, 25);
+                expect(parseFloat(handle.css('left'))).toBeCloseTo(pt.x + 30, 0);
+                expect(parseFloat(handle.css('top'))).toBeCloseTo(pt.y + 20, 0);
+                mouse($(document), 'mouseup', 35, 25);
+                // it is still there and wasn't switched to editing
+                expect($el.find('.g-li-annotation-text-move').length).toBe(1);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                expect(results).toEqual([]);
+                // moving the mouse without the button down does nothing
+                mouse($(document), 'mousemove', 100, 100);
+                expect(parseFloat(handle.css('left'))).toBeCloseTo(pt.x + 30, 0);
+                // it can be dragged again, and releasing over the text works
+                offset = handle.offset();
+                mouse(handle, 'mousedown', 5, 5);
+                mouse($(document), 'mousemove', 15, -5);
+                mouse(handle, 'mouseup', 15, -5);
+                expect(parseFloat(handle.css('left'))).toBeCloseTo(pt.x + 40, 0);
+                expect(parseFloat(handle.css('top'))).toBeCloseTo(pt.y + 10, 0);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(0);
+                center = viewer.viewer.displayToGcs({x: pt.x + 40, y: pt.y + 10});
+                // finishing without editing reports the new location
+                viewer.finishTextEdit();
+                expect(results.length).toBe(1);
+                expect(results[0][1]).toBe('Movable\ntext');
+                closeTo(results[0][2], [center.x, center.y, 0], 3);
+                expect($el.find('.g-li-annotation-text-move').length).toBe(0);
+
+                // a click switches to editing
+                handle = record({movable: true});
+                offset = handle.offset();
+                mouse(handle, 'mousedown', 5, 5);
+                mouse(handle, 'mouseup', 5, 5);
+                expect($el.find('.g-li-annotation-text-move').length).toBe(0);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(1);
+                expect($el.find('.g-li-annotation-text-edit').val()).toBe('Movable\ntext');
+                expect(document.activeElement).toBe($el.find('.g-li-annotation-text-edit')[0]);
+                expect(results.length).toBe(1);
+                key(typeText('Edited'), 'Enter', true);
+                expect(results[1]).toEqual(['resolved', 'Edited', [100, 200, 0]]);
+
+                // drag and then click to edit; both changes are reported
+                handle = record({movable: true, enterKey: 'finish'});
+                offset = handle.offset();
+                mouse(handle, 'mousedown', 5, 5);
+                mouse($(document), 'mousemove', 35, 25);
+                mouse($(document), 'mouseup', 35, 25);
+                offset = handle.offset();
+                mouse(handle, 'mousedown', 5, 5);
+                mouse($(document), 'mouseup', 5, 5);
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(1);
+                pt = viewer.viewer.gcsToDisplay({x: 100, y: 200});
+                expect(parseFloat($el.find('.g-li-annotation-text-edit').css('left'))).toBeCloseTo(pt.x + 30, 0);
+                key(typeText('Moved and edited'), 'Enter');
+                center = viewer.viewer.displayToGcs({x: pt.x + 30, y: pt.y + 20});
+                expect(results[2][1]).toBe('Moved and edited');
+                closeTo(results[2][2], [center.x, center.y, 0], 3);
+
+                // enter switches to editing and escape cancels a move
+                handle = record({movable: true});
+                key(handle, 'Enter');
+                expect($el.find('.g-li-annotation-text-edit').length).toBe(1);
+                viewer.finishTextEdit(null);
+                handle = record({movable: true});
+                offset = handle.offset();
+                mouse(handle, 'mousedown', 5, 5);
+                mouse($(document), 'mousemove', 35, 25);
+                mouse($(document), 'mouseup', 35, 25);
+                key(handle, 'Escape');
+                expect(results[3]).toEqual(['rejected']);
+                expect($el.find('.g-li-annotation-text-move').length).toBe(0);
+                // losing focus finishes
+                handle = record({movable: true});
+                handle.trigger('blur');
+                expect(results[4]).toEqual(['resolved', 'Movable\ntext', [100, 200, 0]]);
+                expect(results.length).toBe(5);
+            });
+
+            it('draw text elements', function () {
+                runs(function () {
+                    // place the text so that it doesn't overlap on screen
+                    center1 = viewer.viewer.displayToGcs({x: 100, y: 80});
+                    center2 = viewer.viewer.displayToGcs({x: 250, y: 200});
+                    model = new largeImageAnnotation.models.AnnotationModel({
+                        _id: 'textannotation',
+                        annotation: {
+                            name: 'text',
+                            elements: [{
+                                id: 'a00000000000000000000001',
+                                type: 'text',
+                                center: [center1.x, center1.y, 0],
+                                text: 'A comment'
+                            }, {
+                                id: 'a00000000000000000000002',
+                                type: 'text',
+                                center: [center2.x, center2.y, 0],
+                                text: 'long first line\nshort',
+                                lineColor: 'rgba(255, 0, 0, 0.5)',
+                                fontSize: 24
+                            }, {
+                                id: 'a00000000000000000000004',
+                                type: 'rectangle',
+                                center: [300, 300, 0],
+                                rotation: 0,
+                                width: 10,
+                                height: 10
+                            }]
+                        }
+                    });
+                    expect(viewer.textLayer).toBe(null);
+                    viewer.drawAnnotation(model, {fetch: false});
+                });
+                girderTest.waitForLoad();
+                runs(function () {
+                    var features = viewer._annotations[model.id].features;
+                    var text = features.filter(function (feature) {
+                        return feature.featureType === 'text';
+                    });
+                    expect(viewer.textLayer).not.toBe(null);
+                    expect(viewer.textLayer.features().length).toBe(1);
+                    // drawn annotations are above the text
+                    expect(viewer.annotationLayer.zIndex()).toBeGreaterThan(viewer.textLayer.zIndex());
+                    expect(text.length).toBe(1);
+                    expect(features.length).toBe(2);
+                    text = text[0];
+                    expect(text.data().length).toBe(2);
+                    expect(text.style.get('text')(text.data()[1], 1)).toBe('long first line\nshort');
+                    expect(text.style.get('font')(text.data()[0], 0)).toBe('16px/20px sans-serif');
+                    expect(text.style.get('font')(text.data()[1], 1)).toBe('24px/30px sans-serif');
+                    expect(text.style('color')(text.data()[0], 0)).toBe('#000000');
+                    expect(text.style('color')(text.data()[1], 1)).toBe('#ff0000');
+                    expect(text.style.get('textOpacity')(text.data()[0], 0)).toBe(1);
+                    expect(text.style.get('textOpacity')(text.data()[1], 1)).toBe(0.5);
+                    expect(text.position()(text.data()[1], 1)).toEqual({x: center2.x, y: center2.y});
+                    // redrawing replaces the feature
+                    viewer.drawAnnotation(model, {fetch: false});
+                });
+                girderTest.waitForLoad();
+                runs(function () {
+                    expect(viewer.textLayer.features().length).toBe(1);
+                });
+            });
+
+            it('draw a long comment', function () {
+                var longModel;
+                runs(function () {
+                    longModel = new largeImageAnnotation.models.AnnotationModel({
+                        _id: 'longtextannotation',
+                        annotation: {
+                            name: 'long text',
+                            elements: [{
+                                id: 'b00000000000000000000001',
+                                type: 'text',
+                                center: [100, 300, 0],
+                                text: longText
+                            }]
+                        }
+                    });
+                    viewer.drawAnnotation(longModel, {fetch: false});
+                });
+                girderTest.waitForLoad();
+                runs(function () {
+                    var text = viewer._annotations[longModel.id].features[0];
+                    expect(viewer.textLayer.features().length).toBe(2);
+                    expect(text.featureType).toBe('text');
+                    expect(text.style.get('text')(text.data()[0], 0)).toBe(longText);
+                    // the text is drawn and can be found
+                    viewer.viewer.draw();
+                    var found = text.pointSearch({x: 100, y: 300});
+                    expect(found.found.length).toBe(1);
+                    expect(found.found[0].id).toBe('b00000000000000000000001');
+                    viewer.removeAnnotation(longModel);
+                    expect(viewer.textLayer.features().length).toBe(1);
+                });
+            });
+
+            it('text opacity, highlighting, and hiding', function () {
+                var text = viewer.textLayer.features()[0];
+
+                function opacities() {
+                    return text.data().map(function (d, i) {
+                        return text.style.get('textOpacity')(d, i);
+                    });
+                }
+                viewer.highlightAnnotation(model.id, 'a00000000000000000000001');
+                expect(opacities()).toEqual([1, 0.5 * 0.33]);
+                viewer.highlightAnnotation(model.id);
+                expect(opacities()).toEqual([1, 0.5]);
+                viewer.highlightAnnotation('otherannotation');
+                expect(opacities()).toEqual([0.33, 0.5 * 0.33]);
+                viewer.highlightAnnotation();
+                expect(opacities()).toEqual([1, 0.5]);
+                viewer.hideAnnotation(model.id, 'a00000000000000000000002');
+                expect(opacities()).toEqual([1, 0]);
+                viewer.hideAnnotation();
+                expect(opacities()).toEqual([1, 0.5]);
+                viewer.setGlobalAnnotationOpacity(0.5);
+                expect(viewer.textLayer.opacity()).toBe(0.5);
+                expect(opacities()).toEqual([1, 0.5]);
+                viewer.setAnnotationOpacity(model.id, 0.25);
+                expect(viewer.textLayer.opacity()).toBe(0.5);
+                expect(opacities()).toEqual([0.5, 0.25]);
+                viewer.setAnnotationOpacity(model.id);
+                viewer.setGlobalAnnotationOpacity(1);
+                expect(viewer.textLayer.opacity()).toBe(1);
+                expect(opacities()).toEqual([1, 0.5]);
+            });
+
+            it('text mouse events', function () {
+                var over = [], out = [], clicked = [], context = {};
+
+                viewer.on('g:mouseOverAnnotation', function (element, annotation) {
+                    expect(annotation).toBe(model.id);
+                    over.push(element.id);
+                }, context);
+                viewer.on('g:mouseOutAnnotation', function (element) {
+                    out.push(element.id);
+                }, context);
+                viewer.on('g:mouseClickAnnotation', function (element) {
+                    clicked.push(element.id);
+                }, context);
+
+                function moveTo(x, y, dx, dy) {
+                    var pt = viewer.viewer.gcsToDisplay({x: x, y: y});
+                    pt = {x: pt.x + (dx || 0), y: pt.y + (dy || 0)};
+                    interactor.simulateEvent('mousemove', {map: pt});
+                    return pt;
+                }
+                interactor.simulateEvent('mousemove', {map: {x: 390, y: 10}});
+                moveTo(center1.x, center1.y);
+                expect(over).toEqual(['a00000000000000000000001']);
+                moveTo(center1.x, center1.y, 0, 30);
+                expect(out).toEqual(['a00000000000000000000001']);
+                // each line of multiline text is checked separately.  The
+                // second line is shorter than the first.
+                moveTo(center2.x, center2.y, -70, -15);
+                expect(over).toEqual(['a00000000000000000000001', 'a00000000000000000000002']);
+                moveTo(center2.x, center2.y, -70, 15);
+                expect(out).toEqual(['a00000000000000000000001', 'a00000000000000000000002']);
+                var pt = moveTo(center2.x, center2.y, 0, 15);
+                expect(over.length).toBe(3);
+                interactor.simulateEvent('mousedown', {button: 'left', map: pt});
+                interactor.simulateEvent('mouseup', {button: 'left', map: pt});
+                expect(clicked).toEqual(['a00000000000000000000002']);
+                // hidden text doesn't get events
+                interactor.simulateEvent('mousemove', {map: {x: 390, y: 10}});
+                viewer.hideAnnotation(model.id, 'a00000000000000000000002');
+                moveTo(center2.x, center2.y, 0, 15);
+                expect(over.length).toBe(3);
+                viewer.hideAnnotation();
+                interactor.simulateEvent('mousemove', {map: {x: 390, y: 10}});
+                viewer.off(null, null, context);
+            });
+
+            it('remove text elements', function () {
+                viewer.removeAnnotation(model);
+                expect(viewer.textLayer.features().length).toBe(0);
+                expect(viewer._annotations[model.id]).toBe(undefined);
+            });
+        });
+
         describe('global annotation opacity', function () {
             var opacity, opacityFunction;
             beforeEach(function () {
