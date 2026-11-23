@@ -133,6 +133,65 @@ Transforms can be applied to scale the individual sources:
 Note that the zero values from the previous example have been omitted as they
 are unnecessary.
 
+Cropping A Source
+~~~~~~~~~~~~~~~~~
+
+A source can be cropped.  The crop values are in the pixel coordinates of the
+source; ``left`` and ``top`` are inclusive and ``right`` and ``bottom`` are
+exclusive.  Omitted values default to the edge of the source.
+
+Cropping does not move the source: if the crop starts at ``(20, 30)``, that
+pixel of the source is still located at ``(20, 30)`` in the output.  To place
+the upper left of the cropped area at the upper left of the output, combine
+the crop with an offset:
+
+::
+
+    ---
+    sources:
+      - path: ./test_orient1.tif
+        position:
+          x: -20
+          y: -30
+          crop:
+            left: 20
+            top: 30
+            right: 100
+            bottom: 150
+
+This results in an output that is 80 pixels wide and 120 pixels high.
+
+Specifying Resolution
+~~~~~~~~~~~~~~~~~~~~~
+
+Some files do not contain the physical size of a pixel or the magnification
+at which they were scanned, or contain incorrect values.  A multi-source file
+can be used to specify or override these values without modifying the original
+file.  For instance, if you have an ``ndpi`` file that has no scale information
+and you know that it was scanned at 20x with a resolution of 0.5 microns per
+pixel, you can use:
+
+::
+
+    ---
+    scale:
+      mm_x: 0.0005
+      mm_y: 0.0005
+      magnification: 20
+    sources:
+      - path: ./sample_without_scale.ndpi
+
+``mm_x`` and ``mm_y`` are the width and height of a pixel in **millimeters**,
+not microns, so 0.5 microns per pixel is ``0.0005``. If only ``magnification``
+is present, ``10x`` is considered to be ``0.001 mm/pixel`` (one micron per
+pixel). Specifying only one of the three values will functionally populate the
+others with a "best guess".
+
+As a caution, while "20x" is considered to be 0.5 microns/pixel, this is NOT
+exact. Whole slide scanners often have slight variations (e.g.,
+0.00048 mm/pixel), and some scanners can be radically different (e.g., 10x
+optics but higher resolution sensors, so the images is 0.3 microns/pixel).
+
 Controlling Axis Values
 ~~~~~~~~~~~~~~~~~~~~~~~
 

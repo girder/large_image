@@ -18,7 +18,7 @@
         "codemirror": "^5.65.0",
         "copy-webpack-plugin": "^4.5.2",
         "d3": "^3.5.16",
-        "geojs": "^1.8.6",
+        "geojs": "^1.21.0",
         "@egjs/hammerjs": "^2.0.8",
         "js-yaml": "~4.1.0",
         "jsonlint-mod": "^1.7.6",

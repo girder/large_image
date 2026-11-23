@@ -321,6 +321,40 @@ class AnnotationSchema:
         'additionalProperties': False,
     })
 
+    textShapeSchema = extendSchema(baseElementSchema, {
+        'properties': {
+            'type': {
+                'type': 'string',
+                'enum': ['text'],
+            },
+            'center': coordSchema,
+            'text': {
+                'type': 'string',
+                # At least one character, no control characters other than
+                # line feeds (this excludes tabs), and no leading or trailing
+                # whitespace.  Any other unicode is allowed.
+                'pattern': r'^(?!\s)[^\x00-\x09\x0b-\x1f\x7f-\x9f]+(?<!\s)$',
+                'description':
+                    'One or more lines of text separated by line feeds.  '
+                    'This is centered horizontally and vertically on the '
+                    'center coordinate.  When the annotation is saved, '
+                    'leading and trailing whitespace is removed and other '
+                    'line breaks are converted to line feeds.',
+            },
+            'lineColor': colorSchema,
+            'fontSize': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+                'description':
+                    'The font size in display (CSS) pixels.  The text is '
+                    'the same size on screen at all zoom levels.  Defaults '
+                    'to 16.',
+            },
+        },
+        'required': ['type', 'center', 'text'],
+        'additionalProperties': False,
+    })
+
     heatmapSchema = extendSchema(baseElementSchema, {
         'properties': {
             'type': {
@@ -561,6 +595,7 @@ class AnnotationSchema:
             polylineShapeSchema,
             rectangleShapeSchema,
             rectangleGridShapeSchema,
+            textShapeSchema,
             overlaySchema,
             pixelmapSchema,
         ],
@@ -1240,6 +1275,9 @@ class Annotation(AccessControlledModel):
                         del element[key]
                 if isinstance(element.get('id'), ObjectId):
                     element['id'] = str(element['id'])
+                if element.get('type') == 'text' and isinstance(element.get('text'), str):
+                    element['text'] = element['text'].replace(
+                        '\r\n', '\n').replace('\r', '\n').strip()
                 # Handle elements with large arrays by checking that a
                 # conversion to a numpy array works
                 keys = {}
