@@ -74,6 +74,45 @@ describe('geojs-annotations', function () {
         });
     });
 
+    describe('text', function () {
+        var text;
+
+        beforeEach(function () {
+            text = large_image_annotation.annotations.text;
+        });
+
+        it('sanitizeText', function () {
+            expect(text.sanitizeText('A comment')).toBe('A comment');
+            expect(text.sanitizeText('  trimmed \n')).toBe('trimmed');
+            expect(text.sanitizeText('  not trimmed ', false)).toBe('  not trimmed ');
+            expect(text.sanitizeText(undefined)).toBe('');
+            expect(text.sanitizeText(null)).toBe('');
+            expect(text.sanitizeText(5)).toBe('5');
+            expect(text.sanitizeText(' \t\n ')).toBe('');
+            // line breaks are kept as line feeds, tabs become spaces, and
+            // other control characters are removed
+            expect(text.sanitizeText('two\nlines')).toBe('two\nlines');
+            expect(text.sanitizeText('a\r\nb\rc\n\nd')).toBe('a\nb\nc\n\nd');
+            expect(text.sanitizeText('a\tb')).toBe('a b');
+            expect(text.sanitizeText('bell\u0007 del\u007f c1\u0085 nul\u0000.')).toBe('bell del c1 nul.');
+            // other unicode is kept, including characters outside of the
+            // basic multilingual plane and non-breaking spaces within text
+            expect(text.sanitizeText('\u00c5ngstr\u00f6m \u65e5\u672c\u8a9e \ud83d\ude03 a\u00a0b')).toBe(
+                '\u00c5ngstr\u00f6m \u65e5\u672c\u8a9e \ud83d\ude03 a\u00a0b');
+        });
+        it('textFont', function () {
+            expect(text.textFont({fontSize: 20})).toBe('20px/25px sans-serif');
+            expect(text.textFont({})).toBe('16px/20px sans-serif');
+            expect(text.textFont()).toBe('16px/20px sans-serif');
+            expect(text.textFont({fontSize: -5})).toBe('16px/20px sans-serif');
+            expect(text.textFont({fontSize: 12.5})).toBe('12.5px/15.63px sans-serif');
+        });
+        it('text is not converted to geojson', function () {
+            var result = convert({a: {type: 'text', center: [1, 2, 0], text: 'A comment'}});
+            expect(result.features.length).toBe(0);
+        });
+    });
+
     describe('types', function () {
         var style = {
             fill: false,

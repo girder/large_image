@@ -1461,22 +1461,27 @@ class MultiFileTileSource(FileTileSource, metaclass=LruCacheMetaclass):
                 'maxWidth': (corners[2][0] - corners[0][0]) // scale,
                 'maxHeight': (corners[2][1] - corners[0][1]) // scale,
             }
-            if region['left'] < 0:
-                x -= region['left'] * scaleX // scale
-                output['maxWidth'] += int(region['left'] * scaleX // scale)
-                region['left'] = 0
-            if region['top'] < 0:
-                y -= region['top'] * scaleY // scale
-                output['maxHeight'] += int(region['top'] * scaleY // scale)
-                region['top'] = 0
-            if region['right'] > source['metadata']['sizeX']:
+            # Limit the region to the source or to the crop, if there is one
+            limit = bbox.get('crop') or {
+                'left': 0, 'top': 0,
+                'right': source['metadata']['sizeX'],
+                'bottom': source['metadata']['sizeY']}
+            if region['left'] < limit['left']:
+                x -= (region['left'] - limit['left']) * scaleX // scale
+                output['maxWidth'] += int((region['left'] - limit['left']) * scaleX // scale)
+                region['left'] = limit['left']
+            if region['top'] < limit['top']:
+                y -= (region['top'] - limit['top']) * scaleY // scale
+                output['maxHeight'] += int((region['top'] - limit['top']) * scaleY // scale)
+                region['top'] = limit['top']
+            if region['right'] > limit['right']:
                 output['maxWidth'] -= int(
-                    (region['right'] - source['metadata']['sizeX']) * scaleX // scale)
-                region['right'] = source['metadata']['sizeX']
-            if region['bottom'] > source['metadata']['sizeY']:
+                    (region['right'] - limit['right']) * scaleX // scale)
+                region['right'] = limit['right']
+            if region['bottom'] > limit['bottom']:
                 output['maxHeight'] -= int(
-                    (region['bottom'] - source['metadata']['sizeY']) * scaleY // scale)
-                region['bottom'] = source['metadata']['sizeY']
+                    (region['bottom'] - limit['bottom']) * scaleY // scale)
+                region['bottom'] = limit['bottom']
             for key in region:
                 region[key] = int(round(region[key]))
             self.logger.debug('getRegion: ts: %r, region: %r, output: %r', ts, region, output)

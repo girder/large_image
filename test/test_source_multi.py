@@ -534,3 +534,38 @@ def testThinPlateSplineInvalid():
     )
     with pytest.raises(Exception, match='Cannot compute the warp transform'):
         large_image_source_multi.open(json.dumps(spec))
+
+
+@pytest.mark.parametrize(('position', 'scale'), [
+    ({}, 1),
+    ({'x': 10, 'y': 6}, 1),
+    ({'x': 300, 'y': 280}, 1),
+    ({'x': -20, 'y': -30}, 1),
+    ({'scale': 2}, 2),
+    ({'x': 10, 'y': 6, 'scale': 2}, 2),
+])
+def testCropWithoutTransform(position, scale):
+    testDir = os.path.dirname(os.path.realpath(__file__))
+    imagePath = os.path.join(testDir, 'test_files', 'test_orient1.tif')
+    crop = {'left': 20, 'top': 30, 'right': 100, 'bottom': 150}
+    orig = large_image.open(imagePath).getRegion(format='numpy')[0]
+    orig = np.repeat(np.repeat(orig, scale, axis=0), scale, axis=1)
+    source = large_image_source_multi.open({'sources': [{
+        'path': imagePath,
+        'position': dict(position, crop=crop),
+    }]})
+    x = position.get('x', 0)
+    y = position.get('y', 0)
+    left = max(0, x + crop['left'] * scale)
+    top = max(0, y + crop['top'] * scale)
+    assert source.sizeX == x + crop['right'] * scale
+    assert source.sizeY == y + crop['bottom'] * scale
+    image = source.getRegion(format='numpy')[0]
+    assert image.shape[:2] == (source.sizeY, source.sizeX)
+    # The cropped area is unchanged
+    assert np.array_equal(
+        image[top:, left:, :1],
+        orig[top - y:crop['bottom'] * scale, left - x:crop['right'] * scale])
+    # Outside of the crop is empty
+    assert not image[:top, :, -1].any()
+    assert not image[:, :left, -1].any()

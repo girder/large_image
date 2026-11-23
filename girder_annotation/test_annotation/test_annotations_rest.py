@@ -865,6 +865,12 @@ class TestLargeImageAnnotationElementGroups:
                     'points': [[7, 8, 0], [17, 6, 0], [27, 9, 0], [37, 14, 0], [46, 8, 0]],
                     'closed': False,
                     'fillColor': 'rgba(0, 255, 0, 1)',
+                }, {
+                    'type': 'text',
+                    'center': [30.5, 40.5, 0],
+                    'text': 'A comment',
+                    'lineColor': '#ff0000',
+                    'fontSize': 20,
                 }],
             },
         )
@@ -872,11 +878,21 @@ class TestLargeImageAnnotationElementGroups:
         resp = server.request('/annotation/%s/geojson' % str(annot['_id']), user=admin)
         assert utilities.respStatus(resp) == 200
         assert resp.json['type'] == 'FeatureCollection'
-        assert len(resp.json['features']) == 6
+        assert len(resp.json['features']) == 7
+        assert resp.json['features'][6]['geometry']['type'] == 'Point'
+        assert resp.json['features'][6]['properties']['type'] == 'text'
+        assert resp.json['features'][6]['properties']['text'] == 'A comment'
 
         import girder_large_image_annotation
         annot = girder_large_image_annotation.utils.GeoJSONAnnotation(resp.json)
-        assert annot.elementCount == 6
+        assert annot.elementCount == 7
+        assert {k: v for k, v in annot.elements[6].items() if k != 'id'} == {
+            'type': 'text',
+            'center': [30.5, 40.5, 0],
+            'text': 'A comment',
+            'lineColor': '#ff0000',
+            'fontSize': 20,
+        }
 
         resp = server.request(
             path='/annotation/item/{}'.format(self.item['_id']),
