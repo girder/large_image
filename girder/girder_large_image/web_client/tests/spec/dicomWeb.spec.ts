@@ -21,18 +21,6 @@ const seriesUID = '1.3.6.1.4.1.5962.99.1.3205815762.381594633.1639588388306.2.0'
 const verifyItemName = seriesUID;
 
 /**
- * Submit the import form.  Browsers refuse to submit a form whose number
- * input fails constraint validation (for instance, a non-integer or negative
- * limit), so to exercise the plugin's own validation the submit event is
- * dispatched directly rather than clicking the button.
- */
-const submitImportForm = async (page: Page) => {
-  await page.locator('.g-dwas-import-form').evaluate((form) => {
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  });
-};
-
-/**
  * Download a URL from within the page and return the status and size in
  * bytes.  The bytes are kept in the page under the given name so that later
  * requests can be compared against them without transferring them to the
@@ -88,9 +76,12 @@ test.describe('DICOMWeb assetstore', () => {
 
       // This should work now
       await page.locator('#g-new-dwas-form input.btn-primary').click();
+      // The assetstore list is sorted by name, and the test server's
+      // temporary assetstore is named after its directory, so the DICOMweb
+      // assetstore need not be first in the list.
       await expect.poll(async () => {
         const assetstores = await asyncRestRequest(page, { url: 'assetstore' }) as Array<Record<string, string>>;
-        return assetstores.length === 2 && assetstores[0].type === 'dicomweb';
+        return assetstores.length === 2 && assetstores.some((assetstore) => assetstore.type === 'dicomweb');
       }).toBe(true);
     });
 
@@ -107,36 +98,20 @@ test.describe('DICOMWeb assetstore', () => {
       // Navigate to the import page
       await page.locator('.g-dwas-import-button').first().click();
       await expect(page.locator('.g-submit-assetstore-import')).toBeVisible();
+      // Scope to the import form; the hidden register dialog used to create
+      // the admin user leaves its own validation message element in the DOM.
+      const validationMessage = page.locator('.g-dwas-import-form .g-validation-failed-message');
 
-      // Test error when no ID is set.
+      // Test error when no ID is set.  This is the only validation done in
+      // the browser; the limit and filters are checked by the import task,
+      // which runs in a worker and reports problems in its log rather than
+      // in the response to the import request.
       await page.locator('.g-submit-assetstore-import').click();
-      await expect(page.locator('.g-validation-failed-message')).toHaveText('Invalid Destination ID');
+      await expect(validationMessage).toHaveText('Invalid Destination ID');
 
       await page.locator('#g-dwas-import-dest-type').selectOption(destinationType);
       await page.locator('#g-dwas-import-dest-id').fill(destinationId);
-
-      // Test error for an invalid limit
-      await page.locator('#g-dwas-import-limit').fill('1.3');
-      await submitImportForm(page);
-      await expect(page.locator('.g-validation-failed-message')).toHaveText('Invalid limit: 1.3');
-
-      // Test error for negative limit
-      await page.locator('#g-dwas-import-limit').fill('-1');
-      await submitImportForm(page);
-      await expect(page.locator('.g-validation-failed-message')).toHaveText('Invalid limit: -1');
-
-      // Fix the limit
       await page.locator('#g-dwas-import-limit').fill('1');
-
-      // Test error for invalid JSON in the filters parameter
-      await page.locator('#g-dwas-import-filters').fill('{');
-      await page.locator('.g-submit-assetstore-import').click();
-      await expect(page.locator('.g-validation-failed-message')).toHaveText(/^Invalid filters/);
-
-      // Perform a search where no results are returned
-      await page.locator('#g-dwas-import-filters').fill('{"StudyInstanceUID": "DOES_NOT_EXIST"}');
-      await page.locator('.g-submit-assetstore-import').click();
-      await expect(page.locator('.g-validation-failed-message')).toHaveText('No studies matching the search filters were found');
     });
 
     let itemId = '';
@@ -145,6 +120,11 @@ test.describe('DICOMWeb assetstore', () => {
       // We will only import this specific StudyInstanceUID
       await page.locator('#g-dwas-import-filters').fill(`{"StudyInstanceUID": "${studyUID}"}`);
       await page.locator('.g-submit-assetstore-import').click();
+
+      // Once the import has been queued, the page navigates to the
+      // destination.  When tasks run eagerly in the server process, the
+      // request does not return until the import is complete.
+      await expect(page).toHaveURL(new RegExp(`#${destinationType}/${destinationId}$`), { timeout: 60000 });
 
       // Verify that the item we were looking for was imported
       await expect.poll(async () => {

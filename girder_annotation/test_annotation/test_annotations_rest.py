@@ -502,6 +502,74 @@ class TestLargeImageAnnotationRest:
         resp = server.request('/annotation/%s/access' % annot['_id'], user=user)
         assert utilities.respStatus(resp) == 200
 
+    def testAnnotationAccessLevelChangesEtag(self, server, user, admin):
+        publicFolder = utilities.namedFolder(admin, 'Public')
+        item = Item().createItem('userItem', user, publicFolder)
+        annot = Annotation().createAnnotation(item, admin, sampleAnnotation)
+
+        # The user can read the public annotation
+        resp = server.request('/annotation/%s' % annot['_id'], user=user)
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['_accessLevel'] < AccessType.WRITE
+        etag = resp.headers['ETag']
+        updated = resp.json['updated']
+        resp = server.request(
+            '/annotation/%s' % annot['_id'], user=user, isJson=False,
+            additionalHeaders=[('If-None-Match', etag)])
+        assert utilities.respStatus(resp) == 304
+
+        # Give the user write access without otherwise changing the annotation
+        resp = server.request('/annotation/%s/access' % annot['_id'], user=admin)
+        assert utilities.respStatus(resp) == 200
+        access = dict(**resp.json)
+        access['users'].append({
+            'login': user['login'],
+            'flags': [],
+            'id': str(user['_id']),
+            'level': AccessType.WRITE,
+        })
+        resp = server.request(
+            '/annotation/%s/access' % annot['_id'],
+            method='PUT',
+            user=admin,
+            params={
+                'access': json.dumps(access),
+                'public': True,
+            },
+        )
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['_accessLevel'] == AccessType.ADMIN
+        assert resp.json['updated'] == updated
+
+        # The etag has changed, so a conditional request gets the new access
+        # level rather than a 304
+        resp = server.request(
+            '/annotation/%s' % annot['_id'], user=user,
+            additionalHeaders=[('If-None-Match', etag)])
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['_accessLevel'] == AccessType.WRITE
+        assert resp.json['updated'] == updated
+        assert resp.headers['ETag'] != etag
+
+        # Changing the public flag also changes the etag
+        etag = resp.headers['ETag']
+        resp = server.request(
+            '/annotation/%s/access' % annot['_id'],
+            method='PUT',
+            user=admin,
+            params={
+                'access': json.dumps(access),
+                'public': False,
+            },
+        )
+        assert utilities.respStatus(resp) == 200
+        resp = server.request(
+            '/annotation/%s' % annot['_id'], user=user,
+            additionalHeaders=[('If-None-Match', etag)])
+        assert utilities.respStatus(resp) == 200
+        assert resp.json['public'] is False
+        assert resp.headers['ETag'] != etag
+
     @pytest.mark.singular
     def testAnnotationAccessControlEndpointsDocumentDB(self, server, user, admin):
         os.environ['LARGE_IMAGE_DOCUMENTDB'] = 'true'

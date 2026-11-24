@@ -223,6 +223,47 @@ const AnnotationModel = AccessControlledModel.extend({
     },
 
     /**
+     * The cache key needs the updated, created, and access level.
+     *
+     * @returns {string} a cache key.
+     */
+    _cacheKey: function () {
+        const user = getCurrentUser();
+        return (this.get('updated') || this.get('created')) +
+            (user && user.id ? '_' + user.id : '') +
+            '_' + this.get('_version') +
+            '_' + this.get('_accessLevel') +
+            '_' + this.get('public');
+    },
+
+    /**
+     * Save the access control list.  This is the same as the base model's
+     * method, except that the response is applied to the model before the
+     * g:accessListSaved event is triggered, so that listeners that refetch
+     * the annotation use the new access level in the cache key.
+     */
+    updateAccess: function (params) {
+        if (this.altUrl === null && this.resourceName === null) {
+            throw new Error('An altUrl or resourceName must be set on the Model.');
+        }
+
+        return restRequest({
+            url: `${this.altUrl || this.resourceName}/${this.id}/access`,
+            method: 'PUT',
+            data: _.extend({
+                access: JSON.stringify(this.get('access')),
+                public: this.get('public'),
+                publicFlags: JSON.stringify(this.get('publicFlags') || [])
+            }, params || {})
+        }).done((resp) => {
+            this.set(_.pick(resp || {}, '_accessLevel', 'access', 'public', 'publicFlags'));
+            this.trigger('g:accessListSaved');
+        }).fail((err) => {
+            this.trigger('g:error', err);
+        });
+    },
+
+    /**
      * Fetch the centroids and unpack the binary data.
      */
     fetchCentroids: function () {
@@ -231,7 +272,7 @@ const AnnotationModel = AccessControlledModel.extend({
             url: url,
             data: {
                 centroids: true,
-                _: (this.get('updated') || this.get('created')) + '_' + this.get('_version')
+                _: this._cacheKey()
             },
             xhrFields: {
                 responseType: 'arraybuffer'
@@ -330,11 +371,10 @@ const AnnotationModel = AccessControlledModel.extend({
         }
 
         opts = opts || {};
-        var user = getCurrentUser();
         var restOpts = {
             url: (this.altUrl || this.resourceName) + '/' + this.get('_id'),
             /* Add our region request into the query */
-            data: Object.assign({}, this._region, {_: (this.get('updated') || this.get('created')) + (user && user.id ? '_' + user.id : '') + '_' + this.get('_version')})
+            data: Object.assign({}, this._region, {_: this._cacheKey()})
         };
         if (opts.extraPath) {
             restOpts.url += '/' + opts.extraPath;
