@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.37.1
+
+- Fix stale annotation access levels in cache key ([#2168](../../pull/2168))
+
 ## 1.37.0
 
 ### Features
