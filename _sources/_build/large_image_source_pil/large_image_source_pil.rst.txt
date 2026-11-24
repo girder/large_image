@@ -1,0 +1,21 @@
+large\_image\_source\_pil package
+=================================
+
+Submodules
+----------
+
+large\_image\_source\_pil.girder\_source module
+-----------------------------------------------
+
+.. automodule:: large_image_source_pil.girder_source
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: large_image_source_pil
+   :members:
+   :show-inheritance:
+   :undoc-members:
