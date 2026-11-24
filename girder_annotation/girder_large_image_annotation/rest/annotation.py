@@ -181,10 +181,13 @@ class AnnotationResource(Resource):
         user = self.getCurrentUser()
         annotation = Annotation().load(
             id, region=params, user=user, level=AccessType.READ, getElements=False)
-        _handleETag('getAnnotation', annotation, params, max_age=86400 * 30)
         if annotation is None:
             msg = 'Annotation not found'
             raise RestException(msg, 404)
+        # Include the user's access level and the public flag
+        _handleETag('getAnnotation', annotation, params,
+                    Annotation().getAccessLevel(annotation, user),
+                    annotation.get('public'), max_age=86400 * 30)
         return self._getAnnotation(annotation, params)
 
     @autoDescribeRoute(
@@ -199,10 +202,12 @@ class AnnotationResource(Resource):
     @access.public(cookie=True, scope=TokenScope.DATA_READ)
     @loadmodel(model='annotation', plugin='large_image', getElements=False, level=AccessType.READ)
     def getAnnotationWithFormat(self, annotation, format):
-        _handleETag('getAnnotationWithFormat', annotation, format, max_age=86400 * 30)
         if annotation is None:
             msg = 'Annotation not found'
             raise RestException(msg, 404)
+        _handleETag('getAnnotationWithFormat', annotation, format,
+                    Annotation().getAccessLevel(annotation, self.getCurrentUser()),
+                    annotation.get('public'), max_age=86400 * 30)
 
         def generateResult():
             for chunk in Annotation().geojson(annotation):
