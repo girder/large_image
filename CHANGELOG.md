@@ -5,6 +5,7 @@
 ### Features
 
 - Add a text annotation element to the annotation schema and renderer ([#2165](../../pull/2165))
+- Add a NiiVue image viewer ([#2167](../../pull/2167))
 
 ### Improvements
 
