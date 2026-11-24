@@ -104,7 +104,7 @@ function makeDraggableSVG(svg, validateDrag, callback, xRange) {
     }
 }
 
-module.exports = {
+export default {
     props: [
         'itemId',
         'layerIndex',
@@ -131,6 +131,34 @@ module.exports = {
             xRange: [undefined, undefined],
             vRange: [undefined, undefined]
         };
+    },
+    computed: {
+        minVal() {
+            if (!this.histogram) return 0;
+            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
+            if (this.currentMin === undefined) return parseFloat(this.histogram.min.toFixed(2));
+            return this.currentMin;
+        },
+        maxVal() {
+            if (!this.histogram) return 1;
+            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
+            if (this.currentMax === undefined) return parseFloat(this.histogram.max.toFixed(2));
+            return this.currentMax;
+        },
+        invert() {
+            return this.currentMin > this.currentMax;
+        },
+        dtypeRange() {
+            // remove byte-order characters
+            let dtype = this.dtype.replace('>', '').replace('<', '').replace('=', '').replace('|', '');
+            if (dtypeAliases[dtype]) dtype = dtypeAliases[dtype];
+            const range = dtypeRanges[dtype];
+            if (range && range.length === 2) {
+                return range;
+            } else {
+                return [this.histogram.min, this.histogram.max];
+            }
+        }
     },
     watch: {
         currentFrame() {
@@ -171,34 +199,6 @@ module.exports = {
                 this.$refs.maxExclusionBox.setAttribute('visibility', 'hidden');
             } else {
                 this.$refs.maxExclusionBox.setAttribute('visibility', 'visible');
-            }
-        }
-    },
-    computed: {
-        minVal() {
-            if (!this.histogram) return 0;
-            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage(this.autoRange / 100));
-            if (this.currentMin === undefined) return parseFloat(this.histogram.min.toFixed(2));
-            return this.currentMin;
-        },
-        maxVal() {
-            if (!this.histogram) return 1;
-            if (this.autoRange !== undefined) return Math.round(this.fromDistributionPercentage((100 - this.autoRange) / 100));
-            if (this.currentMax === undefined) return parseFloat(this.histogram.max.toFixed(2));
-            return this.currentMax;
-        },
-        invert() {
-            return this.currentMin > this.currentMax;
-        },
-        dtypeRange() {
-            // remove byte-order characters
-            let dtype = this.dtype.replace('>', '').replace('<', '').replace('=', '').replace('|', '');
-            if (dtypeAliases[dtype]) dtype = dtypeAliases[dtype];
-            const range = dtypeRanges[dtype];
-            if (range && range.length === 2) {
-                return range;
-            } else {
-                return [this.histogram.min, this.histogram.max];
             }
         }
     },

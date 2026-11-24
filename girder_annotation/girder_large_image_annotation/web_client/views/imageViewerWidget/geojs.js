@@ -1,14 +1,14 @@
-import $ from 'jquery';
-import _ from 'underscore';
-import Backbone from 'backbone';
-import events from '@girder/core/events';
-import {wrap} from '@girder/core/utilities/PluginUtils';
-import {restRequest, getApiRoot} from '@girder/core/rest';
-
 import convertAnnotation from '../../annotations/geojs/convert';
 import * as defaults from '../../annotations/defaults';
 import style from '../../annotations/style';
 import {sanitizeText, textFont} from '../../annotations/text';
+
+const $ = girder.$;
+const _ = girder._;
+const Backbone = girder.Backbone;
+const events = girder.events;
+const {wrap} = girder.utilities.PluginUtils;
+const {restRequest, getApiRoot} = girder.rest;
 
 /**
  * Generate a new "random" element id (24 random 16 digits).
@@ -42,6 +42,9 @@ function onFeatureMouseEvents(target, handler) {
 }
 
 var GeojsImageViewerWidgetExtension = function (viewer) {
+    // The methods returned here are copied onto the viewer's prototype, so
+    // keep a reference to the original destroy method to call from ours.
+    const destroy = viewer.prototype.destroy;
     wrap(viewer, 'initialize', function (initialize) {
         var settings = arguments[1];
 
@@ -62,7 +65,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         return initialize.apply(this, _.rest(arguments));
     });
 
-    return viewer.extend({
+    return {
         _postRender: function () {
             // the feature layer is for annotations that are loaded
             this.featureLayer = this.viewer.createLayer('feature', {
@@ -833,7 +836,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         destroy: function () {
             // don't leave an editor or report text after the viewer is gone
             this.finishTextEdit(null);
-            return viewer.prototype.destroy.apply(this, arguments);
+            return destroy.apply(this, arguments);
         },
 
         /**
@@ -1396,7 +1399,7 @@ var GeojsImageViewerWidgetExtension = function (viewer) {
         },
 
         _guid: guid
-    });
+    };
 };
 
 export default GeojsImageViewerWidgetExtension;
