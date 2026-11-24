@@ -173,6 +173,10 @@ var ConfigView = View.extend({
             label: 'Leaflet',
             type: 'leaflet'
         }, {
+            name: 'niivue',
+            label: 'NiiVue',
+            type: 'niivue'
+        }, {
             name: 'slideatlas',
             label: 'SlideAtlas',
             type: 'slideatlas'
